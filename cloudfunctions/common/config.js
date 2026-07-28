@@ -10,7 +10,7 @@
 module.exports = {
   // 阿里百炼 DeepSeek API（refreshNews 主力数据源）
   bailian: {
-    apiKey: process.env.DASHSCOPE_API_KEY || '',
+    apiKey: process.env.DASHSCOPE_API_KEY || 'sk-5b6cb233fcf04fe597ec263b5c871c2a',
     model: 'deepseek-v3.2',
     timeout: 30000,
   },

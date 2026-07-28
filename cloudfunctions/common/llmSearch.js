@@ -9,10 +9,11 @@
 
 const https = require('https')
 
+const config = require('./config')
 // ─── 配置 ───────────────────────────────────────────
 
-// 百炼 API 配置（从环境变量读取，不硬编码）
-const API_KEY = process.env.DASHSCOPE_API_KEY || ''
+// 百炼 API 配置（优先环境变量，fallback 到 config）
+const API_KEY = process.env.DASHSCOPE_API_KEY || config.bailian?.apiKey || ''
 const API_BASE = 'dashscope.aliyuncs.com'
 const API_PATH = '/compatible-mode/v1/chat/completions'
 const MODEL = 'deepseek-v3.2'  // 支持联网搜索的 DeepSeek 模型
@@ -33,7 +34,7 @@ const CATEGORY_PROMPTS = {
 新闻源：xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com
 
 要求：
-1. 必须是今天（2026年7月28日）发布的新闻
+1. 必须是最近几天发布的最新新闻
 2. 每条新闻输出为 JSON 对象，包含以下字段：
    - title: 新闻标题（字符串，不超过50字）
    - summary: 新闻摘要（字符串，100-200字）
@@ -48,7 +49,7 @@ const CATEGORY_PROMPTS = {
 新闻源：36kr.com, huxiu.com, techcrunch.com
 
 要求：
-1. 必须是今天发布的科技/互联网/AI 相关新闻
+1. 必须是最近发布的最新科技/互联网/AI 相关新闻
 2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
 3. 只返回 JSON 数组`,
 
@@ -56,7 +57,7 @@ const CATEGORY_PROMPTS = {
 新闻源：xinhuanet.com, cctv.com, thepaper.cn, reuters.com
 
 要求：
-1. 必须是今天发布的体育新闻
+1. 必须是最近发布的最新体育新闻
 2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
 3. 只返回 JSON 数组`,
 
@@ -64,7 +65,7 @@ const CATEGORY_PROMPTS = {
 新闻源：reuters.com, bbc.com, apnews.com, huanqiu.com, chinanews.com
 
 要求：
-1. 必须是今天发布的国际新闻
+1. 必须是最近发布的最新国际新闻
 2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
 3. 只返回 JSON 数组`,
 
@@ -72,7 +73,7 @@ const CATEGORY_PROMPTS = {
 新闻源：people.com.cn, thepaper.cn, chinanews.com, cctv.com
 
 要求：
-1. 必须是今天发布的社会/生活/民生类新闻
+1. 必须是最近发布的最新社会/生活/民生类新闻
 2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
 3. 只返回 JSON 数组`,
 }
@@ -110,7 +111,7 @@ async function searchNewsByCategory(category) {
     search_options: {
       search_strategy: 'max',
       forced_search: true,
-      freshness: 1,  // 只搜今天
+      freshness: 7,  // 只搜最近7天（API限制最小值为7）
     },
     temperature: 0.1,  // 低温度，减少幻觉
     max_tokens: 3000,
@@ -202,7 +203,23 @@ function parseNewsFromContent(content, category) {
       summary: String(item.summary || '').trim(),
       category,
       categoryName: categoryNames[category] || category,
-      source: String(item.source || '未知来源').trim(),
+      source: (() => {
+        const raw = String(item.source || '未知来源').trim()
+        // 尝试域名→中文名映射
+        const domainMap = {
+          'xinhuanet.com': '新华社', 'people.com.cn': '人民日报', 'cctv.com': '央视新闻',
+          'chinanews.com': '中新网', 'thepaper.cn': '澎湃新闻', '36kr.com': '36氪',
+          'huxiu.com': '虎嗅', 'huanqiu.com': '环球时报', 'reuters.com': '路透社',
+          'bbc.com': 'BBC', 'apnews.com': '美联社', 'techcrunch.com': 'TechCrunch',
+        }
+        // 如果 source 是域名，映射为中文名
+        if (domainMap[raw]) return domainMap[raw]
+        // 如果 source 包含域名，尝试提取
+        for (const [domain, name] of Object.entries(domainMap)) {
+          if (raw.includes(domain)) return name
+        }
+        return raw
+      })(),
       publishTime: new Date().toISOString(),
     }))
     .filter(item => item.title.length > 0)
