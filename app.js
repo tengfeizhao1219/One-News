@@ -12,10 +12,10 @@ App({
       this.globalData.categoryNames[c.id] = c.name
     })
 
-    // 初始化云开发（上线前替换为你的环境ID）
+    // 初始化云开发
     if (wx.cloud) {
       wx.cloud.init({
-        env: 'your-env-id',  // TODO: 替换为你的云开发环境ID
+        env: 'cloud1-1g9313w0bb791de0',
         traceUser: false
       })
     }

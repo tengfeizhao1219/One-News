@@ -30,7 +30,7 @@ const SWIPE_ANIMATION_MS = 380   // 滑动动画时长
 
 // 请求配置
 const PAGE_SIZE = 10
-const USE_MOCK = true            // 开发阶段使用Mock数据
+const USE_MOCK = false            // 生产模式：使用云函数
 
 module.exports = {
   CATEGORIES,
