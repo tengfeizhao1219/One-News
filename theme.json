@@ -11,14 +11,14 @@
     "--overlay": "rgba(0, 0, 0, 0.25)"
   },
   "dark": {
-    "--bg-page": "#1A1A1C",
-    "--bg-card": "#252527",
-    "--text-primary": "#E5E5E7",
-    "--text-secondary": "#8E8E93",
-    "--text-body": "#C7C7CC",
-    "--divider": "#38383A",
-    "--tag-bg": "#2C2C2E",
-    "--tag-text": "#8E8E93",
-    "--overlay": "rgba(255, 255, 255, 0.08)"
+    "--bg-page": "#000000",
+    "--bg-card": "#0D0D0D",
+    "--text-primary": "#FFFFFF",
+    "--text-secondary": "#999999",
+    "--text-body": "#D4D4D4",
+    "--divider": "#1C1C1E",
+    "--tag-bg": "#1C1C1E",
+    "--tag-text": "#999999",
+    "--overlay": "rgba(0, 0, 0, 0.7)"
   }
 }
