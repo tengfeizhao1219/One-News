@@ -8,7 +8,7 @@
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
   <!-- 卡片容器 -->
-  <view class="card-stage">
+  <view class="card-stage {{showPanel ? 'hidden' : ''}}">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
         class="card {{item.state}}"
