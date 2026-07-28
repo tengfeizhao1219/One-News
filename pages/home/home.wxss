@@ -7,6 +7,42 @@
   position: relative;
 }
 
+/* ============ 固定顶部搜索栏 ============ */
+.fixed-top-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.top-bar-inner {
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 190rpx;  /* 避开微信原生胶囊按钮（约 174rpx 宽度 + 间距） */
+  height: 64rpx;
+  align-items: center;
+}
+
+.top-bar-search {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background-color: var(--tag-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.top-bar-search:active {
+  opacity: 0.6;
+}
+
+.search-icon-top {
+  font-size: 28rpx;
+}
+
 /* ============ 卡片舞台 ============ */
 .card-stage {
   position: absolute;
@@ -31,16 +67,20 @@
   background-color: var(--bg-card);
   display: flex;
   flex-direction: column;
-  transition: transform 0.38s cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* 默认无 transition —— 手指拖拽时实时跟手，不延迟 */
   opacity: 0;
   pointer-events: none;
+}
+
+/* 只有自动切换/回弹时才启用 transition */
+.card.with-transition {
+  transition: transform 0.35s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .card.active {
   opacity: 1;
   pointer-events: auto;
   z-index: 2;
-  will-change: transform;
 }
 
 .card.above {
@@ -57,43 +97,12 @@
 
 .card-body {
   flex: 1;
-  padding: 80rpx 64rpx 48rpx;
+  padding: 120rpx 64rpx 48rpx;
   display: flex;
   flex-direction: column;
   justify-content: center;
   overflow-y: auto;
-}
-
-/* 卡片顶部搜索按钮 */
-.card-header {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 32rpx;
-  flex-shrink: 0;
-}
-
-.card-search-btn {
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 24rpx;
-  border-radius: 32rpx;
-  background-color: var(--tag-bg);
-  pointer-events: auto;
-}
-
-.card-search-btn:active {
-  opacity: 0.6;
-}
-
-.search-icon-small {
-  font-size: 24rpx;
-}
-
-.search-text {
-  font-size: 24rpx;
-  color: var(--text-secondary);
-  font-weight: 500;
+  /* 固定元素不受卡片 transform 影响 —— 已在外部独立 */
 }
 
 .card-title {
@@ -138,35 +147,6 @@
   opacity: 0.6;
 }
 
-/* ============ 导航指示点 ============ */
-.nav-dots {
-  position: absolute;
-  right: 32rpx;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
-  z-index: 25;
-  padding: 20rpx 0;
-}
-
-.nav-dot {
-  width: 8rpx;
-  height: 8rpx;
-  border-radius: 4rpx;
-  background-color: var(--text-secondary);
-  opacity: 0.35;
-  transition: all 0.35s ease;
-}
-
-.nav-dot.active {
-  height: 48rpx;
-  background-color: var(--text-primary);
-  opacity: 0.8;
-  border-radius: 4rpx;
-}
-
 /* ============ 侧边栏遮罩 ============ */
 .panel-overlay {
   position: absolute;
@@ -209,7 +189,6 @@
 .panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 100rpx 40rpx 32rpx;
   flex-shrink: 0;
 }
@@ -219,35 +198,6 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 1rpx;
-}
-
-.panel-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 20rpx;
-}
-
-.panel-search {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26rpx;
-}
-
-.panel-close {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26rpx;
-  color: var(--text-secondary);
 }
 
 /* ============ 分类Tab ============ */
@@ -273,7 +223,7 @@
 .panel-tab.active {
   color: var(--text-primary);
   background-color: var(--tag-bg);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ============ 新闻列表 ============ */
@@ -285,10 +235,18 @@
 .panel-item {
   padding: 28rpx 40rpx;
   border-bottom: 1rpx solid var(--divider);
+  border-left: 6rpx solid transparent;
+  transition: background-color 0.2s;
 }
 
 .panel-item:active {
   background-color: var(--tag-bg);
+}
+
+/* 当前阅读的新闻高亮 */
+.panel-item.current {
+  background-color: var(--tag-bg);
+  border-left-color: var(--text-primary);
 }
 
 .panel-item-title {

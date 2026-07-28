@@ -21,18 +21,16 @@ Page({
   // 触摸状态
   touchStartY: 0,
   touchStartX: 0,
-  touchCurrentY: 0,
   isAnimating: false,
-  cardOffset: 0,           // 当前卡片偏移量（跟随手指）
+  isDragging: false,
+  cardOffset: 0,
 
   onLoad() {
     this.loadNews()
   },
 
   onShow() {
-    // 刷新屏幕尺寸（处理设备旋转/分屏）
     refreshPageSize()
-    // 从详情页/搜索页返回时恢复卡片渲染状态
     if (this.data.newsList.length > 0) {
       this.renderCards(this.data.newsList)
     }
@@ -54,7 +52,6 @@ Page({
       this.renderCards(list)
       wx.hideLoading()
 
-      // 4秒后隐藏引导
       setTimeout(() => {
         this.setData({ showGuide: false })
       }, 4000)
@@ -67,7 +64,6 @@ Page({
   // ============ 卡片渲染 ============
 
   renderCards(list, targetIndex) {
-    // 当传入 targetIndex 时直接使用（规避 setData 异步问题）
     const currentIndex = targetIndex !== undefined ? targetIndex : this.data.currentIndex
     const cards = []
     const total = list.length
@@ -77,34 +73,35 @@ Page({
       return
     }
 
-    // 确保 currentIndex 不越界
     const idx = Math.max(0, Math.min(currentIndex, total - 1))
-    if (idx !== this.data.currentIndex) {
-      this.setData({ currentIndex: idx })
-    }
 
     // 上一张
     if (idx > 0) {
       cards.push(this.buildCard(list[idx - 1], -1))
     }
-
     // 当前
     cards.push(this.buildCard(list[idx], 0))
-
     // 下一张
     if (idx < total - 1) {
       cards.push(this.buildCard(list[idx + 1], 1))
     }
 
-    this.setData({ cards })
+    // 同步 currentIndex（处理越界修正）
+    if (idx !== this.data.currentIndex) {
+      this.setData({ currentIndex: idx, cards })
+    } else {
+      this.setData({ cards })
+    }
   },
 
   buildCard(item, position) {
+    // transitionClass 控制 CSS transition：有动画时才启用
     return {
       ...item,
       summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-      translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT)
+      translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
+      transitionClass: ''  // 默认无 transition（手指拖拽时不需要）
     }
   },
 
@@ -114,7 +111,7 @@ Page({
     if (this.isAnimating) return
     this.touchStartY = e.touches[0].clientY
     this.touchStartX = e.touches[0].clientX
-    this.touchCurrentY = this.touchStartY
+    this.isDragging = false
     this.cardOffset = 0
   },
 
@@ -123,15 +120,26 @@ Page({
     const dy = e.touches[0].clientY - this.touchStartY
     const dx = e.touches[0].clientX - this.touchStartX
 
-    // 水平滑动优先（左滑面板）
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 20) {
+    // 首次判定方向：水平优先 → 左滑面板
+    if (!this.isDragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+      this.isDragging = true
+    }
+    if (this.isDragging && Math.abs(dx) > Math.abs(dy)) {
       return
     }
 
-    // 垂直滑动：限制范围
-    const maxOffset = 200
-    this.cardOffset = Math.max(-maxOffset, Math.min(maxOffset, dy))
-    this.updateCardOffset()
+    // 垂直滑动：移除 transition，实时跟手
+    if (!this.isDragging && Math.abs(dy) > 5) {
+      this.isDragging = true
+      // 拖拽开始：禁用 CSS transition（核心修复：避免拖拽时的延迟抖动）
+      this.setTransitionEnabled(false)
+    }
+
+    if (this.isDragging && Math.abs(dy) > Math.abs(dx)) {
+      const maxOffset = 200
+      this.cardOffset = Math.max(-maxOffset, Math.min(maxOffset, dy))
+      this.updateCardOffset()
+    }
   },
 
   onTouchEnd(e) {
@@ -147,8 +155,10 @@ Page({
       return
     }
 
-    // 垂直滑动切换卡片
+    // 垂直滑动切换
     if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+      // 启用 transition（自动切换动画）
+      this.setTransitionEnabled(true)
       this.isAnimating = true
       if (dy < 0) {
         this.swipeNext()
@@ -156,9 +166,18 @@ Page({
         this.swipePrev()
       }
     } else {
-      // 回弹
+      // 回弹：启用 transition 做弹性回弹动画
+      this.setTransitionEnabled(true)
       this.resetCardOffset()
+      setTimeout(() => this.setTransitionEnabled(false), SWIPE_ANIMATION_MS)
     }
+  },
+
+  // 控制卡片的 CSS transition
+  setTransitionEnabled(enabled) {
+    const cls = enabled ? 'with-transition' : ''
+    const cards = this.data.cards.map(card => ({ ...card, transitionClass: cls }))
+    this.setData({ cards })
   },
 
   swipeNext() {
@@ -173,7 +192,10 @@ Page({
     this.setData({ currentIndex: newIndex })
     this.renderCards(newsList, newIndex)
     this._lastSwipeTime = Date.now()
-    setTimeout(() => { this.isAnimating = false }, SWIPE_ANIMATION_MS)
+    setTimeout(() => {
+      this.isAnimating = false
+      this.setTransitionEnabled(false)
+    }, SWIPE_ANIMATION_MS)
   },
 
   swipePrev() {
@@ -188,7 +210,10 @@ Page({
     this.setData({ currentIndex: newIndex })
     this.renderCards(newsList, newIndex)
     this._lastSwipeTime = Date.now()
-    setTimeout(() => { this.isAnimating = false }, SWIPE_ANIMATION_MS)
+    setTimeout(() => {
+      this.isAnimating = false
+      this.setTransitionEnabled(false)
+    }, SWIPE_ANIMATION_MS)
   },
 
   updateCardOffset() {
@@ -214,7 +239,6 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
-    // 如果刚进行过滑动操作，忽略点击
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) return
 
     const { currentIndex, newsList } = this.data
@@ -238,7 +262,6 @@ Page({
       currentCategory: cat,
       showPanel: false
     })
-    // 重新加载并切换到第一条
     getNewsList({ category: cat }).then(res => {
       const list = res.list || []
       this.setData({
@@ -249,7 +272,6 @@ Page({
       this.renderCards(list)
     }).catch(() => {
       wx.showToast({ title: '加载失败', icon: 'none' })
-      // 恢复侧边栏状态
       this.setData({ showPanel: true })
     })
   },
@@ -267,7 +289,6 @@ Page({
   },
 
   preventMove() {
-    // 阻止遮罩层滚动穿透
     return false
   },
 
