@@ -195,13 +195,14 @@ function parseNewsFromContent(content, category) {
   }
 
   return rawList
+    .filter(item => item != null && typeof item === 'object')
     .map((item, i) => ({
       id: `llm_${category}_${Date.now()}_${i}`,
-      title: (item.title || '').trim(),
-      summary: (item.summary || '').trim(),
+      title: String(item.title || '').trim(),
+      summary: String(item.summary || '').trim(),
       category,
       categoryName: categoryNames[category] || category,
-      source: (item.source || '未知来源').trim(),
+      source: String(item.source || '未知来源').trim(),
       publishTime: new Date().toISOString(),
     }))
     .filter(item => item.title.length > 0)

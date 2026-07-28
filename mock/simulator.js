@@ -107,6 +107,10 @@ function simulateSearchNews(mockData, keyword, pageNum, pageSize) {
 
       // 正常逻辑
       const kw = (keyword || '').toLowerCase()
+      if (!kw) {
+        resolve({ list: [], total: 0 })
+        return
+      }
       let list = mockData.filter(item =>
         item.title.toLowerCase().includes(kw) ||
         item.summary.toLowerCase().includes(kw)
