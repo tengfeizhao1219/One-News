@@ -266,8 +266,8 @@
 }
 
 .panel-tab.active {
-  color: #fff;
-  background-color: #3A3A3C;
+  color: var(--bg-card);
+  background-color: var(--text-primary);
   font-weight: 700;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
 }
@@ -275,8 +275,8 @@
 /* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
   .panel-tab.active {
-    color: #1A1A1C;
-    background-color: #E5E5E7;
+    color: var(--bg-page);
+    background-color: var(--text-primary);
     box-shadow: 0 2rpx 8rpx rgba(255, 255, 255, 0.08);
   }
 }
@@ -316,8 +316,15 @@
 
 /* 当前阅读的新闻标题颜色高亮 */
 .panel-item-title.current {
-  color: #2563EB;
+  color: var(--text-primary);
   font-weight: 700;
+}
+
+/* 暗色模式下保持蓝色高亮 */
+@media (prefers-color-scheme: dark) {
+  .panel-item-title.current {
+    color: #60A5FA;
+  }
 }
 
 .panel-empty {

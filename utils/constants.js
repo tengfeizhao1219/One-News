@@ -43,8 +43,8 @@ const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
 
 // 请求配置
 const PAGE_SIZE = 10
-// TEST_MODE 环境变量允许测试时强制启用 Mock 模式
-const USE_MOCK = process.env.TEST_MODE === 'true' ? true : false
+// 开发阶段默认启用 Mock 模式（AI 缓存），云函数部署后改为 false
+const USE_MOCK = true
 
 // AI 新闻缓存配置
 const AI_CACHE = {

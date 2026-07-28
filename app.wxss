@@ -8,6 +8,40 @@ page {
   overflow: hidden;
 }
 
+/* ============ 暗色模式强制覆盖（真机兼容）============ */
+@media (prefers-color-scheme: dark) {
+  page {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+  }
+  .page {
+    background-color: #000000 !important;
+  }
+  .card {
+    background-color: #0D0D0D !important;
+  }
+  .card-title {
+    color: #FFFFFF !important;
+  }
+  .summary-p {
+    color: #D4D4D4 !important;
+  }
+  .card-meta {
+    color: #999999 !important;
+  }
+  .swipe-hint {
+    color: #666666 !important;
+  }
+  .category-tag {
+    background-color: #1C1C1E !important;
+    color: #999999 !important;
+  }
+  .fixed-top-bar .top-bar-refresh,
+  .fixed-top-bar .top-bar-search {
+    background-color: #1C1C1E !important;
+  }
+}
+
 /* 状态栏占位 */
 .status-bar {
   flex-shrink: 0;
