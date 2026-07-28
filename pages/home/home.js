@@ -187,11 +187,18 @@ Page({
   },
 
   updateCardOffset() {
-    // 实时跟手移动（简化实现：通过 setData 更新 translateY）
-    const cards = this.data.cards.map(card => ({
-      ...card,
-      translateY: card.state === 'active' ? this.cardOffset : 0
-    }))
+    const { currentIndex, newsList } = this.data
+    const cards = this.data.cards.map(card => {
+      let translateY = 0
+      if (card.state === 'active') {
+        translateY = this.cardOffset
+      } else if (card.state === 'above') {
+        translateY = -100 + (this.cardOffset / 10) // 跟随移动但保持屏幕外
+      } else if (card.state === 'below') {
+        translateY = 100 + (this.cardOffset / 10)
+      }
+      return { ...card, translateY }
+    })
     this.setData({ cards })
   },
 
