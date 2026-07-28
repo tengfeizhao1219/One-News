@@ -166,6 +166,7 @@ function handleApiError(errorCode, message) {
     'API_RATE_LIMIT':   '今日阅读次数已用完，明天再来吧',
     'API_UNAVAILABLE':  '新闻服务暂时不可用，请稍后重试',
     'ALL_DOWN':         '新闻服务暂时不可用，请稍后重试',
+    'LLM_SEARCH_FAILED':'智能搜索暂时不可用，请稍后重试',
     'NO_DATA':          '暂无新闻，下拉刷新试试',
     'API_KEY_INVALID':  '服务配置错误，请联系管理员',
     'API_TIMEOUT':      '网络开小差了，请重试',

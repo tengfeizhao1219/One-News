@@ -33,7 +33,7 @@ const VALID_SOURCES = new Set(Object.values(SOURCE_DOMAIN_MAP))
 // 最小/最大长度
 const MIN_TITLE_LENGTH = 5
 const MAX_TITLE_LENGTH = 200
-const MIN_SUMMARY_LENGTH = 20
+const MIN_SUMMARY_LENGTH = 10
 const MAX_SUMMARY_LENGTH = 1000
 
 // ─── 校验函数 ──────────────────────────────────────
