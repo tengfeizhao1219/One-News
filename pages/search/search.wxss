@@ -45,7 +45,7 @@
   height: 40rpx;
   border-radius: 50%;
   background-color: var(--text-secondary);
-  color: #FFF;
+  color: var(--bg-card);
   display: flex;
   align-items: center;
   justify-content: center;

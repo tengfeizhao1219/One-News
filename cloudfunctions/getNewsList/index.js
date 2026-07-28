@@ -26,6 +26,7 @@ exports.main = async (event) => {
       .skip((pageNum - 1) * pageSize)
       .limit(pageSize)
       .field({
+        _id: true,
         title: true,
         summary: true,
         category: true,

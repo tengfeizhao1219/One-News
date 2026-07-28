@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, STATUS_BAR_HEIGHT } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT } = require('../../utils/constants')
 const { getNewsList } = require('../../utils/request')
 
 const app = getApp()
@@ -64,8 +64,9 @@ Page({
 
   // ============ 卡片渲染 ============
 
-  renderCards(list) {
-    const { currentIndex } = this.data
+  renderCards(list, targetIndex) {
+    // 当传入 targetIndex 时直接使用（规避 setData 异步问题）
+    const currentIndex = targetIndex !== undefined ? targetIndex : this.data.currentIndex
     const cards = []
     const total = list.length
 
@@ -76,7 +77,7 @@ Page({
 
     // 确保 currentIndex 不越界
     const idx = Math.max(0, Math.min(currentIndex, total - 1))
-    if (idx !== currentIndex) {
+    if (idx !== this.data.currentIndex) {
       this.setData({ currentIndex: idx })
     }
 
@@ -101,7 +102,7 @@ Page({
       ...item,
       summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-      translateY: position === 0 ? 0 : (position < 0 ? -window.innerHeight : window.innerHeight)
+      translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT)
     }
   },
 
@@ -167,7 +168,7 @@ Page({
     }
     const newIndex = currentIndex + 1
     this.setData({ currentIndex: newIndex })
-    this.renderCards(newsList)
+    this.renderCards(newsList, newIndex)
     this._lastSwipeTime = Date.now()
     setTimeout(() => { this.isAnimating = false }, SWIPE_ANIMATION_MS)
   },
@@ -181,7 +182,7 @@ Page({
     }
     const newIndex = currentIndex - 1
     this.setData({ currentIndex: newIndex })
-    this.renderCards(newsList)
+    this.renderCards(newsList, newIndex)
     this._lastSwipeTime = Date.now()
     setTimeout(() => { this.isAnimating = false }, SWIPE_ANIMATION_MS)
   },
@@ -199,8 +200,8 @@ Page({
   resetCardOffset() {
     const cards = this.data.cards.map(card => {
       if (card.state === 'active') return { ...card, translateY: 0 }
-      if (card.state === 'above') return { ...card, translateY: -window.innerHeight }
-      if (card.state === 'below') return { ...card, translateY: window.innerHeight }
+      if (card.state === 'above') return { ...card, translateY: -PAGE_HEIGHT }
+      if (card.state === 'below') return { ...card, translateY: PAGE_HEIGHT }
       return card
     })
     this.setData({ cards })
@@ -254,7 +255,7 @@ Page({
       currentIndex: idx,
       showPanel: false
     })
-    this.renderCards(newsList)
+    this.renderCards(newsList, idx)
   },
 
   preventMove() {

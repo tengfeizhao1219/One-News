@@ -103,10 +103,11 @@
   text-align: center;
   padding: 32rpx 0 80rpx;
   font-size: 22rpx;
-  color: #C4C1BB;
+  color: var(--text-secondary);
   flex-shrink: 0;
   letter-spacing: 4rpx;
   font-weight: 300;
+  opacity: 0.6;
 }
 
 /* ============ 导航指示点 ============ */
@@ -125,7 +126,7 @@
   width: 6rpx;
   height: 6rpx;
   border-radius: 3rpx;
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: var(--divider);
   transition: all 0.35s;
 }
 
@@ -267,8 +268,8 @@
   bottom: 160rpx;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(28, 28, 30, 0.85);
-  color: #FFF;
+  background-color: var(--text-primary);
+  color: var(--bg-card);
   padding: 28rpx 48rpx;
   border-radius: 28rpx;
   font-size: 26rpx;

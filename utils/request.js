@@ -1,6 +1,6 @@
 // 请求层封装 - 支持 Mock / 云函数双模式
 
-const { USE_MOCK, PAGE_SIZE } = require('./constants')
+const { USE_MOCK, PAGE_SIZE, CATEGORY_MAP } = require('./constants')
 const { formatRelativeTime } = require('./util')
 const mockNews = require('../mock/news')
 
@@ -110,21 +110,34 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
   return wx.cloud.callFunction({
     name: 'getNewsList',
     data: { category, pageNum, pageSize }
-  }).then(res => res.result.data)
+  }).then(res => {
+    const data = res.result.data
+    return {
+      list: (data.list || []).map(formatNewsItem),
+      total: data.total,
+      hasMore: data.hasMore
+    }
+  })
 }
 
 function getNewsDetailCloud(newsId) {
   return wx.cloud.callFunction({
     name: 'getNewsDetail',
     data: { newsId }
-  }).then(res => res.result.data)
+  }).then(res => formatNewsItem(res.result.data, true))
 }
 
 function searchNewsCloud({ keyword, pageNum, pageSize }) {
   return wx.cloud.callFunction({
     name: 'searchNews',
     data: { keyword, pageNum, pageSize }
-  }).then(res => res.result.data)
+  }).then(res => {
+    const data = res.result.data
+    return {
+      list: (data.list || []).map(formatNewsItem),
+      total: data.total
+    }
+  })
 }
 
 // ============ 格式化 ============
@@ -136,7 +149,7 @@ function formatNewsItem(item, includeContent = false) {
     summary: item.summary,
     content: includeContent ? (item.content || item.summary) : undefined,
     category: item.category,
-    categoryName: item.categoryName,
+    categoryName: item.categoryName || CATEGORY_MAP[item.category] || item.category,
     source: item.source,
     time: formatRelativeTime(item.publishTime || item.time),
     publishTime: item.publishTime || item.time
