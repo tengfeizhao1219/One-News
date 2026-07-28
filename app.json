@@ -6,7 +6,7 @@
   ],
   "window": {
     "navigationStyle": "custom",
-    "backgroundColor": "@bg-page",
+    "backgroundColor": "#F5F3F0",
     "backgroundTextStyle": "dark"
   },
   "darkmode": true,
