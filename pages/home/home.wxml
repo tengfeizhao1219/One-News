@@ -4,9 +4,12 @@
   bindtouchmove="onTouchMove" 
   bindtouchend="onTouchEnd">
 
-  <!-- 固定顶部栏：搜索图标（左侧） -->
+  <!-- 固定顶部栏：刷新（左侧）+ 搜索（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
+      <view class="top-bar-refresh" bindtap="onRefreshNews">
+        <text class="refresh-icon">{{isRefreshing ? '⏳' : '🔄'}}</text>
+      </view>
       <view class="top-bar-search" bindtap="goSearch">
         <text class="search-icon-top">🔍</text>
       </view>

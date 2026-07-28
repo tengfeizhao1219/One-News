@@ -1,9 +1,19 @@
 {
   "triggers": [
     {
-      "name": "dailyNewsRefresh",
+      "name": "morningRefresh",
       "type": "timer",
-      "config": "0 0 8 * * * *"
+      "config": "0 0 6 * * * *"
+    },
+    {
+      "name": "noonRefresh",
+      "type": "timer",
+      "config": "0 0 11 * * * *"
+    },
+    {
+      "name": "eveningRefresh",
+      "type": "timer",
+      "config": "0 0 20 * * * *"
     }
   ]
 }

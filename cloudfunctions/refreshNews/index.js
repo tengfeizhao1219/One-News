@@ -1,67 +1,17 @@
-// 新闻自动刷新云函数
-// 从 GitHub raw URL 拉取 data/news.json，批量写入云数据库 news_cache
+// 新闻自动刷新云函数 v3
+// 调用阿里百炼 DeepSeek 联网搜索 → 质量校验 → 写入云数据库
 //
 // 触发方式：
-//   1. 定时触发器（每天 8:00，cron: 0 0 8 * * * *）
-//   2. 手动调用（用于首次部署验证）
-//
-// GitHub raw URL：
-//   https://raw.githubusercontent.com/tengfeizhao1219/One-News/main/data/news.json
+//   1. 定时触发器（6:00 / 11:00 / 20:00）
+//   2. 小程序手动调用（用户点击刷新按钮）
 
 const cloud = require('wx-server-sdk')
-const https = require('https')
-
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-// ─── 配置 ───────────────────────────────────────────
-
-const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/tengfeizhao1219/One-News/main/data/news.json'
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000  // 缓存有效期 24 小时
-const REQUEST_TIMEOUT = 10000              // GitHub 请求超时 10 秒
-
-// ─── HTTP 请求封装 ──────────────────────────────────
-
-/**
- * 通过 HTTPS GET 获取 JSON 数据
- */
-function fetchJson(url) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: REQUEST_TIMEOUT }, (res) => {
-      // 处理重定向
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        console.log(`[refreshNews] 跟随重定向: ${res.headers.location}`)
-        fetchJson(res.headers.location).then(resolve).catch(reject)
-        return
-      }
-
-      if (res.statusCode !== 200) {
-        reject(new Error(`GitHub 返回状态码 ${res.statusCode}`))
-        return
-      }
-
-      let body = ''
-      res.on('data', chunk => { body += chunk })
-      res.on('end', () => {
-        try {
-          const data = JSON.parse(body)
-          resolve(data)
-        } catch (err) {
-          reject(new Error(`JSON 解析失败: ${err.message}`))
-        }
-      })
-    })
-
-    req.on('error', (err) => {
-      reject(new Error(`网络请求失败: ${err.message}`))
-    })
-
-    req.on('timeout', () => {
-      req.destroy()
-      reject(new Error('请求超时'))
-    })
-  })
-}
+const { searchAllCategories } = require('../common/llmSearch')
+const { validateAndClean } = require('../common/validator')
+const config = require('../common/config')
 
 // ─── 数据库操作 ─────────────────────────────────────
 
@@ -70,13 +20,10 @@ function fetchJson(url) {
  */
 async function clearOldCache(category) {
   try {
-    const now = Date.now()
-    // 删除该分类下所有数据（不论是否过期）
     const res = await db.collection('news_cache')
       .where({ category })
       .remove()
-    console.log(`[refreshNews] 清除 ${category} 旧缓存: ${res.stats.removed || 0} 条`)
-    return res.stats.removed || 0
+    return res.stats?.removed || 0
   } catch (err) {
     console.warn(`[refreshNews] 清除 ${category} 旧缓存失败:`, err.message)
     return 0
@@ -88,7 +35,7 @@ async function clearOldCache(category) {
  */
 async function batchInsert(newsList) {
   const now = Date.now()
-  const expireAt = now + CACHE_TTL_MS
+  const expireAt = now + config.cache.dbCacheTTL
   let inserted = 0
   let failed = 0
 
@@ -109,13 +56,12 @@ async function batchInsert(newsList) {
       })
       inserted++
     } catch (err) {
-      // 忽略重复 ID 错误（errCode -1）
       if (err.errCode === -1) {
-        console.log(`[refreshNews] 跳过重复: ${item.id}`)
-      } else {
-        failed++
-        console.warn(`[refreshNews] 写入失败 [${item.id}]:`, err.message)
+        // 重复 ID，跳过
+        continue
       }
+      failed++
+      console.warn(`[refreshNews] 写入失败 [${item.id}]:`, err.message)
     }
   }
 
@@ -125,48 +71,47 @@ async function batchInsert(newsList) {
 // ─── 主函数 ─────────────────────────────────────────
 
 exports.main = async (event) => {
-  console.log('[refreshNews] ========== 开始刷新新闻缓存 ==========')
-  console.log(`[refreshNews] GitHub URL: ${GITHUB_RAW_URL}`)
+  const startTime = Date.now()
+  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v3 大模型搜索) ==========')
 
-  // 1. 从 GitHub 拉取 news.json
-  let newsData
+  // 1. 调用大模型联网搜索所有分类
+  let searchResult
   try {
-    newsData = await fetchJson(GITHUB_RAW_URL)
+    searchResult = await searchAllCategories()
   } catch (err) {
-    console.error('[refreshNews] GitHub 拉取失败:', err.message)
+    console.error('[refreshNews] 大模型搜索失败:', err.message)
     return {
       code: -1,
-      message: `GitHub 拉取失败: ${err.message}`,
-      errorCode: 'GITHUB_FETCH_FAILED',
+      message: `新闻搜索失败: ${err.message}`,
+      errorCode: 'LLM_SEARCH_FAILED',
     }
   }
 
-  // 2. 校验数据格式
-  const newsList = newsData.news || newsData
-  if (!Array.isArray(newsList) || newsList.length === 0) {
-    console.error('[refreshNews] 数据格式异常或无数据')
-    return {
-      code: -1,
-      message: 'news.json 数据为空或格式异常',
-      errorCode: 'INVALID_DATA',
-    }
+  console.log(`[refreshNews] 搜索完成: ${searchResult.news.length} 条原始结果`)
+  console.log(`[refreshNews] 分类统计:`, JSON.stringify(searchResult.stats))
+
+  // 2. 质量校验 + 去重
+  const { valid, rejected, stats: validationStats } = validateAndClean(searchResult.news)
+
+  console.log(`[refreshNews] 校验结果: ${validationStats.passed} 通过, ${validationStats.rejected} 拒绝, ${validationStats.duplicatesRemoved} 去重`)
+
+  if (rejected.length > 0) {
+    console.warn('[refreshNews] 拒绝详情:', JSON.stringify(rejected.slice(0, 5)))
   }
 
-  console.log(`[refreshNews] 拉取成功: ${newsList.length} 条新闻, 版本: ${newsData.version || 'unknown'}`)
+  // 3. 如果有效新闻太少，记录警告但继续
+  if (valid.length < 5) {
+    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${valid.length} 条，可能影响用户体验`)
+  }
 
-  // 3. 按分类分组
+  // 4. 按分类分组写入
   const categories = {}
-  newsList.forEach(item => {
+  valid.forEach(item => {
     const cat = item.category || 'unknown'
     if (!categories[cat]) categories[cat] = []
     categories[cat].push(item)
   })
 
-  console.log(`[refreshNews] 分类分布:`, Object.fromEntries(
-    Object.entries(categories).map(([k, v]) => [k, v.length])
-  ))
-
-  // 4. 逐分类清除旧缓存 + 写入新数据
   let totalInserted = 0
   let totalFailed = 0
   let totalCleared = 0
@@ -179,28 +124,26 @@ exports.main = async (event) => {
     totalInserted += inserted
     totalFailed += failed
 
-    console.log(`[refreshNews] ${category}: 清除 ${cleared} 条 → 写入 ${inserted} 条 (失败 ${failed})`)
+    console.log(`[refreshNews] ${category}: 清除 ${cleared} → 写入 ${inserted} (失败 ${failed})`)
   }
 
+  const elapsed = Date.now() - startTime
+
   // 5. 返回结果
-  const result = {
+  return {
     code: 0,
-    message: '新闻缓存刷新成功',
+    message: `刷新完成，共 ${totalInserted} 条新闻`,
     data: {
-      version: newsData.version || 'unknown',
-      generatedAt: newsData.generatedAt || '',
-      total: newsList.length,
+      total: valid.length,
       inserted: totalInserted,
       failed: totalFailed,
       cleared: totalCleared,
       categories: Object.fromEntries(
         Object.entries(categories).map(([k, v]) => [k, v.length])
       ),
+      searchStats: searchResult.stats,
+      validation: validationStats,
+      elapsedMs: elapsed,
     },
   }
-
-  console.log('[refreshNews] ========== 刷新完成 ==========')
-  console.log(`[refreshNews] 总计: ${totalInserted} 条写入, ${totalFailed} 条失败, ${totalCleared} 条清除`)
-
-  return result
 }

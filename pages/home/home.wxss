@@ -7,7 +7,7 @@
   position: relative;
 }
 
-/* ============ ¹Ì¶¨¶¥²¿ËÑË÷À¸£¨×ó²à£© ============ */
+/* ============ ¹Ì¶¨¶¥²¿À¸£¨Ë¢ÐÂ×ó + ËÑË÷ÓÒ£© ============ */
 .fixed-top-bar {
   position: absolute;
   top: 0;
@@ -18,10 +18,29 @@
 
 .top-bar-inner {
   display: flex;
-  justify-content: flex-start;
-  padding-left: 40rpx;
+  justify-content: space-between;
+  padding: 0 40rpx;
   height: 64rpx;
   align-items: center;
+}
+
+.top-bar-refresh {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background-color: var(--tag-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+.top-bar-refresh:active {
+  opacity: 0.6;
+}
+
+.refresh-icon {
+  font-size: 28rpx;
 }
 
 .top-bar-search {

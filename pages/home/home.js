@@ -22,6 +22,7 @@ Page({
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
     errorMessage: '',       // 错误提示文案
     skeletonCount: 3,       // 骨架屏卡片数量
+    isRefreshing: false,    // 手动刷新中
   },
 
   // 触摸状态
@@ -97,6 +98,41 @@ Page({
   // 重试加载
   onRetry() {
     this.loadNews()
+  },
+
+  // 手动刷新新闻（调用 refreshNews 云函数 → 重新加载）
+  async onRefreshNews() {
+    if (this.data.isRefreshing) return
+
+    this.setData({ isRefreshing: true })
+
+    try {
+      // 调用 refreshNews 云函数触发大模型搜索
+      const res = await wx.cloud.callFunction({
+        name: 'refreshNews',
+        data: {},
+      })
+
+      if (res.result.code === 0) {
+        wx.showToast({
+          title: `已更新 ${res.result.data.inserted || 0} 条新闻`,
+          icon: 'success',
+          duration: 2000,
+        })
+      } else {
+        wx.showToast({
+          title: res.result.message || '刷新失败',
+          icon: 'none',
+        })
+      }
+    } catch (err) {
+      console.error('手动刷新失败:', err)
+      wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
+    }
+
+    // 无论刷新成功与否，重新加载新闻列表
+    await this.loadNews()
+    this.setData({ isRefreshing: false })
   },
 
   // ============ 卡片渲染 ============
