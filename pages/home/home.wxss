@@ -7,47 +7,6 @@
   position: relative;
 }
 
-/* ============ 顶部操作栏 ============ */
-.top-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 40rpx;
-  pointer-events: none;
-}
-
-.top-bar-title {
-  font-size: 30rpx;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: 2rpx;
-  pointer-events: none;
-}
-
-.top-bar-search {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-}
-
-.top-bar-search:active {
-  opacity: 0.6;
-}
-
-.search-icon-text {
-  font-size: 30rpx;
-}
-
 /* ============ 卡片舞台 ============ */
 .card-stage {
   position: absolute;
@@ -102,6 +61,38 @@
   flex-direction: column;
   justify-content: center;
   overflow-y: auto;
+}
+
+/* 卡片顶部搜索按钮 */
+.card-header {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 32rpx;
+  flex-shrink: 0;
+}
+
+.card-search-btn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 12rpx 24rpx;
+  border-radius: 32rpx;
+  background-color: var(--tag-bg);
+  pointer-events: auto;
+}
+
+.card-search-btn:active {
+  opacity: 0.6;
+}
+
+.search-icon-small {
+  font-size: 24rpx;
+}
+
+.search-text {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .card-title {
