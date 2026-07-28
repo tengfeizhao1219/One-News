@@ -1,0 +1,17 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/detail/detail",
+    "pages/search/search"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "@bg-page",
+    "backgroundTextStyle": "dark"
+  },
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

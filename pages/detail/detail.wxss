@@ -1,0 +1,81 @@
+/* 详情页样式 */
+
+.page {
+  height: 100vh;
+  background-color: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-back {
+  padding: 16rpx 48rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  letter-spacing: 1rpx;
+}
+
+.content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.detail-body {
+  padding: 16rpx 64rpx 80rpx;
+}
+
+.detail-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin-bottom: 28rpx;
+  letter-spacing: -0.5rpx;
+}
+
+.detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  margin-bottom: 44rpx;
+  letter-spacing: 0.5rpx;
+}
+
+.category-tag {
+  display: inline-block;
+  padding: 4rpx 18rpx;
+  border-radius: 18rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  background-color: var(--tag-bg);
+  color: var(--tag-text);
+}
+
+.detail-divider {
+  height: 1rpx;
+  background-color: var(--divider);
+  margin-bottom: 48rpx;
+}
+
+.detail-text {
+  font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+}
+
+.text-p {
+  font-size: 34rpx;
+  color: var(--text-body);
+  line-height: 2.2;
+  margin-bottom: 40rpx;
+  letter-spacing: 1rpx;
+}
+
+.back-bottom {
+  text-align: center;
+  padding: 80rpx 0 60rpx;
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  letter-spacing: 1rpx;
+}

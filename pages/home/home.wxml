@@ -1,0 +1,100 @@
+<!-- 首页 - 卡片流主视图 -->
+<view class="page" 
+  bindtouchstart="onTouchStart" 
+  bindtouchmove="onTouchMove" 
+  bindtouchend="onTouchEnd">
+
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 卡片容器 -->
+  <view class="card-stage">
+    <block wx:for="{{cards}}" wx:key="id">
+      <view 
+        class="card {{item.state}}"
+        style="transform: translateY({{item.translateY}}px);"
+        data-index="{{index}}"
+        bindtap="onCardTap">
+
+        <view class="card-body">
+          <!-- 标题 -->
+          <view class="card-title">{{item.title}}</view>
+          
+          <!-- 摘要 -->
+          <view class="card-summary">
+            <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
+              <view class="summary-p">{{item}}</view>
+            </block>
+          </view>
+          
+          <!-- 元信息 -->
+          <view class="card-meta">
+            <view class="category-tag">{{item.categoryName}}</view>
+            <text>{{item.source}}</text>
+            <text>·</text>
+            <text>{{item.time}}</text>
+          </view>
+        </view>
+
+        <!-- 底部提示 -->
+        <view class="swipe-hint">↑ 上滑阅读下一条</view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 导航指示点 -->
+  <view class="nav-dots">
+    <view 
+      wx:for="{{newsList}}" 
+      wx:key="id" 
+      class="nav-dot {{index === currentIndex ? 'active' : ''}}">
+    </view>
+  </view>
+
+  <!-- 侧边栏遮罩 -->
+  <view 
+    class="panel-overlay {{showPanel ? 'show' : ''}}" 
+    bindtap="closePanel"
+    catchtouchmove="preventMove">
+  </view>
+
+  <!-- 侧边栏面板 -->
+  <view class="slide-panel {{showPanel ? 'show' : ''}}">
+    <view class="panel-header">
+      <text class="panel-title">今日新闻</text>
+      <view class="panel-close" bindtap="closePanel">✕</view>
+    </view>
+
+    <!-- 分类标签 -->
+    <scroll-view class="panel-tabs" scroll-x enable-flex>
+      <view 
+        wx:for="{{categories}}" 
+        wx:key="id"
+        class="panel-tab {{currentCategory === item.id ? 'active' : ''}}"
+        data-cat="{{item.id}}"
+        bindtap="onCategoryChange">
+        {{item.name}}
+      </view>
+    </scroll-view>
+
+    <!-- 新闻列表 -->
+    <scroll-view class="panel-list" scroll-y>
+      <view 
+        wx:for="{{filteredNewsList}}" 
+        wx:key="id"
+        class="panel-item"
+        data-index="{{item._originalIndex}}"
+        bindtap="onPanelItemTap">
+        <view class="panel-item-title">{{item.title}}</view>
+      </view>
+      <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
+        暂无新闻
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 首次引导 -->
+  <view class="guide-overlay" wx:if="{{showGuide}}">
+    <text>↑ 上滑阅读下一条\n← 左滑查看今日列表\n· 点击卡片阅读全文</text>
+  </view>
+</view>

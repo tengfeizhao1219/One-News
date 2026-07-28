@@ -1,0 +1,50 @@
+<!-- 搜索页 -->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <text class="search-icon">🔍</text>
+      <input 
+        class="search-input" 
+        placeholder="搜索新闻..."
+        placeholder-class="search-placeholder"
+        value="{{keyword}}"
+        focus="{{true}}"
+        bindinput="onInput"
+        bindconfirm="onSearch"
+        confirm-type="search">
+      </input>
+      <view class="search-clear" wx:if="{{keyword}}" bindtap="onClear">✕</view>
+    </view>
+    <view class="search-cancel" bindtap="goBack">取消</view>
+  </view>
+
+  <!-- 搜索结果 -->
+  <scroll-view class="result-list" scroll-y wx:if="{{keyword}}">
+    <view 
+      wx:for="{{results}}" 
+      wx:key="id"
+      class="result-item"
+      data-id="{{item.id}}"
+      bindtap="onResultTap">
+      <view class="result-title">{{item.title}}</view>
+      <view class="result-meta">
+        <view class="category-tag">{{item.categoryName}}</view>
+        <text>{{item.source}}</text>
+        <text>·</text>
+        <text>{{item.time}}</text>
+      </view>
+    </view>
+    <view wx:if="{{results.length === 0 && searched}}" class="result-empty">
+      未找到相关新闻
+    </view>
+  </scroll-view>
+
+  <!-- 初始状态 -->
+  <view class="init-state" wx:if="{{!keyword}}">
+    <text class="init-text">输入关键词开始搜索</text>
+  </view>
+</view>

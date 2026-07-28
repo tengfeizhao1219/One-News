@@ -1,0 +1,39 @@
+<!-- 详情页 - 极简阅读 -->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 返回按钮 -->
+  <view class="nav-back" bindtap="goBack">
+    <text>← 返回</text>
+  </view>
+
+  <!-- 内容 -->
+  <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
+    <view class="detail-body">
+      <!-- 标题 -->
+      <view class="detail-title">{{news.title}}</view>
+
+      <!-- 元信息 -->
+      <view class="detail-meta">
+        <view class="category-tag">{{news.categoryName}}</view>
+        <text>{{news.source}}</text>
+        <text>·</text>
+        <text>{{news.time}}</text>
+      </view>
+
+      <!-- 分隔线 -->
+      <view class="detail-divider"></view>
+
+      <!-- 正文 -->
+      <view class="detail-text">
+        <block wx:for="{{paragraphs}}" wx:key="*this">
+          <view class="text-p">{{item}}</view>
+        </block>
+      </view>
+
+      <!-- 底部返回 -->
+      <view class="back-bottom" bindtap="goBack">← 返回</view>
+    </view>
+  </scroll-view>
+</view>
