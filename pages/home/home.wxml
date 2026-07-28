@@ -13,7 +13,7 @@
       <view 
         class="card {{item.state}}"
         style="transform: translateY({{item.translateY}}px);"
-        data-index="{{index}}"
+        data-id="{{item.id}}"
         bindtap="onCardTap">
 
         <view class="card-body">

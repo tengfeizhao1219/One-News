@@ -6,7 +6,9 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event) => {
-  const { keyword, pageNum = 1, pageSize = 10 } = event
+  const { keyword } = event
+  const pageNum = Math.max(1, parseInt(event.pageNum) || 1)
+  const pageSize = Math.min(100, Math.max(1, parseInt(event.pageSize) || 10))
 
   if (!keyword || !keyword.trim()) {
     return { code: -1, message: '缺少keyword参数' }
@@ -14,9 +16,11 @@ exports.main = async (event) => {
 
   try {
     const kw = keyword.trim()
+    // 转义正则特殊字符，防止意外匹配
+    const escapedKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     // 使用正则进行模糊匹配
     const regex = db.RegExp({
-      regexp: kw,
+      regexp: escapedKw,
       options: 'i'
     })
 

@@ -20,7 +20,6 @@
   opacity: 0;
   pointer-events: none;
 }
-}
 
 .card {
   position: absolute;
@@ -32,7 +31,6 @@
   display: flex;
   flex-direction: column;
   transition: transform 0.38s cubic-bezier(0.22, 0.61, 0.36, 1);
-  will-change: transform;
   opacity: 0;
   pointer-events: none;
 }
@@ -41,6 +39,7 @@
   opacity: 1;
   pointer-events: auto;
   z-index: 2;
+  will-change: transform;
 }
 
 .card.above {
@@ -95,16 +94,6 @@
   letter-spacing: 0.5rpx;
 }
 
-.category-tag {
-  display: inline-block;
-  padding: 4rpx 18rpx;
-  border-radius: 18rpx;
-  font-size: 22rpx;
-  font-weight: 500;
-  background-color: var(--tag-bg);
-  color: var(--tag-text);
-}
-
 .swipe-hint {
   text-align: center;
   padding: 32rpx 0 80rpx;
@@ -149,7 +138,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: var(--overlay);
   z-index: 29;
   opacity: 0;
   pointer-events: none;
@@ -174,7 +163,7 @@
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
-  box-shadow: -8rpx 0 48rpx rgba(0, 0, 0, 0.06);
+  box-shadow: -8rpx 0 48rpx var(--overlay);
 }
 
 .slide-panel.show {

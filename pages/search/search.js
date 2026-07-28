@@ -25,6 +25,7 @@ Page({
 
   onLoad() {
     // 在 onLoad 中绑定防抖函数，确保 this 正确
+    this._searchTimer = null
     this._doSearch = debounce((keyword) => {
       searchNews({ keyword }).then(res => {
         this.setData({
@@ -37,19 +38,28 @@ Page({
     }, 300)
   },
 
+  onUnload() {
+    // 清理防抖定时器，防止页面销毁后执行 setData
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = null
+    }
+  },
+
   onSearch(e) {
     const keyword = e.detail.value || this.data.keyword
     if (!keyword.trim()) return
-    searchNews({ keyword: keyword.trim() }).then(res => {
-      this.setData({
-        results: res.list || [],
-        searched: true
-      })
-    })
+    // 使用与 onInput 相同的防抖搜索
+    this._doSearch(keyword.trim())
   },
 
   onClear() {
     this.setData({ keyword: '', results: [], searched: false })
+    // 清除防抖定时器
+    if (this._searchTimer) {
+      clearTimeout(this._searchTimer)
+      this._searchTimer = null
+    }
   },
 
   onResultTap(e) {

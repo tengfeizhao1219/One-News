@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList } = require('../../utils/request')
 
 const app = getApp()
@@ -30,6 +30,8 @@ Page({
   },
 
   onShow() {
+    // 刷新屏幕尺寸（处理设备旋转/分屏）
+    refreshPageSize()
     // 从详情页/搜索页返回时恢复卡片渲染状态
     if (this.data.newsList.length > 0) {
       this.renderCards(this.data.newsList)
@@ -162,6 +164,7 @@ Page({
   swipeNext() {
     const { currentIndex, newsList } = this.data
     if (currentIndex >= newsList.length - 1) {
+      this.renderCards(newsList, currentIndex)
       this.resetCardOffset()
       this.isAnimating = false
       return
@@ -176,6 +179,7 @@ Page({
   swipePrev() {
     const { currentIndex, newsList } = this.data
     if (currentIndex <= 0) {
+      this.renderCards(newsList, currentIndex)
       this.resetCardOffset()
       this.isAnimating = false
       return
@@ -243,6 +247,10 @@ Page({
         filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i }))
       })
       this.renderCards(list)
+    }).catch(() => {
+      wx.showToast({ title: '加载失败', icon: 'none' })
+      // 恢复侧边栏状态
+      this.setData({ showPanel: true })
     })
   },
 

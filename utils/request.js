@@ -111,6 +111,9 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
     name: 'getNewsList',
     data: { category, pageNum, pageSize }
   }).then(res => {
+    if (res.result.code !== 0) {
+      throw new Error(res.result.message || '获取新闻列表失败')
+    }
     const data = res.result.data
     return {
       list: (data.list || []).map(formatNewsItem),
@@ -124,7 +127,12 @@ function getNewsDetailCloud(newsId) {
   return wx.cloud.callFunction({
     name: 'getNewsDetail',
     data: { newsId }
-  }).then(res => formatNewsItem(res.result.data, true))
+  }).then(res => {
+    if (res.result.code !== 0) {
+      throw new Error(res.result.message || '获取新闻详情失败')
+    }
+    return formatNewsItem(res.result.data, true)
+  })
 }
 
 function searchNewsCloud({ keyword, pageNum, pageSize }) {
@@ -132,6 +140,9 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
     name: 'searchNews',
     data: { keyword, pageNum, pageSize }
   }).then(res => {
+    if (res.result.code !== 0) {
+      throw new Error(res.result.message || '搜索新闻失败')
+    }
     const data = res.result.data
     return {
       list: (data.list || []).map(formatNewsItem),
@@ -143,8 +154,10 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
 // ============ 格式化 ============
 
 function formatNewsItem(item, includeContent = false) {
+  const itemId = item._id || item.id
   return {
-    id: item.id || item._id,
+    id: itemId,
+    _id: itemId,
     title: item.title,
     summary: item.summary,
     content: includeContent ? (item.content || item.summary) : undefined,

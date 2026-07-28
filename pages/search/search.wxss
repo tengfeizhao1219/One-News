@@ -95,16 +95,6 @@
   color: var(--text-secondary);
 }
 
-.category-tag {
-  display: inline-block;
-  padding: 2rpx 14rpx;
-  border-radius: 14rpx;
-  font-size: 20rpx;
-  font-weight: 500;
-  background-color: var(--tag-bg);
-  color: var(--tag-text);
-}
-
 .result-empty {
   text-align: center;
   padding: 120rpx 0;

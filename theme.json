@@ -7,7 +7,8 @@
     "--text-body": "#3A3A3C",
     "--divider": "#E8E6E1",
     "--tag-bg": "#EEECE8",
-    "--tag-text": "#7A7A7A"
+    "--tag-text": "#7A7A7A",
+    "--overlay": "rgba(0, 0, 0, 0.25)"
   },
   "dark": {
     "--bg-page": "#1A1A1C",
@@ -17,6 +18,7 @@
     "--text-body": "#C7C7CC",
     "--divider": "#38383A",
     "--tag-bg": "#2C2C2E",
-    "--tag-text": "#8E8E93"
+    "--tag-text": "#8E8E93",
+    "--overlay": "rgba(255, 255, 255, 0.08)"
   }
 }

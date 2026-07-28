@@ -44,16 +44,6 @@
   letter-spacing: 0.5rpx;
 }
 
-.category-tag {
-  display: inline-block;
-  padding: 4rpx 18rpx;
-  border-radius: 18rpx;
-  font-size: 22rpx;
-  font-weight: 500;
-  background-color: var(--tag-bg);
-  color: var(--tag-text);
-}
-
 .detail-divider {
   height: 1rpx;
   background-color: var(--divider);

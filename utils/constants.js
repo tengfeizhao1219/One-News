@@ -11,7 +11,7 @@ const CATEGORIES = [
 const CATEGORY_MAP = {}
 CATEGORIES.forEach(c => { CATEGORY_MAP[c.id] = c.name })
 
-// 页面尺寸常量（运行时计算）
+// 页面尺寸常量（运行时计算，默认值在无法获取系统信息时使用）
 let PAGE_WIDTH = 375
 let PAGE_HEIGHT = 667
 let STATUS_BAR_HEIGHT = 20
@@ -22,6 +22,18 @@ try {
   PAGE_HEIGHT = info.windowHeight
   STATUS_BAR_HEIGHT = info.statusBarHeight
 } catch (e) {}
+
+/**
+ * 刷新页面尺寸（在 onShow/onResize 中调用）
+ */
+function refreshPageSize() {
+  try {
+    const info = wx.getSystemInfoSync()
+    PAGE_WIDTH = info.windowWidth
+    PAGE_HEIGHT = info.windowHeight
+    STATUS_BAR_HEIGHT = info.statusBarHeight
+  } catch (e) {}
+}
 
 // 手势阈值
 const SWIPE_THRESHOLD = 50       // 上下滑动切换阈值
@@ -38,6 +50,7 @@ module.exports = {
   PAGE_WIDTH,
   PAGE_HEIGHT,
   STATUS_BAR_HEIGHT,
+  refreshPageSize,
   SWIPE_THRESHOLD,
   PANEL_SWIPE_THRESHOLD,
   SWIPE_ANIMATION_MS,

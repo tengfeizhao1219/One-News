@@ -7,3 +7,19 @@ page {
   height: 100%;
   overflow: hidden;
 }
+
+/* 状态栏占位 */
+.status-bar {
+  flex-shrink: 0;
+}
+
+/* 全局组件样式 */
+.category-tag {
+  display: inline-block;
+  padding: 4rpx 18rpx;
+  border-radius: 18rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  background-color: var(--tag-bg);
+  color: var(--tag-text);
+}

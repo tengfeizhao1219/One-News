@@ -6,7 +6,9 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event) => {
-  const { category = 'all', pageNum = 1, pageSize = 10 } = event
+  const category = event.category || 'all'
+  const pageNum = Math.max(1, parseInt(event.pageNum) || 1)
+  const pageSize = Math.min(100, Math.max(1, parseInt(event.pageSize) || 10))
 
   try {
     let query = db.collection('news')
