@@ -100,14 +100,29 @@ Page({
     this.loadNews()
   },
 
-  // 手动刷新新闻（调用 refreshNews 云函数 → 重新加载）
+  // 手动刷新新闻
+  // Mock 模式：直接重新加载数据
+  // 云函数模式：调用 refreshNews 触发大模型搜索 → 重新加载
   async onRefreshNews() {
     if (this.data.isRefreshing) return
 
     this.setData({ isRefreshing: true })
 
+    const { USE_MOCK } = require('../../utils/constants')
+
+    if (USE_MOCK) {
+      // Mock 模式：直接重新加载（模拟刷新效果）
+      wx.showToast({ title: '刷新中...', icon: 'loading', duration: 800 })
+      setTimeout(async () => {
+        await this.loadNews()
+        this.setData({ isRefreshing: false })
+        wx.showToast({ title: '已刷新', icon: 'success', duration: 1500 })
+      }, 500)
+      return
+    }
+
+    // 云函数模式：调用 refreshNews 触发大模型搜索
     try {
-      // 调用 refreshNews 云函数触发大模型搜索
       const res = await wx.cloud.callFunction({
         name: 'refreshNews',
         data: {},
