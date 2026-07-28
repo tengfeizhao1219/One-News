@@ -13,8 +13,36 @@
     </view>
   </view>
 
-  <!-- 卡片容器 -->
-  <view class="card-stage {{showPanel ? 'hidden' : ''}}">
+  <!-- ========== 骨架屏（加载中） ========== -->
+  <view class="skeleton-stage" wx:if="{{pageState === 'loading'}}">
+    <view class="skeleton-card" wx:for="{{skeletonCount}}" wx:key="*this">
+      <view class="sk-title"></view>
+      <view class="sk-line sk-line-1"></view>
+      <view class="sk-line sk-line-2"></view>
+      <view class="sk-line sk-line-3 sk-short"></view>
+      <view class="sk-meta">
+        <view class="sk-tag"></view>
+        <view class="sk-source"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ========== 错误状态 ========== -->
+  <view class="state-container" wx:if="{{pageState === 'error'}}">
+    <view class="state-icon">📡</view>
+    <view class="state-message">{{errorMessage}}</view>
+    <view class="state-retry" bindtap="onRetry">点击重试</view>
+  </view>
+
+  <!-- ========== 空数据状态 ========== -->
+  <view class="state-container" wx:if="{{pageState === 'empty'}}">
+    <view class="state-icon">📭</view>
+    <view class="state-message">{{errorMessage}}</view>
+    <view class="state-retry" bindtap="onRetry">下拉刷新试试</view>
+  </view>
+
+  <!-- ========== 正常卡片流 ========== -->
+  <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
         class="card {{item.state}} {{item.transitionClass}}"
@@ -49,7 +77,7 @@
   </view>
 
   <!-- 导航指示点 -->
-  <view class="nav-dots">
+  <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
     <view 
       wx:for="{{newsList}}" 
       wx:key="id" 

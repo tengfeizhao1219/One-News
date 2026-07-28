@@ -43,7 +43,17 @@ const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
 
 // 请求配置
 const PAGE_SIZE = 10
-const USE_MOCK = false            // 生产模式：使用云函数
+// TEST_MODE 环境变量允许测试时强制启用 Mock 模式
+const USE_MOCK = process.env.TEST_MODE === 'true' ? true : false
+
+// AI 新闻缓存配置
+const AI_CACHE = {
+  version: '2026-07-28-v1',
+  generatedAt: '2026-07-28T11:46:00+08:00',
+  // 建议刷新周期：每天手动触发一次 WorkBuddy 搜索更新
+  // 运行: 告诉 WorkBuddy "搜索最新新闻更新 AI 缓存"
+  refreshIntervalHours: 24,
+}
 
 module.exports = {
   CATEGORIES,
@@ -57,5 +67,6 @@ module.exports = {
   SWIPE_ANIMATION_MS,
   BOUNCE_ANIMATION_MS,
   PAGE_SIZE,
-  USE_MOCK
+  USE_MOCK,
+  AI_CACHE
 }

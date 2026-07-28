@@ -1,16 +1,32 @@
-// è¯·æ±‚å±‚å°è£… - æ”¯æŒ Mock / äº‘å‡½æ•°åŒæ¨¡å¼
+// ÇëÇó²ã·â×° ¡ª Ö§³Ö Mock£¨AI »º´æ£©/ ÔÆº¯ÊıË«Ä£Ê½
+//
+// Êı¾İÁ÷¼Ü¹¹£¨v2.0£©£º
+//   Mock Ä£Ê½ ¡ú AI ĞÂÎÅ»º´æ (mock/ai-news-cache.js) + Ä£ÄâÆ÷
+//   Éú²úÄ£Ê½ ¡ú ÔÆº¯Êı getNewsList / searchNews
+//              ©¸©¤ AI »º´æ (aiNewsService) ¡ú ÔÆÊı¾İ¿â»º´æ ¡ú Íâ²¿ API ½µ¼¶
+//
+//   AI »º´æÌØµã£ºÁãÑÓ³Ù¡¢Áã·ÑÓÃ¡¢ÁãÍâ²¿ÒÀÀµ
+//   ÓÉ WorkBuddy Í¨¹ı WebSearch + WebFetch ÊµÊ±ËÑË÷Éú³É
 
-const { USE_MOCK, PAGE_SIZE, CATEGORY_MAP } = require('./constants')
+const { USE_MOCK, PAGE_SIZE, CATEGORY_MAP, AI_CACHE } = require('./constants')
 const { formatRelativeTime } = require('./util')
-const mockNews = require('../mock/news')
+const { simulateGetNewsList, simulateSearchNews } = require('../mock/simulator')
+
+// AI ĞÂÎÅ»º´æ£¨Mock Ä£Ê½Ö±½ÓÊ¹ÓÃ£¬Éú²úÄ£Ê½×ßÔÆº¯Êı£©
+let aiNewsCache = []
+try {
+  aiNewsCache = require('../mock/ai-news-cache')
+} catch (_) {
+  aiNewsCache = []
+}
 
 /**
- * è·å–æ–°é—»åˆ—è¡¨
+ * »ñÈ¡ĞÂÎÅÁĞ±í
  * @param {Object} params
- * @param {string} params.category åˆ†ç±»IDï¼Œé»˜è®¤'all'
- * @param {number} params.pageNum   é¡µç ï¼Œé»˜è®¤1
- * @param {number} params.pageSize  æ¯é¡µæ¡æ•°ï¼Œé»˜è®¤10
- * @returns {Promise<{list: Array, total: number, hasMore: boolean}>}
+ * @param {string} params.category ·ÖÀàID£¬Ä¬ÈÏ'all'
+ * @param {number} params.pageNum   Ò³Âë£¬Ä¬ÈÏ1
+ * @param {number} params.pageSize  Ã¿Ò³ÌõÊı£¬Ä¬ÈÏ10
+ * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
 function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
   if (USE_MOCK) {
@@ -20,7 +36,7 @@ function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {
 }
 
 /**
- * è·å–æ–°é—»è¯¦æƒ…
+ * »ñÈ¡ĞÂÎÅÏêÇé
  * @param {string} newsId
  * @returns {Promise<Object>}
  */
@@ -32,7 +48,7 @@ function getNewsDetail(newsId) {
 }
 
 /**
- * æœç´¢æ–°é—»
+ * ËÑË÷ĞÂÎÅ
  * @param {Object} params
  * @param {string} params.keyword
  * @param {number} params.pageNum
@@ -46,40 +62,33 @@ function searchNews({ keyword, pageNum = 1, pageSize = PAGE_SIZE } = {}) {
   return searchNewsCloud({ keyword, pageNum, pageSize })
 }
 
-// ============ Mock å®ç° ============
+// ============ Mock ÊµÏÖ£¨AI »º´æ + Ä£ÄâÆ÷£©============
 
 function getNewsListMock({ category, pageNum, pageSize }) {
-  return new Promise((resolve) => {
-    let list = [...mockNews]
-    if (category && category !== 'all') {
-      list = list.filter(item => item.category === category)
-    }
-    const total = list.length
-    const start = (pageNum - 1) * pageSize
-    const pagedList = list.slice(start, start + pageSize)
-    const hasMore = start + pageSize < total
+  // Ê¹ÓÃ AI ĞÂÎÅ»º´æ×÷ÎªÊı¾İÔ´
+  const dataSource = aiNewsCache.length > 0 ? aiNewsCache : []
 
-    // æ¨¡æ‹Ÿç½‘ç»œå»¶è¿Ÿ
-    setTimeout(() => {
-      resolve({
-        list: pagedList.map(formatNewsItem),
-        total,
-        hasMore
-      })
-    }, 200)
-  })
+  return simulateGetNewsList(dataSource, category, pageNum, pageSize).then(res => ({
+    list: res.list.map(formatNewsItem),
+    total: res.total,
+    hasMore: res.hasMore,
+    meta: {
+      source: 'ai_cache_mock',
+      cacheVersion: AI_CACHE.version,
+      cacheGeneratedAt: AI_CACHE.generatedAt,
+    }
+  }))
 }
 
 function getNewsDetailMock(newsId) {
   return new Promise((resolve, reject) => {
-    // å…¼å®¹å­—ç¬¦ä¸²IDå’ŒObjectIdï¼ˆäº‘æ•°æ®åº“å¯èƒ½è¿”å›ä¸åŒæ ¼å¼ï¼‰
-    const item = mockNews.find(n => {
+    const item = aiNewsCache.find(n => {
       const nid = String(n.id || n._id || '')
       const sid = String(newsId || '')
       return nid === sid
     })
     if (!item) {
-      reject(new Error('æ–°é—»ä¸å­˜åœ¨'))
+      reject(new Error('ĞÂÎÅ²»´æÔÚ'))
       return
     }
     setTimeout(() => {
@@ -89,22 +98,13 @@ function getNewsDetailMock(newsId) {
 }
 
 function searchNewsMock({ keyword, pageNum, pageSize }) {
-  return new Promise((resolve) => {
-    const kw = keyword.toLowerCase()
-    let list = mockNews.filter(item =>
-      item.title.toLowerCase().includes(kw) ||
-      item.summary.toLowerCase().includes(kw)
-    )
-    const total = list.length
-    const start = (pageNum - 1) * pageSize
-    list = list.slice(start, start + pageSize)
-    setTimeout(() => {
-      resolve({ list: list.map(formatNewsItem), total })
-    }, 200)
-  })
+  return simulateSearchNews(aiNewsCache, keyword, pageNum, pageSize).then(res => ({
+    list: res.list.map(formatNewsItem),
+    total: res.total
+  }))
 }
 
-// ============ äº‘å‡½æ•°å®ç° ============
+// ============ ÔÆº¯ÊıÊµÏÖ ============
 
 function getNewsListCloud({ category, pageNum, pageSize }) {
   return wx.cloud.callFunction({
@@ -112,13 +112,16 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
     data: { category, pageNum, pageSize }
   }).then(res => {
     if (res.result.code !== 0) {
-      throw new Error(res.result.message || 'è·å–æ–°é—»åˆ—è¡¨å¤±è´¥')
+      const err = new Error(res.result.message || '»ñÈ¡ĞÂÎÅÁĞ±íÊ§°Ü')
+      err.errorCode = res.result.errorCode
+      throw err
     }
     const data = res.result.data
     return {
       list: (data.list || []).map(formatNewsItem),
       total: data.total,
-      hasMore: data.hasMore
+      hasMore: data.hasMore,
+      meta: res.result.meta,  // Í¸´« source ĞÅÏ¢
     }
   })
 }
@@ -129,7 +132,7 @@ function getNewsDetailCloud(newsId) {
     data: { newsId }
   }).then(res => {
     if (res.result.code !== 0) {
-      throw new Error(res.result.message || 'è·å–æ–°é—»è¯¦æƒ…å¤±è´¥')
+      throw new Error(res.result.message || '»ñÈ¡ĞÂÎÅÏêÇéÊ§°Ü')
     }
     return formatNewsItem(res.result.data, true)
   })
@@ -141,7 +144,9 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
     data: { keyword, pageNum, pageSize }
   }).then(res => {
     if (res.result.code !== 0) {
-      throw new Error(res.result.message || 'æœç´¢æ–°é—»å¤±è´¥')
+      const err = new Error(res.result.message || 'ËÑË÷ĞÂÎÅÊ§°Ü')
+      err.errorCode = res.result.errorCode
+      throw err
     }
     const data = res.result.data
     return {
@@ -151,7 +156,25 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
   })
 }
 
-// ============ æ ¼å¼åŒ– ============
+// ============ ´íÎóÂëÓ³Éä ============
+
+/**
+ * ½«ÔÆº¯Êı·µ»ØµÄ´íÎóÂëÓ³ÉäÎªÓÃ»§ÓÑºÃµÄÌáÊ¾ÎÄ°¸
+ */
+function handleApiError(errorCode, message) {
+  const errorMessages = {
+    'API_RATE_LIMIT':   '½ñÈÕÔÄ¶Á´ÎÊıÒÑÓÃÍê£¬Ã÷ÌìÔÙÀ´°É',
+    'API_UNAVAILABLE':  'ĞÂÎÅ·şÎñÔİÊ±²»¿ÉÓÃ£¬ÇëÉÔºóÖØÊÔ',
+    'ALL_DOWN':         'ĞÂÎÅ·şÎñÔİÊ±²»¿ÉÓÃ£¬ÇëÉÔºóÖØÊÔ',
+    'NO_DATA':          'ÔİÎŞĞÂÎÅ£¬ÏÂÀ­Ë¢ĞÂÊÔÊÔ',
+    'API_KEY_INVALID':  '·şÎñÅäÖÃ´íÎó£¬ÇëÁªÏµ¹ÜÀíÔ±',
+    'API_TIMEOUT':      'ÍøÂç¿ªĞ¡²îÁË£¬ÇëÖØÊÔ',
+    'SIMULATED_ERROR':  message || 'Ä£Äâ´íÎó',
+  }
+  return errorMessages[errorCode] || message || 'ÍøÂç¿ªĞ¡²îÁË£¬ÇëÖØÊÔ'
+}
+
+// ============ ¸ñÊ½»¯ ============
 
 function formatNewsItem(item, includeContent = false) {
   const itemId = item._id || item.id
@@ -172,5 +195,6 @@ function formatNewsItem(item, includeContent = false) {
 module.exports = {
   getNewsList,
   getNewsDetail,
-  searchNews
+  searchNews,
+  handleApiError
 }

@@ -1,7 +1,7 @@
 // 首页 - 卡片流主视图逻辑
 
 const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, refreshPageSize } = require('../../utils/constants')
-const { getNewsList } = require('../../utils/request')
+const { getNewsList, handleApiError } = require('../../utils/request')
 
 const app = getApp()
 
@@ -17,7 +17,11 @@ Page({
     currentCategory: 'all', // 首页当前分类
     panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
-    filteredNewsList: []    // 侧边栏过滤后的列表
+    filteredNewsList: [],   // 侧边栏过滤后的列表
+    // 页面状态
+    pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
+    errorMessage: '',       // 错误提示文案
+    skeletonCount: 3,       // 骨架屏卡片数量
   },
 
   // 触摸状态
@@ -46,20 +50,25 @@ Page({
 
   async loadNews() {
     try {
-      wx.showLoading({ title: '加载中...' })
+      this.setData({ pageState: 'loading', errorMessage: '' })
+
       const res = await getNewsList({ category: this.data.currentCategory })
       const list = res.list || []
 
-      this.setData({ newsList: list })
+      if (list.length === 0) {
+        this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试' })
+        return
+      }
+
+      this.setData({ newsList: list, pageState: 'ready' })
       this.renderCards(list)
-      wx.hideLoading()
 
       setTimeout(() => {
         this.setData({ showGuide: false })
       }, 4000)
     } catch (err) {
-      wx.hideLoading()
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      const msg = handleApiError(err.errorCode, err.message)
+      this.setData({ pageState: 'error', errorMessage: msg })
     }
   },
 
@@ -74,8 +83,20 @@ Page({
         panelCategory: cat
       })
     } catch (err) {
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
     }
+  },
+
+  // 下拉刷新
+  onPullDownRefresh() {
+    this.loadNews().then(() => {
+      wx.stopPullDownRefresh()
+    })
+  },
+
+  // 重试加载
+  onRetry() {
+    this.loadNews()
   },
 
   // ============ 卡片渲染 ============
