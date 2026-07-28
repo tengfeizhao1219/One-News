@@ -38,16 +38,14 @@
 }
 
 .card.above {
-  opacity: 1;
+  opacity: 0;
   pointer-events: none;
-  transform: translateY(-100%);
   z-index: 1;
 }
 
 .card.below {
-  opacity: 1;
+  opacity: 0;
   pointer-events: none;
-  transform: translateY(100%);
   z-index: 1;
 }
 

@@ -101,7 +101,7 @@ Page({
       ...item,
       summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-      translateY: 0
+      translateY: position === 0 ? 0 : (position < 0 ? -window.innerHeight : window.innerHeight)
     }
   },
 
@@ -187,23 +187,22 @@ Page({
   },
 
   updateCardOffset() {
-    const { currentIndex, newsList } = this.data
     const cards = this.data.cards.map(card => {
-      let translateY = 0
       if (card.state === 'active') {
-        translateY = this.cardOffset
-      } else if (card.state === 'above') {
-        translateY = -100 + (this.cardOffset / 10) // 跟随移动但保持屏幕外
-      } else if (card.state === 'below') {
-        translateY = 100 + (this.cardOffset / 10)
+        return { ...card, translateY: this.cardOffset }
       }
-      return { ...card, translateY }
+      return card
     })
     this.setData({ cards })
   },
 
   resetCardOffset() {
-    const cards = this.data.cards.map(card => ({ ...card, translateY: 0 }))
+    const cards = this.data.cards.map(card => {
+      if (card.state === 'active') return { ...card, translateY: 0 }
+      if (card.state === 'above') return { ...card, translateY: -window.innerHeight }
+      if (card.state === 'below') return { ...card, translateY: window.innerHeight }
+      return card
+    })
     this.setData({ cards })
   },
 
