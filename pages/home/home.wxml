@@ -18,7 +18,7 @@
     <block wx:for="{{cards}}" wx:key="id">
       <view 
         class="card {{item.state}} {{item.transitionClass}}"
-        style="transform: translateY({{item.translateY}}px);"
+        style="transform: translateY({{item.translateY}}px); opacity: {{item.opacity}};"
         data-id="{{item.id}}"
         bindtap="onCardTap">
 
@@ -46,6 +46,15 @@
         <view class="swipe-hint">↑ 上滑阅读下一条</view>
       </view>
     </block>
+  </view>
+
+  <!-- 导航指示点 -->
+  <view class="nav-dots">
+    <view 
+      wx:for="{{newsList}}" 
+      wx:key="id" 
+      class="nav-dot {{index === currentIndex ? 'active' : ''}}">
+    </view>
   </view>
 
   <!-- 侧边栏遮罩（点击关闭） -->

@@ -38,7 +38,8 @@ function refreshPageSize() {
 // 手势阈值
 const SWIPE_THRESHOLD = 50       // 上下滑动切换阈值
 const PANEL_SWIPE_THRESHOLD = 60 // 左滑呼出面板阈值
-const SWIPE_ANIMATION_MS = 380   // 滑动动画时长
+const SWIPE_ANIMATION_MS = 300   // 翻页动画时长
+const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
 
 // 请求配置
 const PAGE_SIZE = 10
@@ -54,6 +55,7 @@ module.exports = {
   SWIPE_THRESHOLD,
   PANEL_SWIPE_THRESHOLD,
   SWIPE_ANIMATION_MS,
+  BOUNCE_ANIMATION_MS,
   PAGE_SIZE,
   USE_MOCK
 }

@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList } = require('../../utils/request')
 
 const app = getApp()
@@ -116,6 +116,7 @@ Page({
       summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
+      opacity: position === 0 ? 1 : 0,
       transitionClass: ''
     }
   },
@@ -185,32 +186,32 @@ Page({
       // 回弹
       this.setTransitionEnabled(true)
       this.resetCardOffset()
-      setTimeout(() => this.setTransitionEnabled(false), SWIPE_ANIMATION_MS)
+      setTimeout(() => this.setTransitionEnabled(false), BOUNCE_ANIMATION_MS)
     }
   },
 
-  // 翻书模式：同时移动当前卡片和目标卡片
+  // 翻书模式：同时移动当前卡片和目标卡片（含 opacity 渐变）
   updateBookOffset() {
     const { cards } = this.data
     const dir = this.swipeDirection
+    const progress = Math.min(Math.abs(this.cardOffset) / PAGE_HEIGHT, 1)
 
     const updated = cards.map(card => {
       if (dir === 1) {
-        // 上滑：当前卡上移，下一张从下方跟随
+        // 上滑：当前卡上移渐隐，下一张从下方跟随渐显
         if (card.state === 'active') {
-          return { ...card, translateY: this.cardOffset }
+          return { ...card, translateY: this.cardOffset, opacity: 1 - progress * 0.4 }
         }
         if (card.state === 'below') {
-          // 下一张卡片：初始在 PAGE_HEIGHT，随拖拽偏移
-          return { ...card, translateY: PAGE_HEIGHT + this.cardOffset }
+          return { ...card, translateY: PAGE_HEIGHT + this.cardOffset, opacity: progress }
         }
       } else if (dir === -1) {
-        // 下滑：当前卡下移，上一张从上方跟随
+        // 下滑：当前卡下移渐隐，上一张从上方跟随渐显
         if (card.state === 'active') {
-          return { ...card, translateY: this.cardOffset }
+          return { ...card, translateY: this.cardOffset, opacity: 1 - progress * 0.4 }
         }
         if (card.state === 'above') {
-          return { ...card, translateY: -PAGE_HEIGHT + this.cardOffset }
+          return { ...card, translateY: -PAGE_HEIGHT + this.cardOffset, opacity: progress }
         }
       }
       return card
