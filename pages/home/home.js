@@ -8,13 +8,15 @@ const app = getApp()
 Page({
   data: {
     statusBarHeight: STATUS_BAR_HEIGHT,
-    newsList: [],           // 所有新闻
+    newsList: [],           // 首页当前分类的新闻
     cards: [],              // 卡片渲染数据（仅3张）
     currentIndex: 0,        // 当前卡片索引
     showPanel: false,       // 侧边栏是否显示
     showGuide: true,        // 首次引导
     categories: CATEGORIES,
-    currentCategory: 'all',
+    currentCategory: 'all', // 首页当前分类
+    panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
+    panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: []    // 侧边栏过滤后的列表
   },
 
@@ -24,9 +26,13 @@ Page({
   isAnimating: false,
   isDragging: false,
   cardOffset: 0,
+  // 翻书模式：拖拽时同时移动当前卡和目标卡
+  swipeDirection: 0, // 1=上滑(next), -1=下滑(prev), 0=未确定
 
   onLoad() {
     this.loadNews()
+    // 侧边栏也加载一份数据（全部新闻）
+    this.loadPanelNews()
   },
 
   onShow() {
@@ -44,11 +50,7 @@ Page({
       const res = await getNewsList({ category: this.data.currentCategory })
       const list = res.list || []
 
-      this.setData({
-        newsList: list,
-        filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i }))
-      })
-
+      this.setData({ newsList: list })
       this.renderCards(list)
       wx.hideLoading()
 
@@ -57,6 +59,21 @@ Page({
       }, 4000)
     } catch (err) {
       wx.hideLoading()
+      wx.showToast({ title: '加载失败', icon: 'none' })
+    }
+  },
+
+  // 侧边栏数据加载（全部新闻，独立于首页分类）
+  async loadPanelNews(category) {
+    const cat = category || 'all'
+    try {
+      const res = await getNewsList({ category: cat })
+      const list = res.list || []
+      this.setData({
+        filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i })),
+        panelCategory: cat
+      })
+    } catch (err) {
       wx.showToast({ title: '加载失败', icon: 'none' })
     }
   },
@@ -86,7 +103,6 @@ Page({
       cards.push(this.buildCard(list[idx + 1], 1))
     }
 
-    // 同步 currentIndex（处理越界修正）
     if (idx !== this.data.currentIndex) {
       this.setData({ currentIndex: idx, cards })
     } else {
@@ -95,23 +111,23 @@ Page({
   },
 
   buildCard(item, position) {
-    // transitionClass 控制 CSS transition：有动画时才启用
     return {
       ...item,
       summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
-      transitionClass: ''  // 默认无 transition（手指拖拽时不需要）
+      transitionClass: ''
     }
   },
 
-  // ============ 触摸事件 ============
+  // ============ 触摸事件（翻书式动画）============
 
   onTouchStart(e) {
     if (this.isAnimating) return
     this.touchStartY = e.touches[0].clientY
     this.touchStartX = e.touches[0].clientX
     this.isDragging = false
+    this.swipeDirection = 0
     this.cardOffset = 0
   },
 
@@ -120,7 +136,7 @@ Page({
     const dy = e.touches[0].clientY - this.touchStartY
     const dx = e.touches[0].clientX - this.touchStartX
 
-    // 首次判定方向：水平优先 → 左滑面板
+    // 水平滑动优先
     if (!this.isDragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
       this.isDragging = true
     }
@@ -128,17 +144,18 @@ Page({
       return
     }
 
-    // 垂直滑动：移除 transition，实时跟手
+    // 垂直滑动：确定方向
     if (!this.isDragging && Math.abs(dy) > 5) {
       this.isDragging = true
-      // 拖拽开始：禁用 CSS transition（核心修复：避免拖拽时的延迟抖动）
+      this.swipeDirection = dy < 0 ? 1 : -1  // 上滑=1, 下滑=-1
       this.setTransitionEnabled(false)
     }
 
     if (this.isDragging && Math.abs(dy) > Math.abs(dx)) {
-      const maxOffset = 200
+      const maxOffset = PAGE_HEIGHT
       this.cardOffset = Math.max(-maxOffset, Math.min(maxOffset, dy))
-      this.updateCardOffset()
+      // 翻书模式：同时移动当前卡和目标卡
+      this.updateBookOffset()
     }
   },
 
@@ -157,7 +174,6 @@ Page({
 
     // 垂直滑动切换
     if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-      // 启用 transition（自动切换动画）
       this.setTransitionEnabled(true)
       this.isAnimating = true
       if (dy < 0) {
@@ -166,14 +182,43 @@ Page({
         this.swipePrev()
       }
     } else {
-      // 回弹：启用 transition 做弹性回弹动画
+      // 回弹
       this.setTransitionEnabled(true)
       this.resetCardOffset()
       setTimeout(() => this.setTransitionEnabled(false), SWIPE_ANIMATION_MS)
     }
   },
 
-  // 控制卡片的 CSS transition
+  // 翻书模式：同时移动当前卡片和目标卡片
+  updateBookOffset() {
+    const { cards } = this.data
+    const dir = this.swipeDirection
+
+    const updated = cards.map(card => {
+      if (dir === 1) {
+        // 上滑：当前卡上移，下一张从下方跟随
+        if (card.state === 'active') {
+          return { ...card, translateY: this.cardOffset }
+        }
+        if (card.state === 'below') {
+          // 下一张卡片：初始在 PAGE_HEIGHT，随拖拽偏移
+          return { ...card, translateY: PAGE_HEIGHT + this.cardOffset }
+        }
+      } else if (dir === -1) {
+        // 下滑：当前卡下移，上一张从上方跟随
+        if (card.state === 'active') {
+          return { ...card, translateY: this.cardOffset }
+        }
+        if (card.state === 'above') {
+          return { ...card, translateY: -PAGE_HEIGHT + this.cardOffset }
+        }
+      }
+      return card
+    })
+
+    this.setData({ cards: updated })
+  },
+
   setTransitionEnabled(enabled) {
     const cls = enabled ? 'with-transition' : ''
     const cards = this.data.cards.map(card => ({ ...card, transitionClass: cls }))
@@ -216,16 +261,6 @@ Page({
     }, SWIPE_ANIMATION_MS)
   },
 
-  updateCardOffset() {
-    const cards = this.data.cards.map(card => {
-      if (card.state === 'active') {
-        return { ...card, translateY: this.cardOffset }
-      }
-      return card
-    })
-    this.setData({ cards })
-  },
-
   resetCardOffset() {
     const cards = this.data.cards.map(card => {
       if (card.state === 'active') return { ...card, translateY: 0 }
@@ -253,39 +288,58 @@ Page({
   // ============ 侧边栏 ============
 
   closePanel() {
+    // 关闭面板时，将面板分类同步到首页（如果不同）
+    const { panelCategory, currentCategory } = this.data
+    if (panelCategory !== currentCategory) {
+      this.setData({ currentCategory: panelCategory })
+      // 重新加载首页数据
+      getNewsList({ category: panelCategory }).then(res => {
+        const list = res.list || []
+        this.setData({ newsList: list, currentIndex: 0 })
+        this.renderCards(list)
+      })
+    }
     this.setData({ showPanel: false })
   },
 
+  // 侧边栏分类切换 —— 不关闭面板，仅更新列表
   onCategoryChange(e) {
     const cat = e.currentTarget.dataset.cat
-    this.setData({
-      currentCategory: cat,
-      showPanel: false
-    })
-    getNewsList({ category: cat }).then(res => {
-      const list = res.list || []
-      this.setData({
-        newsList: list,
-        currentIndex: 0,
-        filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i }))
-      })
-      this.renderCards(list)
-    }).catch(() => {
-      wx.showToast({ title: '加载失败', icon: 'none' })
-      this.setData({ showPanel: true })
-    })
+    this.loadPanelNews(cat)
   },
 
+  // 侧边栏列表项点击 —— 关闭面板，跳转到对应新闻
   onPanelItemTap(e) {
     const idx = e.currentTarget.dataset.index
-    const { newsList } = this.data
-    if (idx === undefined || idx >= newsList.length) return
+    const { filteredNewsList } = this.data
+    if (idx === undefined || idx >= filteredNewsList.length) return
 
-    this.setData({
-      currentIndex: idx,
-      showPanel: false
-    })
-    this.renderCards(newsList, idx)
+    const item = filteredNewsList[idx]
+    // 使用面板分类和对应数据
+    const cat = this.data.panelCategory
+
+    // 如果面板分类和首页分类不同，先切换首页分类
+    if (cat !== this.data.currentCategory) {
+      this.setData({ currentCategory: cat })
+      getNewsList({ category: cat }).then(res => {
+        const list = res.list || []
+        // 找到对应新闻在完整列表中的索引
+        const realIdx = Math.min(idx, list.length - 1)
+        this.setData({
+          newsList: list,
+          currentIndex: realIdx,
+          showPanel: false
+        })
+        this.renderCards(list, realIdx)
+      })
+    } else {
+      // 同一分类，直接跳转
+      this.setData({
+        currentIndex: idx,
+        showPanel: false
+      })
+      this.renderCards(this.data.newsList, idx)
+    }
   },
 
   preventMove() {
