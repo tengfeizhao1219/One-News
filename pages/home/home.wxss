@@ -91,8 +91,10 @@
 }
 
 /* 自动切换/回弹时启用 transition（翻书动画） */
+/* transition 同时作用于 transform 和 opacity，确保流畅过渡 */
 .card.with-transition {
-  transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1.0);
+  transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1.0),
+              opacity 0.35s ease;
 }
 
 .card.active {

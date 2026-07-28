@@ -25,14 +25,11 @@ Page({
     isRefreshing: false,    // 手动刷新中
   },
 
-  // 触摸状态
-  touchStartY: 0,
-  touchStartX: 0,
-  isAnimating: false,
-  isDragging: false,
-  cardOffset: 0,
-  // 翻书模式：拖拽时同时移动当前卡和目标卡
-  swipeDirection: 0, // 1=上滑(next), -1=下滑(prev), 0=未确定
+  // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
+  _touchStartY: 0,
+  _touchStartX: 0,
+  _isAnimating: false,
+  _lastSwipeTime: 0,
 
   onLoad() {
     this.loadNews()
@@ -102,8 +99,6 @@ Page({
   },
 
   // 手动刷新新闻
-  // Mock 模式：直接重新加载数据
-  // 云函数模式：调用 refreshNews 触发大模型搜索 → 重新加载
   async onRefreshNews() {
     if (this.data.isRefreshing) return
 
@@ -112,7 +107,6 @@ Page({
     const { USE_MOCK } = require('../../utils/constants')
 
     if (USE_MOCK) {
-      // Mock 模式：直接重新加载（模拟刷新效果）
       wx.showToast({ title: '刷新中...', icon: 'loading', duration: 800 })
       setTimeout(async () => {
         await this.loadNews()
@@ -122,7 +116,6 @@ Page({
       return
     }
 
-    // 云函数模式：调用 refreshNews 触发大模型搜索
     try {
       const res = await wx.cloud.callFunction({
         name: 'refreshNews',
@@ -146,20 +139,23 @@ Page({
       wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
     }
 
-    // 无论刷新成功与否，重新加载新闻列表
     await this.loadNews()
     this.setData({ isRefreshing: false })
   },
 
   // ============ 卡片渲染 ============
 
+  /**
+   * 渲染卡片数据（仅构建数据，不涉及动画状态）
+   * 始终以 targetIndex 为中心生成 3 张卡片
+   */
   renderCards(list, targetIndex) {
     const currentIndex = targetIndex !== undefined ? targetIndex : this.data.currentIndex
     const cards = []
     const total = list.length
 
     if (total === 0) {
-      this.setData({ cards: [] })
+      this.setData({ cards: [], currentIndex: 0 })
       return
     }
 
@@ -176,11 +172,8 @@ Page({
       cards.push(this.buildCard(list[idx + 1], 1))
     }
 
-    if (idx !== this.data.currentIndex) {
-      this.setData({ currentIndex: idx, cards })
-    } else {
-      this.setData({ cards })
-    }
+    // 一次性更新 currentIndex 和 cards
+    this.setData({ currentIndex: idx, cards })
   },
 
   buildCard(item, position) {
@@ -194,154 +187,185 @@ Page({
     }
   },
 
-  // ============ 触摸事件（翻书式动画）============
+  // ============ WXS 回调（从 WXS 触摸处理中回调） ============
 
-  onTouchStart(e) {
-    if (this.isAnimating) return
-    this.touchStartY = e.touches[0].clientY
-    this.touchStartX = e.touches[0].clientX
-    this.isDragging = false
-    this.swipeDirection = 0
-    this.cardOffset = 0
+  /**
+   * WXS touchStart 回调 —— 仅记录状态，不做 setData
+   */
+  onWxsTouchStart(data) {
+    if (this._isAnimating) return
+    this._touchStartY = data.startY
+    this._touchStartX = data.startX
   },
 
-  onTouchMove(e) {
-    if (this.isAnimating) return
-    const dy = e.touches[0].clientY - this.touchStartY
-    const dx = e.touches[0].clientX - this.touchStartX
-
-    // 水平滑动优先
-    if (!this.isDragging && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-      this.isDragging = true
-    }
-    if (this.isDragging && Math.abs(dx) > Math.abs(dy)) {
-      return
-    }
-
-    // 垂直滑动：确定方向
-    if (!this.isDragging && Math.abs(dy) > 5) {
-      this.isDragging = true
-      this.swipeDirection = dy < 0 ? 1 : -1  // 上滑=1, 下滑=-1
-      this.setTransitionEnabled(false)
-    }
-
-    if (this.isDragging && Math.abs(dy) > Math.abs(dx)) {
-      const maxOffset = PAGE_HEIGHT
-      this.cardOffset = Math.max(-maxOffset, Math.min(maxOffset, dy))
-      // 翻书模式：同时移动当前卡和目标卡
-      this.updateBookOffset()
-    }
+  /**
+   * WXS touchMove 回调 —— 仅记录偏移，不做 setData
+   * 渲染由 WXS 的 getTranslateY/getOpacity 直接驱动
+   */
+  onWxsTouchMove(data) {
+    // WXS 已处理渲染，JS 层只需记录当前状态供 touchend 使用
+    this._lastTouchData = data
   },
 
-  onTouchEnd(e) {
-    if (this.isAnimating) return
+  /**
+   * WXS touchEnd 回调 —— 执行切换或回弹
+   * 核心策略：先在当前 cards 上做动画，动画完成后再重建 cards
+   */
+  onWxsTouchEnd(data) {
+    if (this._isAnimating) return
 
-    const dy = e.changedTouches[0].clientY - this.touchStartY
-    const dx = e.changedTouches[0].clientX - this.touchStartX
+    const { dy, dx } = data
 
     // 左滑呼出面板
     if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       this.setData({ showPanel: true })
-      this.resetCardOffset()
+      this._resetCardPositions()
       return
     }
 
     // 垂直滑动切换
     if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-      this.setTransitionEnabled(true)
-      this.isAnimating = true
+      this._isAnimating = true
       if (dy < 0) {
-        this.swipeNext()
+        this._animateSwipeNext()
       } else {
-        this.swipePrev()
+        this._animateSwipePrev()
       }
     } else {
-      // 回弹
-      this.setTransitionEnabled(true)
-      this.resetCardOffset()
-      setTimeout(() => this.setTransitionEnabled(false), BOUNCE_ANIMATION_MS)
+      // 回弹到原位
+      this._animateBounceBack()
     }
   },
 
-  // 翻书模式：同时移动当前卡片和目标卡片（含 opacity 渐变）
-  updateBookOffset() {
-    const { cards } = this.data
-    const dir = this.swipeDirection
-    const progress = Math.min(Math.abs(this.cardOffset) / PAGE_HEIGHT, 1)
+  // ============ 动画切换逻辑 ============
 
-    const updated = cards.map(card => {
-      if (dir === 1) {
-        // 上滑：当前卡上移渐隐，下一张从下方跟随渐显
-        if (card.state === 'active') {
-          return { ...card, translateY: this.cardOffset, opacity: 1 - progress * 0.4 }
-        }
-        if (card.state === 'below') {
-          return { ...card, translateY: PAGE_HEIGHT + this.cardOffset, opacity: progress }
-        }
-      } else if (dir === -1) {
-        // 下滑：当前卡下移渐隐，上一张从上方跟随渐显
-        if (card.state === 'active') {
-          return { ...card, translateY: this.cardOffset, opacity: 1 - progress * 0.4 }
-        }
-        if (card.state === 'above') {
-          return { ...card, translateY: -PAGE_HEIGHT + this.cardOffset, opacity: progress }
-        }
+  /**
+   * 上滑切换到下一条
+   * 策略：先给当前 cards 加上 with-transition 并设置目标位置
+   * 动画完成后，再重建 cards 并移除 transition
+   */
+  _animateSwipeNext() {
+    const { currentIndex, newsList, cards } = this.data
+
+    if (currentIndex >= newsList.length - 1) {
+      // 已是最后一张，回弹
+      this._animateBounceBack()
+      return
+    }
+
+    // 步骤1：给当前 cards 加上 transition，设置目标位置（当前卡移到上方，下一张卡移到中间）
+    const animated = cards.map(card => {
+      const next = { ...card, transitionClass: 'with-transition' }
+      if (card.state === 'active') {
+        next.translateY = -PAGE_HEIGHT
+        next.opacity = 0
+      } else if (card.state === 'below') {
+        next.translateY = 0
+        next.opacity = 1
+        next.state = 'active'
       }
-      return card
+      return next
     })
 
-    this.setData({ cards: updated })
+    this.setData({ cards: animated })
+    this._lastSwipeTime = Date.now()
+
+    // 步骤2：动画完成后重建 cards（移除 transition，准备新的目标卡）
+    const newIndex = currentIndex + 1
+    setTimeout(() => {
+      this.renderCards(newsList, newIndex)
+      this._isAnimating = false
+    }, SWIPE_ANIMATION_MS + 50)
   },
 
-  setTransitionEnabled(enabled) {
-    const cls = enabled ? 'with-transition' : ''
-    const cards = this.data.cards.map(card => ({ ...card, transitionClass: cls }))
+  /**
+   * 下滑切换到上一条
+   */
+  _animateSwipePrev() {
+    const { currentIndex, newsList, cards } = this.data
+
+    if (currentIndex <= 0) {
+      this._animateBounceBack()
+      return
+    }
+
+    // 当前卡移到下方，上一张卡移到中间
+    const animated = cards.map(card => {
+      const next = { ...card, transitionClass: 'with-transition' }
+      if (card.state === 'active') {
+        next.translateY = PAGE_HEIGHT
+        next.opacity = 0
+      } else if (card.state === 'above') {
+        next.translateY = 0
+        next.opacity = 1
+        next.state = 'active'
+      }
+      return next
+    })
+
+    this.setData({ cards: animated })
+    this._lastSwipeTime = Date.now()
+
+    const newIndex = currentIndex - 1
+    setTimeout(() => {
+      this.renderCards(newsList, newIndex)
+      this._isAnimating = false
+    }, SWIPE_ANIMATION_MS + 50)
+  },
+
+  /**
+   * 回弹动画：卡片回到原位
+   */
+  _animateBounceBack() {
+    const cards = this.data.cards.map(card => {
+      const next = { ...card, transitionClass: 'with-transition' }
+      if (card.state === 'active') {
+        next.translateY = 0
+        next.opacity = 1
+      } else if (card.state === 'above') {
+        next.translateY = -PAGE_HEIGHT
+        next.opacity = 0
+      } else if (card.state === 'below') {
+        next.translateY = PAGE_HEIGHT
+        next.opacity = 0
+      }
+      return next
+    })
+
+    this.setData({ cards })
+
+    setTimeout(() => {
+      this._removeTransition()
+      this._isAnimating = false
+    }, BOUNCE_ANIMATION_MS + 50)
+  },
+
+  /**
+   * 重置卡片位置（用于非滑动场景如打开面板）
+   */
+  _resetCardPositions() {
+    const cards = this.data.cards.map(card => {
+      const next = { ...card, transitionClass: '' }
+      if (card.state === 'active') {
+        next.translateY = 0
+        next.opacity = 1
+      } else if (card.state === 'above') {
+        next.translateY = -PAGE_HEIGHT
+        next.opacity = 0
+      } else if (card.state === 'below') {
+        next.translateY = PAGE_HEIGHT
+        next.opacity = 0
+      }
+      return next
+    })
     this.setData({ cards })
   },
 
-  swipeNext() {
-    const { currentIndex, newsList } = this.data
-    if (currentIndex >= newsList.length - 1) {
-      this.renderCards(newsList, currentIndex)
-      this.resetCardOffset()
-      this.isAnimating = false
-      return
-    }
-    const newIndex = currentIndex + 1
-    this.setData({ currentIndex: newIndex })
-    this.renderCards(newsList, newIndex)
-    this._lastSwipeTime = Date.now()
-    setTimeout(() => {
-      this.isAnimating = false
-      this.setTransitionEnabled(false)
-    }, SWIPE_ANIMATION_MS)
-  },
-
-  swipePrev() {
-    const { currentIndex, newsList } = this.data
-    if (currentIndex <= 0) {
-      this.renderCards(newsList, currentIndex)
-      this.resetCardOffset()
-      this.isAnimating = false
-      return
-    }
-    const newIndex = currentIndex - 1
-    this.setData({ currentIndex: newIndex })
-    this.renderCards(newsList, newIndex)
-    this._lastSwipeTime = Date.now()
-    setTimeout(() => {
-      this.isAnimating = false
-      this.setTransitionEnabled(false)
-    }, SWIPE_ANIMATION_MS)
-  },
-
-  resetCardOffset() {
-    const cards = this.data.cards.map(card => {
-      if (card.state === 'active') return { ...card, translateY: 0 }
-      if (card.state === 'above') return { ...card, translateY: -PAGE_HEIGHT }
-      if (card.state === 'below') return { ...card, translateY: PAGE_HEIGHT }
-      return card
-    })
+  /**
+   * 移除所有卡片的 transition class
+   */
+  _removeTransition() {
+    const cards = this.data.cards.map(card => ({ ...card, transitionClass: '' }))
     this.setData({ cards })
   },
 
@@ -362,11 +386,9 @@ Page({
   // ============ 侧边栏 ============
 
   closePanel() {
-    // 关闭面板时，将面板分类同步到首页（如果不同）
     const { panelCategory, currentCategory } = this.data
     if (panelCategory !== currentCategory) {
       this.setData({ currentCategory: panelCategory })
-      // 重新加载首页数据
       getNewsList({ category: panelCategory }).then(res => {
         const list = res.list || []
         this.setData({ newsList: list, currentIndex: 0 })
@@ -376,28 +398,23 @@ Page({
     this.setData({ showPanel: false })
   },
 
-  // 侧边栏分类切换 —— 不关闭面板，仅更新列表
   onCategoryChange(e) {
     const cat = e.currentTarget.dataset.cat
     this.loadPanelNews(cat)
   },
 
-  // 侧边栏列表项点击 —— 关闭面板，跳转到对应新闻
   onPanelItemTap(e) {
     const idx = e.currentTarget.dataset.index
     const { filteredNewsList } = this.data
     if (idx === undefined || idx >= filteredNewsList.length) return
 
     const item = filteredNewsList[idx]
-    // 使用面板分类和对应数据
     const cat = this.data.panelCategory
 
-    // 如果面板分类和首页分类不同，先切换首页分类
     if (cat !== this.data.currentCategory) {
       this.setData({ currentCategory: cat })
       getNewsList({ category: cat }).then(res => {
         const list = res.list || []
-        // 找到对应新闻在完整列表中的索引
         const realIdx = Math.min(idx, list.length - 1)
         this.setData({
           newsList: list,
@@ -407,7 +424,6 @@ Page({
         this.renderCards(list, realIdx)
       })
     } else {
-      // 同一分类，直接跳转
       this.setData({
         currentIndex: idx,
         showPanel: false

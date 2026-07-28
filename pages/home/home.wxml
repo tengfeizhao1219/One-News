@@ -1,14 +1,16 @@
 <!-- 首页 - 卡片流主视图 -->
+<wxs module="touch" src="./touch.wxs"></wxs>
+
 <view class="page" 
-  bindtouchstart="onTouchStart" 
-  bindtouchmove="onTouchMove" 
-  bindtouchend="onTouchEnd">
+  bindtouchstart="{{touch.handleTouchStart}}" 
+  bindtouchmove="{{touch.handleTouchMove}}" 
+  bindtouchend="{{touch.handleTouchEnd}}">
 
   <!-- 固定顶部栏：刷新（左侧）+ 搜索（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
       <view class="top-bar-refresh" bindtap="onRefreshNews">
-        <text class="refresh-icon">{{isRefreshing ? '⏳' : '🔄'}}</text>
+        <text class="refresh-icon">{{isRefreshing ? '�?' : '🔄'}}</text>
       </view>
       <view class="top-bar-search" bindtap="goSearch">
         <text class="search-icon-top">🔍</text>
@@ -30,26 +32,26 @@
     </view>
   </view>
 
-  <!-- ========== 错误状态 ========== -->
+  <!-- ========== 错误状�? ========== -->
   <view class="state-container" wx:if="{{pageState === 'error'}}">
     <view class="state-icon">📡</view>
     <view class="state-message">{{errorMessage}}</view>
     <view class="state-retry" bindtap="onRetry">点击重试</view>
   </view>
 
-  <!-- ========== 空数据状态 ========== -->
+  <!-- ========== 空数据状�? ========== -->
   <view class="state-container" wx:if="{{pageState === 'empty'}}">
     <view class="state-icon">📭</view>
     <view class="state-message">{{errorMessage}}</view>
     <view class="state-retry" bindtap="onRetry">下拉刷新试试</view>
   </view>
 
-  <!-- ========== 正常卡片流 ========== -->
+  <!-- ========== 正常卡片�? ========== -->
   <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
-        class="card {{item.state}} {{item.transitionClass}}"
-        style="transform: translateY({{item.translateY}}px); opacity: {{item.opacity}};"
+        class="card {{item.state}} {{touch.isDragging() ? '' : item.transitionClass}}"
+        style="transform: translateY({{touch.getTranslateY(item.state, item.translateY)}}px); opacity: {{touch.getOpacity(item.state, item.opacity)}};"
         data-id="{{item.id}}"
         bindtap="onCardTap">
 
@@ -64,7 +66,7 @@
             </block>
           </view>
           
-          <!-- 元信息 -->
+          <!-- 元信�? -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text>{{item.source}}</text>
@@ -74,12 +76,12 @@
         </view>
 
         <!-- 底部提示 -->
-        <view class="swipe-hint">↑ 上滑阅读下一条</view>
+        <view class="swipe-hint">�? 上滑阅读下一�?</view>
       </view>
     </block>
   </view>
 
-  <!-- 导航指示点 -->
+  <!-- 导航指示�? -->
   <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
     <view 
       wx:for="{{newsList}}" 
@@ -88,14 +90,14 @@
     </view>
   </view>
 
-  <!-- 侧边栏遮罩（点击关闭） -->
+  <!-- 侧边栏遮罩（点击关闭�? -->
   <view 
     class="panel-overlay {{showPanel ? 'show' : ''}}" 
     bindtap="closePanel"
     catchtouchmove="preventMove">
   </view>
 
-  <!-- 侧边栏面板 -->
+  <!-- 侧边栏面�? -->
   <view class="slide-panel {{showPanel ? 'show' : ''}}">
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
@@ -131,6 +133,6 @@
 
   <!-- 首次引导 -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>↑ 上滑阅读下一条\n← 左滑查看今日列表\n· 点击卡片阅读全文</text>
+    <text>�? 上滑阅读下一条\n�? 左滑查看今日列表\n· 点击卡片阅读全文</text>
   </view>
 </view>
