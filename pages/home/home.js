@@ -269,5 +269,13 @@ Page({
   preventMove() {
     // 阻止遮罩层滚动穿透
     return false
+  },
+
+  // ============ 搜索 ============
+
+  goSearch() {
+    wx.navigateTo({
+      url: '/pages/search/search'
+    })
   }
 })

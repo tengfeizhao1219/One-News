@@ -7,6 +7,14 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
+  <!-- 顶部操作栏 -->
+  <view class="top-bar">
+    <view class="top-bar-title">一页</view>
+    <view class="top-bar-search" bindtap="goSearch">
+      <text class="search-icon-text">🔍</text>
+    </view>
+  </view>
+
   <!-- 卡片容器 -->
   <view class="card-stage {{showPanel ? 'hidden' : ''}}">
     <block wx:for="{{cards}}" wx:key="id">
@@ -62,7 +70,10 @@
   <view class="slide-panel {{showPanel ? 'show' : ''}}">
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
-      <view class="panel-close" bindtap="closePanel">✕</view>
+      <view class="panel-header-actions">
+        <view class="panel-search" bindtap="goSearch">🔍</view>
+        <view class="panel-close" bindtap="closePanel">✕</view>
+      </view>
     </view>
 
     <!-- 分类标签 -->
@@ -95,6 +106,6 @@
 
   <!-- 首次引导 -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>↑ 上滑阅读下一条\n← 左滑查看今日列表\n· 点击卡片阅读全文</text>
+    <text>↑ 上滑阅读下一条\n← 左滑查看今日列表\n🔍 点击右上角搜索\n· 点击卡片阅读全文</text>
   </view>
 </view>
