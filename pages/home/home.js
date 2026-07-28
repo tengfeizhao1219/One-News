@@ -77,7 +77,8 @@ Page({
   async loadPanelNews(category) {
     const cat = category || 'all'
     try {
-      const res = await getNewsList({ category: cat })
+      // 侧边栏需要全部数据，不分页
+      const res = await getNewsList({ category: cat, pageSize: 100 })
       const list = res.list || []
       this.setData({
         filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i })),
