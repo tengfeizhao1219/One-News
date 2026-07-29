@@ -60,6 +60,17 @@ Page({
   // ============ 初始化 ============
 
   async init(currentId) {
+    console.log('[detail] init start, id =', currentId)
+    // 超时兜底：若 6s 内未完成初始化，避免永久空白/卡 loading
+    var self = this
+    var timer = setTimeout(function () {
+      if (self.data.pageState === 'loading') {
+        console.warn('[detail] 初始化超时（6s），强制进入 error 状态')
+        self.setData({ pageState: 'error' })
+        wx.hideLoading()
+      }
+    }, 6000)
+
     try {
       wx.showLoading({ title: '加载中...' })
 
@@ -68,6 +79,10 @@ Page({
         this.loadDetail(currentId),
         this.buildReadingList(currentId)
       ])
+      console.log('[detail] 两路数据加载完成, readingList 条数 =',
+        (readingData && readingData.readingList) ? readingData.readingList.length : 0)
+
+      clearTimeout(timer)
 
       // 从阅读列表中获取当前新闻的基本信息（用于 progress）
       const { readingList, readingIndex, totalCount } = readingData
@@ -75,10 +90,12 @@ Page({
 
       wx.hideLoading()
       this.setData({ pageState: 'ready' })
+      console.log('[detail] init success, pageState = ready, totalCount =', totalCount)
 
     } catch (err) {
+      clearTimeout(timer)
       wx.hideLoading()
-      console.error('详情页初始化失败:', err)
+      console.error('[detail] 初始化失败:', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
       this.setData({ pageState: 'error' })
     }

@@ -79,6 +79,9 @@
 /* 阅读容器 —— 翻页动画载体 */
 .reading-container {
   flex: 1;
+  min-height: 0;          /* 防止 flex 内容撑破父容器 */
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -88,7 +91,8 @@
 
 /* 内容滚动区 */
 .content-scroll {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .detail-body {
