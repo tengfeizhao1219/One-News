@@ -35,6 +35,7 @@ Page({
   _lastTouchData: null,
 
   onLoad() {
+    console.log('[home] onLoad triggered')
     this.loadNews()
     // 侧边栏也加载一份数据（全部新闻）
     this.loadPanelNews()
