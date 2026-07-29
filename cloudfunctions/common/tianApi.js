@@ -57,15 +57,21 @@ async function callWithRetry(url, retries = 2) {
 }
 
 /**
- * 调用天行数据新闻 API
+ * 调用天行数据新闻 API（按分类 endpoint 路由）
+ *
+ * 注意：天行 allnews 聚合接口需单独申请（未申请返回 code:160），
+ * 因此改为按已申请的分类专属接口路由，例如：
+ *   guonei(国内) / world(国际) / keji(科技) / generalnews(综合)
+ * 拼接规则：${config.tian.baseUrl}/{endpoint}/index
+ *
  * @param {object} params
- * @param {number|null} params.col - 频道 ID，null 表示全部
- * @param {string} [params.word] - 搜索关键词
+ * @param {string} [params.endpoint='generalnews'] - 天行分类接口名，如 guonei/world/keji/generalnews
+ * @param {string} [params.word] - 搜索关键词（综合/分类接口支持）
  * @param {number} [params.page=1] - 页码
- * @param {number} [params.num=10] - 每页条数
+ * @param {number} [params.num=10] - 每页条数（最大 50）
  * @returns {Promise<{list: Array, allnum: number, curpage: number}>}
  */
-async function callTianApi({ col, word, page = 1, num = 10 }) {
+async function callTianApi({ endpoint = 'generalnews', word, page = 1, num = 10 }) {
   if (!config.tian.apiKey) {
     throw new Error('API_KEY_INVALID: 天行数据 API Key 未配置')
   }
@@ -75,21 +81,18 @@ async function callTianApi({ col, word, page = 1, num = 10 }) {
   params.set('num', String(Math.min(num, 50)))
   params.set('page', String(page))
 
-  if (col !== null && col !== undefined) {
-    params.set('col', String(col))
-  }
   if (word) {
     params.set('word', String(word).trim())
   }
 
-  const url = `${config.tian.baseUrl}?${params.toString()}`
+  const url = `${config.tian.baseUrl}/${endpoint}/index?${params.toString()}`
   console.log('[TianApi] 请求:', url.replace(config.tian.apiKey, '***'))
 
   const result = await callWithRetry(url)
 
   // 天行数据状态码处理
   if (result.code === 200) {
-    // 注意：allnews 接口返回的新闻数组字段是 newslist（非 list）
+    // 天行分类接口返回的新闻数组字段统一为 newslist（部分旧接口为 list，做兼容）
     const list = result.result?.newslist || result.result?.list || []
     return {
       list,

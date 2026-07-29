@@ -156,7 +156,7 @@ One-News/
 |--------|------|------|
 | 🔴 P0 | 清理诊断日志（onCardTap/onLoad 的 console.log） | 待做 |
 | 🔴 P0 | 重新实现阅读模式（详情页上下滑切新闻） | 待做 |
-| 🟡 P1 | 接入真实数据（切换 USE_MOCK=false，部署云函数） | 待做 |
+| 🟡 P1 | 接入真实数据（切换 USE_MOCK=false，部署云函数） | 进行中（L4 天行分类路由已跑通） |
 | 🟡 P1 | SOP 更新（WXS 语法红线 + return false 禁止） | 待做 |
 | 🟢 P2 | v7 回归测试更新（适配最终实现） | 待做 |
 | 🟢 P2 | 轮换百炼 API Key（曾硬编码入 Git 历史，已迁入保险库）+ GitHub PAT 管理 | 待轮换 |
@@ -227,6 +227,7 @@ cat >> "$LOG_FILE" <<'VAULT_EOF'
 |------|------|--------|
 | `github_pat` | GitHub 推送代码 | `github_push` → git remote（oauth2:token） |
 | `bailian_api_key` | 阿里百炼 DeepSeek 联网搜索 | `cloudfunctions/common/config.js` → `DASHSCOPE_API_KEY` 环境变量 |
+| `tian_api_key` | 天行数据新闻接口（L4 降级源） | `cloudfunctions/common/config.js` → `TIAN_API_KEY` 环境变量 |
 
 ### 写入（不回显）
 ```bash
@@ -249,6 +250,39 @@ export DASHSCOPE_API_KEY=$(secret_get bailian_api_key)
 > ⚠️ 安全：早期版本曾将百炼 Key 硬编码于 `config.js` 并推入 Git 历史，已改为仅读环境变量。**请前往阿里百炼控制台轮换该 Key**。
 
 VAULT_EOF
+
+# ─── 天行分类路由（方案 B）章节（引号 heredoc，避免 $()/反引号 被展开）───
+cat >> "$LOG_FILE" <<'TIAN_EOF'
+
+---
+
+## 🗞️ 天行数据 · 分类路由（方案 B）
+
+> `getNewsList` / `searchNews` 的第 4 层降级源。因 `allnews` 聚合接口未申请（code:160）且需 `col` 参数（code:280），改为**按一页分类直连已申请的分类专属 endpoint**。
+
+**分类路由映射**（实测全部 code=200，每条带真实 sourceUrl，零占位符）：
+
+| 一页分类 | 天行 endpoint | 状态 |
+|----------|--------------|------|
+| recommend（推荐） | `generalnews`（综合） | ✅ |
+| tech（科技） | `keji`（科技） | ✅ |
+| international（国际） | `world`（国际） | ✅ |
+| sports（体育） | `generalnews`（兜底，tiyu 未申请） | ⚠️ |
+| life（生活） | `generalnews`（兜底，无对应接口） | ⚠️ |
+| all（全部） | `generalnews` | ✅ |
+
+**已确认可用的额外接口**（暂未映射，留作扩展）：`ai`(AI) / `it`(IT) / `internet`(互联网)。
+**不可用**：`allnews`(需 col 参数) / `guonei`(160 未申请) / `tiyu`(160 未申请) / `shehui`(404)。
+
+**关键代码点**：
+- `cloudfunctions/common/config.js`：`tian.baseUrl = https://apis.tianapi.com`（host 基址）
+- `cloudfunctions/common/tianApi.js`：`callTianApi({ endpoint, ... })` → `${baseUrl}/${endpoint}/index`
+- `cloudfunctions/common/adapter.js`：`APP_TO_TIAN_ENDPOINT` / `TIAN_ENDPOINTS_AVAILABLE`
+- 密钥：`/root/.secrets/tian_api_key` → 环境变量 `TIAN_API_KEY`（部署云函数时配置）
+
+> 详见 [变更记录 CHG-012](docs/changelog/变更记录.md)。
+
+TIAN_EOF
 
 # ─── 页脚 ───
 cat >> "$LOG_FILE" << EOF

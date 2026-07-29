@@ -10,7 +10,7 @@ const config = require('../common/config')
 // ─── 外部 API 降级（终极兜底）───
 const { callTianApi } = require('../common/tianApi')
 const { callJuheApi } = require('../common/juheApi')
-const { adaptNewsList, APP_TO_TIAN_COL, APP_TO_JUHE_TYPE, CATEGORY_NAMES } = require('../common/adapter')
+const { adaptNewsList, APP_TO_TIAN_ENDPOINT, APP_TO_JUHE_TYPE, CATEGORY_NAMES } = require('../common/adapter')
 
 // ─── 缓存查询 ────────────────────────────────────────
 
@@ -58,10 +58,10 @@ async function getFromDbCache(category, pageNum, pageSize) {
 // ─── 外部 API 降级 ───────────────────────────────────
 
 async function fetchFromTianApi(category, pageNum, pageSize) {
-  const colId = APP_TO_TIAN_COL[category]
+  const endpoint = APP_TO_TIAN_ENDPOINT[category] || 'generalnews'
   const fetchSize = Math.max(pageSize, config.pagination.apiFetchSize)
-  const apiData = await callTianApi({ col: colId, page: pageNum, num: fetchSize })
-  const adapted = adaptNewsList(apiData.list, 'tian', colId)
+  const apiData = await callTianApi({ endpoint, page: pageNum, num: fetchSize })
+  const adapted = adaptNewsList(apiData.list, 'tian', category)
   return {
     list: adapted.slice(0, pageSize),
     total: apiData.allnum,

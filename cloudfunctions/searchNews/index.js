@@ -61,13 +61,14 @@ async function searchFromDb(keyword, pageNum, pageSize) {
  * 通过天行 API 搜索（第4层降级）
  */
 async function searchViaTianApi(keyword, pageNum, pageSize) {
+  // 搜索走综合接口（generalnews），通过 word 关键词过滤
   const apiData = await callTianApi({
-    col: null,
+    endpoint: 'generalnews',
     word: keyword,
     page: pageNum,
     num: pageSize,
   })
-  const adapted = adaptNewsList(apiData.list, 'tian', null)
+  const adapted = adaptNewsList(apiData.list, 'tian', 'recommend')
   return { list: adapted, total: apiData.allnum }
 }
 

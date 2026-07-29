@@ -10,29 +10,32 @@
 
 // ─── 分类映射表 ──────────────────────────────────────
 
-// 天行数据频道 col ID → 一页分类 ID
-const TIAN_COL_TO_APP = {
-  7:  'recommend',      // 国内新闻 → 推荐
-  8:  'international',  // 国际新闻
-  12: 'sports',         // 体育新闻
-  13: 'tech',           // 科技新闻
-  17: 'life',           // 健康知识 → 生活
-  // 扩展映射
-  10: 'life',           // 娱乐新闻 → 生活
-  32: 'recommend',      // 财经新闻 → 推荐
-  27: 'international',  // 军事新闻 → 国际
-  18: 'life',           // 旅游资讯 → 生活
-  14: 'tech',           // 互联网 → 科技
+// 方案 B（分类路由）：改用天行「分类专属接口」直连，不再依赖 allnews 聚合接口。
+//
+// 实测可用接口（真实 key 探测，2026-07-29）：
+//   generalnews(综合) ✅  world(国际) ✅  keji(科技) ✅
+//   ai(AI) ✅  it(IT) ✅  internet(互联网) ✅
+// 未申请/不可用：allnews(需 col 参数，冗余) / guonei(160未申请) /
+//               tiyu(160未申请) / shehui(404不存在)
+//
+// 一页分类 ID → 天行分类 endpoint 名称
+const APP_TO_TIAN_ENDPOINT = {
+  'recommend':     'generalnews',  // 综合（混合流，最适合作为首页推荐）
+  'tech':          'keji',         // 科技
+  'international': 'world',        // 国际
+  'sports':        'generalnews',  // 体育：tiyu 未申请 → 综合兜底
+  'life':          'generalnews',  // 生活：无对应接口 → 综合兜底
+  'all':           'generalnews',  // 全部 → 综合兜底
 }
 
-// 一页分类 ID → 天行数据 col 参数
-const APP_TO_TIAN_COL = {
-  'recommend':     7,
-  'tech':          13,
-  'sports':        12,
-  'life':          17,
-  'international': 8,
-  'all':           null,  // 全部 → 不传 col 参数
+// 天行已确认可用的分类接口清单（供扩展/排查参考，非强制映射）
+const TIAN_ENDPOINTS_AVAILABLE = {
+  generalnews: '综合',
+  world:       '国际',
+  keji:        '科技',
+  ai:          'AI',
+  it:          'IT',
+  internet:    '互联网',
 }
 
 // 聚合数据 type 参数 → 一页分类 ID
@@ -78,10 +81,12 @@ function stripHtml(str) {
 
 /**
  * 适配天行数据 API 返回的单条新闻
+ * @param {object} apiItem 天行返回的单条新闻
+ * @param {string} category 一页分类 ID（如 recommend/tech，直接透传）
  */
-function adaptTianNewsItem(apiItem, colId) {
+function adaptTianNewsItem(apiItem, category) {
   const id = String(apiItem.id || '')
-  const category = TIAN_COL_TO_APP[colId] || 'recommend'
+  const cat = CATEGORY_NAMES[category] ? category : 'recommend'
 
   let title = stripHtml(apiItem.title || '')
   let summary = stripHtml(apiItem.description || '')
@@ -95,8 +100,8 @@ function adaptTianNewsItem(apiItem, colId) {
     _id: id,
     title: title || '[无标题]',
     summary,
-    category,
-    categoryName: CATEGORY_NAMES[category] || '推荐',
+    category: cat,
+    categoryName: CATEGORY_NAMES[cat] || '推荐',
     source: apiItem.source || '未知来源',
     sourceUrl: apiItem.url || '',
     publishTime: apiItem.ctime || '',
@@ -135,10 +140,10 @@ function adaptJuheNewsItem(apiItem) {
 /**
  * 安全适配器 — 处理各种异常字段，失败返回 null
  */
-function safeAdapt(apiItem, apiSource, colId) {
+function safeAdapt(apiItem, apiSource, category) {
   try {
     const result = apiSource === 'tian'
-      ? adaptTianNewsItem(apiItem, colId)
+      ? adaptTianNewsItem(apiItem, category)
       : adaptJuheNewsItem(apiItem)
 
     // 必需字段校验
@@ -157,9 +162,9 @@ function safeAdapt(apiItem, apiSource, colId) {
 /**
  * 批量适配新闻列表
  */
-function adaptNewsList(apiList, apiSource, colId) {
+function adaptNewsList(apiList, apiSource, category) {
   return apiList
-    .map(item => safeAdapt(item, apiSource, colId))
+    .map(item => safeAdapt(item, apiSource, category))
     .filter(Boolean)
 }
 
@@ -167,8 +172,8 @@ function adaptNewsList(apiList, apiSource, colId) {
 
 module.exports = {
   // 分类映射
-  TIAN_COL_TO_APP,
-  APP_TO_TIAN_COL,
+  APP_TO_TIAN_ENDPOINT,
+  TIAN_ENDPOINTS_AVAILABLE,
   JUHE_TYPE_TO_APP,
   APP_TO_JUHE_TYPE,
   CATEGORY_NAMES,

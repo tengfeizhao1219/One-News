@@ -251,12 +251,12 @@ assert(nullAdapt === null, 'null 输入 safeAdapt 应返回 null')
 const undefinedAdapt = adapter.safeAdapt(undefined, 'tian', 7)
 assert(undefinedAdapt === null, 'undefined 输入 safeAdapt 应返回 null')
 
-// 4. 字段映射正确性 — TIAN_COL_TO_APP
-assertEqual(adapter.TIAN_COL_TO_APP[7], 'recommend', 'TIAN_COL_TO_APP col=7 → recommend')
-assertEqual(adapter.TIAN_COL_TO_APP[8], 'international', 'TIAN_COL_TO_APP col=8 → international')
-assertEqual(adapter.TIAN_COL_TO_APP[12], 'sports', 'TIAN_COL_TO_APP col=12 → sports')
-assertEqual(adapter.TIAN_COL_TO_APP[13], 'tech', 'TIAN_COL_TO_APP col=13 → tech')
-assertEqual(adapter.TIAN_COL_TO_APP[17], 'life', 'TIAN_COL_TO_APP col=17 → life')
+// 4. 字段映射正确性 — APP_TO_TIAN_ENDPOINT（方案 B：分类路由）
+assertEqual(adapter.APP_TO_TIAN_ENDPOINT['recommend'], 'generalnews', 'APP_TO_TIAN_ENDPOINT recommend → generalnews')
+assertEqual(adapter.APP_TO_TIAN_ENDPOINT['tech'], 'keji', 'APP_TO_TIAN_ENDPOINT tech → keji')
+assertEqual(adapter.APP_TO_TIAN_ENDPOINT['international'], 'world', 'APP_TO_TIAN_ENDPOINT international → world')
+assertEqual(adapter.APP_TO_TIAN_ENDPOINT['sports'], 'generalnews', 'APP_TO_TIAN_ENDPOINT sports → generalnews(兜底)')
+assertEqual(adapter.APP_TO_TIAN_ENDPOINT['life'], 'generalnews', 'APP_TO_TIAN_ENDPOINT life → generalnews(兜底)')
 
 // 5. 字段映射正确性 — JUHE_TYPE_TO_APP
 assertEqual(adapter.JUHE_TYPE_TO_APP['top'], 'recommend', 'JUHE top → recommend')

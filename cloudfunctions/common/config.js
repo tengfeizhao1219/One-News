@@ -17,8 +17,11 @@ module.exports = {
   },
 
   // 天行数据 API（第4层降级，可选）
+  // 注意：baseUrl 仅作为 host 基址，具体分类由 callTianApi 按 endpoint 拼接
+  // 例如 https://apis.tianapi.com/{endpoint}/index
+  // 原因：allnews 聚合接口未申请（返回 code:160），改为按已申请的分类专属接口路由
   tian: {
-    baseUrl: 'https://apis.tianapi.com/allnews/index',
+    baseUrl: 'https://apis.tianapi.com',
     apiKey: process.env.TIAN_API_KEY || '',
     timeout: 8000,
     retryDelay: [1000, 2000],
