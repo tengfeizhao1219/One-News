@@ -39,18 +39,19 @@ const CATEGORY_PROMPTS = {
    - title: 新闻标题（字符串，不超过50字）
    - summary: 新闻摘要（字符串，100-200字）
    - source: 来源（必须是上述新闻源之一）
+   - url: 原文链接（真实网页 URL，以 http/https 开头）
 3. 所有5条放在一个 JSON 数组中返回
 4. 只返回 JSON 数组，不要其他文字
 
 返回格式示例：
-[{"title":"...","summary":"...","source":"新华社"}]`,
+[{"title":"...","summary":"...","source":"新华社","url":"https://www.news.com/xxx"}]`,
 
   tech: `请从以下可信科技新闻源搜索今日最重要的5条科技新闻：
 新闻源：36kr.com, huxiu.com, techcrunch.com
 
 要求：
 1. 必须是最近发布的最新科技/互联网/AI 相关新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
+2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
 3. 只返回 JSON 数组`,
 
   sports: `请从以下可信新闻源搜索今日最重要的5条体育新闻：
@@ -58,7 +59,7 @@ const CATEGORY_PROMPTS = {
 
 要求：
 1. 必须是最近发布的最新体育新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
+2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
 3. 只返回 JSON 数组`,
 
   international: `请从以下可信新闻源搜索今日最重要的5条国际新闻：
@@ -66,7 +67,7 @@ const CATEGORY_PROMPTS = {
 
 要求：
 1. 必须是最近发布的最新国际新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
+2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
 3. 只返回 JSON 数组`,
 
   life: `请从以下可信新闻源搜索今日最重要的5条社会生活新闻：
@@ -74,7 +75,7 @@ const CATEGORY_PROMPTS = {
 
 要求：
 1. 必须是最近发布的最新社会/生活/民生类新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源)
+2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
 3. 只返回 JSON 数组`,
 }
 
@@ -100,7 +101,7 @@ async function searchNewsByCategory(category) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。你只从指定的可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。'
+        content: '你是一个专业的新闻搜索助手。你只从指定的可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻【必须】包含 url 字段，且 url 必须是该新闻最初发布的真实网页链接（以 http/https 开头），不得使用占位符。'
       },
       {
         role: 'user',
@@ -203,6 +204,7 @@ function parseNewsFromContent(content, category) {
       summary: String(item.summary || '').trim(),
       category,
       categoryName: categoryNames[category] || category,
+      sourceUrl: String(item.url || item.sourceUrl || '').trim(),
       source: (() => {
         const raw = String(item.source || '未知来源').trim()
         // 尝试域名→中文名映射

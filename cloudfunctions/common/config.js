@@ -9,8 +9,9 @@
 
 module.exports = {
   // 阿里百炼 DeepSeek API（refreshNews 主力数据源）
+  // 安全：key 仅从环境变量读取，禁止硬编码（已存入 /root/.secrets/bailian_api_key）
   bailian: {
-    apiKey: process.env.DASHSCOPE_API_KEY || 'sk-5b6cb233fcf04fe597ec263b5c871c2a',
+    apiKey: process.env.DASHSCOPE_API_KEY || '',
     model: 'deepseek-v3.2',
     timeout: 30000,
   },
