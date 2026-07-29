@@ -15,6 +15,7 @@
 // 实测可用接口（真实 key 探测，2026-07-29）：
 //   generalnews(综合) ✅  world(国际) ✅  keji(科技) ✅
 //   ai(AI) ✅  it(IT) ✅  internet(互联网) ✅
+//   nongye(农业) ✅  sicprobe(科学探索) ✅   ← 已接入为独立分类
 // 未申请/不可用：allnews(需 col 参数，冗余) / guonei(160未申请) /
 //               tiyu(160未申请) / shehui(404不存在)
 //
@@ -25,6 +26,8 @@ const APP_TO_TIAN_ENDPOINT = {
   'international': 'world',        // 国际
   'sports':        'generalnews',  // 体育：tiyu 未申请 → 综合兜底
   'life':          'generalnews',  // 生活：无对应接口 → 综合兜底
+  'agriculture':   'nongye',       // 农业（独立分类）
+  'science':       'sicprobe',     // 科学探索（独立分类）
   'all':           'generalnews',  // 全部 → 综合兜底
 }
 
@@ -36,6 +39,8 @@ const TIAN_ENDPOINTS_AVAILABLE = {
   ai:          'AI',
   it:          'IT',
   internet:    '互联网',
+  nongye:      '农业',
+  sicprobe:    '科学探索',
 }
 
 // 聚合数据 type 参数 → 一页分类 ID
@@ -67,6 +72,8 @@ const CATEGORY_NAMES = {
   'sports':        '体育',
   'life':          '生活',
   'international': '国际',
+  'agriculture':   '农业',
+  'science':       '科学',
 }
 
 // ─── 字段映射函数 ───────────────────────────────────

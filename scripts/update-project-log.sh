@@ -269,10 +269,14 @@ cat >> "$LOG_FILE" <<'TIAN_EOF'
 | international（国际） | `world`（国际） | ✅ |
 | sports（体育） | `generalnews`（兜底，tiyu 未申请） | ⚠️ |
 | life（生活） | `generalnews`（兜底，无对应接口） | ⚠️ |
+| agriculture（农业） | `nongye`（农业） | ✅ 新增独立分类 |
+| science（科学） | `sicprobe`（科学探索） | ✅ 新增独立分类 |
 | all（全部） | `generalnews` | ✅ |
 
 **已确认可用的额外接口**（暂未映射，留作扩展）：`ai`(AI) / `it`(IT) / `internet`(互联网)。
 **不可用**：`allnews`(需 col 参数) / `guonei`(160 未申请) / `tiyu`(160 未申请) / `shehui`(404)。
+
+> 前端分类表 `utils/constants.js` 现含 8 项（all/recommend/tech/international/sports/life/agriculture/science），侧边栏经 `wx:for` 自动渲染。
 
 **关键代码点**：
 - `cloudfunctions/common/config.js`：`tian.baseUrl = https://apis.tianapi.com`（host 基址）

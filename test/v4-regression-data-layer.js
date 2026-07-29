@@ -514,7 +514,7 @@ assert(stats.categories.recommend > 0, 'stats.categories.recommend 应 > 0')
 assert(typeof aiNewsService.getCategories === 'function', 'getCategories 应可调用')
 const catList = aiNewsService.getCategories()
 assert(Array.isArray(catList), 'getCategories 应返回数组')
-assert(catList.length === 5, 'getCategories 应返回 5 个分类')
+assert(catList.length === 7, 'getCategories 应返回 7 个分类（5 原有 + 农业/科学，all 不计入）')
 catList.forEach(cat => {
   assert(typeof cat.id === 'string', `分类 ${cat.id} 的 id 应为字符串`)
   assert(typeof cat.name === 'string', `分类 ${cat.id} 的 name 应为字符串`)

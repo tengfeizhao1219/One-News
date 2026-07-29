@@ -5,7 +5,9 @@ const CATEGORIES = [
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
   { id: 'sports', name: '体育' },
-  { id: 'life', name: '生活' }
+  { id: 'life', name: '生活' },
+  { id: 'agriculture', name: '农业' },
+  { id: 'science', name: '科学' }
 ]
 
 const CATEGORY_MAP = {}

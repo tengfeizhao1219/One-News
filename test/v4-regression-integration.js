@@ -190,11 +190,11 @@ mod('constants.js');
 
 // 1.1 CATEGORIES array completeness
 var catIds = constants.CATEGORIES.map(function(c) { return c.id; });
-deepEq(catIds, ['all', 'recommend', 'tech', 'international', 'sports', 'life'],
-  'CATEGORIES contains all 6 category IDs');
+deepEq(catIds, ['all', 'recommend', 'tech', 'international', 'sports', 'life', 'agriculture', 'science'],
+  'CATEGORIES contains all 8 category IDs');
 
 // 1.2 CATEGORIES array length
-eq(constants.CATEGORIES.length, 6, 'CATEGORIES array length is 6');
+eq(constants.CATEGORIES.length, 8, 'CATEGORIES array length is 8');
 
 // 1.3 Each category has id/name fields
 var allFieldsOk = true;

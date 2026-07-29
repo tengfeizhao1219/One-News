@@ -44,6 +44,8 @@ const CACHE_META = {
     sports: 0,
     international: 0,
     life: 0,
+    agriculture: 0,
+    science: 0,
   },
 }
 
@@ -52,7 +54,7 @@ const CACHE_META = {
  */
 function initCacheStats() {
   CACHE_META.totalItems = _aiNewsCache.length
-  CACHE_META.categories = { recommend: 0, tech: 0, sports: 0, international: 0, life: 0 }
+  CACHE_META.categories = { recommend: 0, tech: 0, sports: 0, international: 0, life: 0, agriculture: 0, science: 0 }
   _aiNewsCache.forEach(item => {
     if (CACHE_META.categories.hasOwnProperty(item.category)) {
       CACHE_META.categories[item.category]++
