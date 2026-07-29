@@ -1,12 +1,9 @@
-<!-- ��ҳ - ��Ƭ������ͼ -->
+<!-- 首页 - 卡片流主视图 -->
 <wxs module="touch" src="./touch.wxs"></wxs>
 
-<view class="page" 
-  bindtouchstart="{{touch.handleTouchStart}}" 
-  bindtouchmove="{{touch.handleTouchMove}}" 
-  bindtouchend="{{touch.handleTouchEnd}}">
+<view class="page">
 
-  <!-- �̶���������ˢ�£���ࣩ+ �������Ҳࣩ -->
+  <!-- 固定顶部栏：刷新（左侧）+ 搜索（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
       <view class="top-bar-refresh" bindtap="onRefreshNews">
@@ -18,7 +15,7 @@
     </view>
   </view>
 
-  <!-- ========== �Ǽ����������У� ========== -->
+  <!-- ========== 骨架屏（加载中） ========== -->
   <view class="skeleton-stage" wx:if="{{pageState === 'loading'}}">
     <view class="skeleton-card" wx:for="{{skeletonCount}}" wx:key="*this">
       <view class="sk-title"></view>
@@ -32,22 +29,25 @@
     </view>
   </view>
 
-  <!-- ========== ����״̬ ========== -->
+  <!-- ========== 错误状态 ========== -->
   <view class="state-container" wx:if="{{pageState === 'error'}}">
     <view class="state-icon">!</view>
     <view class="state-message">{{errorMessage}}</view>
-    <view class="state-retry" bindtap="onRetry">�������</view>
+    <view class="state-retry" bindtap="onRetry">点击重试</view>
   </view>
 
-  <!-- ========== ������״̬ ========== -->
+  <!-- ========== 空数据状态 ========== -->
   <view class="state-container" wx:if="{{pageState === 'empty'}}">
     <view class="state-icon">-</view>
     <view class="state-message">{{errorMessage}}</view>
-    <view class="state-retry" bindtap="onRetry">����ˢ������</view>
+    <view class="state-retry" bindtap="onRetry">下拉刷新试试</view>
   </view>
 
-  <!-- ========== ������Ƭ�� ========== -->
-  <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}">
+  <!-- ========== 正常卡片流 ========== -->
+  <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}"
+    bindtouchstart="{{touch.handleTouchStart}}" 
+    bindtouchmove="{{touch.handleTouchMove}}" 
+    bindtouchend="{{touch.handleTouchEnd}}">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
         class="card {{item.state}} {{touch.isDragging() ? '' : item.transitionClass}}"
@@ -56,17 +56,17 @@
         bindtap="onCardTap">
 
         <view class="card-body">
-          <!-- ���� -->
+          <!-- 标题 -->
           <view class="card-title">{{item.title}}</view>
           
-          <!-- ժҪ -->
+          <!-- 摘要 -->
           <view class="card-summary">
             <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
               <view class="summary-p">{{item}}</view>
             </block>
           </view>
           
-          <!-- Ԫ��Ϣ -->
+          <!-- 元信息 -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text>{{item.source}}</text>
@@ -75,13 +75,13 @@
           </view>
         </view>
 
-        <!-- �ײ���ʾ -->
-        <view class="swipe-hint">^ �ϻ��Ķ���һ��</view>
+        <!-- 底部提示 -->
+        <view class="swipe-hint">^ 上滑阅读下一条</view>
       </view>
     </block>
   </view>
 
-  <!-- ����ָʾ�� -->
+  <!-- 导航指示点 -->
   <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
     <view 
       wx:for="{{newsList}}" 
@@ -90,20 +90,19 @@
     </view>
   </view>
 
-  <!-- ��������֣�����رգ� -->
+  <!-- 侧边栏遮罩（点击关闭） -->
   <view 
     class="panel-overlay {{showPanel ? 'show' : ''}}" 
-    bindtap="closePanel"
-    catchtouchmove="preventMove">
+    bindtap="closePanel">
   </view>
 
-  <!-- �������� -->
-  <view class="slide-panel {{showPanel ? 'show' : ''}}" catchtouchmove="preventMove">
+  <!-- 侧边栏面板 -->
+  <view class="slide-panel {{showPanel ? 'show' : ''}}">
     <view class="panel-header">
-      <text class="panel-title">��������</text>
+      <text class="panel-title">今日新闻</text>
     </view>
 
-    <!-- �����ǩ����ǰ����������л����ر���壩 -->
+    <!-- 分类标签（当前分类高亮，切换不关闭面板） -->
     <scroll-view class="panel-tabs" scroll-x enable-flex>
       <view 
         wx:for="{{categories}}" 
@@ -115,7 +114,7 @@
       </view>
     </scroll-view>
 
-    <!-- �����б� -->
+    <!-- 新闻列表 -->
     <scroll-view class="panel-list" scroll-y>
       <view 
         wx:for="{{filteredNewsList}}" 
@@ -126,13 +125,13 @@
         <view class="panel-item-title {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}">{{item.title}}</view>
       </view>
       <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
-        ��������
+        暂无新闻
       </view>
     </scroll-view>
   </view>
 
-  <!-- �״����� -->
+  <!-- 首次引导 -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>^ �ϻ��Ķ���һ��\n&lt;- �󻬲鿴�����б�\n- �����Ƭ�Ķ�ȫ��</text>
+    <text>^ 上滑阅读下一条\n&lt;- 左滑查看今日列表\n- 点击卡片阅读全文</text>
   </view>
 </view>

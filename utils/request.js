@@ -1,18 +1,18 @@
-// ÇëÇó²ã·â×° ¡ª Ö§³Ö Mock£¨AI »º´æ£©/ ÔÆº¯ÊıË«Ä£Ê½
+// è¯·æ±‚å±‚å°è£… â€” æ”¯æŒ Mockï¼ˆAI ç¼“å­˜ï¼‰/ äº‘å‡½æ•°åŒæ¨¡å¼
 //
-// Êı¾İÁ÷¼Ü¹¹£¨v2.0£©£º
-//   Mock Ä£Ê½ ¡ú AI ĞÂÎÅ»º´æ (mock/ai-news-cache.js) + Ä£ÄâÆ÷
-//   Éú²úÄ£Ê½ ¡ú ÔÆº¯Êı getNewsList / searchNews
-//              ©¸©¤ AI »º´æ (aiNewsService) ¡ú ÔÆÊı¾İ¿â»º´æ ¡ú Íâ²¿ API ½µ¼¶
+// æ•°æ®æµæ¶æ„ï¼ˆv2.0ï¼‰ï¼š
+//   Mock æ¨¡å¼ â†’ AI æ–°é—»ç¼“å­˜ (mock/ai-news-cache.js) + æ¨¡æ‹Ÿå™¨
+//   ç”Ÿäº§æ¨¡å¼ â†’ äº‘å‡½æ•° getNewsList / searchNews
+//              â””â”€ AI ç¼“å­˜ (aiNewsService) â†’ äº‘æ•°æ®åº“ç¼“å­˜ â†’ å¤–éƒ¨ API é™çº§
 //
-//   AI »º´æÌØµã£ºÁãÑÓ³Ù¡¢Áã·ÑÓÃ¡¢ÁãÍâ²¿ÒÀÀµ
-//   ÓÉ WorkBuddy Í¨¹ı WebSearch + WebFetch ÊµÊ±ËÑË÷Éú³É
+//   AI ç¼“å­˜ç‰¹ç‚¹ï¼šé›¶å»¶è¿Ÿã€é›¶è´¹ç”¨ã€é›¶å¤–éƒ¨ä¾èµ–
+//   ç”± WorkBuddy é€šè¿‡ WebSearch + WebFetch å®æ—¶æœç´¢ç”Ÿæˆ
 
 const { USE_MOCK, PAGE_SIZE, CATEGORY_MAP, AI_CACHE } = require('./constants')
 const { formatRelativeTime } = require('./util')
 const { simulateGetNewsList, simulateSearchNews } = require('../mock/simulator')
 
-// AI ĞÂÎÅ»º´æ£¨Mock Ä£Ê½Ö±½ÓÊ¹ÓÃ£¬Éú²úÄ£Ê½×ßÔÆº¯Êı£©
+// AI æ–°é—»ç¼“å­˜ï¼ˆMock æ¨¡å¼ç›´æ¥ä½¿ç”¨ï¼Œç”Ÿäº§æ¨¡å¼èµ°äº‘å‡½æ•°ï¼‰
 let aiNewsCache = []
 try {
   aiNewsCache = require('../mock/ai-news-cache')
@@ -21,11 +21,11 @@ try {
 }
 
 /**
- * »ñÈ¡ĞÂÎÅÁĞ±í
+ * è·å–æ–°é—»åˆ—è¡¨
  * @param {Object} params
- * @param {string} params.category ·ÖÀàID£¬Ä¬ÈÏ'all'
- * @param {number} params.pageNum   Ò³Âë£¬Ä¬ÈÏ1
- * @param {number} params.pageSize  Ã¿Ò³ÌõÊı£¬Ä¬ÈÏ10
+ * @param {string} params.category åˆ†ç±»IDï¼Œé»˜è®¤'all'
+ * @param {number} params.pageNum   é¡µç ï¼Œé»˜è®¤1
+ * @param {number} params.pageSize  æ¯é¡µæ¡æ•°ï¼Œé»˜è®¤10
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
 function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
@@ -36,7 +36,7 @@ function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {
 }
 
 /**
- * »ñÈ¡ĞÂÎÅÏêÇé
+ * è·å–æ–°é—»è¯¦æƒ…
  * @param {string} newsId
  * @returns {Promise<Object>}
  */
@@ -48,7 +48,7 @@ function getNewsDetail(newsId) {
 }
 
 /**
- * ËÑË÷ĞÂÎÅ
+ * æœç´¢æ–°é—»
  * @param {Object} params
  * @param {string} params.keyword
  * @param {number} params.pageNum
@@ -62,10 +62,10 @@ function searchNews({ keyword, pageNum = 1, pageSize = PAGE_SIZE } = {}) {
   return searchNewsCloud({ keyword, pageNum, pageSize })
 }
 
-// ============ Mock ÊµÏÖ£¨AI »º´æ + Ä£ÄâÆ÷£©============
+// ============ Mock å®ç°ï¼ˆAI ç¼“å­˜ + æ¨¡æ‹Ÿå™¨ï¼‰============
 
 function getNewsListMock({ category, pageNum, pageSize }) {
-  // Ê¹ÓÃ AI ĞÂÎÅ»º´æ×÷ÎªÊı¾İÔ´
+  // ä½¿ç”¨ AI æ–°é—»ç¼“å­˜ä½œä¸ºæ•°æ®æº
   const dataSource = aiNewsCache.length > 0 ? aiNewsCache : []
 
   return simulateGetNewsList(dataSource, category, pageNum, pageSize).then(res => ({
@@ -88,7 +88,7 @@ function getNewsDetailMock(newsId) {
       return nid === sid
     })
     if (!item) {
-      reject(new Error('ĞÂÎÅ²»´æÔÚ'))
+      reject(new Error('æ–°é—»ä¸å­˜åœ¨'))
       return
     }
     setTimeout(() => {
@@ -104,7 +104,7 @@ function searchNewsMock({ keyword, pageNum, pageSize }) {
   }))
 }
 
-// ============ ÔÆº¯ÊıÊµÏÖ ============
+// ============ äº‘å‡½æ•°å®ç° ============
 
 function getNewsListCloud({ category, pageNum, pageSize }) {
   return wx.cloud.callFunction({
@@ -112,7 +112,7 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
     data: { category, pageNum, pageSize }
   }).then(res => {
     if (res.result.code !== 0) {
-      const err = new Error(res.result.message || '»ñÈ¡ĞÂÎÅÁĞ±íÊ§°Ü')
+      const err = new Error(res.result.message || 'è·å–æ–°é—»åˆ—è¡¨å¤±è´¥')
       err.errorCode = res.result.errorCode
       throw err
     }
@@ -121,7 +121,7 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
       list: (data.list || []).map(formatNewsItem),
       total: data.total,
       hasMore: data.hasMore,
-      meta: res.result.meta,  // Í¸´« source ĞÅÏ¢
+      meta: res.result.meta,  // é€ä¼  source ä¿¡æ¯
     }
   })
 }
@@ -132,7 +132,7 @@ function getNewsDetailCloud(newsId) {
     data: { newsId }
   }).then(res => {
     if (res.result.code !== 0) {
-      throw new Error(res.result.message || '»ñÈ¡ĞÂÎÅÏêÇéÊ§°Ü')
+      throw new Error(res.result.message || 'è·å–æ–°é—»è¯¦æƒ…å¤±è´¥')
     }
     return formatNewsItem(res.result.data, true)
   })
@@ -144,7 +144,7 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
     data: { keyword, pageNum, pageSize }
   }).then(res => {
     if (res.result.code !== 0) {
-      const err = new Error(res.result.message || 'ËÑË÷ĞÂÎÅÊ§°Ü')
+      const err = new Error(res.result.message || 'æœç´¢æ–°é—»å¤±è´¥')
       err.errorCode = res.result.errorCode
       throw err
     }
@@ -156,26 +156,26 @@ function searchNewsCloud({ keyword, pageNum, pageSize }) {
   })
 }
 
-// ============ ´íÎóÂëÓ³Éä ============
+// ============ é”™è¯¯ç æ˜ å°„ ============
 
 /**
- * ½«ÔÆº¯Êı·µ»ØµÄ´íÎóÂëÓ³ÉäÎªÓÃ»§ÓÑºÃµÄÌáÊ¾ÎÄ°¸
+ * å°†äº‘å‡½æ•°è¿”å›çš„é”™è¯¯ç æ˜ å°„ä¸ºç”¨æˆ·å‹å¥½çš„æç¤ºæ–‡æ¡ˆ
  */
 function handleApiError(errorCode, message) {
   const errorMessages = {
-    'API_RATE_LIMIT':   '½ñÈÕÔÄ¶Á´ÎÊıÒÑÓÃÍê£¬Ã÷ÌìÔÙÀ´°É',
-    'API_UNAVAILABLE':  'ĞÂÎÅ·şÎñÔİÊ±²»¿ÉÓÃ£¬ÇëÉÔºóÖØÊÔ',
-    'ALL_DOWN':         'ĞÂÎÅ·şÎñÔİÊ±²»¿ÉÓÃ£¬ÇëÉÔºóÖØÊÔ',
-    'LLM_SEARCH_FAILED':'ÖÇÄÜËÑË÷ÔİÊ±²»¿ÉÓÃ£¬ÇëÉÔºóÖØÊÔ',
-    'NO_DATA':          'ÔİÎŞĞÂÎÅ£¬ÏÂÀ­Ë¢ĞÂÊÔÊÔ',
-    'API_KEY_INVALID':  '·şÎñÅäÖÃ´íÎó£¬ÇëÁªÏµ¹ÜÀíÔ±',
-    'API_TIMEOUT':      'ÍøÂç¿ªĞ¡²îÁË£¬ÇëÖØÊÔ',
-    'SIMULATED_ERROR':  message || 'Ä£Äâ´íÎó',
+    'API_RATE_LIMIT':   'ä»Šæ—¥é˜…è¯»æ¬¡æ•°å·²ç”¨å®Œï¼Œæ˜å¤©å†æ¥å§',
+    'API_UNAVAILABLE':  'æ–°é—»æœåŠ¡æš‚æ—¶ä¸å¯ç”¨ï¼Œè¯·ç¨åé‡è¯•',
+    'ALL_DOWN':         'æ–°é—»æœåŠ¡æš‚æ—¶ä¸å¯ç”¨ï¼Œè¯·ç¨åé‡è¯•',
+    'LLM_SEARCH_FAILED':'æ™ºèƒ½æœç´¢æš‚æ—¶ä¸å¯ç”¨ï¼Œè¯·ç¨åé‡è¯•',
+    'NO_DATA':          'æš‚æ— æ–°é—»ï¼Œä¸‹æ‹‰åˆ·æ–°è¯•è¯•',
+    'API_KEY_INVALID':  'æœåŠ¡é…ç½®é”™è¯¯ï¼Œè¯·è”ç³»ç®¡ç†å‘˜',
+    'API_TIMEOUT':      'ç½‘ç»œå¼€å°å·®äº†ï¼Œè¯·é‡è¯•',
+    'SIMULATED_ERROR':  message || 'æ¨¡æ‹Ÿé”™è¯¯',
   }
-  return errorMessages[errorCode] || message || 'ÍøÂç¿ªĞ¡²îÁË£¬ÇëÖØÊÔ'
+  return errorMessages[errorCode] || message || 'ç½‘ç»œå¼€å°å·®äº†ï¼Œè¯·é‡è¯•'
 }
 
-// ============ ¸ñÊ½»¯ ============
+// ============ æ ¼å¼åŒ– ============
 
 function formatNewsItem(item, includeContent = false) {
   const itemId = item._id || item.id

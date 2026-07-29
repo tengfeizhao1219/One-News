@@ -432,10 +432,6 @@ Page({
     }
   },
 
-  preventMove() {
-    return false
-  },
-
   // ============ 搜索 ============
 
   goSearch() {

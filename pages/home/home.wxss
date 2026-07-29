@@ -1,4 +1,4 @@
-/* Ê×Ò³ÑùÊ½ - ¼«¼òÅ¯»ÒÅäÉ« */
+/* é¦–é¡µæ ·å¼ - æç®€æš–ç°é…è‰² */
 
 .page {
   height: 100vh;
@@ -7,7 +7,7 @@
   position: relative;
 }
 
-/* ============ ¹Ì¶¨¶¥²¿À¸£¨Ë¢ĞÂ×ó + ËÑË÷ÓÒ£© ============ */
+/* ============ å›ºå®šé¡¶éƒ¨æ ï¼ˆåˆ·æ–°å·¦ + æœç´¢å³ï¼‰ ============ */
 .fixed-top-bar {
   position: absolute;
   top: 0;
@@ -62,7 +62,7 @@
   font-size: 28rpx;
 }
 
-/* ============ ¿¨Æ¬ÎèÌ¨ ============ */
+/* ============ å¡ç‰‡èˆå° ============ */
 .card-stage {
   position: absolute;
   top: 0;
@@ -73,8 +73,7 @@
 }
 
 .card-stage.hidden {
-  opacity: 0;
-  pointer-events: none;
+  display: none;
 }
 
 .card {
@@ -90,8 +89,8 @@
   pointer-events: none;
 }
 
-/* ×Ô¶¯ÇĞ»»/»Øµ¯Ê±ÆôÓÃ transition£¨·­Êé¶¯»­£© */
-/* transition Í¬Ê±×÷ÓÃÓÚ transform ºÍ opacity£¬È·±£Á÷³©¹ı¶É */
+/* è‡ªåŠ¨åˆ‡æ¢/å›å¼¹æ—¶å¯ç”¨ transitionï¼ˆç¿»ä¹¦åŠ¨ç”»ï¼‰ */
+/* transition åŒæ—¶ä½œç”¨äº transform å’Œ opacityï¼Œç¡®ä¿æµç•…è¿‡æ¸¡ */
 .card.with-transition {
   transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1.0),
               opacity 0.35s ease;
@@ -165,7 +164,7 @@
   opacity: 0.6;
 }
 
-/* ============ µ¼º½Ö¸Ê¾µã ============ */
+/* ============ å¯¼èˆªæŒ‡ç¤ºç‚¹ ============ */
 .nav-dots {
   position: absolute;
   right: 28rpx;
@@ -194,7 +193,7 @@
   border-radius: 4rpx;
 }
 
-/* ============ ²à±ßÀ¸ÕÚÕÖ ============ */
+/* ============ ä¾§è¾¹æ é®ç½© ============ */
 .panel-overlay {
   position: absolute;
   top: 0;
@@ -213,7 +212,7 @@
   pointer-events: auto;
 }
 
-/* ============ ²à±ßÀ¸Ãæ°å ============ */
+/* ============ ä¾§è¾¹æ é¢æ¿ ============ */
 .slide-panel {
   position: absolute;
   top: 0;
@@ -247,7 +246,7 @@
   letter-spacing: 1rpx;
 }
 
-/* ============ ·ÖÀàTab£¨¸üĞÑÄ¿µÄ¸ßÁÁ£© ============ */
+/* ============ åˆ†ç±»Tabï¼ˆæ›´é†’ç›®çš„é«˜äº®ï¼‰ ============ */
 .panel-tabs {
   display: flex;
   padding: 0 32rpx 28rpx;
@@ -274,7 +273,7 @@
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
 }
 
-/* °µÉ«Ä£Ê½ÊÊÅä */
+/* æš—è‰²æ¨¡å¼é€‚é… */
 @media (prefers-color-scheme: dark) {
   .panel-tab.active {
     color: var(--bg-page);
@@ -283,7 +282,7 @@
   }
 }
 
-/* ============ ĞÂÎÅÁĞ±í ============ */
+/* ============ æ–°é—»åˆ—è¡¨ ============ */
 .panel-list {
   flex: 1;
   overflow-y: auto;
@@ -299,7 +298,7 @@
   background-color: var(--tag-bg);
 }
 
-/* µ±Ç°ÔÄ¶ÁµÄĞÂÎÅ¸ßÁÁ */
+/* å½“å‰é˜…è¯»çš„æ–°é—»é«˜äº® */
 .panel-item.current {
   background-color: var(--tag-bg);
 }
@@ -316,13 +315,13 @@
   -webkit-box-orient: vertical;
 }
 
-/* µ±Ç°ÔÄ¶ÁµÄĞÂÎÅ±êÌâÑÕÉ«¸ßÁÁ */
+/* å½“å‰é˜…è¯»çš„æ–°é—»æ ‡é¢˜é¢œè‰²é«˜äº® */
 .panel-item-title.current {
   color: var(--text-primary);
   font-weight: 700;
 }
 
-/* °µÉ«Ä£Ê½ÏÂ±£³ÖÀ¶É«¸ßÁÁ */
+/* æš—è‰²æ¨¡å¼ä¸‹ä¿æŒè“è‰²é«˜äº® */
 @media (prefers-color-scheme: dark) {
   .panel-item-title.current {
     color: #60A5FA;
@@ -336,7 +335,7 @@
   color: var(--text-secondary);
 }
 
-/* ============ Òıµ¼ÕÚÕÖ ============ */
+/* ============ å¼•å¯¼é®ç½© ============ */
 .guide-overlay {
   position: absolute;
   bottom: 160rpx;
@@ -362,7 +361,7 @@
   100% { opacity: 0; }
 }
 
-/* ============ ¹Ç¼ÜÆÁ ============ */
+/* ============ éª¨æ¶å± ============ */
 .skeleton-stage {
   position: absolute;
   top: 0;
@@ -447,7 +446,7 @@
   100% { background-position: -200% 0; }
 }
 
-/* ============ ×´Ì¬Ò³Ãæ£¨´íÎó/¿ÕÊı¾İ£© ============ */
+/* ============ çŠ¶æ€é¡µé¢ï¼ˆé”™è¯¯/ç©ºæ•°æ®ï¼‰ ============ */
 .state-container {
   position: absolute;
   top: 50%;
