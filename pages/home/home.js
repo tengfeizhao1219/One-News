@@ -500,14 +500,26 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
-    if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) return
+    console.log('[home] onCardTap triggered, _lastSwipeTime =', this._lastSwipeTime)
+    if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) {
+      console.log('[home] onCardTap blocked by debounce')
+      return
+    }
 
     const { currentIndex, newsList, currentCategory } = this.data
     const news = newsList[currentIndex]
-    if (!news) return
+    console.log('[home] onCardTap news =', news ? news.id : 'undefined', 'currentIndex =', currentIndex)
+    if (!news) {
+      console.log('[home] onCardTap: no news at currentIndex')
+      return
+    }
 
+    const url = `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`
+    console.log('[home] navigateTo:', url)
     wx.navigateTo({
-      url: `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`
+      url: url,
+      success: () => console.log('[home] navigateTo success'),
+      fail: (err) => console.error('[home] navigateTo fail:', err)
     })
   },
 
