@@ -22,6 +22,11 @@
         <text>{{news.time}}</text>
       </view>
 
+      <!-- 查看原文链接 -->
+      <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
+        <text>📎 查看原文</text>
+      </view>
+
       <!-- 分隔线 -->
       <view class="detail-divider"></view>
 

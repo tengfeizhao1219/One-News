@@ -47,7 +47,7 @@ async function searchFromDb(keyword, pageNum, pageSize) {
         id: item.id, _id: item._id,
         title: item.title, summary: item.summary,
         category: item.category, categoryName: item.categoryName,
-        source: item.source, publishTime: item.publishTime,
+        source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
       })),
       total,
     }

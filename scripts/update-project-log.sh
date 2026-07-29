@@ -1,121 +1,116 @@
+#!/bin/bash
+# ============================================================
+# 「一页」One News - 项目日志自动更新脚本
+# 每5小时由定时任务自动触发，生成最新项目状态日志
+# ============================================================
+
+set -euo pipefail
+
+PROJECT_DIR="/workspace/One-News"
+LOG_FILE="$PROJECT_DIR/docs/项目日志.md"
+TIMESTAMP=$(TZ='Asia/Shanghai' date '+%Y-%m-%d %H:%M:%S %Z')
+
+cd "$PROJECT_DIR"
+
+# 拉取最新代码（静默模式）
+git pull origin main --ff-only 2>/dev/null || true
+
+# 获取 Git 统计
+LATEST_COMMIT=$(git log -1 --format="%h" 2>/dev/null || echo "N/A")
+LATEST_COMMIT_MSG=$(git log -1 --format="%s" 2>/dev/null || echo "N/A")
+LATEST_COMMIT_DATE=$(git log -1 --format="%ai" 2>/dev/null || echo "N/A")
+TOTAL_COMMITS=$(git rev-list --count HEAD 2>/dev/null || echo "0")
+
+# 获取文件统计
+TOTAL_FILES=$(find . -type f -not -path './.git/*' | wc -l)
+CODE_FILES=$(find . -type f \( -name "*.js" -o -name "*.wxml" -o -name "*.wxss" -o -name "*.json" \) -not -path './.git/*' -not -path './node_modules/*' | wc -l)
+DOC_FILES=$(find ./docs -type f -name "*.md" 2>/dev/null | wc -l)
+TEST_FILES=$(find ./test -type f -name "*.js" 2>/dev/null | wc -l)
+
+# 获取测试统计
+TOTAL_TESTS=$(grep -r "it\|test\|assert\|expect" ./test/*.js 2>/dev/null | wc -l || echo "0")
+
+# 获取文档列表
+DOC_LIST=$(find ./docs -name "*.md" -not -name "项目日志.md" 2>/dev/null | sort | while read f; do
+  echo "  - \`${f#./}\`"
+done)
+
+# 获取迭代目录
+ITERATIONS=$(ls -d docs/iteration-* 2>/dev/null | sort | while read d; do
+  name=$(basename "$d")
+  count=$(find "$d" -name "*.md" | wc -l)
+  echo "  - **$name**：$count 个文档"
+done)
+
+# 获取 README 中检查清单状态
+CHECKLIST_STATUS=$(grep -E '^\- \[(x| )\]' README.md 2>/dev/null | head -10 || echo "无检查清单")
+
+cat > "$LOG_FILE" << EOF
 # 「一页」项目日志
 
 > **项目名称**：一页（One News）— 极简沉浸式微信小程序新闻阅读器  
-> **自动更新**：每5小时 | **最近更新**：2026-07-29 19:21:31 CST  
+> **自动更新**：每5小时 | **最近更新**：$TIMESTAMP  
 > **项目仓库**：[tengfeizhao1219/One-News](https://github.com/tengfeizhao1219/One-News)  
 > **微信 AppID**：wx1ccb4d171dd88162  
 > **云环境**：cloud1-1g9313w0bb791de0  
 
 ---
 
-## 📊 项目快照（2026-07-29 19:21:31 CST）
+## 📊 项目快照（$TIMESTAMP）
 
 | 指标 | 数值 |
 |------|------|
-| Git 最新提交 | `ddeaba3` — docs: 项目日志 —— 完整项目状态汇总 |
-| 提交时间 | 2026-07-29 18:48:24 +0800 |
-| 总提交数 | 1 |
-| 项目文件数 | 115 |
-| 代码文件数 | 56 |
-| 文档文件数 | 46 |
-| 测试文件数 | 9 |
-| 测试用例（估算） | ~1126 |
+| Git 最新提交 | \`$LATEST_COMMIT\` — $LATEST_COMMIT_MSG |
+| 提交时间 | $LATEST_COMMIT_DATE |
+| 总提交数 | $TOTAL_COMMITS |
+| 项目文件数 | $TOTAL_FILES |
+| 代码文件数 | $CODE_FILES |
+| 文档文件数 | $DOC_FILES |
+| 测试文件数 | $TEST_FILES |
+| 测试用例（估算） | ~$TOTAL_TESTS |
 
 ---
 
 ## 🔍 上线检查清单状态
 
-```
-- [x] 替换 AppID 为你的小程序 AppID ← ✅ wx1ccb4d171dd88162
-- [x] 开通云开发并配置环境 ID ← ✅ cloud1-1g9313w0bb791de0
-- [ ] 部署所有云函数
-- [ ] 在云数据库导入新闻数据
-- [x] 将 `USE_MOCK` 改为 `false` ← ✅ 已切换
-- [ ] 配置小程序后台（类目、名称、图标）
-- [ ] 真机测试所有交互
-- [ ] 提交审核
-```
+\`\`\`
+$CHECKLIST_STATUS
+\`\`\`
 
 ---
 
 ## 📁 迭代文档
 
-  - **iteration-0**：5 个文档
-  - **iteration-1**：5 个文档
-  - **iteration-2**：2 个文档
-  - **iteration-3**：3 个文档
-  - **iteration-4**：17 个文档
-  - **iteration-5**：8 个文档
+$ITERATIONS
 
 ---
 
 ## 📄 完整文档清单
 
-  - `docs/changelog/变更记录.md`
-  - `docs/iteration-0/PRD-新闻速览小程序.md`
-  - `docs/iteration-0/测试用例初稿.md`
-  - `docs/iteration-0/用户画像.md`
-  - `docs/iteration-0/竞品分析报告.md`
-  - `docs/iteration-0/需求评审纪要.md`
-  - `docs/iteration-1/线框图与交互原型.md`
-  - `docs/iteration-1/视觉风格与配色方案.md`
-  - `docs/iteration-1/设计规范文档.md`
-  - `docs/iteration-1/设计评审纪要.md`
-  - `docs/iteration-1/设计走查清单.md`
-  - `docs/iteration-2/技术方案文档.md`
-  - `docs/iteration-2/技术方案评审纪要.md`
-  - `docs/iteration-3/代码评审记录.md`
-  - `docs/iteration-3/单元测试报告.md`
-  - `docs/iteration-3/开发自测清单.md`
-  - `docs/iteration-4/AI新闻缓存架构-技术变更文档.md`
-  - `docs/iteration-4/Mock回归测试报告.md`
-  - `docs/iteration-4/Mock回归测试报告-v3.md`
-  - `docs/iteration-4/V4回归测试报告.md`
-  - `docs/iteration-4/代码评审记录.md`
-  - `docs/iteration-4/实时新闻-UI影响评估.md`
-  - `docs/iteration-4/实时新闻-技术方案.md`
-  - `docs/iteration-4/实时新闻-测试用例.md`
-  - `docs/iteration-4/实时新闻-需求概要.md`
-  - `docs/iteration-4/性能测试报告.md`
-  - `docs/iteration-4/新闻自动更新-UI影响评估.md`
-  - `docs/iteration-4/新闻自动更新-技术方案.md`
-  - `docs/iteration-4/新闻自动更新-技术方案-v3.md`
-  - `docs/iteration-4/新闻自动更新-技术方案评审纪要.md`
-  - `docs/iteration-4/新闻自动更新-测试用例.md`
-  - `docs/iteration-4/新闻自动更新-需求概要.md`
-  - `docs/iteration-4/集成测试报告.md`
-  - `docs/iteration-5/V5回归测试报告.md`
-  - `docs/iteration-5/V6回归测试报告.md`
-  - `docs/iteration-5/上线检查清单-V4.md`
-  - `docs/iteration-5/发布检查清单.md`
-  - `docs/iteration-5/发布评审纪要.md`
-  - `docs/iteration-5/测试报告.md`
-  - `docs/iteration-5/测试用例终版.md`
-  - `docs/iteration-5/视觉走查报告.md`
-  - `docs/SOP-软件开发流程基准.md`
-  - `docs/templates/变更申请模板.md`
-  - `docs/templates/测试用例模板.md`
-  - `docs/templates/评审纪要模板.md`
+$DOC_LIST
 
 ---
 
 ## 🧪 测试套件
 
-  - `test/mock-regression.js` (253 行)
-  - `test/v3-regression.js` (455 行)
-  - `test/v4-regression-data-layer.js` (621 行)
-  - `test/v4-regression-integration.js` (683 行)
-  - `test/v4-regression-llmsearch.js` (1260 行)
-  - `test/v4-regression-validator.js` (544 行)
-  - `test/v5-regression-touch-architecture.js` (147 行)
-  - `test/v6-regression-bug1-bug2.js` (187 行)
-  - `test/v7-regression-reading-mode.js` (191 行)
+EOF
+
+# 添加测试文件详情
+for t in ./test/*.js; do
+  if [ -f "$t" ]; then
+    name=$(basename "$t")
+    lines=$(wc -l < "$t")
+    echo "  - \`test/$name\` ($lines 行)" >> "$LOG_FILE"
+  fi
+done
+
+cat >> "$LOG_FILE" << EOF
 
 ---
 
 ## 🏗️ 项目结构
 
-```
+\`\`\`
 One-News/
 ├── pages/
 │   ├── home/           # 首页（卡片流 + 侧边栏）
@@ -139,7 +134,7 @@ One-News/
 ├── scripts/            # 构建/工具脚本
 ├── images/             # 图片资源
 └── demo/               # UI Demo
-```
+\`\`\`
 
 ---
 
@@ -148,8 +143,8 @@ One-News/
 | 配置项 | 值 |
 |--------|-----|
 | 数据模式 | Mock（USE_MOCK=true） |
-| 当前分支 | main |
-| 最新提交 | `ddeaba3` |
+| 当前分支 | $(git branch --show-current 2>/dev/null || echo "main") |
+| 最新提交 | \`$LATEST_COMMIT\` |
 | 暗色模式 | 跟随系统 |
 | 主包大小 | < 2MB |
 
@@ -211,4 +206,9 @@ One-News/
 
 ---
 
-*本文档由定时任务自动生成（每5小时更新） | 最近更新：2026-07-29 19:21:31 CST*
+*本文档由定时任务自动生成（每5小时更新） | 最近更新：$TIMESTAMP*
+EOF
+
+echo "✅ 项目日志已更新：$LOG_FILE"
+echo "   时间戳：$TIMESTAMP"
+echo "   最新提交：$LATEST_COMMIT"

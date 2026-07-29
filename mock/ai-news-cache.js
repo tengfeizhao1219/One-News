@@ -14,7 +14,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '证券时报',
-    publishTime: '2026-07-28T08:30:00Z'
+    publishTime: '2026-07-28T08:30:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_002',
@@ -24,7 +25,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '新华社',
-    publishTime: '2026-07-28T02:15:00Z'
+    publishTime: '2026-07-28T02:15:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_003',
@@ -34,7 +36,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '人民网',
-    publishTime: '2026-07-28T17:01:00Z'
+    publishTime: '2026-07-28T17:01:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_004',
@@ -44,7 +47,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '今日头条',
-    publishTime: '2026-07-28T06:00:00Z'
+    publishTime: '2026-07-28T06:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_005',
@@ -54,7 +58,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '央视新闻',
-    publishTime: '2026-07-28T09:00:00Z'
+    publishTime: '2026-07-28T09:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_006',
@@ -64,7 +69,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '经济日报',
-    publishTime: '2026-07-28T10:00:00Z'
+    publishTime: '2026-07-28T10:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_007',
@@ -74,7 +80,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '文旅中国',
-    publishTime: '2026-07-28T07:30:00Z'
+    publishTime: '2026-07-28T07:30:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_rec_008',
@@ -84,7 +91,8 @@ const aiNewsCache = [
     category: 'recommend',
     categoryName: '推荐',
     source: '金融时报',
-    publishTime: '2026-07-28T11:00:00Z'
+    publishTime: '2026-07-28T11:00:00Z',
+    sourceUrl: ''
   },
 
   // ============ 科技 ============
@@ -96,7 +104,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'CSDN',
-    publishTime: '2026-07-22T16:00:00Z'
+    publishTime: '2026-07-22T16:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_002',
@@ -106,7 +115,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'NVIDIA Newsroom',
-    publishTime: '2026-07-26T14:00:00Z'
+    publishTime: '2026-07-26T14:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_003',
@@ -116,7 +126,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'TechCrunch',
-    publishTime: '2026-07-27T08:00:00Z'
+    publishTime: '2026-07-27T08:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_004',
@@ -126,7 +137,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'Reuters Technology',
-    publishTime: '2026-07-25T12:00:00Z'
+    publishTime: '2026-07-25T12:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_005',
@@ -136,7 +148,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: '36氪',
-    publishTime: '2026-07-28T08:00:00Z'
+    publishTime: '2026-07-28T08:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_006',
@@ -146,7 +159,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'Nature',
-    publishTime: '2026-07-20T09:00:00Z'
+    publishTime: '2026-07-20T09:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_007',
@@ -156,7 +170,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: '电子工程专辑',
-    publishTime: '2026-07-18T10:00:00Z'
+    publishTime: '2026-07-18T10:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_tech_008',
@@ -166,7 +181,8 @@ const aiNewsCache = [
     category: 'tech',
     categoryName: '科技',
     source: 'The Verge',
-    publishTime: '2026-07-15T11:00:00Z'
+    publishTime: '2026-07-15T11:00:00Z',
+    sourceUrl: ''
   },
 
   // ============ 体育 ============
@@ -178,7 +194,8 @@ const aiNewsCache = [
     category: 'sports',
     categoryName: '体育',
     source: '新浪体育',
-    publishTime: '2026-07-27T14:00:00Z'
+    publishTime: '2026-07-27T14:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_sports_002',
@@ -188,7 +205,8 @@ const aiNewsCache = [
     category: 'sports',
     categoryName: '体育',
     source: '中时新闻网',
-    publishTime: '2026-07-28T07:00:00Z'
+    publishTime: '2026-07-28T07:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_sports_003',
@@ -198,7 +216,8 @@ const aiNewsCache = [
     category: 'sports',
     categoryName: '体育',
     source: '新华体育',
-    publishTime: '2026-07-28T10:00:00Z'
+    publishTime: '2026-07-28T10:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_sports_004',
@@ -208,7 +227,8 @@ const aiNewsCache = [
     category: 'sports',
     categoryName: '体育',
     source: '腾讯体育',
-    publishTime: '2026-07-26T15:00:00Z'
+    publishTime: '2026-07-26T15:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_sports_005',
@@ -218,7 +238,8 @@ const aiNewsCache = [
     category: 'sports',
     categoryName: '体育',
     source: '央视体育',
-    publishTime: '2026-07-21T20:00:00Z'
+    publishTime: '2026-07-21T20:00:00Z',
+    sourceUrl: ''
   },
 
   // ============ 国际 ============
@@ -230,7 +251,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '知乎全球热点',
-    publishTime: '2026-07-28T06:00:00Z'
+    publishTime: '2026-07-28T06:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_002',
@@ -240,7 +262,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '路透社',
-    publishTime: '2026-07-28T04:30:00Z'
+    publishTime: '2026-07-28T04:30:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_003',
@@ -250,7 +273,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '新华网',
-    publishTime: '2026-07-28T03:00:00Z'
+    publishTime: '2026-07-28T03:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_004',
@@ -260,7 +284,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: 'BBC中文',
-    publishTime: '2026-07-28T05:00:00Z'
+    publishTime: '2026-07-28T05:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_005',
@@ -270,7 +295,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '联合国新闻',
-    publishTime: '2026-07-27T16:00:00Z'
+    publishTime: '2026-07-27T16:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_006',
@@ -280,7 +306,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: 'BBC',
-    publishTime: '2026-07-27T18:00:00Z'
+    publishTime: '2026-07-27T18:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_007',
@@ -290,7 +317,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '联合国新闻',
-    publishTime: '2026-07-24T12:00:00Z'
+    publishTime: '2026-07-24T12:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_intl_008',
@@ -300,7 +328,8 @@ const aiNewsCache = [
     category: 'international',
     categoryName: '国际',
     source: '法新社',
-    publishTime: '2026-07-28T12:00:00Z'
+    publishTime: '2026-07-28T12:00:00Z',
+    sourceUrl: ''
   },
 
   // ============ 生活 ============
@@ -312,7 +341,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '央视网',
-    publishTime: '2026-07-28T08:00:00Z'
+    publishTime: '2026-07-28T08:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_002',
@@ -322,7 +352,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '文旅之声',
-    publishTime: '2026-07-28T09:30:00Z'
+    publishTime: '2026-07-28T09:30:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_003',
@@ -332,7 +363,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '三联生活周刊',
-    publishTime: '2026-07-27T14:00:00Z'
+    publishTime: '2026-07-27T14:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_004',
@@ -342,7 +374,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '光明日报',
-    publishTime: '2026-07-26T11:00:00Z'
+    publishTime: '2026-07-26T11:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_005',
@@ -352,7 +385,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '健康时报',
-    publishTime: '2026-07-25T10:00:00Z'
+    publishTime: '2026-07-25T10:00:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_006',
@@ -362,7 +396,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '住建部',
-    publishTime: '2026-07-28T10:30:00Z'
+    publishTime: '2026-07-28T10:30:00Z',
+    sourceUrl: ''
   },
   {
     id: 'ai_life_007',
@@ -372,7 +407,8 @@ const aiNewsCache = [
     category: 'life',
     categoryName: '生活',
     source: '中央气象台',
-    publishTime: '2026-07-28T06:00:00Z'
+    publishTime: '2026-07-28T06:00:00Z',
+    sourceUrl: ''
   }
 ]
 

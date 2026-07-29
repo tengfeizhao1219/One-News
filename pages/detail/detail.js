@@ -36,5 +36,18 @@ Page({
 
   goBack() {
     wx.navigateBack()
+  },
+
+  // 打开原始新闻链接（复制链接或使用 webview）
+  openSourceUrl() {
+    const url = this.data.news.sourceUrl
+    if (!url) return
+    // 在小程序内打开 webview 或复制链接
+    wx.setClipboardData({
+      data: url,
+      success() {
+        wx.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none', duration: 2500 })
+      }
+    })
   }
 })

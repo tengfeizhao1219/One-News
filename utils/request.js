@@ -188,6 +188,7 @@ function formatNewsItem(item, includeContent = false) {
     category: item.category,
     categoryName: item.categoryName || CATEGORY_MAP[item.category] || item.category,
     source: item.source,
+    sourceUrl: item.sourceUrl || item._url || '',
     time: formatRelativeTime(item.publishTime || item.time),
     publishTime: item.publishTime || item.time
   }

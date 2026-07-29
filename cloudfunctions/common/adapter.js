@@ -98,9 +98,9 @@ function adaptTianNewsItem(apiItem, colId) {
     category,
     categoryName: CATEGORY_NAMES[category] || '推荐',
     source: apiItem.source || '未知来源',
+    sourceUrl: apiItem.url || '',
     publishTime: apiItem.ctime || '',
     // 扩展字段（前端暂不使用，预留）
-    _url: apiItem.url || '',
     _picUrl: apiItem.picUrl || '',
   }
 }
@@ -126,8 +126,8 @@ function adaptJuheNewsItem(apiItem) {
     category,
     categoryName: apiItem.category || CATEGORY_NAMES[category] || '推荐',
     source: apiItem.author_name || '未知来源',
+    sourceUrl: apiItem.url || '',
     publishTime: apiItem.date || '',
-    _url: apiItem.url || '',
     _picUrl: apiItem.thumbnail_pic_s || '',
   }
 }

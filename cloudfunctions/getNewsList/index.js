@@ -42,7 +42,7 @@ async function getFromDbCache(category, pageNum, pageSize) {
           id: item.id, _id: item._id,
           title: item.title, summary: item.summary,
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
-          source: item.source, publishTime: item.publishTime,
+          source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
         })),
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,
