@@ -45,6 +45,48 @@ Page({
     if (this.data.newsList.length > 0) {
       this.renderCards(this.data.newsList)
     }
+
+    // 处理从详情页（阅读模式）返回的定位信息
+    this._handleDetailReturn()
+  },
+
+  /**
+   * 处理从详情页阅读模式返回后的定位
+   * 如果用户在阅读模式中切到了不同分类的新闻，需要切换分类并定位
+   */
+  _handleDetailReturn() {
+    const app = getApp()
+    const state = app.globalData._detailReturnState
+    if (!state) return
+
+    // 清除状态，防止重复处理
+    app.globalData._detailReturnState = null
+
+    const { category, readingIndex } = state
+    const { currentCategory, newsList, currentIndex } = this.data
+
+    // 如果分类没变，直接定位
+    if (category === currentCategory && newsList.length > 0) {
+      const idx = Math.min(readingIndex, newsList.length - 1)
+      if (idx !== currentIndex) {
+        this.setData({ currentIndex: idx })
+        this.renderCards(newsList, idx)
+      }
+      return
+    }
+
+    // 分类变了，需要切换分类并加载数据
+    if (category && category !== currentCategory) {
+      this.setData({ currentCategory: category })
+      getNewsList({ category: category }).then(res => {
+        const list = res.list || []
+        const idx = Math.min(readingIndex, list.length - 1)
+        this.setData({ newsList: list, currentIndex: idx, currentPage: 1, loadingMore: false })
+        this.renderCards(list, idx)
+      }).catch(() => {
+        // 加载失败，保持当前状态
+      })
+    }
   },
 
   // ============ 数据加载 ============
@@ -460,12 +502,12 @@ Page({
   onCardTap(e) {
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) return
 
-    const { currentIndex, newsList } = this.data
+    const { currentIndex, newsList, currentCategory } = this.data
     const news = newsList[currentIndex]
     if (!news) return
 
     wx.navigateTo({
-      url: `/pages/detail/detail?id=${news.id}`
+      url: `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`
     })
   },
 

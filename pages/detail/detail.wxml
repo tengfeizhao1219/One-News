@@ -1,39 +1,80 @@
-<!-- 详情页 - 极简阅读 -->
+<!-- 详情页 —— 阅读模式：上下滑切换新闻（跨分类串联） -->
 <view class="page">
+
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 返回按钮 -->
-  <view class="nav-back" bindtap="goBack">
-    <text>← 返回</text>
+  <!-- 顶部导航栏 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack">
+      <text>← 返回</text>
+    </view>
+    <view class="nav-progress" wx:if="{{totalCount > 0}}">
+      <text>第 {{readingIndex + 1}} / {{totalCount}} 条</text>
+    </view>
+    <view class="nav-spacer"></view>
   </view>
 
-  <!-- 内容 -->
-  <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="detail-body">
-      <!-- 标题 -->
-      <view class="detail-title">{{news.title}}</view>
+  <!-- ========== 加载中 ========== -->
+  <view class="state-container" wx:if="{{pageState === 'loading'}}">
+    <view class="state-loading">加载中...</view>
+  </view>
 
-      <!-- 元信息 -->
-      <view class="detail-meta">
-        <view class="category-tag">{{news.categoryName}}</view>
-        <text>{{news.source}}</text>
-        <text>·</text>
-        <text>{{news.time}}</text>
+  <!-- ========== 错误状态 ========== -->
+  <view class="state-container" wx:if="{{pageState === 'error'}}">
+    <view class="state-icon">!</view>
+    <view class="state-message">加载失败</view>
+    <view class="state-retry" bindtap="onRetry">点击重试</view>
+  </view>
+
+  <!-- ========== 阅读内容 ========== -->
+  <view class="reading-container {{transitionClass}}" wx:if="{{pageState === 'ready'}}"
+    style="transform: translateY({{translateY}}px);"
+    bindtouchstart="onTouchStart"
+    bindtouchmove="onTouchMove"
+    bindtouchend="onTouchEnd">
+
+    <scroll-view
+      class="content-scroll"
+      scroll-y
+      enhanced
+      show-scrollbar="{{false}}"
+      bindscrolltoupper="onScrollToUpper"
+      bindscrolltolower="onScrollToLower"
+      bindscroll="onScroll">
+
+      <view class="detail-body">
+        <!-- 标题 -->
+        <view class="detail-title">{{news.title}}</view>
+
+        <!-- 元信息 -->
+        <view class="detail-meta">
+          <view class="category-tag">{{news.categoryName}}</view>
+          <text>{{news.source}}</text>
+          <text>·</text>
+          <text>{{news.time}}</text>
+        </view>
+
+        <!-- 分隔线 -->
+        <view class="detail-divider"></view>
+
+        <!-- 正文 -->
+        <view class="detail-text">
+          <block wx:for="{{paragraphs}}" wx:key="*this">
+            <view class="text-p">{{item}}</view>
+          </block>
+        </view>
+
+        <!-- 底部提示 -->
+        <view class="swipe-footer">
+          <view class="swipe-hint-prev {{isAtTop ? 'active' : ''}}">
+            <text>↑ 继续下拉查看上一条</text>
+          </view>
+          <view class="swipe-hint-next {{isAtBottom ? 'active' : ''}}">
+            <text>↓ 继续上拉查看下一条</text>
+          </view>
+        </view>
       </view>
-
-      <!-- 分隔线 -->
-      <view class="detail-divider"></view>
-
-      <!-- 正文 -->
-      <view class="detail-text">
-        <block wx:for="{{paragraphs}}" wx:key="*this">
-          <view class="text-p">{{item}}</view>
-        </block>
-      </view>
-
-      <!-- 底部返回 -->
-      <view class="back-bottom" bindtap="goBack">← 返回</view>
-    </view>
-  </scroll-view>
+    </scroll-view>
+  </view>
 </view>
