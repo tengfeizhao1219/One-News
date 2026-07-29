@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 
 const app = getApp()
@@ -23,6 +23,8 @@ Page({
     errorMessage: '',       // 错误提示文案
     skeletonCount: 3,       // 骨架屏卡片数量
     isRefreshing: false,    // 手动刷新中
+    currentPage: 1,         // 当前分页（用于边界加载更多）
+    loadingMore: false,     // 边界加载更多/刷新中
   },
 
   // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
@@ -30,6 +32,7 @@ Page({
   _touchStartX: 0,
   _isAnimating: false,
   _lastSwipeTime: 0,
+  _lastTouchData: null,
 
   onLoad() {
     this.loadNews()
@@ -58,7 +61,7 @@ Page({
         return
       }
 
-      this.setData({ newsList: list, pageState: 'ready' })
+      this.setData({ newsList: list, pageState: 'ready', currentPage: 1 })
       this.renderCards(list)
 
       setTimeout(() => {
@@ -150,9 +153,9 @@ Page({
    * 始终以 targetIndex 为中心生成 3 张卡片
    */
   renderCards(list, targetIndex) {
-    const currentIndex = targetIndex !== undefined ? targetIndex : this.data.currentIndex
-    const cards = []
-    const total = list.length
+    const safeList = Array.isArray(list) ? list : []
+    const currentIndex = targetIndex !== undefined ? targetIndex : (this.data.currentIndex || 0)
+    const total = safeList.length
 
     if (total === 0) {
       this.setData({ cards: [], currentIndex: 0 })
@@ -160,26 +163,28 @@ Page({
     }
 
     const idx = Math.max(0, Math.min(currentIndex, total - 1))
+    const cards = []
+    if (idx > 0 && safeList[idx - 1]) cards.push(this.buildCard(safeList[idx - 1], -1))
+    if (safeList[idx]) cards.push(this.buildCard(safeList[idx], 0))
+    if (idx < total - 1 && safeList[idx + 1]) cards.push(this.buildCard(safeList[idx + 1], 1))
 
-    // 上一张
-    if (idx > 0) {
-      cards.push(this.buildCard(list[idx - 1], -1))
-    }
-    // 当前
-    cards.push(this.buildCard(list[idx], 0))
-    // 下一张
-    if (idx < total - 1) {
-      cards.push(this.buildCard(list[idx + 1], 1))
-    }
-
-    // 一次性更新 currentIndex 和 cards
     this.setData({ currentIndex: idx, cards })
   },
 
   buildCard(item, position) {
+    if (!item) {
+      return {
+        id: '', title: '', summary: '', summaryParagraphs: [],
+        category: '', categoryName: '', source: '', time: '',
+        state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
+        translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
+        opacity: position === 0 ? 1 : 0, transitionClass: ''
+      }
+    }
+    const summary = item.summary || ''
     return {
       ...item,
-      summaryParagraphs: (item.summary || '').split('\n').filter(p => p.trim()),
+      summaryParagraphs: summary.split(String.fromCharCode(10)).filter(p => p.trim()),
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
       opacity: position === 0 ? 1 : 0,
@@ -193,50 +198,66 @@ Page({
    * WXS touchStart 回调 —— 仅记录状态，不做 setData
    */
   onWxsTouchStart(data) {
-    if (this._isAnimating) return
-    this._touchStartY = data.startY
-    this._touchStartX = data.startX
+    try {
+      if (this._isAnimating) return
+      this._touchStartY = data.startY
+      this._touchStartX = data.startX
+    } catch (e) {
+      console.error('onWxsTouchStart error', e)
+    }
   },
 
   /**
    * WXS touchMove 回调 —— 仅记录偏移，不做 setData
-   * 渲染由 WXS 的 getTranslateY/getOpacity 直接驱动
    */
   onWxsTouchMove(data) {
-    // WXS 已处理渲染，JS 层只需记录当前状态供 touchend 使用
-    this._lastTouchData = data
+    try {
+      this._lastTouchData = data
+    } catch (e) {}
   },
 
   /**
-   * WXS touchEnd 回调 —— 执行切换或回弹
-   * 核心策略：先在当前 cards 上做动画，动画完成后再重建 cards
+   * WXS touchEnd 回调 —— 执行切换 / 回弹 / 边界加载更多或刷新
+   * 异常隔离：任何内部异常都不能楔住手势层（WXS 已先重置自身状态）
    */
   onWxsTouchEnd(data) {
-    if (this._isAnimating) return
+    try {
+      if (this._isAnimating) return
 
-    const { dy, dx } = data
+      const { dy, dx } = data
 
-    // 左滑呼出面板
-    if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-      this.setData({ showPanel: true })
-      this._resetCardPositions()
-      return
-    }
-
-    // 垂直滑动切换
-    if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-      this._isAnimating = true
-      if (dy < 0) {
-        this._animateSwipeNext()
-      } else {
-        this._animateSwipePrev()
+      // 左滑呼出面板
+      if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        this.setData({ showPanel: true })
+        this._resetCardPositions()
+        return
       }
-    } else {
-      // 回弹到原位
-      this._animateBounceBack()
+
+      // 垂直滑动：先判断是否触达边界，做加载更多 / 刷新
+      if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
+        const atLast = this.data.currentIndex >= this.data.newsList.length - 1
+        const atFirst = this.data.currentIndex <= 0
+
+        if (dy < 0 && atLast) {
+          // 已到列表末尾仍上滑 -> 加载更多（获取新的其他新闻）
+          this.loadMoreNews()
+        } else if (dy > 0 && atFirst) {
+          // 已到列表开头仍下滑 -> 刷新当前分类
+          this.refreshCurrentCategory()
+        } else {
+          this._isAnimating = true
+          if (dy < 0) this._animateSwipeNext()
+          else this._animateSwipePrev()
+        }
+      } else {
+        // 未达阈值，回弹到原位
+        this._animateBounceBack()
+      }
+    } catch (e) {
+      console.error('onWxsTouchEnd error', e)
+      this._isAnimating = false
     }
   },
-
   // ============ 动画切换逻辑 ============
 
   /**
@@ -273,8 +294,13 @@ Page({
     // 步骤2：动画完成后重建 cards（移除 transition，准备新的目标卡）
     const newIndex = currentIndex + 1
     setTimeout(() => {
-      this.renderCards(newsList, newIndex)
-      this._isAnimating = false
+      try {
+        this.renderCards(newsList, newIndex)
+      } catch (e) {
+        console.error('renderCards failed', e)
+      } finally {
+        this._isAnimating = false
+      }
     }, SWIPE_ANIMATION_MS + 50)
   },
 
@@ -308,8 +334,13 @@ Page({
 
     const newIndex = currentIndex - 1
     setTimeout(() => {
-      this.renderCards(newsList, newIndex)
-      this._isAnimating = false
+      try {
+        this.renderCards(newsList, newIndex)
+      } catch (e) {
+        console.error('renderCards failed', e)
+      } finally {
+        this._isAnimating = false
+      }
     }, SWIPE_ANIMATION_MS + 50)
   },
 
@@ -335,8 +366,13 @@ Page({
     this.setData({ cards })
 
     setTimeout(() => {
-      this._removeTransition()
-      this._isAnimating = false
+      try {
+        this._removeTransition()
+      } catch (e) {
+        console.error('removeTransition failed', e)
+      } finally {
+        this._isAnimating = false
+      }
     }, BOUNCE_ANIMATION_MS + 50)
   },
 
@@ -369,6 +405,56 @@ Page({
     this.setData({ cards })
   },
 
+  // ============ 边界加载更多 / 刷新 ============
+
+  /**
+   * 到达列表末尾继续上滑 -> 加载更多新闻并给出反馈
+   */
+  async loadMoreNews() {
+    if (this.data.loadingMore) return
+    const { currentCategory, currentPage, newsList } = this.data
+    this.setData({ loadingMore: true })
+    wx.showToast({ title: '加载更多…', icon: 'loading', duration: 800 })
+    try {
+      const res = await getNewsList({ category: currentCategory, pageNum: currentPage + 1, pageSize: PAGE_SIZE })
+      const newItems = res.list || []
+      if (newItems.length === 0) {
+        wx.showToast({ title: '已经到底啦', icon: 'none' })
+        return
+      }
+      const oldLen = newsList.length
+      const merged = newsList.concat(newItems)
+      this.setData({ newsList: merged, currentPage: currentPage + 1, currentIndex: oldLen })
+      this.renderCards(merged, oldLen)
+      setTimeout(() => {
+        wx.showToast({ title: '已加载 ' + newItems.length + ' 条', icon: 'none' })
+      }, 400)
+    } catch (err) {
+      wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
+    } finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+
+  /**
+   * 到达列表开头继续下滑 -> 刷新当前分类并给出反馈
+   */
+  async refreshCurrentCategory() {
+    if (this.data.loadingMore) return
+    this.setData({ loadingMore: true })
+    wx.showToast({ title: '刷新中…', icon: 'loading', duration: 800 })
+    try {
+      const res = await getNewsList({ category: this.data.currentCategory, pageNum: 1, pageSize: PAGE_SIZE })
+      const list = res.list || []
+      this.setData({ newsList: list, currentPage: 1, currentIndex: 0 })
+      this.renderCards(list, 0)
+    } catch (err) {
+      wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
+    } finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+
   // ============ 卡片点击 ============
 
   onCardTap(e) {
@@ -391,7 +477,7 @@ Page({
       this.setData({ currentCategory: panelCategory })
       getNewsList({ category: panelCategory }).then(res => {
         const list = res.list || []
-        this.setData({ newsList: list, currentIndex: 0 })
+        this.setData({ newsList: list, currentIndex: 0, currentPage: 1, loadingMore: false })
         this.renderCards(list)
       })
     }
@@ -419,6 +505,8 @@ Page({
         this.setData({
           newsList: list,
           currentIndex: realIdx,
+          currentPage: 1,
+          loadingMore: false,
           showPanel: false
         })
         this.renderCards(list, realIdx)

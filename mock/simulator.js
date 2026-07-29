@@ -77,8 +77,29 @@ function simulateGetNewsList(mockData, category, pageNum, pageSize) {
       }
       const total = list.length
       const start = (pageNum - 1) * pageSize
-      const pagedList = list.slice(start, start + pageSize)
-      const hasMore = start + pageSize < total
+
+      // 原始数据分页（有限）
+      let pagedList = list.slice(start, start + pageSize)
+      let hasMore = start + pageSize < total
+
+      // 无限延伸：当请求页码超出原始数据范围时，循环克隆生成“新”新闻，
+      // 使“到达列表末尾继续上滑加载更多”在 Mock 模式下也能持续获取新的其他新闻。
+      // 仅在确有原始数据（total>0）时生成，空分类 / 空结果不受影响。
+      if (pagedList.length === 0 && total > 0) {
+        const ts = Date.now()
+        pagedList = []
+        for (let i = 0; i < pageSize; i++) {
+          const src = list[(start + i) % total]
+          const genId = 'mock-gen-' + pageNum + '-' + i + '-' + ts
+          pagedList.push({
+            ...src,
+            id: genId,
+            _id: genId,
+            title: src.title + '（第' + pageNum + '页·延伸阅读）',
+          })
+        }
+        hasMore = true
+      }
 
       resolve({ list: pagedList, total, hasMore })
     }, config.delay)

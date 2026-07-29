@@ -56,17 +56,20 @@ function isDragging() {
 // 绑定给 WXML 的 touch 事件处理函数
 function handleTouchStart(event, ownerInstance) {
   var touch = event.touches[0]
+  // 先重置手势状态（与 touchEnd 对称，确保任何情况下都不会卡死）
   touchState.startY = touch.clientY
   touchState.startX = touch.clientX
   touchState.offsetY = 0
   touchState.isDragging = false
   touchState.direction = 0
 
-  // 通知 JS 层
-  ownerInstance.callMethod('onWxsTouchStart', {
-    startY: touch.clientY,
-    startX: touch.clientX
-  })
+  // 通知 JS 层（用 try/catch 隔离，JS 异常绝不能楔住手势层）
+  try {
+    ownerInstance.callMethod('onWxsTouchStart', {
+      startY: touch.clientY,
+      startX: touch.clientX
+    })
+  } catch (e) {}
   return false
 }
 
@@ -97,33 +100,40 @@ function handleTouchMove(event, ownerInstance) {
     touchState.offsetY = clamped
   }
 
-  // 通知 JS 层当前偏移（低频，用于记录状态）
-  ownerInstance.callMethod('onWxsTouchMove', {
-    dy: dy,
-    offsetY: touchState.offsetY,
-    direction: touchState.direction,
-    isDragging: touchState.isDragging
-  })
+  // 通知 JS 层当前偏移（低频，用于记录状态；异常隔离）
+  try {
+    ownerInstance.callMethod('onWxsTouchMove', {
+      dy: dy,
+      offsetY: touchState.offsetY,
+      direction: touchState.direction,
+      isDragging: touchState.isDragging
+    })
+  } catch (e) {}
   return false
 }
 
 function handleTouchEnd(event, ownerInstance) {
+  // 关键修复：先无条件重置 WXS 手势状态。
+  // 原实现在 callMethod 之后才重置，一旦 JS 回调 onWxsTouchEnd 抛错，
+  // 重置代码不会执行，isDragging 将永久卡在 true，导致卡片停在拖拽偏移位、
+  // 且禁用 transition —— 表现为“滑到某条突然卡死，滑两条又恢复”。
+  touchState.isDragging = false
+  touchState.offsetY = 0
+  touchState.direction = 0
+
   var touch = event.changedTouches[0]
   var dy = touch.clientY - touchState.startY
   var dx = touch.clientX - touchState.startX
 
-  // 通知 JS 层处理切换
-  ownerInstance.callMethod('onWxsTouchEnd', {
-    dy: dy,
-    dx: dx,
-    offsetY: touchState.offsetY,
-    direction: touchState.direction
-  })
-
-  // 立即重置 WXS 状态（避免闪现 —— WXS 的 getTranslateY/getOpacity 不再覆盖 item 值）
-  touchState.isDragging = false
-  touchState.offsetY = 0
-  touchState.direction = 0
+  // 通知 JS 层处理切换（异常隔离，绝不楔住手势层）
+  try {
+    ownerInstance.callMethod('onWxsTouchEnd', {
+      dy: dy,
+      dx: dx,
+      offsetY: 0,
+      direction: 0
+    })
+  } catch (e) {}
 
   return false
 }

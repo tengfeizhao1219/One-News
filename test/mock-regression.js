@@ -102,9 +102,11 @@ async function run() {
     }
   })
 
-  await test('分页 — 大页码返回空', async () => {
+  await test('分页 — 大页码触发无限延伸加载', async () => {
     const res = await getNewsList({ category: 'all', pageNum: 100, pageSize: 10 })
-    assert(res.list.length === 0, '大页码应返回空列表')
+    assert(res.list.length > 0, `大页码应触发无限延伸加载并返回数据，实际: ${res.list.length}`)
+    assert(res.hasMore === true, '无限延伸场景下 hasMore 应为 true')
+    assert(res.list[0].title.includes('延伸阅读'), '延伸生成的新闻标题应带“延伸阅读”标记')
   })
 
   // ── 场景2：搜索 ──
