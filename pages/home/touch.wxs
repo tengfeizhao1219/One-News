@@ -1,5 +1,7 @@
 // WXS 响应式触摸处理 —— 避免 JS 层高频 setData
 // 直接操作 WXS 变量实现拖拽跟手，松手后通过回调通知 JS 层执行切换
+// 注意：WXS 仅支持 ES5 子集，禁止 try/catch、let/const、箭头函数、模板字符串、解构等语法，
+//       否则整模块编译失败，所有触摸回调与样式绑定全部失效。
 
 var touchState = {
   startY: 0,
@@ -63,13 +65,11 @@ function handleTouchStart(event, ownerInstance) {
   touchState.isDragging = false
   touchState.direction = 0
 
-  // 通知 JS 层（用 try/catch 隔离，JS 异常绝不能楔住手势层）
-  try {
-    ownerInstance.callMethod('onWxsTouchStart', {
-      startY: touch.clientY,
-      startX: touch.clientX
-    })
-  } catch (e) {}
+  // 通知 JS 层（JS 侧 onWxsTouchStart 内部已做异常隔离）
+  ownerInstance.callMethod('onWxsTouchStart', {
+    startY: touch.clientY,
+    startX: touch.clientX
+  })
   return false
 }
 
@@ -100,23 +100,22 @@ function handleTouchMove(event, ownerInstance) {
     touchState.offsetY = clamped
   }
 
-  // 通知 JS 层当前偏移（低频，用于记录状态；异常隔离）
-  try {
-    ownerInstance.callMethod('onWxsTouchMove', {
-      dy: dy,
-      offsetY: touchState.offsetY,
-      direction: touchState.direction,
-      isDragging: touchState.isDragging
-    })
-  } catch (e) {}
+  // 通知 JS 层当前偏移（低频，用于记录状态）
+  ownerInstance.callMethod('onWxsTouchMove', {
+    dy: dy,
+    offsetY: touchState.offsetY,
+    direction: touchState.direction,
+    isDragging: touchState.isDragging
+  })
   return false
 }
 
 function handleTouchEnd(event, ownerInstance) {
-  // 关键修复：先无条件重置 WXS 手势状态。
+  // 关键修复：先无条件重置 WXS 手势状态，再通知 JS 层。
   // 原实现在 callMethod 之后才重置，一旦 JS 回调 onWxsTouchEnd 抛错，
-  // 重置代码不会执行，isDragging 将永久卡在 true，导致卡片停在拖拽偏移位、
+  // 重置代码不会执行，isDragging 永久卡在 true，导致卡片停在拖拽偏移位、
   // 且禁用 transition —— 表现为“滑到某条突然卡死，滑两条又恢复”。
+  // WXS 不支持 try/catch，故以“先重置再回调”的顺序保证手势层永不楔死。
   touchState.isDragging = false
   touchState.offsetY = 0
   touchState.direction = 0
@@ -125,15 +124,13 @@ function handleTouchEnd(event, ownerInstance) {
   var dy = touch.clientY - touchState.startY
   var dx = touch.clientX - touchState.startX
 
-  // 通知 JS 层处理切换（异常隔离，绝不楔住手势层）
-  try {
-    ownerInstance.callMethod('onWxsTouchEnd', {
-      dy: dy,
-      dx: dx,
-      offsetY: 0,
-      direction: 0
-    })
-  } catch (e) {}
+  // 通知 JS 层处理切换（JS 侧 onWxsTouchEnd 内部已做异常隔离）
+  ownerInstance.callMethod('onWxsTouchEnd', {
+    dy: dy,
+    dx: dx,
+    offsetY: 0,
+    direction: 0
+  })
 
   return false
 }

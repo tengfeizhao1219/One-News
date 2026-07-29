@@ -50,6 +50,11 @@ function isStrictUtf8(buf) {
 }
 
 // ===== 静态检查：touch.wxs 异常安全（Bug1 根因防护）=====
+// 架构事实：WXS 仅支持 ES5 子集，禁止 try/catch、let/const、箭头函数、模板字符串、
+//          解构等语法；一旦使用，整模块编译失败，所有触摸回调与样式绑定全部失效
+//          （正是 191ba57 推送后“侧边栏打不开 + 新闻不能滑动”的根因）。
+//          因此 WXS 层无法用 try/catch，Bug1 的异常安全只能靠“先无条件重置再回调”的顺序保证，
+//          真正的异常隔离在 JS 层 onWxsTouchEnd 内部 try/catch 完成。
 console.log('\n【静态】touch.wxs 手势层异常安全（Bug1 根因防护）')
 {
   const wxs = read(files.wxs)
@@ -58,10 +63,32 @@ console.log('\n【静态】touch.wxs 手势层异常安全（Bug1 根因防护�
   check('handleTouchEnd 先无条件重置 isDragging 再回调',
     idxReset > -1 && idxCall > -1 && idxReset < idxCall,
     'reset@' + idxReset + ' call@' + idxCall)
-  const tryCatchAroundCall = /try\s*\{[\s\S]*callMethod\('onWxsTouchEnd'[\s\S]*?\}\s*catch/.test(wxs)
-  check('callMethod 被 try/catch 隔离（JS 异常不楔住手势层）', tryCatchAroundCall)
-  const catchCount = (wxs.match(/catch \(e\)/g) || []).length
-  check('三个 handler 均含 try/catch 隔离', catchCount >= 3, 'catch 数=' + catchCount)
+
+  // 仅对“代码”做非法语法扫描（剔除 // 行注释，避免误判注释文字）
+  const codeOnly = wxs.split('\n').map(function (l) {
+    return l.replace(/\/\/.*$/, '')
+  }).join('\n')
+  const forbidden = [
+    ['try/catch', /\btry\s*\{|\bcatch\s*\(/],
+    ['let', /\blet\s+/],
+    ['const', /\bconst\s+/],
+    ['箭头函数 =>', /=>/],
+    ['模板字符串 `', /`/],
+  ]
+  let illegal = []
+  forbidden.forEach(function (pair) {
+    if (pair[1].test(codeOnly)) illegal.push(pair[0])
+  })
+  check('touch.wxs 代码为纯 ES5（不含 try/catch/let/const/箭头/模板字符串）',
+    illegal.length === 0, '命中: ' + illegal.join(','))
+  check('touch.wxs 绝不含 try/catch（否则整模块编译失败）',
+    !/\btry\s*\{|\bcatch\s*\(/.test(codeOnly))
+
+  // 三个 handler 均定义并导出
+  const hasStart = /function handleTouchStart\(/.test(wxs) && /handleTouchStart: handleTouchStart/.test(wxs)
+  const hasMove = /function handleTouchMove\(/.test(wxs) && /handleTouchMove: handleTouchMove/.test(wxs)
+  const hasEnd = /function handleTouchEnd\(/.test(wxs) && /handleTouchEnd: handleTouchEnd/.test(wxs)
+  check('三个触摸 handler 均定义并导出', hasStart && hasMove && hasEnd)
 }
 
 // ===== 静态检查：home.js 架构不变量（Bug1 / Bug2 防护）=====
