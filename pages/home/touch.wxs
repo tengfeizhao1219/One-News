@@ -70,7 +70,6 @@ function handleTouchStart(event, ownerInstance) {
     startY: touch.clientY,
     startX: touch.clientX
   })
-  return false
 }
 
 function handleTouchMove(event, ownerInstance) {
@@ -83,7 +82,7 @@ function handleTouchMove(event, ownerInstance) {
     touchState.isDragging = true
   }
   if (touchState.isDragging && Math.abs(dx) > Math.abs(dy)) {
-    return false
+    // 水平滑动中，不处理垂直逻辑
   }
 
   // 垂直滑动：确定方向
@@ -107,7 +106,6 @@ function handleTouchMove(event, ownerInstance) {
     direction: touchState.direction,
     isDragging: touchState.isDragging
   })
-  return false
 }
 
 function handleTouchEnd(event, ownerInstance) {
@@ -132,7 +130,7 @@ function handleTouchEnd(event, ownerInstance) {
     direction: 0
   })
 
-  return false
+  // 不返回 false，避免阻止子元素上的 bindtap 事件
 }
 
 // 外部可调：JS 层松手后通知 WXS 开始过渡
