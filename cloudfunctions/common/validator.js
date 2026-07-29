@@ -7,6 +7,7 @@
  *   3. 标题去重
  *   4. 时间合理性
  *   5. 内容质量（长度、敏感词等）
+ *   6. sourceUrl 格式校验（L1：正则 + 占位符检测）
  */
 
 // ─── 配置 ───────────────────────────────────────────
@@ -89,6 +90,107 @@ function validateNewsItem(item) {
     }
   }
 
+  // 6. sourceUrl 格式校验（L1）
+  //    只做零成本的格式/语义检测，不做网络可达性（L2 可选）
+  if (item.sourceUrl) {
+    const urlResult = validateSourceUrl(item.sourceUrl, item.source)
+    if (!urlResult.valid) {
+      // 不拒绝整条新闻，只清空无效 sourceUrl
+      item.sourceUrl = ''
+      item._urlRejected = urlResult.reason
+    }
+  }
+
+  return { valid: true }
+}
+
+/**
+ * L1 URL 格式校验
+ *
+ * 因为百炼 DeepSeek 返回的 sourceUrl 是模型生成的（非 API 原生），
+ * 必须检查是否存在幻觉（占位符、模板 URL、与来源不匹配等）。
+ *
+ * @param {string} url       - 模型返回的 URL
+ * @param {string} source    - 来源中文名（如"新华社"），用于域名一致性检查
+ * @returns {{ valid: boolean, reason?: string }}
+ */
+function validateSourceUrl(url, source) {
+  if (!url || typeof url !== 'string') {
+    return { valid: false, reason: 'URL 为空' }
+  }
+
+  const u = url.trim()
+
+  // 1. 协议检查
+  if (!/^https?:\/\//i.test(u)) {
+    return { valid: false, reason: `URL 不含 http(s) 协议: ${u.substring(0, 60)}` }
+  }
+
+  // 2. 占位符/模板 URL 检测（模型幻觉高频模式）
+  //
+  //  关键设计：36氪(/p/)、虎嗅(/article/)、澎湃(newsDetail) 等媒体
+  //  的 URL 路径天然就是数字 ID，不能靠数字长度来判断。
+  //  因此只检测"数字序列有显著规律"的占位符（如 1234567890、9876543210、
+  //  11111111 等），而不对合法媒体的数字路径做一刀切。
+  const placeholderPatterns = [
+    /1234567890/,                          // 递增序列占位（10位）
+    /9876543210/,                          // 递减序列占位（10位）
+    /\b9876543\b/,                         // 递减序列占位（7位，仅独立数字词边界）
+    /\b1234567\b/,                         // 递增序列占位（7位，仅独立数字词边界）
+    /example\.com/i,                       // example.com 占位域名
+    /localhost/i,                          // localhost
+    /placeholder/i,                        // 含 "placeholder" 字样
+    /your[-_]?domain/i,                    // "yourdomain.com" 模板
+    /example\.(com|org|net)/i,             // 各种 example 域名
+    /^https?:\/\/[^/]+\/\d{1,4}$/,         // 域名后仅有 1-4 位数字，无路径（如 /1234）
+  ]
+
+  for (const pattern of placeholderPatterns) {
+    if (pattern.test(u)) {
+      return { valid: false, reason: `疑似占位符/模板 URL: ${u.substring(0, 80)}` }
+    }
+  }
+
+  // 3. 域名提取与来源一致性检查（宽松模式：仅警告，不拒绝）
+  try {
+    const hostname = new URL(u).hostname.replace(/^www\./, '').toLowerCase()
+
+    // 来源中文名 → 预期域名映射
+    const SOURCE_DOMAIN_EXPECT = {
+      '新华社':     ['xinhuanet.com'],
+      '人民日报':   ['people.com.cn'],
+      '央视新闻':   ['cctv.com', 'cctv.cn'],
+      '中新网':     ['chinanews.com'],
+      '澎湃新闻':   ['thepaper.cn'],
+      '36氪':       ['36kr.com'],
+      '虎嗅':       ['huxiu.com'],
+      '环球时报':   ['huanqiu.com'],
+      '路透社':     ['reuters.com'],
+      'BBC':        ['bbc.com', 'bbc.co.uk'],
+      '美联社':     ['apnews.com'],
+      'TechCrunch': ['techcrunch.com'],
+    }
+
+    const expectedDomains = SOURCE_DOMAIN_EXPECT[source]
+    if (expectedDomains) {
+      const matchesSource = expectedDomains.some(d => hostname === d || hostname.endsWith('.' + d))
+      if (!matchesSource) {
+        // 域名与来源不一致——大概率是模型把 URL 安错了新闻
+        return { valid: false, reason: `URL 域名(${hostname})与来源(${source})不匹配` }
+      }
+    }
+  } catch (_) {
+    // URL 解析失败（语法错误）
+    return { valid: false, reason: `URL 解析失败: ${u.substring(0, 60)}` }
+  }
+
+  // 4. 极端短域名（如 "t.cn"）——可能是模型截断或编造
+  const hostname = new URL(u).hostname.replace(/^www\./, '').toLowerCase()
+  const dotCount = (hostname.match(/\./g) || []).length
+  if (dotCount < 1 || hostname.length < 6) {
+    return { valid: false, reason: `URL 域名过短/异常: ${hostname}` }
+  }
+
   return { valid: true }
 }
 
@@ -156,6 +258,7 @@ function validateAndClean(newsList) {
 module.exports = {
   validateNewsItem,
   validateAndClean,
+  validateSourceUrl,
   deduplicateByTitle,
   VALID_SOURCES,
 }

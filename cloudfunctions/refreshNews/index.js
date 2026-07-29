@@ -49,6 +49,7 @@ async function batchInsert(newsList) {
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
+          sourceUrl: item.sourceUrl || '',
           publishTime: item.publishTime,
           cacheExpire: expireAt,
           createdAt: now,
