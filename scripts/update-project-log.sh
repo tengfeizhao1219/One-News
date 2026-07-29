@@ -159,7 +159,7 @@ One-News/
 | 🟡 P1 | 接入真实数据（切换 USE_MOCK=false，部署云函数） | 待做 |
 | 🟡 P1 | SOP 更新（WXS 语法红线 + return false 禁止） | 待做 |
 | 🟢 P2 | v7 回归测试更新（适配最终实现） | 待做 |
-| 🟢 P2 | GitHub PAT 轮换（聊天中暴露过） | 提醒用户 |
+| 🟢 P2 | 轮换百炼 API Key（曾硬编码入 Git 历史，已迁入保险库）+ GitHub PAT 管理 | 待轮换 |
 
 ---
 
@@ -203,6 +203,55 @@ One-News/
 - [测试用例](docs/iteration-5/测试用例终版.md)
 - [上线操作指南](上线操作指南.md)
 - [变更记录](docs/changelog/变更记录.md)
+
+EOF
+
+# ─── 敏感信息保险库（Secrets Vault）章节（引号 heredoc，避免 $()/反引号 被展开）───
+cat >> "$LOG_FILE" <<'VAULT_EOF'
+
+---
+
+## 🔐 敏感信息保险库（Secrets Vault）
+
+> 所有密钥**不进代码、不进 Git、不回显**，统一存放于本地保险库，按需经助手脚本注入环境变量。
+
+| 项 | 值 |
+|----|-----|
+| 保险库目录 | `/root/.secrets/`（权限 700） |
+| 密钥文件权限 | 600 |
+| 助手脚本 | `/usr/local/bin/secret_put`、`secret_get`、`github_push` |
+
+### 当前存放的密钥
+
+| 密钥 | 用途 | 消费方 |
+|------|------|--------|
+| `github_pat` | GitHub 推送代码 | `github_push` → git remote（oauth2:token） |
+| `bailian_api_key` | 阿里百炼 DeepSeek 联网搜索 | `cloudfunctions/common/config.js` → `DASHSCOPE_API_KEY` 环境变量 |
+
+### 写入（不回显）
+```bash
+echo "ghp_xxx" | secret_put github_pat
+echo "sk-xxx"  | secret_put bailian_api_key
+```
+
+### 读取与使用
+```bash
+secret_get github_pat          # 仅输出值，供管道
+secret_get bailian_api_key
+
+# 推送代码（自动注入 token，结束还原 remote）
+github_push /workspace/One-News origin main
+
+# 云函数运行时注入百炼 Key
+export DASHSCOPE_API_KEY=$(secret_get bailian_api_key)
+```
+
+> ⚠️ 安全：早期版本曾将百炼 Key 硬编码于 `config.js` 并推入 Git 历史，已改为仅读环境变量。**请前往阿里百炼控制台轮换该 Key**。
+
+VAULT_EOF
+
+# ─── 页脚 ───
+cat >> "$LOG_FILE" << EOF
 
 ---
 
