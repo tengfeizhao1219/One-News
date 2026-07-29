@@ -4,8 +4,6 @@
 const { STATUS_BAR_HEIGHT, SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, CATEGORIES } = require('../../utils/constants')
 const { getNewsDetail, getNewsList, handleApiError } = require('../../utils/request')
 
-const app = getApp()
-
 Page({
   data: {
     statusBarHeight: STATUS_BAR_HEIGHT,
@@ -49,7 +47,11 @@ Page({
     this.setData({ homeIndex, homeCategory })
 
     if (id) {
-      this.init(id)
+      this.init(id).catch((err) => {
+        // 兜底：任何未捕获异常都转入 error 状态，避免白屏
+        console.error('详情页初始化失败:', err)
+        this.setData({ pageState: 'error' })
+      })
     } else {
       this.setData({ pageState: 'error' })
     }
@@ -88,7 +90,8 @@ Page({
   async loadDetail(newsId) {
     const news = await getNewsDetail(newsId)
     const text = news.content || news.summary || ''
-    const paragraphs = text.split('\\n\\n').filter(function (p) { return p.trim() })
+    // content 在 JS 运行时已是实际换行符，按实际换行切段（兼容 \n 或 \n\n）
+    const paragraphs = text.split(/\n+/).map(function (p) { return p.trim() }).filter(function (p) { return p })
 
     this.setData({ news, paragraphs })
 
@@ -300,10 +303,13 @@ Page({
     if (readingList.length > 0 && readingList[readingIndex]) {
       var currentNews = readingList[readingIndex]
       // 通过 app.globalData 将定位信息传回首页
-      app.globalData._detailReturnState = {
-        newsId: currentNews.id,
-        category: currentNews.category,
-        readingIndex: readingIndex
+      var app = getApp()
+      if (app && app.globalData) {
+        app.globalData._detailReturnState = {
+          newsId: currentNews.id,
+          category: currentNews.category,
+          readingIndex: readingIndex
+        }
       }
     }
 

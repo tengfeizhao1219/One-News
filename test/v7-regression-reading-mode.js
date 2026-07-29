@@ -87,9 +87,9 @@ console.log('\n【静态】detail.js 阅读模式架构不变量')
   check('返回信息含 newsId / category / readingIndex',
     js.includes('newsId:') && js.includes('category:') && js.includes('readingIndex:'))
 
-  // 段落拆分
-  check('正文按 \\\\n\\\\n 拆分为段落',
-    js.includes("split('\\\\n\\\\n')") || js.includes('split("\\\\n\\\\n")'))
+  // 段落拆分（兼容 \n 或 \n\n，按实际换行切段）
+  check('正文按换行符拆分为段落（可处理 \\n 或 \\n\\n）',
+    js.includes('split(/\\n+/)') || js.includes('split(/\\n+/)') || js.includes('split(/\\n+/)'))
   check('content 优先，fallback 到 summary',
     js.includes('news.content || news.summary'))
 
