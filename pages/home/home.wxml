@@ -1,4 +1,4 @@
-<!-- 棣栭〉 - 鍗＄墖娴佷富瑙嗗浘 -->
+<!-- 首页 - 卡片流主视图 -->
 <wxs module="touch" src="./touch.wxs"></wxs>
 
 <view class="page" 
@@ -6,19 +6,19 @@
   bindtouchmove="{{touch.handleTouchMove}}" 
   bindtouchend="{{touch.handleTouchEnd}}">
 
-  <!-- 鍥哄畾椤堕儴鏍忥細鍒锋柊锛堝乏渚э級+ 鎼滅储锛堝彸渚э級 -->
+  <!-- 固定顶部栏：刷新（左侧）+ 搜索（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
       <view class="top-bar-refresh" bindtap="onRefreshNews">
-        <text class="refresh-icon">{{isRefreshing ? '鈴?' : '馃攧'}}</text>
+        <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
       </view>
       <view class="top-bar-search" bindtap="goSearch">
-        <text class="search-icon-top">馃攳</text>
+        <text class="search-icon-top">S</text>
       </view>
     </view>
   </view>
 
-  <!-- ========== 楠ㄦ灦灞忥紙鍔犺浇涓級 ========== -->
+  <!-- ========== 骨架屏（加载中） ========== -->
   <view class="skeleton-stage" wx:if="{{pageState === 'loading'}}">
     <view class="skeleton-card" wx:for="{{skeletonCount}}" wx:key="*this">
       <view class="sk-title"></view>
@@ -32,21 +32,21 @@
     </view>
   </view>
 
-  <!-- ========== 閿欒鐘舵�? ========== -->
+  <!-- ========== 错误状态 ========== -->
   <view class="state-container" wx:if="{{pageState === 'error'}}">
-    <view class="state-icon">馃摗</view>
+    <view class="state-icon">!</view>
     <view class="state-message">{{errorMessage}}</view>
-    <view class="state-retry" bindtap="onRetry">鐐瑰嚮閲嶈瘯</view>
+    <view class="state-retry" bindtap="onRetry">点击重试</view>
   </view>
 
-  <!-- ========== 绌烘暟鎹姸鎬? ========== -->
+  <!-- ========== 空数据状态 ========== -->
   <view class="state-container" wx:if="{{pageState === 'empty'}}">
-    <view class="state-icon">馃摥</view>
+    <view class="state-icon">-</view>
     <view class="state-message">{{errorMessage}}</view>
-    <view class="state-retry" bindtap="onRetry">涓嬫媺鍒锋柊璇曡瘯</view>
+    <view class="state-retry" bindtap="onRetry">下拉刷新试试</view>
   </view>
 
-  <!-- ========== 姝ｅ父鍗＄墖娴? ========== -->
+  <!-- ========== 正常卡片流 ========== -->
   <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
@@ -56,32 +56,32 @@
         bindtap="onCardTap">
 
         <view class="card-body">
-          <!-- 鏍囬 -->
+          <!-- 标题 -->
           <view class="card-title">{{item.title}}</view>
           
-          <!-- 鎽樿 -->
+          <!-- 摘要 -->
           <view class="card-summary">
             <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
               <view class="summary-p">{{item}}</view>
             </block>
           </view>
           
-          <!-- 鍏冧俊鎭? -->
+          <!-- 元信息 -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text>{{item.source}}</text>
-            <text>路</text>
+            <text> - </text>
             <text>{{item.time}}</text>
           </view>
         </view>
 
-        <!-- 搴曢儴鎻愮ず -->
-        <view class="swipe-hint">鈫? 涓婃粦闃呰涓嬩竴鏉?</view>
+        <!-- 底部提示 -->
+        <view class="swipe-hint">^ 上滑阅读下一条</view>
       </view>
     </block>
   </view>
 
-  <!-- 瀵艰埅鎸囩ず鐐? -->
+  <!-- 导航指示点 -->
   <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
     <view 
       wx:for="{{newsList}}" 
@@ -90,20 +90,20 @@
     </view>
   </view>
 
-  <!-- 渚ц竟鏍忛伄缃╋紙鐐瑰嚮鍏抽棴锛? -->
+  <!-- 侧边栏遮罩（点击关闭） -->
   <view 
     class="panel-overlay {{showPanel ? 'show' : ''}}" 
     bindtap="closePanel"
     catchtouchmove="preventMove">
   </view>
 
-  <!-- 渚ц竟鏍忛潰鏉? -->
-  <view class="slide-panel {{showPanel ? 'show' : ''}}">
+  <!-- 侧边栏面板 -->
+  <view class="slide-panel {{showPanel ? 'show' : ''}}" catchtouchmove="preventMove">
     <view class="panel-header">
-      <text class="panel-title">浠婃棩鏂伴椈</text>
+      <text class="panel-title">今日新闻</text>
     </view>
 
-    <!-- 鍒嗙被鏍囩锛堝綋鍓嶅垎绫婚珮浜紝鍒囨崲涓嶅叧闂潰鏉匡級 -->
+    <!-- 分类标签（当前分类高亮，切换不关闭面板） -->
     <scroll-view class="panel-tabs" scroll-x enable-flex>
       <view 
         wx:for="{{categories}}" 
@@ -115,7 +115,7 @@
       </view>
     </scroll-view>
 
-    <!-- 鏂伴椈鍒楄〃 -->
+    <!-- 新闻列表 -->
     <scroll-view class="panel-list" scroll-y>
       <view 
         wx:for="{{filteredNewsList}}" 
@@ -126,13 +126,13 @@
         <view class="panel-item-title {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}">{{item.title}}</view>
       </view>
       <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
-        鏆傛棤鏂伴椈
+        暂无新闻
       </view>
     </scroll-view>
   </view>
 
-  <!-- 棣栨寮曞 -->
+  <!-- 首次引导 -->
   <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>鈫? 涓婃粦闃呰涓嬩竴鏉n鈫? 宸︽粦鏌ョ湅浠婃棩鍒楄〃\n路 鐐瑰嚮鍗＄墖闃呰鍏ㄦ枃</text>
+    <text>^ 上滑阅读下一条\n&lt;- 左滑查看今日列表\n- 点击卡片阅读全文</text>
   </view>
 </view>
