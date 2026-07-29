@@ -89,8 +89,10 @@ async function callTianApi({ col, word, page = 1, num = 10 }) {
 
   // 天行数据状态码处理
   if (result.code === 200) {
+    // 注意：allnews 接口返回的新闻数组字段是 newslist（非 list）
+    const list = result.result?.newslist || result.result?.list || []
     return {
-      list: result.result?.list || [],
+      list,
       allnum: result.result?.allnum || 0,
       curpage: result.result?.curpage || page,
     }
@@ -99,6 +101,7 @@ async function callTianApi({ col, word, page = 1, num = 10 }) {
   // API 错误码映射
   const errorMap = {
     150: 'API_RATE_LIMIT',     // 次数不足
+    160: 'API_NOT_APPLIED',    // 尚未申请该 API（需去控制台免费申请）
     230: 'API_KEY_INVALID',    // key无效
     100: 'API_SERVER_ERROR',   // 内部错误
     110: 'API_SERVER_ERROR',   // 内部错误
