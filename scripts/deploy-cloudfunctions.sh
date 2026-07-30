@@ -49,7 +49,7 @@ for fn in "${FUNCS[@]}"; do
   echo "▶ 部署 $fn ..."
   # updateFunctionCode 仅更新代码，保留已有的环境变量与定时触发器
   $CLIENT --config "$CONFIG" call cloudbase manageFunctions \
-    action=updateFunctionCode functionRootPath="$BUILD" functionName="$fn"
+    action=updateFunctionCode functionRootPath="$pkg" functionName="$fn"
   echo "  ✅ $fn 部署完成"
 done
 
