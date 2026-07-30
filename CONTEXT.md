@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `ddeaba3` — docs: 项目日志汇总 |
+| 最新提交 | `969d5db` — feat: multi-session collaboration framework |
 
 ---
 
@@ -65,9 +65,11 @@ utils/
 
 | 文件 | 用途 |
 |------|------|
+| `RELAY.md` 🔥 | **接力棒** — 当前该谁做什么，启动指令 |
 | `CONTEXT.md`（本文件） | 项目速览，新会话第一读 |
 | `COLLABORATION.md` | 多会话协作协议 |
 | `TASK_BOARD.md` | 任务看板（当前任务、进行中、已完成） |
+| `COMMLOG.md` | 会话沟通记录（交接用） |
 | `docs/项目日志.md` | 完整项目历史 |
 | `docs/SOP-软件开发流程基准.md` | 开发规范与流程 |
 
@@ -84,4 +86,4 @@ utils/
 
 ---
 
-> **最后更新**：2026-07-28 | **更新者**：主会话
+> **最后更新**：2026-07-30 | **更新者**：主会话
