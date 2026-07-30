@@ -414,9 +414,12 @@ contains(getNewsListCode, 'parseInt(event.pageSize)', 'pageSize is parseInt-ed')
 contains(getNewsListCode, 'Math.max(1,', 'pageNum minimum is 1');
 contains(getNewsListCode, 'config.pagination.maxPageSize', 'pageSize capped by maxPageSize');
 
-// 5.8 Cache TTL config
-contains(getNewsListCode, 'config.cache.memoryTTL', 'Memory cache uses memoryTTL');
-contains(getNewsListCode, 'cache.set(memoryKey,', 'Writes to L1 memory cache');
+// 5.8 Tian API first priority (v3.2)
+contains(getNewsListCode, 'fetchFromTianApi', 'L1 calls fetchFromTianApi first');
+contains(getNewsListCode, "source: 'tian_api'", 'L1 tian_api is the primary source');
+contains(getNewsListCode, 'memory_cache', 'L2 falls back to memory cache on tian failure');
+contains(getNewsListCode, 'db_cache', 'L3 falls back to DB cache');
+contains(getNewsListCode, 'ai_cache', 'L5 falls back to AI static cache');
 
 // 5.9 Empty data fallback
 contains(getNewsListCode, 'ALL_DOWN', 'Returns ALL_DOWN when all sources fail');

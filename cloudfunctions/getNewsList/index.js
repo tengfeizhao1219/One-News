@@ -1,4 +1,4 @@
-// 获取新闻列表云函数 — 天行实时优先，缓存降权
+// 获取新闻列表云函数 — 天行实时第一优先级
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -89,53 +89,48 @@ exports.main = async (event) => {
 
   console.log(`[getNewsList] category=${category} page=${pageNum} size=${pageSize}`)
 
-  // ── 第1层：内存缓存 ──
-  const memoryKey = `news:list:${category}:${pageNum}`
-  const memoryCached = cache.get(memoryKey)
-  if (memoryCached) {
-    console.log('[getNewsList] L1 内存缓存命中')
-    return { code: 0, data: memoryCached, meta: { source: 'memory_cache' } }
-  }
-
-  // ── 第2层：云数据库缓存（由 refreshNews 定期更新，TTL 10min）──
-  const dbCached = await getFromDbCache(category, pageNum, pageSize)
-  if (dbCached && dbCached.list.length > 0) {
-    console.log(`[getNewsList] L2 DB 缓存命中，返回 ${dbCached.list.length} 条`)
-    cache.set(memoryKey, dbCached, { ttl: config.cache.memoryTTL })
-    return { code: 0, data: dbCached, meta: { source: 'db_cache' } }
-  }
-
-  // ── 第3层：天行实时 API（v3.1 主力数据源，DB 缓存过期后优先走这里）──
-  console.log('[getNewsList] L2 DB 缓存未命中，尝试 L3 天行实时 API')
+  // ── L1：天行实时 API（第一优先级，每次直连）──
   try {
     const result = await fetchFromTianApi(category, pageNum, pageSize)
     const responseData = { list: result.list, total: result.total, hasMore: result.hasMore }
-    cache.set(memoryKey, responseData, { ttl: config.cache.memoryTTL })
-    console.log(`[getNewsList] L3 天行 API 成功，返回 ${result.list.length} 条`)
+    console.log(`[getNewsList] L1 天行 API 成功，返回 ${result.list.length} 条`)
     return { code: 0, data: responseData, meta: { source: 'tian_api' } }
 
   } catch (tianErr) {
     console.warn('[getNewsList] 天行 API 失败:', tianErr.message)
 
-    // ── 第4层：聚合数据降级（可选，需 JUHE_API_KEY）──
+    // ── L2：内存缓存（天行失败后尝试）──
+    const memoryKey = `news:list:${category}:${pageNum}`
+    const memoryCached = cache.get(memoryKey)
+    if (memoryCached) {
+      console.log('[getNewsList] L2 内存缓存命中')
+      return { code: 0, data: memoryCached, meta: { source: 'memory_cache' } }
+    }
+
+    // ── L3：云数据库缓存（refreshNews 写入，TTL 10min）──
+    const dbCached = await getFromDbCache(category, pageNum, pageSize)
+    if (dbCached && dbCached.list.length > 0) {
+      console.log(`[getNewsList] L3 DB 缓存命中，返回 ${dbCached.list.length} 条`)
+      return { code: 0, data: dbCached, meta: { source: 'db_cache' } }
+    }
+
+    // ── L4：聚合数据降级（可选，需 JUHE_API_KEY）──
     try {
       const fallbackResult = await fetchFromJuheApi(category, pageNum, pageSize)
       const responseData = { list: fallbackResult.list, total: fallbackResult.total, hasMore: fallbackResult.hasMore }
-      cache.set(memoryKey, responseData, { ttl: config.cache.memoryTTL })
       console.log(`[getNewsList] L4 聚合 API 降级成功，返回 ${fallbackResult.list.length} 条`)
       return { code: 0, data: responseData, meta: { source: 'juhe_fallback' } }
 
     } catch (juheErr) {
       console.warn('[getNewsList] 聚合 API 也失败:', juheErr.message)
 
-      // ── 第5层：AI 静态缓存（终极兜底，保证永远有数据）──
+      // ── L5：AI 静态缓存（终极兜底）──
       const aiResult = aiNews.getByCategory(category, pageNum, pageSize)
       const aiStats = aiNews.getStats()
 
       if (aiResult.list.length > 0) {
         console.log(`[getNewsList] L5 AI 静态缓存兜底，返回 ${aiResult.list.length} 条`)
         const responseData = { list: aiResult.list, total: aiResult.total, hasMore: aiResult.hasMore }
-        cache.set(memoryKey, responseData, { ttl: config.cache.memoryTTL })
         return {
           code: 0, data: responseData,
           meta: { source: 'ai_cache', cacheVersion: aiStats.version, cacheGeneratedAt: aiStats.generatedAt },
