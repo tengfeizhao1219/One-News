@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `aae100c` — docs: add 即席/直连模式 + flexible intent-based triggers to collaboration framework |
+| 最新提交 | `032ea7a` — docs: fix init scripts to include full framework file map and role directories (v1.3) |
 
 ---
 
