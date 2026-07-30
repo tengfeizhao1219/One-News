@@ -328,4 +328,28 @@ async function extractContent(url) {
   return joined.split('\n')
 }
 
-module.exports = { extractContent, fetchHtml, extractParagraphs, stripHtml, cleanParagraphs }
+/**
+ * 根据新闻原文 URL 提取一段摘要（首段正文），用于列表卡片在无简介时兜底
+ * @param {string} url
+ * @param {number} [maxLen=90] 摘要最大字数（超出截断并加省略号）
+ * @returns {Promise<string|null>}
+ */
+async function extractSummary(url, maxLen = 90) {
+  if (!url || !/^https?:\/\//i.test(url)) return null
+  const html = await fetchHtml(url)
+  if (!html) return null
+
+  let container = locateBodyHtml(html)
+  let paras = extractParagraphs(container)
+  if (paras.length < 1) paras = extractParagraphs(html)
+  if (paras.length === 0) return null
+
+  // 复用正文噪音清洗，取首个有效段落作为摘要
+  const cleaned = cleanParagraphs(paras)
+  const summary = (cleaned[0] || paras[0] || '').trim()
+  if (!summary) return null
+  if (summary.length > maxLen) return summary.slice(0, maxLen) + '…'
+  return summary
+}
+
+module.exports = { extractContent, extractSummary, fetchHtml, extractParagraphs, stripHtml, cleanParagraphs }

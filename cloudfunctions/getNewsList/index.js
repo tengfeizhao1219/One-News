@@ -11,6 +11,7 @@ const config = require('../common/config')
 const { callTianApi } = require('../common/tianApi')
 const { callJuheApi } = require('../common/juheApi')
 const { adaptNewsList, APP_TO_TIAN_ENDPOINT, APP_TO_JUHE_TYPE, CATEGORY_NAMES } = require('../common/adapter')
+const { extractSummary } = require('../common/contentExtractor')
 
 // ─── 缓存查询 ────────────────────────────────────────
 
@@ -80,6 +81,41 @@ async function fetchFromJuheApi(category, pageNum, pageSize) {
   }
 }
 
+// ─── 摘要兜底补全 ───────────────────────────────────
+// 部分新闻（尤其天行/聚合未返回 description 的条目）summary 为空，
+// 导致首页卡片只剩标题。这里对缺摘要且有原文 URL 的条目，抓取正文首段作为摘要。
+// 先查 news 集合是否已有缓存摘要（避免重复抓取），仍缺失的并行抓取，
+// 抓取结果会随下方 syncNewsToCollection 写回集合，后续加载直接复用。
+async function enrichMissingSummaries(list) {
+  const need = list.filter(i => !i.summary && i.sourceUrl)
+  if (need.length === 0) return
+
+  // 1) 批量查 news 集合的已缓存摘要
+  const ids = need.map(i => i.id)
+  const cached = {}
+  try {
+    const res = await db.collection('news').where({ id: db.command.in(ids) }).get()
+    res.data.forEach(d => { if (d.summary) cached[d.id] = d.summary })
+  } catch (e) {
+    console.warn('[enrichMissingSummaries] 缓存查询失败，忽略:', e.message)
+  }
+
+  // 2) 对仍缺失的条目并行抓取正文首段
+  const stillMissing = need.filter(i => !cached[i.id])
+  if (stillMissing.length > 0) {
+    console.log(`[enrichMissingSummaries] 需抓取 ${stillMissing.length} 条摘要`)
+    await Promise.all(stillMissing.map(async (i) => {
+      try {
+        const s = await extractSummary(i.sourceUrl)
+        if (s) cached[i.id] = s
+      } catch (e) { /* 单条失败不影响整体 */ }
+    }))
+  }
+
+  // 3) 回填到列表
+  list.forEach(i => { if (cached[i.id]) i.summary = cached[i.id] })
+}
+
 // ─── 写入 news 集合（供 getNewsDetail 查询详情）────────────
 // 天行免费接口不返回正文全文，仅提供 description（导语）。
 // 这里把列表项（含摘要/图片/来源/链接）落地到 news 集合，
@@ -142,6 +178,8 @@ exports.main = async (event) => {
     const result = await fetchFromTianApi(category, pageNum, pageSize)
     const responseData = { list: result.list, total: result.total, hasMore: result.hasMore }
     console.log(`[getNewsList] L1 天行 API 成功，返回 ${result.list.length} 条`)
+    // 缺摘要的条目抓取正文首段兜底（结果随下方同步写回 news 集合缓存）
+    await enrichMissingSummaries(result.list)
     // 同步落地到 news 集合（写入 ~100ms），供 getNewsDetail 使用
     console.log('[getNewsList] 开始同步写入 news 集合...')
     await syncNewsToCollection(result.list)
@@ -171,6 +209,8 @@ exports.main = async (event) => {
       const fallbackResult = await fetchFromJuheApi(category, pageNum, pageSize)
       const responseData = { list: fallbackResult.list, total: fallbackResult.total, hasMore: fallbackResult.hasMore }
       console.log(`[getNewsList] L4 聚合 API 降级成功，返回 ${fallbackResult.list.length} 条`)
+      // 同样补全缺摘要条目
+      await enrichMissingSummaries(fallbackResult.list)
       return { code: 0, data: responseData, meta: { source: 'juhe_fallback' } }
 
     } catch (juheErr) {

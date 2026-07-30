@@ -110,6 +110,9 @@
   line-height: 1.35;
   margin-bottom: 40rpx;
   letter-spacing: -1rpx;
+  /* 长标题/无空格长串也能正常换行，避免被页面 overflow 直接硬切 */
+  word-break: break-word;
+  overflow-wrap: anywhere;
   /* 限制最多 3 行，过长显示省略号，避免被页面 overflow 直接裁断 */
   overflow: hidden;
   text-overflow: ellipsis;
