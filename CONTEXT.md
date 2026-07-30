@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `bad14f9` — docs: 阶段一需求规划交付 (需求池/优先级矩阵/评审纪要v1.1) |
+| 最新提交 | `057d4db` — docs: 需求梳理与审查报告 + 阶段二功能增强 PRD (D-01) |
 
 ---
 
@@ -22,11 +22,12 @@
 
 | 模块 | 状态 | 备注 |
 |------|------|------|
-| 首页（卡片滑动 + 侧边栏） | ✅ 已完成 | WXS 手势、暗色模式、5 分类 |
+| 首页（卡片滑动 + 侧边栏） | ✅ 已完成 | WXS 手势、暗色模式、8 分类（constants 实际 all/recommend/tech/international/sports/life/agriculture/science） |
 | 详情页（基础展示） | ✅ 已完成 | 单条新闻查看 |
-| 详情页（阅读模式） | ❌ 待开发 | 上下滑跨分类切换新闻（T-01） |
-| 搜索页 | ⚠️ 口径待核实 | 关键词搜索（CONTEXT 标 ✅，但 `app.json` 未注册 `pages/search`，见 RQ-13） |
-| 真实数据接入 | ✅ 已完成 | 天行实时 L1 + 聚合降级 L4 + 云库缓存 L3 + AI 兜底 L5（main，v11-v13） |
+| 详情页（阅读模式） | 🔵 部分落地 | **同分类上下滑翻页已完成**（detail.js pageTo）；仅缺"跨分类衔接"（RQ-01，T-01） |
+| 搜索页 | ❌ 未实现 | 整体缺失：无 `pages/search`、无 `searchNews` 云函数、request.js 无接口；CONTEXT 原"✅"为误标（见 RQ-13） |
+| 真实数据接入 | ✅ 已完成 | getNewsList 五层降级：天行 L1→内存 L2→云库(news_cache) L3→聚合 L4→AI 兜底 L5 |
+| 自动更新 refreshNews | ✅ 已上线 | **v3＝阿里百炼 DeepSeek 联网搜索→质量校验→写 news_cache**（定时 6/11/20 点 + 手动）；非 GitHub news.json |
 | 聚合数据源（Juhe） | ✅ 已接入 | L4 降级 + 分类透传（v12）；API Key 已注入环境变量 |
 | 卡片摘要补全 | ✅ 已实现 | 空摘要自动抓正文首段兜底（v13 enrichMissingSummaries） |
 | 标题截断加固 | ✅ 已完成 | CSS word-break + 摘要限 3 段（v13） |
@@ -45,11 +46,13 @@ cloudfunctions/
 pages/
   home/          — 首页（卡片、侧边栏、WXS 手势）
     touch.wxs    — ⚠️ 纯 ES5！不支持 try/catch/let/const/箭头函数
-  detail/        — 详情页（当前为基础版，待升级阅读模式）
-  search/        — 搜索页
-mock/
-  ai-news-cache.js  — Mock 新闻数据（36 条 × 5 分类）
-  simulator.js      — 模拟分页加载
+  detail/        — 详情页（同分类上下滑翻页已完成；跨分类衔接待 RQ-01/T-01）
+  （无 search/ 页面 — 搜索整体缺失，见 RQ-13）
+cloudfunctions/
+  refreshNews/   — v3：阿里百炼 DeepSeek 联网搜索 → validateAndClean → 写 news_cache
+  common/validator.js — 质量校验（字段/来源白名单/垃圾词/URL 占位符；**未含**微信内容安全 API，见 RQ-10）
+data/
+  news.json      — 遗留文件，当前未被 refreshNews 实时使用（真实源为阿里百炼）
 test/
   v4-regression-data-layer.js — 数据层回归测试套件（178 用例）
 utils/
@@ -82,6 +85,8 @@ utils/
 | `COMMLOG.md` | 会话沟通记录（交接用） |
 | `docs/项目日志.md` | 完整项目历史 |
 | `docs/SOP-软件开发流程基准.md` | 开发规范与流程 |
+| `docs/01-需求规划/需求梳理与审查报告.md` | 🆕 需求梳理 + 文档审查发现（2026-07-30） |
+| `docs/02-产品设计/PRD-阶段二功能增强.md` | 🆕 D-01 阶段二功能增强 PRD（补全 RQ-01/03/04/07/10 设计） |
 
 ---
 
@@ -89,13 +94,14 @@ utils/
 
 | # | 任务 | 优先级 | 依赖 |
 |---|------|--------|------|
-| 1 | 阅读模式（详情页上下滑跨分类切换） | 🔴 高 | 无 |
+| 1 | 阅读模式·跨分类衔接（同分类翻页已完成，仅缺跨分类） | 🔴 高 | T-01 方案 |
 | 2 | 清理 home.js 诊断 console.log | 🟢 低 | 无 |
 | 3 | 切换真实数据（云函数 + 数据源） | ✅ 已完成 | 已在 main（v11-v13）落地 |
 | 4 | SOP 更新（WXS 红线 + return false 禁令） | 🟢 低 | 无 |
-| 5 | 遗留：聚合开放独立分类 tab（体育/生活等） | 🟡 中 | 待用户决策 |
+| 5 | 遗留：聚合开放独立分类 tab（8 分类展示哪些） | 🟡 中 | 待用户决策 |
 | 6 | ~~百炼 Key 轮换~~ | — | 已搁置（2026-07-30 用户决策） |
-| 7 | 搜索页口径核实（CONTEXT 标 ✅ 但 `app.json` 无 `pages/search`，RQ-13） | 🟡 中 | 待项目经理/开发核实真实形态 |
+| 7 | 搜索重建评估（已确认整体缺失，非"口径不一致"） | 🟡 中 | 待项目经理/开发确认是否重建 |
+| 8 | RQ-10 内容合规审核（接微信内容安全 API） | 🔴 高 | T-01 方案，P0 |
 
 ---
 
