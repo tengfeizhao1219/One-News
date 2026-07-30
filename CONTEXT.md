@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `057d4db` — docs: 需求梳理与审查报告 + 阶段二功能增强 PRD (D-01) |
+| 最新提交 | `521e8b8` — docs: 阶段二立项确认 R-06/A-11 闭环，新增 A-12 评审交接 |
 
 ---
 
