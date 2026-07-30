@@ -232,11 +232,16 @@ const juheItem = {
   url: 'https://example.com/juhe/001',
   thumbnail_pic_s: 'https://example.com/thumb.jpg'
 }
-const adaptedJuhe = adapter.adaptJuheNewsItem(juheItem)
+const adaptedJuhe = adapter.adaptJuheNewsItem(juheItem, 'tech')
 assert(adaptedJuhe !== null, '聚合数据适配结果不应为 null')
 assertEqual(adaptedJuhe.id, 'juhe_001', '聚合适配后 id 应正确')
-assertEqual(adaptedJuhe.category, 'recommend', '聚合适配 type=top 应映射为 recommend')
+assertEqual(adaptedJuhe.category, 'tech', '聚合适配应透传请求分类 tech（而非反推）')
+assertEqual(adaptedJuhe.categoryName, '科技', '聚合适配 categoryName 应取 app 分类中文名')
 assertEqual(adaptedJuhe.source, '聚合来源', '聚合适配 source 应正确')
+
+// 透传兜底：未传分类时回落 recommend
+const adaptedJuheFallback = adapter.adaptJuheNewsItem(juheItem)
+assertEqual(adaptedJuheFallback.category, 'recommend', '聚合适配未传分类应回落 recommend')
 
 // 3. 空数据/异常数据输入
 const emptyTian = adapter.adaptTianNewsItem({}, 7)
@@ -257,11 +262,12 @@ assertEqual(adapter.APP_TO_TIAN_ENDPOINT['international'], 'world', 'APP_TO_TIAN
 assertEqual(adapter.APP_TO_TIAN_ENDPOINT['sports'], 'generalnews', 'APP_TO_TIAN_ENDPOINT sports → generalnews(兜底)')
 assertEqual(adapter.APP_TO_TIAN_ENDPOINT['life'], 'generalnews', 'APP_TO_TIAN_ENDPOINT life → generalnews(兜底)')
 
-// 5. 字段映射正确性 — JUHE_TYPE_TO_APP
-assertEqual(adapter.JUHE_TYPE_TO_APP['top'], 'recommend', 'JUHE top → recommend')
-assertEqual(adapter.JUHE_TYPE_TO_APP['keji'], 'tech', 'JUHE keji → tech')
-assertEqual(adapter.JUHE_TYPE_TO_APP['tiyu'], 'sports', 'JUHE tiyu → sports')
-assertEqual(adapter.JUHE_TYPE_TO_APP['guoji'], 'international', 'JUHE guoji → international')
+// 5. 字段映射正确性 — APP_TO_JUHE_TYPE（请求方向：一页分类 → 聚合 type，genuinely used）
+assertEqual(adapter.APP_TO_JUHE_TYPE['recommend'], 'top', 'APP_TO_JUHE_TYPE recommend → top')
+assertEqual(adapter.APP_TO_JUHE_TYPE['tech'], 'keji', 'APP_TO_JUHE_TYPE tech → keji')
+assertEqual(adapter.APP_TO_JUHE_TYPE['sports'], 'tiyu', 'APP_TO_JUHE_TYPE sports → tiyu')
+assertEqual(adapter.APP_TO_JUHE_TYPE['international'], 'guoji', 'APP_TO_JUHE_TYPE international → guoji')
+assertEqual(adapter.APP_TO_JUHE_TYPE['all'], null, 'APP_TO_JUHE_TYPE all → null（取默认头条）')
 
 // 6. 分类名称映射
 assertEqual(adapter.CATEGORY_NAMES['recommend'], '推荐', 'CATEGORY_NAMES recommend → 推荐')

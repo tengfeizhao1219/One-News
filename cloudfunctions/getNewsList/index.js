@@ -72,7 +72,7 @@ async function fetchFromTianApi(category, pageNum, pageSize) {
 async function fetchFromJuheApi(category, pageNum, pageSize) {
   const type = APP_TO_JUHE_TYPE[category]
   const apiData = await callJuheApi({ type, page: pageNum, page_size: pageSize })
-  const adapted = adaptNewsList(apiData.list, 'juhe')
+  const adapted = adaptNewsList(apiData.list, 'juhe', category)
   return {
     list: adapted.slice(0, pageSize),
     total: adapted.length,

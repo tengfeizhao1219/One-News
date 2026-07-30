@@ -43,16 +43,8 @@ const TIAN_ENDPOINTS_AVAILABLE = {
   sicprobe:    '科学探索',
 }
 
-// 聚合数据 type 参数 → 一页分类 ID
-const JUHE_TYPE_TO_APP = {
-  'top':    'recommend',
-  'keji':   'tech',
-  'tiyu':   'sports',
-  'guoji':  'international',
-  'shehui': 'life',
-  'yule':   'life',
-  'caijing':'recommend',
-}
+// 注：聚合响应里的 category 是中文展示名（如"头条""科技"），无法稳定反推回一页分类，
+//     因此适配时直接透传请求方的 app 分类（见 adaptJuheNewsItem），不再做反向映射。
 
 // 一页分类 ID → 聚合数据 type 参数
 const APP_TO_JUHE_TYPE = {
@@ -124,10 +116,13 @@ function adaptTianNewsItem(apiItem, category) {
 
 /**
  * 适配聚合数据 API 返回的单条新闻
+ * @param {object} apiItem 聚合返回的单条新闻
+ * @param {string} category 请求方的 app 分类 ID（直接透传，避免依赖响应里的 category 反推）
  */
-function adaptJuheNewsItem(apiItem) {
+function adaptJuheNewsItem(apiItem, category) {
   const id = String(apiItem.uniquekey || '')
-  const category = JUHE_TYPE_TO_APP[apiItem.category] || 'recommend'
+  // 透传请求方的 app 分类（与天行一致）；未知分类回落到 recommend
+  const cat = CATEGORY_NAMES[category] ? category : 'recommend'
 
   let title = stripHtml(apiItem.title || '')
   let summary = stripHtml(apiItem.description || '')
@@ -143,8 +138,8 @@ function adaptJuheNewsItem(apiItem) {
     title: title || '[无标题]',
     summary,
     content,
-    category,
-    categoryName: apiItem.category || CATEGORY_NAMES[category] || '推荐',
+    category: cat,
+    categoryName: CATEGORY_NAMES[cat] || apiItem.category || '推荐',
     source: apiItem.author_name || '未知来源',
     sourceUrl: apiItem.url || '',
     publishTime: apiItem.date || '',
@@ -159,7 +154,7 @@ function safeAdapt(apiItem, apiSource, category) {
   try {
     const result = apiSource === 'tian'
       ? adaptTianNewsItem(apiItem, category)
-      : adaptJuheNewsItem(apiItem)
+      : adaptJuheNewsItem(apiItem, category)
 
     // 必需字段校验
     if (!result.id) {
@@ -189,7 +184,6 @@ module.exports = {
   // 分类映射
   APP_TO_TIAN_ENDPOINT,
   TIAN_ENDPOINTS_AVAILABLE,
-  JUHE_TYPE_TO_APP,
   APP_TO_JUHE_TYPE,
   CATEGORY_NAMES,
 
