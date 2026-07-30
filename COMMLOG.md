@@ -29,6 +29,35 @@
 
 ---
 
+## [2026-07-29] 数据层三连击收尾 | 会话：[主]（数据层）
+
+### 完成内容
+- v11：正文清洗加固（contentExtractor 实体解码 + 噪音过滤 + 首页标题截断）
+- v12：聚合（Juhe）L4 降级接入 + 分类透传修复（移除不可靠的 JUHE_TYPE_TO_APP 反向映射）
+- v13：卡片摘要补全（空摘要自动抓正文首段兜底 enrichMissingSummaries）+ 标题截断加固（word-break/overflow-wrap + 摘要限 3 段）
+- 部署 getNewsList / getNewsDetail 到云端；云端空摘要由 2/10 降至 0/10
+- 数据层回归测试 178/178 通过；rebase origin/main 后 push（6b7598f）
+
+### 变更文件
+- cloudfunctions/common/contentExtractor.js — 新增 extractSummary
+- cloudfunctions/getNewsList/index.js — 新增 enrichMissingSummaries，接入 L1/L4
+- cloudfunctions/common/adapter.js — 分类透传，移除 JUHE_TYPE_TO_APP
+- cloudfunctions/common/config.js — 聚合配置就绪
+- pages/home/home.wxss — 标题截断加固
+- pages/home/home.js — 摘要限 3 段
+- CONTEXT.md / TASK_BOARD.md / RELAY.md / COMMLOG.md — 修正项目记忆（真实数据接入已落地）
+
+### 遗留问题
+- 百炼 API Key 轮换（未处理，待用户决策）
+- 聚合是否作为某分类主数据源 / 开放体育·生活等独立 tab（用户曾问，未决定）
+- 前端（home.wxss/home.js）改动需用户在微信开发者工具重新编译预览才生效
+
+### 注意事项
+- 标题截断若是仍出现，多半是前端未重新编译（纯前端改动，云端无需操作）
+- 如担心聚合 Key 泄露，可在聚合后台重置后重新注入 JUHE_API_KEY 环境变量
+
+---
+
 ## [2026-07-28] 框架搭建 | 会话：[主]
 
 ### 完成内容

@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `969d5db` — feat: multi-session collaboration framework |
+| 最新提交 | `6b7598f` — v13: 卡片摘要补全 + 标题截断加固（数据层 v11-v13 已落地 main）|
 
 ---
 
@@ -24,9 +24,12 @@
 |------|------|------|
 | 首页（卡片滑动 + 侧边栏） | ✅ 已完成 | WXS 手势、暗色模式、5 分类 |
 | 详情页（基础展示） | ✅ 已完成 | 单条新闻查看 |
-| 详情页（阅读模式） | ❌ 待开发 | 上下滑跨分类切换新闻 |
+| 详情页（阅读模式） | ❌ 待开发 | 上下滑跨分类切换新闻（T-01） |
 | 搜索页 | ✅ 已完成 | 关键词搜索 |
-| 真实数据接入 | ❌ 待开发 | 需云函数 + 数据源 |
+| 真实数据接入 | ✅ 已完成 | 天行实时 L1 + 聚合降级 L4 + 云库缓存 L3 + AI 兜底 L5（main，v11-v13） |
+| 聚合数据源（Juhe） | ✅ 已接入 | L4 降级 + 分类透传（v12）；API Key 已注入环境变量 |
+| 卡片摘要补全 | ✅ 已实现 | 空摘要自动抓正文首段兜底（v13 enrichMissingSummaries） |
+| 标题截断加固 | ✅ 已完成 | CSS word-break + 摘要限 3 段（v13） |
 | Mock 数据 | ✅ 已完成 | 36 条，5 分类，带正文 |
 | 暗色模式 | ✅ 已完成 | 全局 `!important` 覆盖 |
 
@@ -35,6 +38,10 @@
 ## 技术架构速览
 
 ```
+cloudfunctions/
+  getNewsList/    — 新闻列表（L1 天行→L2 内存→L3 云库→L4 聚合→L5 AI 兜底）
+  getNewsDetail/  — 新闻详情（零依赖正文抓取 contentExtractor）
+  common/         — 共享：adapter（分类映射）/ juheApi / config / contentExtractor
 pages/
   home/          — 首页（卡片、侧边栏、WXS 手势）
     touch.wxs    — ⚠️ 纯 ES5！不支持 try/catch/let/const/箭头函数
@@ -44,7 +51,7 @@ mock/
   ai-news-cache.js  — Mock 新闻数据（36 条 × 5 分类）
   simulator.js      — 模拟分页加载
 test/
-  v5-*.js ~ v7-*.js — 回归测试套件（共 9 套）
+  v4-regression-data-layer.js — 数据层回归测试套件（178 用例）
 utils/
   constants.js / request.js / util.js
 ```
@@ -81,9 +88,10 @@ utils/
 |---|------|--------|------|
 | 1 | 阅读模式（详情页上下滑跨分类切换） | 🔴 高 | 无 |
 | 2 | 清理 home.js 诊断 console.log | 🟢 低 | 无 |
-| 3 | 切换真实数据（云函数 + 数据源） | 🟡 中 | 任务 1 |
+| 3 | 切换真实数据（云函数 + 数据源） | ✅ 已完成 | 已在 main（v11-v13）落地 |
 | 4 | SOP 更新（WXS 红线 + return false 禁令） | 🟢 低 | 无 |
+| 5 | 遗留：百炼 Key 轮换 / 聚合开放独立分类 tab | 🟡 中 | 待用户决策 |
 
 ---
 
-> **最后更新**：2026-07-30 | **更新者**：主会话
+> **最后更新**：2026-07-29 | **更新者**：主会话（数据层）
