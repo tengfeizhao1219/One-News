@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `e0b1e61` — chore: issue ad-hoc self-check tasks A-01~A-08 to all roles |
+| 最新提交 | `fd5943a` — docs: 阶段一需求规划交付 (需求池/优先级矩阵/评审纪要v1.1) |
 
 ---
 
