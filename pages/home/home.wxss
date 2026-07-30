@@ -110,6 +110,12 @@
   line-height: 1.35;
   margin-bottom: 40rpx;
   letter-spacing: -1rpx;
+  /* 限制最多 3 行，过长显示省略号，避免被页面 overflow 直接裁断 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
 
 .card-summary {

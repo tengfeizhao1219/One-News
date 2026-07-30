@@ -1,9 +1,0 @@
-{
-  "name": "searchNews",
-  "version": "1.0.0",
-  "description": "搜索新闻",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "latest"
-  }
-}
