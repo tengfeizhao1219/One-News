@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `0e70da9` — docs: role cards, fixed role sessions, baton identity check |
+| 最新提交 | `f29040e` — docs: add full 8-role copy-paste initialization instructions to ROLE_CARDS |
 
 ---
 
