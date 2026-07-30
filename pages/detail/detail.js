@@ -62,34 +62,50 @@ Page({
 
   /**
    * 按索引加载某条新闻详情（翻页核心）
+   * v9: getNewsDetail 失败时降级使用列表摘要（无需等待 DB 写入）
    */
   async loadDetailByIndex(i) {
     const item = this._list[i]
     if (!item) return
     this.setData({ loading: true })
+    const fallback = {
+      id: item.id, _id: item._id || item.id,
+      title: item.title,
+      summary: item.summary || '',
+      content: item.summary || '',
+      category: item.category, categoryName: item.categoryName || '',
+      source: item.source, sourceUrl: item.sourceUrl || '',
+      publishTime: item.publishTime,
+    }
     try {
       const news = await getNewsDetail(item.id)
       const text = news.content || news.summary || ''
       const paragraphs = text.split('\n').filter(p => p.trim())
-      const total = this._list.length
-      this.setData({
-        news,
-        paragraphs,
-        currentIndex: i,
-        isFirst: i <= 0,
-        isLast: i >= total - 1,
-        positionText: `${i + 1} / ${total}`,
-        scrollTop: 0,
-        loading: false,
-      })
-    } catch (err) {
-      this.setData({ loading: false })
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      this.renderDetail(news, paragraphs, i)
+    } catch (_) {
+      // 云函数未命中：降级用列表摘要渲染
+      const text = fallback.content
+      const paragraphs = text.split('\n').filter(p => p.trim())
+      this.renderDetail(fallback, paragraphs, i)
     }
+  },
+
+  renderDetail(news, paragraphs, i) {
+    const total = this._list.length
+    this.setData({
+      news, paragraphs,
+      currentIndex: i,
+      isFirst: i <= 0,
+      isLast: i >= total - 1,
+      positionText: `${i + 1} / ${total}`,
+      scrollTop: 0,
+      loading: false,
+    })
   },
 
   /**
    * 冷启动无列表时的单条加载
+   * v9: 失败时降级提示（冷启动无列表无法用摘要兜底）
    */
   async loadDetail(newsId) {
     try {
@@ -101,7 +117,7 @@ Page({
       wx.hideLoading()
     } catch (err) {
       wx.hideLoading()
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      wx.showToast({ title: '新闻详情暂不可用，请返回重试', icon: 'none' })
     }
   },
 
