@@ -76,6 +76,7 @@ Page({
       category: item.category, categoryName: item.categoryName || '',
       source: item.source, sourceUrl: item.sourceUrl || '',
       publishTime: item.publishTime,
+      picUrl: item.picUrl || '',
     }
     try {
       const news = await getNewsDetail(item.id)

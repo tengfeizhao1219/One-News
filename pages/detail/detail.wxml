@@ -28,6 +28,14 @@
         <!-- 标题 -->
         <view class="detail-title">{{news.title}}</view>
 
+        <!-- 封面图（天行提供时展示） -->
+        <image
+          wx:if="{{news.picUrl}}"
+          src="{{news.picUrl}}"
+          class="detail-cover"
+          mode="widthFix"
+          lazy-load></image>
+
         <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>

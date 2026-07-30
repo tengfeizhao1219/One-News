@@ -102,18 +102,23 @@ function adaptTianNewsItem(apiItem, category) {
   if (title.length > 200) title = title.substring(0, 197) + '...'
   if (summary.length > 500) summary = summary.substring(0, 497) + '...'
 
+  // 天行免费接口通常不返回正文全文 content，仅提供 description（导语/摘要）。
+  // 若某些付费/专属接口返回了 content，则原样保留；否则置空，由下游用 summary 兜底。
+  const content = stripHtml(apiItem.content || '')
+
   return {
     id,
     _id: id,
     title: title || '[无标题]',
     summary,
+    content,
     category: cat,
     categoryName: CATEGORY_NAMES[cat] || '推荐',
     source: apiItem.source || '未知来源',
     sourceUrl: apiItem.url || '',
     publishTime: apiItem.ctime || '',
-    // 扩展字段（前端暂不使用，预留）
-    _picUrl: apiItem.picUrl || '',
+    // 封面图（详情页沉浸式展示用）
+    picUrl: apiItem.picUrl || '',
   }
 }
 
@@ -130,17 +135,20 @@ function adaptJuheNewsItem(apiItem) {
   if (title.length > 200) title = title.substring(0, 197) + '...'
   if (summary.length > 500) summary = summary.substring(0, 497) + '...'
 
+  const content = stripHtml(apiItem.content || '')
+
   return {
     id,
     _id: id,
     title: title || '[无标题]',
     summary,
+    content,
     category,
     categoryName: apiItem.category || CATEGORY_NAMES[category] || '推荐',
     source: apiItem.author_name || '未知来源',
     sourceUrl: apiItem.url || '',
     publishTime: apiItem.date || '',
-    _picUrl: apiItem.thumbnail_pic_s || '',
+    picUrl: apiItem.thumbnail_pic_s || '',
   }
 }
 

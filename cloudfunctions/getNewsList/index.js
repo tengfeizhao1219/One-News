@@ -80,6 +80,36 @@ async function fetchFromJuheApi(category, pageNum, pageSize) {
   }
 }
 
+// ─── 写入 news 集合（供 getNewsDetail 查询详情）────────────
+// 天行免费接口不返回正文全文，仅提供 description（导语）。
+// 这里把列表项（含摘要/图片/来源/链接）落地到 news 集合，
+// 使 getNewsDetail 能按天行 id 查到数据，避免详情页永远 NO_DATA。
+// 采用「先 update 保留 viewCount，文档不存在则 set 创建」的 upsert 策略。
+async function syncNewsToCollection(list) {
+  if (!Array.isArray(list) || list.length === 0) return
+  const now = Date.now()
+  for (const item of list) {
+    const id = item.id || item._id
+    if (!id) continue
+    const doc = {
+      id,
+      title: item.title || '',
+      summary: item.summary || '',
+      // 天行无正文时以摘要兜底，详情页正文即有内容可渲染
+      content: item.content || item.summary || '',
+      category: item.category || 'recommend',
+      categoryName: item.categoryName || '',
+      source: item.source || '',
+      sourceUrl: item.sourceUrl || '',
+      picUrl: item.picUrl || '',
+      publishTime: item.publishTime || '',
+      updatedAt: now,
+    }
+    db.collection('news').doc(id).update({ data: doc })
+      .catch(() => db.collection('news').doc(id).set({ data: { ...doc, viewCount: 0, createdAt: now } }))
+  }
+}
+
 // ─── 主函数 ─────────────────────────────────────────
 
 exports.main = async (event) => {
@@ -94,6 +124,8 @@ exports.main = async (event) => {
     const result = await fetchFromTianApi(category, pageNum, pageSize)
     const responseData = { list: result.list, total: result.total, hasMore: result.hasMore }
     console.log(`[getNewsList] L1 天行 API 成功，返回 ${result.list.length} 条`)
+    // 异步落地到 news 集合（不阻塞列表返回），供 getNewsDetail 使用
+    syncNewsToCollection(result.list)
     return { code: 0, data: responseData, meta: { source: 'tian_api' } }
 
   } catch (tianErr) {
