@@ -158,7 +158,7 @@ One-News/
 | 🟡 P1 | 接入真实数据（切换 USE_MOCK=false，部署云函数） | 进行中（L4 天行分类路由已跑通） |
 | 🟡 P1 | SOP 更新（WXS 语法红线 + return false 禁止） | 待做 |
 | 🟢 P2 | v7 回归测试更新（适配最终实现） | 待做 |
-| 🟢 P2 | 轮换百炼 API Key（曾硬编码入 Git 历史，已迁入保险库）+ GitHub PAT 管理 | 待轮换 |
+| 🟢 P2 | 轮换百炼 API Key（曾硬编码入 Git 历史，已迁入保险库）+ GitHub PAT 轮换为 fine-grained（仅 One-News 仓库 write） | 待轮换（需仓库所有者操作） |
 
 ---
 
@@ -212,41 +212,35 @@ cat >> "$LOG_FILE" <<'VAULT_EOF'
 
 ## 🔐 敏感信息保险库（Secrets Vault）
 
-> 所有密钥**不进代码、不进 Git、不回显**，统一存放于本地保险库，按需经助手脚本注入环境变量。
+> **密钥管理准则**：所有密钥**不进代码、不进 Git 仓库（含提交历史）、不回显**；但可集中存放于 **tdrive 项目保险库（云盘）** `vault/`，供各角色会话按需取用。
 
 | 项 | 值 |
 |----|-----|
-| 保险库目录 | `/root/.secrets/`（权限 700） |
-| 密钥文件权限 | 600 |
-| 助手脚本 | `/usr/local/bin/secret_put`、`secret_get`、`github_push` |
+| 保险库位置 | tdrive 项目盘 `vault/`（dir_id = `NbXEQRsesdqd`） |
+| 取用方式 | tdrive `file_download` 签发临时 URL → `curl` 落地临时文件 → `git -c url...insteadOf` 注入 |
+| 权限要求 | 仓库公开：`git pull` 无需令牌；仅 `git push` 需从保险库取 `github_pat` |
 
 ### 当前存放的密钥
 
-| 密钥 | 用途 | 消费方 |
-|------|------|--------|
-| `github_pat` | GitHub 推送代码 | `github_push` → git remote（oauth2:token） |
-| `bailian_api_key` | 阿里百炼 DeepSeek 联网搜索 | `cloudfunctions/common/config.js` → `DASHSCOPE_API_KEY` 环境变量 |
-| `tian_api_key` | 天行数据新闻接口（L4 降级源） | `cloudfunctions/common/config.js` → `TIAN_API_KEY` 环境变量 |
+| 密钥 | 存放位置 | 用途 | 消费方 |
+|------|----------|------|--------|
+| `github_pat` | tdrive `vault/github_pat`（file_id `NJZQjYLZjTkW`） | GitHub 推送代码 | git remote（token 注入，不写入 remote 配置） |
+| `bailian_api_key` | 阿里百炼控制台 → 云函数环境变量 `DASHSCOPE_API_KEY` | 阿里百炼 DeepSeek 联网搜索 | `cloudfunctions/common/config.js` |
+| `tian_api_key` | 天行控制台 → 云函数环境变量 `TIAN_API_KEY` | 天行数据新闻接口（L4 降级源） | `cloudfunctions/common/config.js` |
 
-### 写入（不回显）
+### 从保险库取 github_pat 并推送（不回显、不落盘配置）
+
 ```bash
-echo "ghp_xxx" | secret_put github_pat
-echo "sk-xxx"  | secret_put bailian_api_key
-```
-
-### 读取与使用
-```bash
-secret_get github_pat          # 仅输出值，供管道
-secret_get bailian_api_key
-
-# 推送代码（自动注入 token，结束还原 remote）
-github_push /workspace/One-News origin main
-
-# 云函数运行时注入百炼 Key
-export DASHSCOPE_API_KEY=$(secret_get bailian_api_key)
+# 1) 经 tdrive file_download 取临时下载 URL，curl 到临时文件
+curl -sSL -o /tmp/gh_pat "<tdrive 临时下载 URL>"
+# 2) 用 insteadOf 注入令牌推送，结束后删除临时文件
+TOKEN=$(cat /tmp/gh_pat | tr -d '[:space:]')
+git -c "url.https://${TOKEN}@github.com/.insteadOf=https://github.com/" push origin main
+rm -f /tmp/gh_pat
 ```
 
 > ⚠️ 安全：早期版本曾将百炼 Key 硬编码于 `config.js` 并推入 Git 历史，已改为仅读环境变量。**请前往阿里百炼控制台轮换该 Key**。
+> ⚠️ 当前 `github_pat` 为经典 PAT（≈整账户权限），**建议轮换为 fine-grained PAT**（仅 `One-News` 仓库 write 权限），并同步更新 tdrive 保险库中的 `github_pat`。
 
 VAULT_EOF
 
@@ -281,7 +275,7 @@ cat >> "$LOG_FILE" <<'TIAN_EOF'
 - `cloudfunctions/common/config.js`：`tian.baseUrl = https://apis.tianapi.com`（host 基址）
 - `cloudfunctions/common/tianApi.js`：`callTianApi({ endpoint, ... })` → `${baseUrl}/${endpoint}/index`
 - `cloudfunctions/common/adapter.js`：`APP_TO_TIAN_ENDPOINT` / `TIAN_ENDPOINTS_AVAILABLE`
-- 密钥：`/root/.secrets/tian_api_key` → 环境变量 `TIAN_API_KEY`（部署云函数时配置）
+- 密钥：天行控制台 → 云函数环境变量 `TIAN_API_KEY`（部署云函数时配置，不进 Git）
 
 > 详见 [变更记录 CHG-012](docs/changelog/变更记录.md)。
 
