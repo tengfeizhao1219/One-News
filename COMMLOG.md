@@ -20,7 +20,7 @@
 - `docs/01-需求规划/需求池.md` — 校正 RQ-01/RQ-13/RQ-14 状态与描述（D-01 审查结论落地）
 
 ### 遗留问题 / 阻塞
-- **推送受阻（硬阻塞）**：本会话 `git-credential-helper` 对 github.com 不返回写凭证（`get` 返回空），且 tdrive 保险库工具在本会话不可用，无法取得 GitHub PAT。交付物已提交于本地分支 `feature/stage1-requirement`，待用户/项目经理提供 GitHub PAT 或手动推送后合入 main
+- **推送已完成（更新）**：经用户指引，用 tdrive 保险库 `file_download(NJZQjYLZjTkW)` 取得 GitHub PAT（注意：STS 临时令牌有效期极短，须取后**立即** curl 下载，否则报 InvalidAccessKeyId），已 fast-forward 推送 `feature/stage1-requirement`(84899d6) → `origin/main`。main 现含：需求梳理与审查报告 + 阶段二 PRD(D-01) + 需求池校正。**注意**：本会话 `git-credential-helper` 仍不返回写凭证，后续推送仍需走 tdrive 取 PAT 或用户手动推送
 - 交棒待办（见本会话 PM 回复）：上传资料库、建评审事项、拆待办事项、加关注人、交棒 D-02（交互/视觉）与 T-01（技术）
 
 ### 注意事项
