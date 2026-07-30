@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-07-30] 密钥管理文档对齐 tdrive 保险库机制 | 会话：项目经理（PJM）
+
+### 完成内容
+- 更新 `docs/项目日志.md` 与 `scripts/update-project-log.sh` 的「敏感信息保险库」章节
+- 密钥管理准则由「不进代码、不进 Git、不回显，存本地保险库」改为「不进代码、不进 Git 仓库（含提交历史）、不回显；但可集中存放于 tdrive 项目保险库（云盘）`vault/`」
+- 机制描述对齐现状：本地 `/root/.secrets/` + `secret_*` 脚本 → tdrive `vault/`（dir_id `NbXEQRsesdqd`）+ `file_download` 临时 URL + `git -c url...insteadOf` 注入
+- 待办行 `GitHub PAT 管理` → `GitHub PAT 轮换为 fine-grained（仅 One-News 仓库 write）`（需仓库所有者操作）
+- 天行章节密钥路径由 `/root/.secrets/tian_api_key` 改为「天行控制台 → 云函数环境变量」
+
+### 变更文件
+- `docs/项目日志.md` — Secrets Vault 章节 + 待办行 + 天行密钥路径
+- `scripts/update-project-log.sh` — `VAULT_EOF` 块（项目日志每 2h 由本脚本重生，故源头在此）
+- 提交 `4d3a98d`，已 push 至 `origin/main`
+
+### 遗留问题
+- 经典 PAT（≈整账户权限）**尚未轮换为 fine-grained PAT**：需仓库所有者登录 GitHub 新建 fine-grained PAT（仅 One-News write）、撤销经典 PAT、并将新令牌更新进 tdrive `vault/github_pat`。本会话仅做文档化登记，未执行轮换（无账户权限，且不可贸然撤销唯一可用推送令牌）。
+
+### 注意事项
+- `docs/项目日志.md` 为自动生成文件，手动改会被定时任务覆盖；本次同步改了生成脚本的 `VAULT_EOF` 块，确保声明一致。
+- 下一步（项目经理职责）：等**产品经理**确认交付物（A-01 点名的阅读模式需求 T-01、聚合独立分类 tab 决策、D-01 PRD 定稿）后，产出①整体项目计划 ②交付任务拆分 ③任务间交接流转机制（定稿）。
+
+---
+
 ## [2026-07-30] 协作机制升级 v2.3（统一看板 + 跟踪表） | 会话：项目经理（PJM）
 
 ### 完成内容
