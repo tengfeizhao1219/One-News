@@ -1,0 +1,152 @@
+/* ============ 字体面板样式（底部半屏） ============ */
+
+/* 遮罩层 */
+.panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.panel-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* 面板容器 */
+.setting-panel {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 41;
+  background-color: var(--setting-panel-bg);
+  backdrop-filter: var(--setting-panel-blur);
+  -webkit-backdrop-filter: var(--setting-panel-blur);
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.setting-panel.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* 暗色模式面板背景 */
+@media (prefers-color-scheme: dark) {
+  .setting-panel {
+    background-color: rgba(13, 13, 13, 0.92);
+  }
+}
+
+/* 标题 */
+.panel-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 40rpx 48rpx 32rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 档位列表 */
+.tier-list {
+  padding: 0;
+}
+
+/* 单行档位 */
+.tier-row {
+  display: flex;
+  align-items: center;
+  height: 88rpx;
+  padding: 0 48rpx;
+  gap: 24rpx;
+  transition: background-color 0.2s;
+}
+
+.tier-row:active {
+  opacity: 0.7;
+}
+
+.tier-row.selected {
+  background-color: var(--tag-bg);
+}
+
+/* 暗色模式选中行 */
+@media (prefers-color-scheme: dark) {
+  .tier-row.selected {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* 单选框（圆形） */
+.radio-circle {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  border: 2rpx solid var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.radio-circle.checked {
+  border-color: var(--text-primary);
+  background-color: var(--text-primary);
+}
+
+.radio-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  background-color: #FFFFFF;
+}
+
+/* 档位标签 */
+.tier-label {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--text-primary);
+  width: 80rpx;
+  flex-shrink: 0;
+}
+
+/* 预览文字 */
+.tier-preview {
+  flex: 1;
+  color: var(--text-body);
+  line-height: 1.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 分割线 */
+.panel-divider {
+  margin: 16rpx 48rpx;
+  height: 1rpx;
+  background: var(--divider);
+}
+
+/* 底部关于·反馈 */
+.panel-footer {
+  padding: 24rpx 48rpx 48rpx;
+}
+
+.footer-text {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  letter-spacing: 1rpx;
+}

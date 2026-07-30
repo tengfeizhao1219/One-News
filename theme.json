@@ -8,7 +8,20 @@
     "--divider": "#E8E6E1",
     "--tag-bg": "#EEECE8",
     "--tag-text": "#7A7A7A",
-    "--overlay": "rgba(0, 0, 0, 0.25)"
+    "--overlay": "rgba(0, 0, 0, 0.25)",
+    "--font-scale": "1",
+    "--color-favorite": "#FF3B30",
+    "--color-favorite-active": "#FF3B30",
+    "--color-warning": "#F59E0B",
+    "--bottom-bar-bg": "rgba(250, 249, 247, 0.85)",
+    "--setting-panel-bg": "rgba(250, 249, 247, 0.92)",
+    "--setting-panel-blur": "blur(20px)",
+    "--chip-bg": "rgba(28, 28, 30, 0.85)",
+    "--chip-text": "#FFFFFF",
+    "--flash-tech": "#007AFF",
+    "--flash-world": "#5856D6",
+    "--flash-sports": "#FF9500",
+    "--flash-life": "#34C759"
   },
   "dark": {
     "--bg-page": "#000000",
@@ -19,6 +32,19 @@
     "--divider": "#1C1C1E",
     "--tag-bg": "#1C1C1E",
     "--tag-text": "#999999",
-    "--overlay": "rgba(0, 0, 0, 0.7)"
+    "--overlay": "rgba(0, 0, 0, 0.7)",
+    "--font-scale": "1",
+    "--color-favorite": "#FF453A",
+    "--color-favorite-active": "#FF453A",
+    "--color-warning": "#FBBF24",
+    "--bottom-bar-bg": "rgba(13, 13, 13, 0.9)",
+    "--setting-panel-bg": "rgba(13, 13, 13, 0.92)",
+    "--setting-panel-blur": "blur(20px)",
+    "--chip-bg": "rgba(255, 255, 255, 0.15)",
+    "--chip-text": "#FFFFFF",
+    "--flash-tech": "#60A5FA",
+    "--flash-world": "#818CF8",
+    "--flash-sports": "#FBBF24",
+    "--flash-life": "#34D399"
   }
 }

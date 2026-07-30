@@ -66,4 +66,19 @@
   <!-- 首/尾提示 -->
   <view class="edge-tip" wx:if="{{total > 1 && isFirst}}">已经是第一条，上滑返回</view>
   <view class="edge-tip" wx:if="{{total > 1 && isLast}}">已经是最后一条</view>
+
+  <!-- 底部操作栏（收藏左 + 分享右） -->
+  <view class="detail-bottom-bar">
+    <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
+      <text class="bottom-bar-icon">{{isFavorited ? '♥' : '♡'}}</text>
+      <text class="bottom-bar-label">收藏</text>
+    </view>
+    <button class="bottom-bar-btn share-btn-reset" open-type="share">
+      <text class="bottom-bar-icon">↗</text>
+      <text class="bottom-bar-label">分享</text>
+    </button>
+  </view>
+
+  <!-- 隐藏 Canvas（分享占位图预生成） -->
+  <share-card id="share-card" canvasWidth="{{400}}" canvasHeight="{{300}}"></share-card>
 </view>

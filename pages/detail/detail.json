@@ -1,4 +1,6 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "share-card": "../../components/share-card/share-card"
+  },
   "navigationStyle": "custom"
 }

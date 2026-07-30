@@ -25,6 +25,10 @@ Page({
     isRefreshing: false,    // 手动刷新中
     currentPage: 1,         // 当前分页（用于边界加载更多）
     loadingMore: false,     // 边界加载更多/刷新中
+    // 字体面板
+    showFontPanel: false,   // 字体面板是否显示
+    fontScaleTier: 0,       // 当前字体档位 0-3
+    _fontScaleValue: 1,     // CSS --font-scale 数值（由 app 注入）
   },
 
   // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
@@ -38,6 +42,8 @@ Page({
     this.loadNews()
     // 侧边栏也加载一份数据（全部新闻）
     this.loadPanelNews()
+    // 同步字体档位（由 app._initFontScale 初始化）
+    this._syncFontScale()
   },
 
   onShow() {
@@ -48,6 +54,20 @@ Page({
 
     // 处理从详情页（阅读模式）返回的定位信息
     this._handleDetailReturn()
+    // 同步字体（onShow 时可能从其他页面返回，需刷新）
+    this._syncFontScale()
+  },
+
+  /**
+   * 同步字体档位与 CSS 变量值
+   */
+  _syncFontScale() {
+    var app = getApp()
+    var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
+    var val = (app && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1
+    if (tier !== this.data.fontScaleTier || val !== this.data._fontScaleValue) {
+      this.setData({ fontScaleTier: tier, _fontScaleValue: val })
+    }
   },
 
   /**
@@ -562,4 +582,30 @@ Page({
 
   // ============ 搜索 ============
   // 说明：v8 起取消主动搜索功能，小程序定位为「精选阅读」，不再提供搜索入口。
+
+  // ============ 字体面板 ============
+
+  /**
+   * 打开字体设置面板
+   */
+  onOpenSettings() {
+    this._syncFontScale()
+    this.setData({ showFontPanel: true })
+  },
+
+  /**
+   * 关闭字体面板
+   */
+  onCloseFontPanel() {
+    this.setData({ showFontPanel: false })
+  },
+
+  /**
+   * 字体档位变更回调（从 font-panel 组件触发）
+   */
+  onFontPanelChange(e) {
+    var tier = e.detail.tier
+    this._syncFontScale()
+    this.setData({ fontScaleTier: tier })
+  },
 })

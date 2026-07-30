@@ -95,7 +95,7 @@
 }
 
 .detail-title {
-  font-size: 48rpx;
+  font-size: calc(48rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.45;
@@ -107,7 +107,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: 26rpx;
+  font-size: calc(26rpx * var(--font-scale));
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
@@ -138,9 +138,9 @@
 }
 
 .text-p {
-  font-size: 34rpx;
+  font-size: calc(34rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 2.2;
+  line-height: calc(2.2 * var(--font-scale));
   margin-bottom: 40rpx;
   letter-spacing: 1rpx;
 }
@@ -148,7 +148,103 @@
 .back-bottom {
   text-align: center;
   padding: 80rpx 0 60rpx;
-  font-size: 28rpx;
+  font-size: calc(28rpx * var(--font-scale));
   color: var(--text-secondary);
   letter-spacing: 1rpx;
+}
+
+/* ============ 底部操作栏（收藏 + 分享） ============ */
+.detail-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  height: calc(100rpx + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background-color: var(--bottom-bar-bg);
+  backdrop-filter: var(--setting-panel-blur);
+  -webkit-backdrop-filter: var(--setting-panel-blur);
+  border-top: 1rpx solid var(--divider);
+}
+
+.bottom-bar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  padding: 20rpx 0;
+  font-size: calc(24rpx * var(--font-scale));
+  color: var(--text-secondary);
+  transition: transform 0.15s ease;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  line-height: 1;
+}
+
+.bottom-bar-btn::after {
+  border: none;
+}
+
+.bottom-bar-btn:active {
+  transform: scale(0.9);
+}
+
+/* 重置 button 默认样式 */
+.share-btn-reset {
+  margin: 0;
+  padding: 20rpx 0;
+  font-size: calc(24rpx * var(--font-scale));
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  line-height: 1;
+}
+
+.share-btn-reset::after {
+  border: none;
+}
+
+.bottom-bar-icon {
+  font-size: 44rpx;
+  line-height: 1;
+}
+
+.bottom-bar-label {
+  font-size: calc(24rpx * var(--font-scale));
+  color: var(--text-secondary);
+}
+
+/* 已收藏态 */
+.bottom-bar-btn.is-favorited .bottom-bar-icon {
+  color: var(--color-favorite);
+}
+
+/* 收藏动画 */
+@keyframes heartBeat {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.25); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.bottom-bar-btn.heart-anim .bottom-bar-icon {
+  animation: heartBeat 0.3s ease-out;
+}
+
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .bottom-bar-btn.is-favorited .bottom-bar-icon {
+    color: var(--color-favorite-active);
+  }
+}
+
+/* scroll-view 底部留白，避免被操作栏遮挡 */
+.content {
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }

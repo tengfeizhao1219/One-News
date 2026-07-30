@@ -1,0 +1,7 @@
+<!-- 分享卡片组件 — Canvas 占位图生成（隐藏画布） -->
+<canvas
+  type="2d"
+  id="share-canvas"
+  class="share-canvas"
+  style="width: {{canvasWidth}}px; height: {{canvasHeight}}px;">
+</canvas>

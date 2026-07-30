@@ -1,0 +1,6 @@
+/* 分享 Canvas 画布 — 隐藏，仅用于离屏渲染 */
+.share-canvas {
+  position: fixed;
+  left: -9999px;
+  top: -9999px;
+}
