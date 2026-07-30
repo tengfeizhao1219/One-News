@@ -20,11 +20,11 @@
 - 上一棒产出：无（项目初始）
 
 ### 完成标准（Checklist）
-- [ ] `docs/iteration-0/用户画像.md` 已创建
-- [ ] `docs/iteration-0/竞品分析报告.md` 已创建
-- [ ] `docs/iteration-0/需求池.md` 已创建
-- [ ] `docs/iteration-0/需求优先级矩阵.md` 已创建
-- [ ] `docs/iteration-0/需求评审纪要.md` 已创建
+- [ ] `docs/01-需求规划/用户画像.md` 已创建
+- [ ] `docs/01-需求规划/竞品分析报告.md` 已创建
+- [ ] `docs/01-需求规划/需求池.md` 已创建
+- [ ] `docs/01-需求规划/需求优先级矩阵.md` 已创建
+- [ ] `docs/01-需求规划/需求评审纪要.md` 已创建
 - [ ] `TASK_BOARD.md` 中 R-01~R-06 标记为 ✅
 - [ ] 🔒 `CONTEXT.md`「最新提交」已更新为本次 commit hash
 - [ ] 🔒 `COMMLOG.md` 已追加交接包（做了什么 + 产出物 + 提醒）
