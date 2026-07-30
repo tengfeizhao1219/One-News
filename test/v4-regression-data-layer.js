@@ -97,8 +97,8 @@ assert(config.bailian.timeout === 30000, 'bailian timeout 应为 30000ms')
 // 3. 数据库缓存 TTL 值
 assert(typeof config.cache === 'object', 'config.cache 应为对象')
 assert(typeof config.cache.memoryTTL === 'number', 'cache.memoryTTL 应为数字')
-assertEqual(config.cache.memoryTTL, 5 * 60 * 1000, '内存缓存 TTL 应为 5 分钟')
-assertEqual(config.cache.dbCacheTTL, 24 * 60 * 60 * 1000, '数据库缓存 TTL 应为 24 小时')
+assertEqual(config.cache.memoryTTL, 2 * 60 * 1000, '内存缓存 TTL 应为 2 分钟（v3.1 降权）')
+assertEqual(config.cache.dbCacheTTL, 10 * 60 * 1000, '数据库缓存 TTL 应为 10 分钟（v3.1 降权）')
 
 // 4. 分页默认值
 assert(typeof config.pagination === 'object', 'config.pagination 应为对象')

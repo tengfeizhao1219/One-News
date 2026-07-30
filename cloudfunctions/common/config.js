@@ -1,8 +1,8 @@
 /**
- * 云函数配置模块 v3
+ * 云函数配置模块 v3.1
  *
- * 数据源优先级：
- *   getNewsList: 内存缓存 → 云数据库(大模型搜索写入) → AI静态缓存 → 外部API
+ * 数据源优先级（缓存降权，天行实时优先）：
+ *   getNewsList: 内存缓存(2min) → 云数据库(10min) → AI静态缓存(兜底) → 天行API(主力) → 聚合降级
  *   searchNews:  内存缓存 → 云数据库搜索 → AI静态缓存 → 外部API
  *   refreshNews: 阿里百炼 DeepSeek 联网搜索 → 校验 → 写入云数据库
  */
@@ -34,11 +34,11 @@ module.exports = {
     timeout: 6000,
   },
 
-  // 缓存配置
+  // 缓存配置（v3.1 降权：缩短 TTL，让天行实时数据成为主力）
   cache: {
-    memoryTTL: 5 * 60 * 1000,       // 内存缓存 5 分钟
-    searchTTL: 10 * 60 * 1000,       // 搜索缓存 10 分钟
-    dbCacheTTL: 24 * 60 * 60 * 1000, // 云数据库缓存 24 小时
+    memoryTTL: 2 * 60 * 1000,        // 内存缓存 2 分钟（原 5min）
+    searchTTL: 5 * 60 * 1000,        // 搜索缓存 5 分钟（原 10min）
+    dbCacheTTL: 10 * 60 * 1000,      // 云数据库缓存 10 分钟（原 24h）
     maxCachePages: 3,
   },
 

@@ -7,18 +7,87 @@
   flex-direction: column;
 }
 
-.nav-back {
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 16rpx 48rpx;
+  flex-shrink: 0;
+}
+
+.nav-back {
   font-size: 30rpx;
   font-weight: 600;
   color: var(--text-secondary);
-  flex-shrink: 0;
+  letter-spacing: 1rpx;
+}
+
+.nav-position {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  background-color: var(--tag-bg, rgba(0,0,0,0.04));
+  padding: 4rpx 18rpx;
+  border-radius: 18rpx;
   letter-spacing: 1rpx;
 }
 
 .content {
   flex: 1;
   overflow-y: auto;
+}
+
+/* 翻页动画容器 */
+.article {
+  transition: transform 0.26s ease, opacity 0.26s ease;
+  will-change: transform, opacity;
+}
+.article.out-up   { transform: translateY(-100%); opacity: 0; }
+.article.out-down { transform: translateY(100%);  opacity: 0; }
+.article.in-up    { transform: translateY(100%);  opacity: 0; }
+.article.in-down  { transform: translateY(-100%); opacity: 0; }
+
+/* 上下翻页按钮 */
+.pager-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 40rpx;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 48rpx;
+  pointer-events: none;
+  z-index: 20;
+}
+.pager-btn {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 40rpx;
+  line-height: 1.1;
+  color: var(--text-secondary);
+  background-color: var(--tag-bg, rgba(0,0,0,0.04));
+  padding: 14rpx 22rpx;
+  border-radius: 20rpx;
+}
+.pager-btn text {
+  font-size: 22rpx;
+  margin-top: 4rpx;
+  letter-spacing: 1rpx;
+}
+
+/* 首/尾边界提示 */
+.edge-tip {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 120rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  z-index: 15;
+  pointer-events: none;
 }
 
 .detail-body {

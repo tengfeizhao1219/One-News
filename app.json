@@ -1,8 +1,7 @@
 {
   "pages": [
     "pages/home/home",
-    "pages/detail/detail",
-    "pages/search/search"
+    "pages/detail/detail"
   ],
   "window": {
     "navigationStyle": "custom",

@@ -515,6 +515,9 @@ Page({
       return
     }
 
+    // 把当前分类的新闻列表交给详情页，支持上下翻页浏览
+    app.globalData.detailContext = { category: currentCategory, list: newsList }
+
     const url = `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`
     console.log('[home] navigateTo:', url)
     wx.navigateTo({
@@ -576,10 +579,5 @@ Page({
   },
 
   // ============ 搜索 ============
-
-  goSearch() {
-    wx.navigateTo({
-      url: '/pages/search/search'
-    })
-  }
+  // 说明：v8 起取消主动搜索功能，小程序定位为「精选阅读」，不再提供搜索入口。
 })

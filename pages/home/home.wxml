@@ -9,9 +9,6 @@
       <view class="top-bar-refresh" bindtap="onRefreshNews">
         <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
       </view>
-      <view class="top-bar-search" bindtap="goSearch">
-        <text class="search-icon-top">S</text>
-      </view>
     </view>
   </view>
 

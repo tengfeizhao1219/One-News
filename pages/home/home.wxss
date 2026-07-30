@@ -43,25 +43,6 @@
   font-size: 28rpx;
 }
 
-.top-bar-search {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-}
-
-.top-bar-search:active {
-  opacity: 0.6;
-}
-
-.search-icon-top {
-  font-size: 28rpx;
-}
-
 /* ============ 卡片舞台 ============ */
 .card-stage {
   position: absolute;

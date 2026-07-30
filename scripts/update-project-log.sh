@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # 「一页」One News - 项目日志自动更新脚本
-# 每5小时由定时任务自动触发，生成最新项目状态日志
+# 每2小时由定时任务自动触发，生成最新项目状态日志
 # ============================================================
 
 set -euo pipefail
@@ -49,7 +49,7 @@ cat > "$LOG_FILE" << EOF
 # 「一页」项目日志
 
 > **项目名称**：一页（One News）— 极简沉浸式微信小程序新闻阅读器  
-> **自动更新**：每5小时 | **最近更新**：$TIMESTAMP  
+> **自动更新**：每2小时 | **最近更新**：$TIMESTAMP  
 > **项目仓库**：[tengfeizhao1219/One-News](https://github.com/tengfeizhao1219/One-News)  
 > **微信 AppID**：wx1ccb4d171dd88162  
 > **云环境**：cloud1-1g9313w0bb791de0  
@@ -114,8 +114,7 @@ cat >> "$LOG_FILE" << EOF
 One-News/
 ├── pages/
 │   ├── home/           # 首页（卡片流 + 侧边栏）
-│   ├── detail/         # 详情页
-│   └── search/         # 搜索页
+│   └── detail/         # 详情页（支持上下翻页浏览）
 ├── cloudfunctions/     # 云函数
 │   ├── getNewsList/
 │   ├── getNewsDetail/
@@ -293,7 +292,7 @@ cat >> "$LOG_FILE" << EOF
 
 ---
 
-*本文档由定时任务自动生成（每5小时更新） | 最近更新：$TIMESTAMP*
+*本文档由定时任务自动生成（每2小时更新） | 最近更新：$TIMESTAMP*
 EOF
 
 echo "✅ 项目日志已更新：$LOG_FILE"

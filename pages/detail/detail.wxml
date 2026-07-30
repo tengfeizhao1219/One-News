@@ -1,44 +1,69 @@
-<!-- 详情页 - 极简阅读 -->
-<view class="page">
+<!-- 详情页 - 极简阅读 + 上下翻页 -->
+<view
+  class="page"
+  bindtouchstart="onTouchStart"
+  bindtouchend="onTouchEnd">
+
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 返回按钮 -->
-  <view class="nav-back" bindtap="goBack">
-    <text>← 返回</text>
+  <!-- 顶部栏：返回（左）+ 位置指示（右） -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack">
+      <text>← 返回</text>
+    </view>
+    <view class="nav-position" wx:if="{{total > 1}}">{{positionText}}</view>
   </view>
 
   <!-- 内容 -->
-  <scroll-view class="content" scroll-y enhanced show-scrollbar="{{false}}">
-    <view class="detail-body">
-      <!-- 标题 -->
-      <view class="detail-title">{{news.title}}</view>
+  <scroll-view
+    class="content"
+    scroll-y
+    scroll-top="{{scrollTop}}"
+    enhanced
+    show-scrollbar="{{false}}">
 
-      <!-- 元信息 -->
-      <view class="detail-meta">
-        <view class="category-tag">{{news.categoryName}}</view>
-        <text>{{news.source}}</text>
-        <text>·</text>
-        <text>{{news.time}}</text>
+    <view class="article {{animClass}}">
+      <view class="detail-body">
+        <!-- 标题 -->
+        <view class="detail-title">{{news.title}}</view>
+
+        <!-- 元信息 -->
+        <view class="detail-meta">
+          <view class="category-tag">{{news.categoryName}}</view>
+          <text>{{news.source}}</text>
+          <text>·</text>
+          <text>{{news.time}}</text>
+        </view>
+
+        <!-- 查看原文链接 -->
+        <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
+          <text>📎 查看原文</text>
+        </view>
+
+        <!-- 分隔线 -->
+        <view class="detail-divider"></view>
+
+        <!-- 正文 -->
+        <view class="detail-text">
+          <block wx:for="{{paragraphs}}" wx:key="*this">
+            <view class="text-p">{{item}}</view>
+          </block>
+        </view>
+
+        <!-- 底部返回 -->
+        <view class="back-bottom" bindtap="goBack">← 返回</view>
       </view>
-
-      <!-- 查看原文链接 -->
-      <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
-        <text>📎 查看原文</text>
-      </view>
-
-      <!-- 分隔线 -->
-      <view class="detail-divider"></view>
-
-      <!-- 正文 -->
-      <view class="detail-text">
-        <block wx:for="{{paragraphs}}" wx:key="*this">
-          <view class="text-p">{{item}}</view>
-        </block>
-      </view>
-
-      <!-- 底部返回 -->
-      <view class="back-bottom" bindtap="goBack">← 返回</view>
     </view>
   </scroll-view>
+
+  <!-- 上下翻页手势提示 / 触发区 -->
+  <view class="pager-hint" wx:if="{{total > 1}}">
+    <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
+    <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
+  </view>
+
+  <!-- 首/尾提示 -->
+  <view class="edge-tip" wx:if="{{total > 1 && isFirst}}">已经是第一条，上滑返回</view>
+  <view class="edge-tip" wx:if="{{total > 1 && isLast}}">已经是最后一条</view>
 </view>

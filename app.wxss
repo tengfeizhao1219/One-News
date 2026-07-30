@@ -36,8 +36,7 @@ page {
     background-color: #1C1C1E !important;
     color: #999999 !important;
   }
-  .fixed-top-bar .top-bar-refresh,
-  .fixed-top-bar .top-bar-search {
+  .fixed-top-bar .top-bar-refresh {
     background-color: #1C1C1E !important;
   }
 }
