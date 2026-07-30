@@ -8,7 +8,8 @@
  *   模块四：aiNewsData.js 数据完整性测试（12项）
  *   模块五：aiNewsService.js 服务测试（8项）
  *   模块六：外部 API 封装测试（8项）
- *   模块七：mock/ai-news-cache.js 测试（6项）
+ *
+ * 注：v5 清理 Mock 后，原"模块七：mock/ai-news-cache.js"已移除（mock 数据已删除）。
  *
  * 运行：node test/v4-regression-data-layer.js
  */
@@ -67,7 +68,6 @@ function printSummary() {
 // ═══════════════════════════════════════════════════════
 
 const commonDir = path.join(__dirname, '..', 'cloudfunctions', 'common')
-const mockDir = path.join(__dirname, '..', 'mock')
 
 const config = require(path.join(commonDir, 'config.js'))
 const cache = require(path.join(commonDir, 'cache.js'))
@@ -76,7 +76,6 @@ const aiNewsData = require(path.join(commonDir, 'aiNewsData.js'))
 const aiNewsService = require(path.join(commonDir, 'aiNewsService.js'))
 const tianApi = require(path.join(commonDir, 'tianApi.js'))
 const juheApi = require(path.join(commonDir, 'juheApi.js'))
-const mockCache = require(path.join(mockDir, 'ai-news-cache.js'))
 
 // ═══════════════════════════════════════════════════════
 // 模块一：config.js 配置验证（8项）
@@ -562,56 +561,6 @@ assert(juheSource.includes('application/x-www-form-urlencoded'), 'juheApi 应使
 // 8. 超时处理
 assert(tianSource.includes('API_TIMEOUT'), 'tianApi 应处理超时')
 assert(juheSource.includes('API_TIMEOUT'), 'juheApi 应处理超时')
-
-// ═══════════════════════════════════════════════════════
-// 模块七：mock/ai-news-cache.js 测试（6项）
-// ═══════════════════════════════════════════════════════
-
-console.log('\n=== 模块七：mock/ai-news-cache.js 测试 ===')
-
-// 1. 数据完整性
-assert(Array.isArray(mockCache), 'mock/ai-news-cache 应为数组')
-assert(mockCache.length > 0, 'mock/ai-news-cache 不应为空')
-
-// 2. 与 aiNewsData.js 的数据一致性
-assertEqual(mockCache.length, aiNewsData.length,
-  `mock 数据量(${mockCache.length})应与 aiNewsData(${aiNewsData.length})一致`)
-
-// 3. 分类覆盖
-const mockCats = {}
-mockCache.forEach(item => {
-  mockCats[item.category] = (mockCats[item.category] || 0) + 1
-})
-categories.forEach(cat => {
-  assert(mockCats[cat] > 0, `mock 应包含 ${cat} 分类`)
-})
-
-// 4. ID 一致性 — 逐条对比
-let idMismatch = 0
-mockCache.forEach((mockItem, idx) => {
-  if (aiNewsData[idx] && mockItem.id !== aiNewsData[idx].id) {
-    idMismatch++
-  }
-})
-assert(idMismatch === 0, `mock 与 aiNewsData ID 不一致: ${idMismatch} 条`)
-
-// 5. title 一致性
-let titleMismatch = 0
-mockCache.forEach((mockItem, idx) => {
-  if (aiNewsData[idx] && mockItem.title !== aiNewsData[idx].title) {
-    titleMismatch++
-  }
-})
-assert(titleMismatch === 0, `mock 与 aiNewsData title 不一致: ${titleMismatch} 条`)
-
-// 6. category 一致性
-let catMismatch = 0
-mockCache.forEach((mockItem, idx) => {
-  if (aiNewsData[idx] && mockItem.category !== aiNewsData[idx].category) {
-    catMismatch++
-  }
-})
-assert(catMismatch === 0, `mock 与 aiNewsData category 不一致: ${catMismatch} 条`)
 
 // ═══════════════════════════════════════════════════════
 // 测试总结

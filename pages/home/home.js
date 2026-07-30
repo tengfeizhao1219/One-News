@@ -150,18 +150,6 @@ Page({
 
     this.setData({ isRefreshing: true })
 
-    const { USE_MOCK } = require('../../utils/constants')
-
-    if (USE_MOCK) {
-      wx.showToast({ title: '刷新中...', icon: 'loading', duration: 800 })
-      setTimeout(async () => {
-        await this.loadNews()
-        this.setData({ isRefreshing: false })
-        wx.showToast({ title: '已刷新', icon: 'success', duration: 1500 })
-      }, 500)
-      return
-    }
-
     try {
       const res = await wx.cloud.callFunction({
         name: 'refreshNews',

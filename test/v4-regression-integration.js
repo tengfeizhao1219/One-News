@@ -4,13 +4,12 @@
  * Test files:
  *   1. utils/constants.js
  *   2. utils/request.js
- *   3. mock/simulator.js
- *   4. mock/news.js
- *   5. cloudfunctions/refreshNews/index.js
- *   6. cloudfunctions/getNewsList/index.js
- *   7. cloudfunctions/searchNews/index.js
+ *   3. cloudfunctions/refreshNews/index.js
+ *   4. cloudfunctions/getNewsList/index.js
+ *   5. cloudfunctions/searchNews/index.js
  *
- * Strategy: Mock mode, no real cloud function or external API calls
+ * Strategy: 静态源码分析（云函数/request 路由）+ 常量与错误处理单元测试。
+ *   v5 起移除 Mock 模式，云函数真实调用经云端验证。
  * Run: node test/v4-regression-integration.js
  */
 
@@ -146,7 +145,7 @@ function eqText(actual, expected, desc) {
 
 console.log('='.repeat(60));
 console.log('v4 Integration Regression Test');
-console.log('Modules: constants.js | request.js | simulator.js | news.js | refreshNews | getNewsList | searchNews');
+console.log('Modules: constants.js | request.js | getNewsList | refreshNews | searchNews (cloud source analysis)');
 console.log('='.repeat(60));
 
 // Mock wx global object (required by constants.js)
@@ -155,9 +154,6 @@ global.wx = {
     return { windowWidth: 375, windowHeight: 667, statusBarHeight: 20 };
   },
 };
-
-// Enable TEST_MODE so USE_MOCK becomes true
-process.env.TEST_MODE = 'true';
 
 var path = require('path');
 var fs = require('fs');
@@ -169,16 +165,13 @@ var constants = require(path.join(root, 'utils/constants.js'));
 // ---- Module 2: request.js ----
 var request = require(path.join(root, 'utils/request.js'));
 
-// ---- Module 3: simulator.js & news.js ----
-var simulator = require(path.join(root, 'mock/simulator.js'));
-var mockNews = require(path.join(root, 'mock/news.js'));
-
 // ---- Module 4: refreshNews/config.json ----
 var refreshNewsConfig = require(path.join(root, 'cloudfunctions/refreshNews/config.json'));
 
 // ---- Module 5 & 6: Cloud function source code analysis ----
 var getNewsListCode = fs.readFileSync(path.join(root, 'cloudfunctions/getNewsList/index.js'), 'utf-8');
 var searchNewsCode = fs.readFileSync(path.join(root, 'cloudfunctions/searchNews/index.js'), 'utf-8');
+var requestCode = fs.readFileSync(path.join(root, 'utils/request.js'), 'utf-8');
 var refreshNewsCode = fs.readFileSync(path.join(root, 'cloudfunctions/refreshNews/index.js'), 'utf-8');
 
 // ============================================================
@@ -212,24 +205,14 @@ constants.CATEGORIES.forEach(function(cat) {
 });
 ok(namesOk, 'Each category name is a non-empty string');
 
-// 1.5 USE_MOCK
-eq(constants.USE_MOCK, true, 'USE_MOCK is true under TEST_MODE');
-
-// 1.6 Swipe thresholds
+// 1.5 Swipe thresholds
 eq(constants.SWIPE_THRESHOLD, 50, 'SWIPE_THRESHOLD is 50');
 eq(constants.PANEL_SWIPE_THRESHOLD, 60, 'PANEL_SWIPE_THRESHOLD is 60');
 eq(constants.SWIPE_ANIMATION_MS, 300, 'SWIPE_ANIMATION_MS is 300');
 eq(constants.BOUNCE_ANIMATION_MS, 200, 'BOUNCE_ANIMATION_MS is 200');
 
-// 1.7 PAGE_SIZE
+// 1.6 PAGE_SIZE
 eq(constants.PAGE_SIZE, 10, 'PAGE_SIZE is 10');
-
-// 1.8 AI_CACHE config
-typeOf(constants.AI_CACHE, 'object', 'AI_CACHE is an object');
-ok(constants.AI_CACHE.version !== undefined, 'AI_CACHE.version is defined');
-ok(constants.AI_CACHE.generatedAt !== undefined, 'AI_CACHE.generatedAt is defined');
-ok(constants.AI_CACHE.refreshIntervalHours !== undefined, 'AI_CACHE.refreshIntervalHours is defined');
-eq(constants.AI_CACHE.refreshIntervalHours, 24, 'AI_CACHE.refreshIntervalHours is 24');
 
 // ============================================================
 // Module 2: request.js (15 items)
@@ -238,9 +221,8 @@ console.log('\n' + '-'.repeat(40));
 console.log('Module 2: request.js');
 mod('request.js');
 
-// 2.1 Function signatures
+// 2.1 Function signatures (searchNews removed in v5 mock cleanup)
 typeOf(request.getNewsList, 'function', 'getNewsList is a function');
-typeOf(request.searchNews, 'function', 'searchNews is a function');
 typeOf(request.getNewsDetail, 'function', 'getNewsDetail is a function');
 typeOf(request.handleApiError, 'function', 'handleApiError is a function');
 
@@ -262,80 +244,23 @@ var defaultMsg = request.handleApiError('UNKNOWN_CODE');
 typeOf(defaultMsg, 'string', 'Unknown code without message returns a string');
 ok(defaultMsg.length > 0, 'Unknown code without message returns non-empty string');
 
-// 2.5 USE_MOCK mode: getNewsList returns Promise
-var listResult = request.getNewsList({ category: 'all', pageNum: 1, pageSize: 10 });
-typeOf(listResult, 'object', 'getNewsList returns an object (Promise)');
-typeOf(listResult.then, 'function', 'getNewsList result has .then method');
+// 2.5 Cloud routing (source analysis): getNewsList/getNewsDetail call wx.cloud.callFunction
+contains(requestCode, "wx.cloud.callFunction", 'request.js calls wx.cloud.callFunction');
+contains(requestCode, "name: 'getNewsList'", 'getNewsList routes to cloud function "getNewsList"');
+contains(requestCode, "name: 'getNewsDetail'", 'getNewsDetail routes to cloud function "getNewsDetail"');
 
-// 2.6 USE_MOCK mode: searchNews returns Promise
-var searchResult = request.searchNews({ keyword: 'AI', pageNum: 1, pageSize: 10 });
-typeOf(searchResult, 'object', 'searchNews returns an object (Promise)');
-typeOf(searchResult.then, 'function', 'searchNews result has .then method');
-
-// 2.7 Module exports completeness
-['getNewsList', 'getNewsDetail', 'searchNews', 'handleApiError'].forEach(function(key) {
+// 2.6 Module exports completeness
+['getNewsList', 'getNewsDetail', 'handleApiError'].forEach(function(key) {
   ok(request[key] !== undefined, 'request.js exports ' + key);
 });
 
 // ============================================================
-// Module 3: Mock simulator (10 items)
+// Module 3: refreshNews Cloud Function (15 items)
 // ============================================================
 console.log('\n' + '-'.repeat(40));
-console.log('Module 3: mock/simulator + news.js');
-mod('mock/simulator + news.js');
-
-// 3.1 mockNews data count
-eq(mockNews.length, 17, 'mockNews contains 17 items');
-
-// 3.2 Category distribution
-var catCounts = {};
-mockNews.forEach(function(item) {
-  catCounts[item.category] = (catCounts[item.category] || 0) + 1;
-});
-// Actual distribution: recommend=3, tech=4, international=3, sports=3, life=4
-deepEq(catCounts, { recommend: 3, tech: 4, international: 3, sports: 3, life: 4 },
-  'Category distribution: recommend=3/tech=4/international=3/sports=3/life=4');
-
-// 3.3 Field completeness for each item
-var newsFields = ['id', 'title', 'summary', 'category', 'categoryName', 'source', 'time'];
-var allFieldsOk2 = true;
-mockNews.forEach(function(item) {
-  newsFields.forEach(function(f) {
-    if (item[f] === undefined || item[f] === null || item[f] === '') allFieldsOk2 = false;
-  });
-});
-ok(allFieldsOk2, 'Each item has id/title/summary/category/categoryName/source/time');
-
-// 3.4 SIMULATE config completeness
-typeOf(simulator.SIMULATE, 'object', 'SIMULATE is an object');
-eq(simulator.SIMULATE.scenario, 'normal', 'Default scenario is normal');
-['normal', 'error', 'empty', 'slow'].forEach(function(s) {
-  ok(simulator.SIMULATE.scenarios[s] !== undefined, 'SIMULATE.scenarios contains ' + s);
-});
-
-// 3.5 Function signatures
-typeOf(simulator.simulateGetNewsList, 'function', 'simulateGetNewsList is a function');
-typeOf(simulator.simulateSearchNews, 'function', 'simulateSearchNews is a function');
-
-// 3.6 Error scenario config
-eq(simulator.SIMULATE.scenarios.error.shouldFail, true, 'Error scenario shouldFail is true');
-eq(simulator.SIMULATE.scenarios.error.emptyResult, false, 'Error scenario emptyResult is false');
-
-// 3.7 Empty scenario config
-eq(simulator.SIMULATE.scenarios.empty.shouldFail, false, 'Empty scenario shouldFail is false');
-eq(simulator.SIMULATE.scenarios.empty.emptyResult, true, 'Empty scenario emptyResult is true');
-
-// 3.8 Slow scenario config
-eq(simulator.SIMULATE.scenarios.slow.delay, 5000, 'Slow scenario delay is 5000');
-
-// ============================================================
-// Module 4: refreshNews Cloud Function (15 items)
-// ============================================================
-console.log('\n' + '-'.repeat(40));
-console.log('Module 4: refreshNews cloud function');
+console.log('Module 3: refreshNews cloud function');
 mod('refreshNews');
-
-// 4.1 exports.main
+// 3.1 exports.main
 contains(refreshNewsCode, 'exports.main', 'exports.main is defined');
 contains(refreshNewsCode, 'async (event)', 'main is an async function');
 
@@ -465,182 +390,6 @@ contains(searchNewsCode, 'config.pagination.maxPageSize', 'pageSize capped by ma
 contains(searchNewsCode, 'list: []', 'Returns empty list on no match');
 contains(searchNewsCode, "source: 'no_match'", 'meta.source is no_match on no match');
 
-// ============================================================
-// Async Tests: Mock Simulator Actual Execution
-// ============================================================
-console.log('\n' + '-'.repeat(40));
-console.log('Async Tests: Mock Simulator Runtime Verification');
-mod('async-tests');
-
-function runAsyncTests() {
-  return Promise.resolve().then(function() {
-
-    // -- getNewsList pagination (pageSize=5) --
-    return simulator.simulateGetNewsList(mockNews, 'all', 1, 5).then(function(result) {
-      eq(result.list.length, 5, 'Pagination pageSize=5 returns 5 items');
-      eq(result.total, 17, 'Pagination total is 17');
-      ok(result.hasMore === true, 'Page 1 hasMore is true');
-    });
-
-  }).then(function() {
-
-    // -- getNewsList page 2 (pageSize=10) --
-    return simulator.simulateGetNewsList(mockNews, 'all', 2, 10).then(function(result) {
-      eq(result.list.length, 7, 'Page 2 pageSize=10 returns 7 items (remainder)');
-      eq(result.total, 17, 'Page 2 total is still 17');
-      ok(result.hasMore === false, 'Page 2 hasMore is false');
-    });
-
-  }).then(function() {
-
-    // -- getNewsList category filter: tech --
-    return simulator.simulateGetNewsList(mockNews, 'tech', 1, 10).then(function(result) {
-      eq(result.list.length, 4, 'tech category returns 4 items');
-      eq(result.total, 4, 'tech category total is 4');
-      result.list.forEach(function(item) {
-        eq(item.category, 'tech', 'Filtered item ' + item.id + ' category is tech');
-      });
-    });
-
-  }).then(function() {
-
-    // -- getNewsList category filter: life --
-    return simulator.simulateGetNewsList(mockNews, 'life', 1, 10).then(function(result) {
-      eq(result.list.length, 4, 'life category returns 4 items');
-      eq(result.total, 4, 'life category total is 4');
-    });
-
-  }).then(function() {
-
-    // -- getNewsList non-existent category --
-    return simulator.simulateGetNewsList(mockNews, 'nonexistent', 1, 10).then(function(result) {
-      eq(result.list.length, 0, 'Non-existent category returns empty list');
-      eq(result.total, 0, 'Non-existent category total is 0');
-    });
-
-  }).then(function() {
-
-    // -- searchNews keyword search --
-    return simulator.simulateSearchNews(mockNews, 'AI', 1, 10).then(function(result) {
-      ok(result.list.length > 0, 'Search "AI" has results');
-      result.list.forEach(function(item) {
-        var title = (item.title || '').toLowerCase();
-        var summary = (item.summary || '').toLowerCase();
-        ok(title.includes('ai') || summary.includes('ai'),
-          'Search result "' + item.title.substring(0, 30) + '..." contains keyword AI');
-      });
-    });
-
-  }).then(function() {
-
-    // -- searchNews keyword search: Chinese --
-    return simulator.simulateSearchNews(mockNews, 'AI', 1, 5).then(function(result) {
-      eq(result.list.length, 3, 'Search "AI" returns 3 items');
-    });
-
-  }).then(function() {
-
-    // -- searchNews no match keyword --
-    return simulator.simulateSearchNews(mockNews, 'xyznotfound999', 1, 10).then(function(result) {
-      eq(result.list.length, 0, 'No-match keyword returns empty list');
-    });
-
-  }).then(function() {
-
-    // -- searchNews pagination --
-    return simulator.simulateSearchNews(mockNews, 'AI', 1, 2).then(function(result) {
-      ok(result.list.length <= 2, 'Search pagination result <= pageSize');
-    });
-
-  }).then(function() {
-
-    // -- simulator error scenario --
-    var origScenario = simulator.SIMULATE.scenario;
-    simulator.SIMULATE.scenario = 'error';
-    return simulator.simulateGetNewsList(mockNews, 'all', 1, 10).then(function() {
-      ok(false, 'Error scenario should throw (should not reach here)');
-    }).catch(function(err) {
-      ok(err.errorCode === 'SIMULATED_ERROR', 'Error scenario throws SIMULATED_ERROR');
-    }).then(function() {
-      simulator.SIMULATE.scenario = origScenario;
-    });
-
-  }).then(function() {
-
-    // -- simulator empty scenario --
-    var origScenario = simulator.SIMULATE.scenario;
-    simulator.SIMULATE.scenario = 'empty';
-    return simulator.simulateGetNewsList(mockNews, 'all', 1, 10).then(function(result) {
-      eq(result.list.length, 0, 'Empty scenario returns empty list');
-      eq(result.total, 0, 'Empty scenario total is 0');
-    }).then(function() {
-      simulator.SIMULATE.scenario = origScenario;
-    });
-
-  }).then(function() {
-
-    // -- simulator empty scenario: searchNews --
-    var origScenario = simulator.SIMULATE.scenario;
-    simulator.SIMULATE.scenario = 'empty';
-    return simulator.simulateSearchNews(mockNews, 'AI', 1, 10).then(function(result) {
-      eq(result.list.length, 0, 'Empty scenario searchNews returns empty list');
-      eq(result.total, 0, 'Empty scenario searchNews total is 0');
-    }).then(function() {
-      simulator.SIMULATE.scenario = origScenario;
-    });
-
-  }).then(function() {
-
-    // -- request.getNewsList full mock chain --
-    return request.getNewsList({ category: 'all', pageNum: 1, pageSize: 5 }).then(function(result) {
-      typeOf(result.list, 'object', 'request.getNewsList returns list (Array)');
-      ok(result.list.length > 0, 'request.getNewsList returns non-empty list');
-      typeOf(result.total, 'number', 'request.getNewsList returns total (number)');
-      typeOf(result.hasMore, 'boolean', 'request.getNewsList returns hasMore (boolean)');
-      typeOf(result.meta, 'object', 'request.getNewsList returns meta (object)');
-      eq(result.meta.source, 'ai_cache_mock', 'meta.source is ai_cache_mock');
-    });
-
-  }).then(function() {
-
-    // -- request.searchNews full mock chain --
-    return request.searchNews({ keyword: 'AI', pageNum: 1, pageSize: 5 }).then(function(result) {
-      typeOf(result.list, 'object', 'request.searchNews returns list (Array)');
-      typeOf(result.total, 'number', 'request.searchNews returns total (number)');
-    });
-
-  }).then(function() {
-
-    // -- formatNewsItem verification via request data --
-    return request.getNewsList({ category: 'all', pageNum: 1, pageSize: 1 }).then(function(result) {
-      var item = result.list[0];
-      ['id', '_id', 'title', 'summary', 'category', 'categoryName', 'source', 'time', 'publishTime'].forEach(function(f) {
-        ok(item[f] !== undefined, 'formatNewsItem includes field ' + f);
-      });
-    });
-
-  }).then(function() {
-
-    // -- getNewsList with category filter via request --
-    return request.getNewsList({ category: 'tech', pageNum: 1, pageSize: 10 }).then(function(result) {
-      ok(result.list.length > 0, 'request.getNewsList with tech category returns items');
-      result.list.forEach(function(item) {
-        eq(item.category, 'tech', 'Item ' + item.id + ' category is tech');
-      });
-    });
-
-  }).then(function() {
-
-    // -- searchNews empty keyword via request (should still work with mock) --
-    return request.searchNews({ keyword: '', pageNum: 1, pageSize: 10 }).then(function(result) {
-      typeOf(result.list, 'object', 'request.searchNews with empty keyword returns list');
-      typeOf(result.total, 'number', 'request.searchNews with empty keyword returns total');
-    });
-
-  }).then(function() {
-    printSummary();
-  });
-}
 
 // ============================================================
 // Report
@@ -679,8 +428,5 @@ function printSummary() {
   }
 }
 
-// Run async tests
-runAsyncTests().catch(function(err) {
-  console.error('Async test runtime error:', err);
-  process.exit(1);
-});
+// 运行汇总
+printSummary();

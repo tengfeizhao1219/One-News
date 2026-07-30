@@ -1,24 +1,13 @@
-// 请求层封装 — 支持 Mock（AI 缓存）/ 云函数双模式
+// 请求层封装 — 云函数模式（v5 起：纯真实数据，不再使用 Mock）
 //
-// 数据流架构（v2.0）：
-//   Mock 模式 → AI 新闻缓存 (mock/ai-news-cache.js) + 模拟器
-//   生产模式 → 云函数 getNewsList / searchNews
-//              └─ AI 缓存 (aiNewsService) → 云数据库缓存 → 外部 API 降级
+// 数据流架构：
+//   前端 → 云函数 getNewsList / getNewsDetail / refreshNews
+//          └─ 天行实时 API（第一优先级）→ 内存缓存 → 云数据库 → 聚合降级 → AI 静态缓存兜底
 //
-//   AI 缓存特点：零延迟、零费用、零外部依赖
-//   由 WorkBuddy 通过 WebSearch + WebFetch 实时搜索生成
+// 说明：Mock 模式（AI 新闻缓存 + 模拟器）已于 v5 清理，小程序只读取云端真实新闻。
 
-const { USE_MOCK, PAGE_SIZE, CATEGORY_MAP, AI_CACHE } = require('./constants')
+const { PAGE_SIZE, CATEGORY_MAP } = require('./constants')
 const { formatRelativeTime } = require('./util')
-const { simulateGetNewsList, simulateSearchNews } = require('../mock/simulator')
-
-// AI 新闻缓存（Mock 模式直接使用，生产模式走云函数）
-let aiNewsCache = []
-try {
-  aiNewsCache = require('../mock/ai-news-cache')
-} catch (_) {
-  aiNewsCache = []
-}
 
 /**
  * 获取新闻列表
@@ -29,84 +18,6 @@ try {
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
 function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
-  if (USE_MOCK) {
-    return getNewsListMock({ category, pageNum, pageSize })
-  }
-  return getNewsListCloud({ category, pageNum, pageSize })
-}
-
-/**
- * 获取新闻详情
- * @param {string} newsId
- * @returns {Promise<Object>}
- */
-function getNewsDetail(newsId) {
-  if (USE_MOCK) {
-    return getNewsDetailMock(newsId)
-  }
-  return getNewsDetailCloud(newsId)
-}
-
-/**
- * 搜索新闻
- * @param {Object} params
- * @param {string} params.keyword
- * @param {number} params.pageNum
- * @param {number} params.pageSize
- * @returns {Promise<{list: Array, total: number}>}
- */
-function searchNews({ keyword, pageNum = 1, pageSize = PAGE_SIZE } = {}) {
-  if (USE_MOCK) {
-    return searchNewsMock({ keyword, pageNum, pageSize })
-  }
-  return searchNewsCloud({ keyword, pageNum, pageSize })
-}
-
-// ============ Mock 实现（AI 缓存 + 模拟器）============
-
-function getNewsListMock({ category, pageNum, pageSize }) {
-  // 使用 AI 新闻缓存作为数据源
-  const dataSource = aiNewsCache.length > 0 ? aiNewsCache : []
-
-  return simulateGetNewsList(dataSource, category, pageNum, pageSize).then(res => ({
-    list: res.list.map(formatNewsItem),
-    total: res.total,
-    hasMore: res.hasMore,
-    meta: {
-      source: 'ai_cache_mock',
-      cacheVersion: AI_CACHE.version,
-      cacheGeneratedAt: AI_CACHE.generatedAt,
-    }
-  }))
-}
-
-function getNewsDetailMock(newsId) {
-  return new Promise((resolve, reject) => {
-    const item = aiNewsCache.find(n => {
-      const nid = String(n.id || n._id || '')
-      const sid = String(newsId || '')
-      return nid === sid
-    })
-    if (!item) {
-      reject(new Error('新闻不存在'))
-      return
-    }
-    setTimeout(() => {
-      resolve(formatNewsItem(item, true))
-    }, 150)
-  })
-}
-
-function searchNewsMock({ keyword, pageNum, pageSize }) {
-  return simulateSearchNews(aiNewsCache, keyword, pageNum, pageSize).then(res => ({
-    list: res.list.map(formatNewsItem),
-    total: res.total
-  }))
-}
-
-// ============ 云函数实现 ============
-
-function getNewsListCloud({ category, pageNum, pageSize }) {
   return wx.cloud.callFunction({
     name: 'getNewsList',
     data: { category, pageNum, pageSize }
@@ -126,7 +37,12 @@ function getNewsListCloud({ category, pageNum, pageSize }) {
   })
 }
 
-function getNewsDetailCloud(newsId) {
+/**
+ * 获取新闻详情
+ * @param {string} newsId
+ * @returns {Promise<Object>}
+ */
+function getNewsDetail(newsId) {
   return wx.cloud.callFunction({
     name: 'getNewsDetail',
     data: { newsId }
@@ -135,24 +51,6 @@ function getNewsDetailCloud(newsId) {
       throw new Error(res.result.message || '获取新闻详情失败')
     }
     return formatNewsItem(res.result.data, true)
-  })
-}
-
-function searchNewsCloud({ keyword, pageNum, pageSize }) {
-  return wx.cloud.callFunction({
-    name: 'searchNews',
-    data: { keyword, pageNum, pageSize }
-  }).then(res => {
-    if (res.result.code !== 0) {
-      const err = new Error(res.result.message || '搜索新闻失败')
-      err.errorCode = res.result.errorCode
-      throw err
-    }
-    const data = res.result.data
-    return {
-      list: (data.list || []).map(formatNewsItem),
-      total: data.total
-    }
   })
 }
 
@@ -197,6 +95,5 @@ function formatNewsItem(item, includeContent = false) {
 module.exports = {
   getNewsList,
   getNewsDetail,
-  searchNews,
   handleApiError
 }

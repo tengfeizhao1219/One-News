@@ -18,7 +18,6 @@ const files = {
   detailWxss: path.join(ROOT, 'pages/detail/detail.wxss'),
   homeJs: path.join(ROOT, 'pages/home/home.js'),
   homeWxml: path.join(ROOT, 'pages/home/home.wxml'),
-  aiCache: path.join(ROOT, 'mock/ai-news-cache.js'),
 }
 
 let pass = 0
@@ -145,36 +144,6 @@ console.log('\n【静态】引导文案')
   const wxml = read(files.homeWxml)
   check('引导文案更新为"点击卡片进入阅读"', wxml.includes('点击卡片进入阅读'))
   check('引导文案不再含"阅读全文"', !wxml.includes('阅读全文'))
-}
-
-// ===== 静态检查：Mock 数据 content 字段 =====
-console.log('\n【静态】Mock 数据 content 字段增强')
-{
-  const cache = read(files.aiCache)
-  // 统计 content 字段数量
-  const contentCount = (cache.match(/content:\s*'/g) || []).length
-  check('每条新闻均有 content 字段（36 条）', contentCount === 36, '实际 ' + contentCount)
-  // 版本更新标记在注释中，用日期验证
-  check('content 增强日期标记存在', cache.includes('2026-07-29 content'))
-  // content 段落分隔符：在 JS 字符串中为 \\n\\n，读入内存后变为实际换行符 \n\n
-  check('content 字段含段落分隔符（\\n\\n 或实际换行）', cache.includes('\\\\n\\\\n') || /\n\n/.test(cache))
-  check('ai-news-cache.js 为合法 UTF-8', isStrictUtf8(fs.readFileSync(files.aiCache)))
-
-  // 抽查 content 长度
-  const contentRegex = /content:\s*'([^']+)'/g
-  let m
-  let totalLen = 0
-  let count = 0
-  let shortCount = 0
-  while ((m = contentRegex.exec(cache)) !== null) {
-    const len = m[1].length
-    totalLen += len
-    count++
-    if (len < 200) shortCount++
-  }
-  const avgLen = count > 0 ? Math.round(totalLen / count) : 0
-  check('content 平均长度 ≥ 300 字', avgLen >= 300, '平均 ' + avgLen + ' 字')
-  check('无 content 过短（< 200 字）', shortCount === 0, shortCount + ' 条过短')
 }
 
 // ===== 结果 =====
