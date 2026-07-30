@@ -5,6 +5,30 @@
 
 ---
 
+## [2026-07-30] 共享保险库搭建 | 会话：项目经理（PM）
+
+### 完成内容
+- 在 tdrive 项目盘根目录新建 `vault/` 目录（dir_id = `NbXEQRsesdqd`）
+- 上传 `github_pat`（经典 PAT，≈整账户权限）到 `vault/github_pat`
+- 上传 `vault/README.md` 使用说明（含安全须知、各角色使用方法、轮换指南）
+- 用途：让所有角色会话都能从 tdrive 取令牌做 git push
+
+### 变更文件
+- tdrive: `vault/github_pat`（新建，file_id = NJZQjYLZjTkW）
+- tdrive: `vault/README.md`（新建，file_id = NwguxcUAqVvh）
+- 本仓库无代码变更（tdrive 操作不产生 git 提交）
+
+### 遗留问题
+- 共享的是经典 PAT（≈整账户权限），建议后续轮换为 fine-grained PAT（仅 One-News 仓库 write 权限）
+- 现有文档 `update-project-log.sh` / `docs/项目日志.md` 中「密钥不进云盘」规则与本次决策冲突，待更新
+
+### 注意事项
+- `git pull` 不需要 token（仓库公开）；只有 `git push` 需要从 tdrive 取 github_pat
+- 各角色使用方法：tdrive `file_download` → 读入 TOKEN → `git remote set-url` → `git push` → 还原 remote → 删除临时令牌文件
+- 一旦令牌疑似泄露，立即到 GitHub 撤销/轮换
+
+---
+
 ## [2026-07-30] 接力棒机制 | 会话：[主]
 
 ### 完成内容
