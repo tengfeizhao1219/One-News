@@ -1,0 +1,78 @@
+name: Relay Watch — 任务看板自动巡检
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'TASK_BOARD.md'
+      - 'RELAY.md'
+  workflow_dispatch:   # 允许手动触发
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  relay-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 解析任务看板
+        id: parse
+        run: |
+          chmod +x scripts/pending-tasks.sh
+          OUTPUT=$(scripts/pending-tasks.sh --github 2>&1) || true
+          echo "$OUTPUT"
+
+          # 提取 JSON 摘要
+          PENDING_TOTAL=$(scripts/pending-tasks.sh 2>/dev/null | tail -1 | python3 -c "import sys,json; print(json.load(sys.stdin)['pending_total'])" 2>/dev/null || echo "0")
+          echo "pending_total=$PENDING_TOTAL" >> "$GITHUB_OUTPUT"
+
+          # 写入 GitHub Actions 摘要页
+          echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 创建/更新 Relay 状态 Issue
+        if: ${{ steps.parse.outputs.pending_total != '0' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+
+            // 查找已有的 "Relay Status" issue
+            const { data: existingIssues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'relay-status',
+              state: 'open',
+              per_page: 1
+            });
+
+            const body = `## 🤖 自动巡检 — ${new Date().toISOString().slice(0,10)}
+
+            ${summary}
+
+            > 由 [Relay Watch](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/relay-watch.yml) 自动生成，每次 push 到 main 时更新。`;
+
+            if (existingIssues.length > 0) {
+              // 更新已有 issue
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssues[0].number,
+                body: body
+              });
+              console.log(`已更新 Issue #${existingIssues[0].number}`);
+            } else {
+              // 新建 issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: '🔴 Relay Status — 任务看板自动巡检',
+                body: body,
+                labels: ['relay-status']
+              });
+              console.log('已创建新 Issue');
+            }
