@@ -6,7 +6,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const aiNews = require('./common/aiNewsService')
+const aiNews = require('../common/aiNewsService')
 
 exports.main = async (event) => {
   const { newsId } = event
