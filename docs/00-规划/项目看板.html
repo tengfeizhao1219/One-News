@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>一页 One-News · 项目整体看板</title>
+<style>
+  :root {
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --brand: #2563eb;
+    --brand-d: #1e3a8a;
+    --green: #16a34a;
+    --red: #dc2626;
+    --amber: #d97706;
+    --blue: #2563eb;
+    --indigo: #4f46e5;
+    --slate: #475569;
+    --shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.55; font-size: 14px;
+  }
+  a { color: var(--brand); text-decoration: none; }
+
+  /* ===== Header ===== */
+  header {
+    background: linear-gradient(135deg, var(--brand-d), var(--brand));
+    color: #fff; padding: 22px 24px 18px;
+  }
+  .hdr-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+  .hdr-top h1 { margin: 0; font-size: 22px; letter-spacing: .5px; }
+  .hdr-top .sub { opacity: .85; font-size: 13px; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; font-size: 12.5px; opacity: .92; }
+  .meta-row b { font-weight: 600; opacity: .8; }
+  .commit { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: rgba(255,255,255,.15); padding: 1px 7px; border-radius: 5px; }
+
+  /* ===== Nav ===== */
+  nav {
+    position: sticky; top: 0; z-index: 50; background: #0f172a; color: #cbd5e1;
+    display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 24px; font-size: 12.5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+  nav a { color: #cbd5e1; padding: 3px 0; border-bottom: 2px solid transparent; }
+  nav a:hover { color: #fff; border-bottom-color: var(--brand); }
+
+  /* ===== Layout ===== */
+  main { max-width: 1180px; margin: 0 auto; padding: 22px 20px 60px; }
+  section { margin-bottom: 30px; }
+  .sec-title { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; margin: 0 0 14px; }
+  .sec-title .tick { width: 4px; height: 18px; background: var(--brand); border-radius: 2px; }
+  .sec-title .hint { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: auto; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+
+  /* ===== Summary narrative ===== */
+  .narrative p { margin: 0 0 10px; }
+  .narrative p:last-child { margin-bottom: 0; }
+  .narrative strong { color: var(--brand-d); }
+
+  /* ===== KPI ===== */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }
+  .kpi { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--brand); }
+  .kpi .big { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .kpi .lbl { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .kpi.k-green::before { background: var(--green); }
+  .kpi.k-amber::before { background: var(--amber); }
+  .kpi.k-red::before { background: var(--red); }
+  .kpi.k-indigo::before { background: var(--indigo); }
+
+  /* ===== Pipeline ===== */
+  .pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0; }
+  .pnode { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .pnode.active { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(37,99,235,.18), var(--shadow); }
+  .pnode .pn-id { font-size: 11px; color: var(--muted); }
+  .pnode .pn-name { font-weight: 700; margin: 2px 0 6px; }
+  .pnode .pn-lead { font-size: 12px; color: var(--muted); }
+  .pnode .pn-bar { height: 6px; background: var(--line); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .pnode .pn-bar > i { display: block; height: 100%; background: var(--green); }
+  .pnode .pn-prog { font-size: 11.5px; color: var(--slate); margin-top: 4px; }
+  .arrow { display: flex; align-items: center; color: var(--slate); font-size: 18px; padding: 0 4px; }
+
+  /* ===== Module grid ===== */
+  .mods { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; }
+  .mod { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--slate); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .mod.s-done { border-left-color: var(--green); }
+  .mod.s-todo { border-left-color: var(--red); }
+  .mod.s-warn { border-left-color: var(--amber); }
+  .mod .m-top { display: flex; align-items: center; gap: 8px; }
+  .mod .m-name { font-weight: 600; flex: 1; }
+  .mod .m-note { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+
+  /* ===== Badges ===== */
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .st-done { background: #dcfce7; color: #166534; }
+  .st-todo { background: #fee2e2; color: #991b1b; }
+  .st-warn { background: #fef3c7; color: #92400e; }
+  .st-claim { background: #dbeafe; color: #1e40af; }
+  .st-wait { background: #f1f5f9; color: #475569; }
+  .st-doing { background: #e0e7ff; color: #3730a3; }
+  .st-block { background: #fecaca; color: #7f1d1d; }
+  .st-cancel { background: #e2e8f0; color: #64748b; }
+
+  .prio { font-size: 13px; }
+
+  /* ===== Task board ===== */
+  .phase-block { margin-bottom: 16px; }
+  .phase-h { font-weight: 700; font-size: 14px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+  .phase-h .cnt { font-size: 12px; color: var(--muted); font-weight: 400; }
+  .task-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 8px; }
+  .task { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; }
+  .task .t-id { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: var(--brand-d); min-width: 42px; }
+  .task .t-name { flex: 1; }
+  .task .t-role { color: var(--muted); font-size: 11.5px; }
+
+  /* ===== Generic tables ===== */
+  table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.tbl th, table.tbl td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.tbl th { background: #f8fafc; color: var(--slate); font-weight: 600; font-size: 12px; }
+  table.tbl tr:last-child td { border-bottom: none; }
+  table.tbl td.id { font-family: ui-monospace, Menlo, monospace; font-weight: 700; color: var(--brand-d); white-space: nowrap; }
+
+  /* ===== Activity ===== */
+  .act { position: relative; padding-left: 18px; }
+  .act::before { content: ""; position: absolute; left: 4px; top: 4px; bottom: 4px; width: 2px; background: var(--line); }
+  .act .item { position: relative; margin-bottom: 12px; }
+  .act .item::before { content: ""; position: absolute; left: -16px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--brand); }
+  .act .a-date { font-size: 11.5px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
+  .act .a-title { font-weight: 600; }
+  .act .a-by { font-size: 12px; color: var(--slate); }
+
+  /* ===== Legend ===== */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 12.5px; color: var(--slate); }
+  .legend .lg { display: inline-flex; align-items: center; gap: 5px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px 16px 40px; }
+  footer code { background: #e2e8f0; padding: 1px 6px; border-radius: 4px; }
+
+  @media (max-width: 620px) {
+    .arrow { display: none; }
+    .pnode { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr-top">
+    <h1 id="h-name">一页（One-News）</h1>
+    <span class="sub" id="h-sub">微信小程序 · AI 新闻速览</span>
+  </div>
+  <div class="meta-row" id="h-meta"></div>
+  <div style="margin-top:14px;">
+    <div style="display:flex;justify-content:space-between;font-size:12px;opacity:.9;margin-bottom:5px;">
+      <span>功能模块完成度</span><span id="h-prog-txt"></span>
+    </div>
+    <div style="height:8px;background:rgba(255,255,255,.22);border-radius:5px;overflow:hidden;">
+      <i id="h-prog-bar" style="display:block;height:100%;background:#4ade80;width:0;"></i>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <a href="#overview">概括</a>
+  <a href="#kpi">指标</a>
+  <a href="#pipeline">阶段流水线</a>
+  <a href="#modules">功能模块</a>
+  <a href="#tasks">任务看板</a>
+  <a href="#decisions">决策点</a>
+  <a href="#risks">风险</a>
+  <a href="#todos">待办</a>
+  <a href="#activity">近期动态</a>
+</nav>
+
+<main>
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2 class="sec-title"><span class="tick"></span>项目概括<span class="hint">静态快照 · 数据截至 <span id="ov-date"></span></span></h2>
+    <div class="card narrative" id="ov-summary"></div>
+  </section>
+
+  <!-- 2. KPI -->
+  <section id="kpi">
+    <h2 class="sec-title"><span class="tick"></span>关键指标</h2>
+    <div class="kpis" id="kpi-row"></div>
+  </section>
+
+  <!-- 3. Pipeline -->
+  <section id="pipeline">
+    <h2 class="sec-title"><span class="tick"></span>六阶段流水线<span class="hint">需求规划 → 产品设计 → 技术方案 → 开发实现 → 测试验收 → 上线复盘</span></h2>
+    <div class="card"><div class="pipe" id="pipe"></div></div>
+  </section>
+
+  <!-- 4. Modules -->
+  <section id="modules">
+    <h2 class="sec-title"><span class="tick"></span>功能模块状态<span class="hint" id="mod-hint"></span></h2>
+    <div class="mods" id="mods"></div>
+  </section>
+
+  <!-- 5. Tasks -->
+  <section id="tasks">
+    <h2 class="sec-title"><span class="tick"></span>任务看板<span class="hint">来源 TASK_BOARD.md · 拉式认领</span></h2>
+    <div id="task-board"></div>
+  </section>
+
+  <!-- 6. Decisions -->
+  <section id="decisions">
+    <h2 class="sec-title"><span class="tick"></span>关键决策点<span class="hint">解锁阶段二~四的前置条件</span></h2>
+    <div class="card"><table class="tbl" id="decision-tbl"></table></div>
+  </section>
+
+  <!-- 7. Risks -->
+  <section id="risks">
+    <h2 class="sec-title"><span class="tick"></span>风险清单<span class="hint">来源 项目整体计划 · 风险清单</span></h2>
+    <div class="card"><table class="tbl" id="risk-tbl"></table></div>
+  </section>
+
+  <!-- 8. Todos -->
+  <section id="todos">
+    <h2 class="sec-title"><span class="tick"></span>待办优先级<span class="hint">来源 CONTEXT 待办 + 已知待办</span></h2>
+    <div class="card"><table class="tbl" id="todo-tbl"></table></div>
+  </section>
+
+  <!-- 9. Activity -->
+  <section id="activity">
+    <h2 class="sec-title"><span class="tick"></span>近期动态<span class="hint">来源 COMMLOG.md（倒序）</span></h2>
+    <div class="card"><div class="act" id="act-feed"></div></div>
+  </section>
+
+  <!-- 10. Legend -->
+  <section id="legend">
+    <h2 class="sec-title"><span class="tick"></span>图例</h2>
+    <div class="card"><div class="legend" id="legend-row"></div></div>
+  </section>
+</main>
+
+<footer>
+  本看板为「视图层」交付，单一事实源仍为 <code>CONTEXT.md</code> / <code>TASK_BOARD.md</code> / <code>docs/00-规划/项目整体计划.md</code> / <code>COMMLOG.md</code>。<br/>
+  状态变更后请手动刷新文件顶部 <code>DATA</code> 对象（数据驱动，便于维护）。生成于 <span id="ft-date"></span>。
+</footer>
+
+<script>
+/* =========================================================================
+   DATA —— 集中维护区（刷新看板只需改这里）
+   数据来源：CONTEXT.md / TASK_BOARD.md / docs/00-规划/项目整体计划.md / COMMLOG.md
+   快照日期：2026-07-30
+   ========================================================================= */
+const DATA = {
+  meta: {
+    name: "一页（One-News）",
+    sub: "微信小程序 · AI 新闻速览",
+    techStack: "微信小程序原生 + WXS + Mock 数据（JavaScript）",
+    branch: "main",
+    latestCommit: "bad14f9",
+    latestCommitMsg: "docs: 阶段一需求规划交付 (需求池/优先级矩阵/评审纪要v1.1)",
+    updated: "2026-07-30",
+    updatedBy: "项目经理（PJM）"
+  },
+
+  summary: "<p><strong>「一页 One-News」</strong>已进入<strong>阶段一（需求规划）收尾</strong>。核心开发层面，10 个功能模块中已有 <strong>8 个完成</strong>（首页卡片滑动+侧边栏、详情基础展示、真实数据接入五层降级、聚合数据源、卡片摘要补全、标题截断加固、Mock 数据、暗色模式均已上线 main）。</p>" +
+    "<p><strong>当前焦点</strong>：① 详情页阅读模式（T-01，上下滑跨分类切换）待开发；② 搜索页口径待核实（CONTEXT 标 ✅ 但 app.json 未注册 pages/search，见 RQ-13）。</p>" +
+    "<p><strong>任务层面</strong>：阶段一 R-01~R-05（用户调研 / 竞品分析 / 需求池 / 优先级 / 评审）已全部 ✅，仅余 R-06 立项确认（项目经理关口）待办。全量 42 个任务中 5 完成、12 待认领、25 等待前置，无进行中 / 阻塞。A-01~A-08 全员自查均为待认领，可并行不阻塞主线。</p>" +
+    "<p><strong>决策层面</strong>：3 个关键决策点（D1 阅读模式范围 / D2 聚合独立分类 tab / D3 版本范围）待产品经理确认，是解锁阶段二~四的前置条件。<strong>最大风险</strong>为产品经理确认延迟导致全线阻塞。</p>",
+
+  kpis: [
+    { big: "8 / 10", lbl: "功能模块已完成（80%）", cls: "k-green" },
+    { big: "5 / 42", lbl: "计划任务已完成（12%）", cls: "" },
+    { big: "阶段一", lbl: "当前阶段 · 需求规划（进行中）", cls: "k-indigo" },
+    { big: "3", lbl: "待决策点（D1 / D2 / D3）", cls: "k-amber" },
+    { big: "5", lbl: "风险项（🔴 高 ×1）", cls: "k-red" }
+  ],
+
+  phases: [
+    { id: "一", name: "需求规划", lead: "产品经理", done: 5, total: 6, active: true },
+    { id: "二", name: "产品设计", lead: "产品 + 交互 + 视觉", done: 0, total: 5, active: false },
+    { id: "三", name: "技术方案", lead: "技术负责人", done: 0, total: 5, active: false },
+    { id: "四", name: "开发实现", lead: "前端 + 后端", done: 0, total: 7, active: false },
+    { id: "五", name: "测试验收", lead: "测试 + 产品", done: 0, total: 6, active: false },
+    { id: "六", name: "上线复盘", lead: "全员", done: 0, total: 5, active: false }
+  ],
+
+  modules: [
+    { name: "首页（卡片滑动 + 侧边栏）", status: "done", note: "WXS 手势、暗色模式、5 分类" },
+    { name: "详情页（基础展示）", status: "done", note: "单条新闻查看" },
+    { name: "详情页（阅读模式）", status: "todo", note: "上下滑跨分类切换新闻（T-01）— 当前焦点" },
+    { name: "搜索页", status: "warn", note: "口径待核实：CONTEXT 标 ✅ 但 app.json 未注册 pages/search（RQ-13）" },
+    { name: "真实数据接入", status: "done", note: "天行 L1 + 聚合 L4 + 云库 L3 + AI 兜底 L5（main v11-v13）" },
+    { name: "聚合数据源（Juhe）", status: "done", note: "L4 降级 + 分类透传，API Key 已注入环境变量" },
+    { name: "卡片摘要补全", status: "done", note: "空摘要自动抓正文首段兜底（v13）" },
+    { name: "标题截断加固", status: "done", note: "CSS word-break + 摘要限 3 段（v13）" },
+    { name: "Mock 数据", status: "done", note: "36 条 × 5 分类，带正文" },
+    { name: "暗色模式", status: "done", note: "全局 !important 覆盖" }
+  ],
+
+  phaseTasks: [
+    { phase: "一 · 需求规划", tasks: [
+      { id: "R-01", name: "用户调研（用户画像）", role: "产品经理", prio: "🔴", status: "done" },
+      { id: "R-02", name: "竞品分析（竞品分析报告）", role: "产品经理", prio: "🔴", status: "done" },
+      { id: "R-03", name: "需求收集（需求池）", role: "产品经理", prio: "🔴", status: "done" },
+      { id: "R-04", name: "优先级排序（优先级矩阵）", role: "产品经理", prio: "🔴", status: "done" },
+      { id: "R-05", name: "需求评审（评审纪要）", role: "产品经理", prio: "🔴", status: "done" },
+      { id: "R-06", name: "立项确认（项目启动确认）", role: "项目经理", prio: "🔴", status: "claim" }
+    ]},
+    { phase: "二 · 产品设计", tasks: [
+      { id: "D-01", name: "PRD 撰写", role: "产品经理", prio: "🔴", status: "claim" },
+      { id: "D-02", name: "交互设计（交互原型）", role: "交互设计师", prio: "🔴", status: "claim" },
+      { id: "D-03", name: "视觉设计（视觉稿 + 设计规范）", role: "视觉设计师", prio: "🔴", status: "claim" },
+      { id: "D-04", name: "设计评审（评审纪要）", role: "产品经理", prio: "🟡", status: "wait" },
+      { id: "D-05", name: "设计走查（走查清单）", role: "视觉设计师", prio: "🟢", status: "wait" }
+    ]},
+    { phase: "三 · 技术方案", tasks: [
+      { id: "T-01", name: "技术选型（选型说明）", role: "技术负责人", prio: "🔴", status: "wait" },
+      { id: "T-02", name: "架构设计（技术方案）", role: "技术负责人", prio: "🟡", status: "wait" },
+      { id: "T-03", name: "接口定义（接口文档）", role: "技术负责人", prio: "🟡", status: "wait" },
+      { id: "T-04", name: "技术评审（评审纪要）", role: "技术负责人", prio: "🟡", status: "wait" },
+      { id: "T-05", name: "任务拆分（清单 + 估时）", role: "项目经理 + 技术负责人", prio: "🟡", status: "wait" }
+    ]},
+    { phase: "四 · 开发实现", tasks: [
+      { id: "B-01", name: "环境搭建", role: "技术负责人", prio: "🔴", status: "wait" },
+      { id: "B-02", name: "前端开发", role: "前端开发", prio: "🔴", status: "wait" },
+      { id: "B-03", name: "后端开发", role: "后端开发", prio: "🔴", status: "wait" },
+      { id: "B-04", name: "单元测试（测试报告）", role: "前端/后端开发", prio: "🟡", status: "wait" },
+      { id: "B-05", name: "代码评审（评审记录）", role: "技术负责人", prio: "🟡", status: "wait" },
+      { id: "B-06", name: "进度跟踪（进度汇报）", role: "项目经理", prio: "🟢", status: "wait" },
+      { id: "B-07", name: "提测（提测说明）", role: "项目经理", prio: "🟡", status: "wait" }
+    ]},
+    { phase: "五 · 测试验收", tasks: [
+      { id: "Q-01", name: "测试用例编写", role: "测试工程师", prio: "🔴", status: "wait" },
+      { id: "Q-02", name: "功能测试（测试报告）", role: "测试工程师", prio: "🟡", status: "wait" },
+      { id: "Q-03", name: "回归测试（回归报告）", role: "测试工程师", prio: "🟡", status: "wait" },
+      { id: "Q-04", name: "Bug 跟踪（Bug 清单）", role: "项目经理", prio: "🟡", status: "wait" },
+      { id: "Q-05", name: "产品验收（验收结论）", role: "产品经理", prio: "🟡", status: "wait" },
+      { id: "Q-06", name: "上线检查（检查清单）", role: "项目经理", prio: "🟡", status: "wait" }
+    ]},
+    { phase: "六 · 上线复盘", tasks: [
+      { id: "L-01", name: "发布上线（版本发布）", role: "技术负责人", prio: "🔴", status: "wait" },
+      { id: "L-02", name: "线上验证（验证记录）", role: "测试工程师", prio: "🟡", status: "wait" },
+      { id: "L-03", name: "数据观察（观察报告）", role: "产品经理", prio: "🟡", status: "wait" },
+      { id: "L-04", name: "项目复盘（复盘报告）", role: "项目经理", prio: "🟡", status: "wait" },
+      { id: "L-05", name: "文档归档（归档完成）", role: "项目经理", prio: "🟡", status: "wait" }
+    ]}
+  ],
+
+  backlog: [
+    { id: "A-01", name: "产品职责自查（重点：阅读模式需求 T-01、聚合独立 tab 决策、PRD 范围）", role: "产品经理", prio: "🟡", status: "claim" },
+    { id: "A-02", name: "交互职责自查（重点：阅读模式上下滑跨分类切换交互）", role: "交互设计师", prio: "🟡", status: "claim" },
+    { id: "A-03", name: "视觉职责自查（视觉稿 / 规范 / 暗色模式 / 走查清单）", role: "视觉设计师", prio: "🟡", status: "claim" },
+    { id: "A-04", name: "技术职责自查（重点：阅读模式技术方案、SOP WXS 红线）", role: "技术负责人", prio: "🟡", status: "claim" },
+    { id: "A-05", name: "前端职责自查（首页/详情/搜索/阅读模式/WXS 红线/console.log/标题截断）", role: "前端开发", prio: "🟡", status: "claim" },
+    { id: "A-06", name: "后端职责自查（云函数五层降级 / 数据源 / 接口稳定性）", role: "后端开发", prio: "🟡", status: "claim" },
+    { id: "A-07", name: "测试职责自查（用例 / 功能 / 回归 178 / 真机 / 阅读模式覆盖）", role: "测试工程师", prio: "🟡", status: "claim" },
+    { id: "A-08", name: "PM 汇总：收齐 A-01~A-07 自查，归档并回填看板", role: "项目经理", prio: "🔴", status: "claim" }
+  ],
+
+  decisions: [
+    { id: "D1", item: "阅读模式（T-01）功能范围：仅上下滑切新闻，还是包含跨分类串联？", owner: "产品经理", impact: "阶段二 PRD、阶段三技术方案、阶段四开发量", status: "待确认" },
+    { id: "D2", item: "聚合独立分类 tab（体育/生活等）是否开放？", owner: "产品经理（最终用户拍板）", impact: "阶段二交互、阶段三接口、阶段四前后端", status: "待决策" },
+    { id: "D3", item: "版本范围：本次迭代包哪些功能，哪些延后？", owner: "产品经理 + 项目经理", impact: "全部阶段的交付范围", status: "待确认" }
+  ],
+
+  risks: [
+    { id: 1, risk: "产品经理确认延迟 → 全线阻塞", impact: "🔴 高", prob: "中", mitigation: "A-01 自查先行，D1/D2/D3 决策点尽早对齐" },
+    { id: 2, risk: "阅读模式技术复杂度超预期", impact: "🟡 中", prob: "中", mitigation: "T-01 阶段三做技术预研，尽早暴露" },
+    { id: 3, risk: "聚合独立分类 tab 需求蔓延", impact: "🟡 中", prob: "低", mitigation: "D2 决策后严格限定范围" },
+    { id: 4, risk: "回归测试覆盖不足（178 用例 vs 阅读模式新增）", impact: "🟡 中", prob: "中", mitigation: "Q-01 阶段五补全阅读模式专项用例" },
+    { id: 5, risk: "经典 PAT 被误撤销 → 全员无法 push", impact: "🟡 中", prob: "低", mitigation: "轮换 fine-grained PAT 前确保新旧并存过渡" }
+  ],
+
+  todos: [
+    { id: 1, task: "阅读模式（详情页上下滑跨分类切换）", prio: "🔴 高", status: "待产品确认范围（D1）" },
+    { id: 2, task: "清理 home.js 诊断 console.log", prio: "🟢 低", status: "待做" },
+    { id: 3, task: "切换真实数据（云函数 + 数据源）", prio: "✅", status: "已完成（main v11-v13）" },
+    { id: 4, task: "SOP 更新（WXS 红线 + return false 禁令）", prio: "🟢 低", status: "待做" },
+    { id: 5, task: "聚合开放独立分类 tab（体育/生活等）", prio: "🟡 中", status: "待用户决策（D2）" },
+    { id: 6, task: "百炼 Key 轮换", prio: "—", status: "已搁置（2026-07-30 用户决策）" },
+    { id: 7, task: "搜索页口径核实（RQ-13）", prio: "🟡 中", status: "待项目经理/开发核实" },
+    { id: 8, task: "GitHub PAT 轮换为 fine-grained", prio: "🟢 低", status: "待仓库所有者操作" }
+  ],
+
+  activity: [
+    { date: "2026-07-30", title: "文档去重：流转机制定稿为权威源 + 去掉估时", by: "项目经理（PJM）" },
+    { date: "2026-07-30", title: "项目整体计划 + 任务交接流转机制定稿", by: "项目经理（PJM）" },
+    { date: "2026-07-30", title: "密钥管理文档对齐 tdrive 保险库机制", by: "项目经理（PJM）" },
+    { date: "2026-07-30", title: "协作机制升级 v2.3（统一看板 + 跟踪表）", by: "项目经理（PJM）" },
+    { date: "2026-07-30", title: "共享保险库搭建（tdrive vault/）", by: "项目经理（PM）" },
+    { date: "2026-07-29", title: "数据层三连击收尾（v11/v12/v13，178 用例通过）", by: "[主]（数据层）" }
+  ]
+};
+
+/* ===== Status label map ===== */
+const ST = {
+  done:   { label: "已完成",   cls: "st-done" },
+  todo:   { label: "待开发",   cls: "st-todo" },
+  warn:   { label: "待核实",   cls: "st-warn" },
+  claim:  { label: "待认领",   cls: "st-claim" },
+  wait:   { label: "等待前置", cls: "st-wait" },
+  doing:  { label: "进行中",   cls: "st-doing" },
+  block:  { label: "阻塞中",   cls: "st-block" },
+  cancel: { label: "已取消",   cls: "st-cancel" }
+};
+const ST_ICON = { done:"✅", todo:"❌", warn:"⚠️", claim:"📋", wait:"⏳", doing:"🔄", block:"🚫", cancel:"❌" };
+
+/* ===== Render ===== */
+function $(id){ return document.getElementById(id); }
+
+function renderHeader(){
+  const m = DATA.meta;
+  $("h-name").textContent = m.name;
+  $("h-sub").textContent = m.sub;
+  $("h-meta").innerHTML =
+    `<span><b>技术栈</b> ${m.techStack}</span>` +
+    `<span><b>分支</b> ${m.branch}</span>` +
+    `<span><b>最新提交</b> <span class="commit">${m.latestCommit}</span></span>` +
+    `<span style="opacity:.8;">${m.latestCommitMsg}</span>` +
+    `<span><b>更新</b> ${m.updated} · ${m.updatedBy}</span>`;
+  const done = DATA.modules.filter(x => x.status === "done").length;
+  const total = DATA.modules.length;
+  const pct = Math.round(done / total * 100);
+  $("h-prog-txt").textContent = `${done} / ${total}（${pct}%）`;
+  $("h-prog-bar").style.width = pct + "%";
+}
+
+function renderOverview(){
+  $("ov-date").textContent = DATA.meta.updated;
+  $("ov-summary").innerHTML = DATA.summary;
+}
+
+function renderKPI(){
+  $("kpi-row").innerHTML = DATA.kpis.map(k =>
+    `<div class="kpi ${k.cls}"><div class="big">${k.big}</div><div class="lbl">${k.lbl}</div></div>`
+  ).join("");
+}
+
+function renderPipeline(){
+  $("pipe").innerHTML = DATA.phases.map((p, i) => {
+    const pct = Math.round(p.done / p.total * 100);
+    const node =
+      `<div class="pnode ${p.active ? "active" : ""}">` +
+        `<div class="pn-id">阶段 ${p.id}</div>` +
+        `<div class="pn-name">${p.name}</div>` +
+        `<div class="pn-lead">主导：${p.lead}</div>` +
+        `<div class="pn-bar"><i style="width:${pct}%;"></i></div>` +
+        `<div class="pn-prog">${p.done}/${p.total} 任务 · ${p.active ? "进行中" : "等待"}</div>` +
+      `</div>`;
+    const arrow = (i < DATA.phases.length - 1) ? `<div class="arrow">→</div>` : "";
+    return node + arrow;
+  }).join("");
+}
+
+function renderModules(){
+  const done = DATA.modules.filter(x => x.status === "done").length;
+  const todo = DATA.modules.filter(x => x.status === "todo").length;
+  const warn = DATA.modules.filter(x => x.status === "warn").length;
+  $("mod-hint").textContent = `共 ${DATA.modules.length} 个 · ✅${done} ❌${todo} ⚠️${warn}`;
+  $("mods").innerHTML = DATA.modules.map(m => {
+    const s = ST[m.status];
+    return `<div class="mod s-${m.status}">` +
+      `<div class="m-top"><span class="m-name">${m.name}</span>` +
+      `<span class="badge ${s.cls}">${ST_ICON[m.status]} ${s.label}</span></div>` +
+      `<div class="m-note">${m.note}</div></div>`;
+  }).join("");
+}
+
+function taskChip(t){
+  const s = ST[t.status];
+  return `<div class="task">` +
+    `<span class="t-id">${t.id}</span>` +
+    `<span class="t-name">${t.name}</span>` +
+    `<span class="badge ${s.cls}">${ST_ICON[t.status]} ${s.label}</span>` +
+    `<span class="prio">${t.prio}</span>` +
+    `<span class="t-role">${t.role}</span>` +
+  `</div>`;
+}
+
+function renderTasks(){
+  let html = "";
+  DATA.phaseTasks.forEach(ph => {
+    const cnt = `${ph.tasks.filter(t=>t.status==="done").length}/${ph.tasks.length} 完成`;
+    html += `<div class="phase-block"><div class="phase-h">${ph.phase}<span class="cnt">${cnt}</span></div>` +
+      `<div class="task-list">${ph.tasks.map(taskChip).join("")}</div></div>`;
+  });
+  const bcnt = `${DATA.backlog.filter(t=>t.status==="done").length}/${DATA.backlog.length} 完成`;
+  html += `<div class="phase-block"><div class="phase-h">临时新增（Backlog · A-xx）<span class="cnt">${bcnt} · 即席，不阻塞主线</span></div>` +
+    `<div class="task-list">${DATA.backlog.map(taskChip).join("")}</div></div>`;
+  $("task-board").innerHTML = html;
+}
+
+function renderDecisions(){
+  let h = `<thead><tr><th>ID</th><th>决策项</th><th>决策人</th><th>影响范围</th><th>状态</th></tr></thead><tbody>`;
+  DATA.decisions.forEach(d => {
+    h += `<tr><td class="id">${d.id}</td><td>${d.item}</td><td>${d.owner}</td><td>${d.impact}</td>` +
+      `<td><span class="badge st-claim">${d.status}</span></td></tr>`;
+  });
+  h += `</tbody>`;
+  $("decision-tbl").innerHTML = h;
+}
+
+function renderRisks(){
+  let h = `<thead><tr><th>#</th><th>风险</th><th>影响</th><th>概率</th><th>缓解措施</th></tr></thead><tbody>`;
+  DATA.risks.forEach(r => {
+    h += `<tr><td class="id">${r.id}</td><td>${r.risk}</td><td>${r.impact}</td><td>${r.prob}</td><td>${r.mitigation}</td></tr>`;
+  });
+  h += `</tbody>`;
+  $("risk-tbl").innerHTML = h;
+}
+
+function renderTodos(){
+  let h = `<thead><tr><th>#</th><th>任务</th><th>优先级</th><th>当前状态</th></tr></thead><tbody>`;
+  DATA.todos.forEach(t => {
+    const pc = t.prio.includes("高") ? "st-todo" : t.prio.includes("中") ? "st-warn" : t.prio.includes("✅") ? "st-done" : "st-wait";
+    h += `<tr><td class="id">${t.id}</td><td>${t.task}</td><td><span class="badge ${pc}">${t.prio}</span></td><td>${t.status}</td></tr>`;
+  });
+  h += `</tbody>`;
+  $("todo-tbl").innerHTML = h;
+}
+
+function renderActivity(){
+  $("act-feed").innerHTML = DATA.activity.map(a =>
+    `<div class="item"><div class="a-date">${a.date}</div>` +
+    `<div class="a-title">${a.title}</div>` +
+    `<div class="a-by">${a.by}</div></div>`
+  ).join("");
+}
+
+function renderLegend(){
+  const items = [
+    ["✅","已完成"],["📋","待认领"],["⏳","等待前置"],["🔄","进行中"],["🚫","阻塞中"],["❌","待开发/已取消"],["⚠️","待核实"],
+    ["🔴","高优先级"],["🟡","中优先级"],["🟢","低优先级"]
+  ];
+  $("legend-row").innerHTML = items.map(([ic, lb]) =>
+    `<span class="lg">${ic} ${lb}</span>`
+  ).join("");
+  $("ft-date").textContent = DATA.meta.updated;
+}
+
+/* ===== Init ===== */
+renderHeader();
+renderOverview();
+renderKPI();
+renderPipeline();
+renderModules();
+renderTasks();
+renderDecisions();
+renderRisks();
+renderTodos();
+renderActivity();
+renderLegend();
+</script>
+</body>
+</html>
