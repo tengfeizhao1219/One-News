@@ -185,7 +185,9 @@ LAST_HASH=""
 while true; do
   refresh_repo
   CURRENT=$(parse_board | tail -1)   # 只取 JSON 行做 diff
-  CURRENT_HASH=$(echo "$CURRENT" | md5sum | cut -d' ' -f1)
+  # 去掉时间戳再比对（时间戳每次都变，会导致误报）
+  CURRENT_NOTS=$(echo "$CURRENT" | sed 's/"ts":"[^"]*"//')
+  CURRENT_HASH=$(echo "$CURRENT_NOTS" | md5sum | cut -d' ' -f1)
 
   if [ "$CURRENT_HASH" != "$LAST_HASH" ]; then
     if [ -n "$LAST_HASH" ]; then
