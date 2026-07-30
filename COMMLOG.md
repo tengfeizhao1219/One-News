@@ -5,6 +5,7 @@
 
 ---
 
+
 ## [2026-07-30 即席] A-02 交互职责自查 | 会话：交互设计师 [UX]
 
 ### 完成内容
@@ -402,6 +403,34 @@
 - `git pull` 不需要 token（仓库公开）；只有 `git push` 需要从 tdrive 取 github_pat
 - 各角色使用方法：tdrive `file_download` → 读入 TOKEN → `git remote set-url` → `git push` → 还原 remote → 删除临时令牌文件
 - 一旦令牌疑似泄露，立即到 GitHub 撤销/轮换
+---
+
+## [2026-07-30] 即席全量推进 T-06~T-12（全部 ✅） | 会话：[TL]（技术负责人 · 非接力棒）
+
+### 完成内容
+- T-11 降级策略 L1-L5 权威文档（`降级策略-L1-L5-权威文档.md`）— 确立唯一真源，解决三处冲突
+- T-06 阅读模式技术方案（`阅读模式-技术方案.md`）— scroll-view 上下滑/预取/字号/主题/收藏
+- T-07 技术方案 L1-L5 对齐总览（`技术方案-L1-L5对齐总览.md`）— 当前架构唯一总览；两个过期大文档（`技术方案文档.md`、`实时新闻-技术方案.md`）加"⚠️ 已过时"指针，不删除
+- T-09 独立接口文档（`接口文档.md`）— getNewsList/getNewsDetail/refreshNews 契约 + 错误码 + NewsItem schema
+- T-10 API Key 环境变量管理规范（`API-Key环境变量管理规范.md`）— 三变量清单/必填可选/配置位置/轮换
+- T-08 代码评审记录 v2（`代码评审记录-v2.md`）— 覆盖 v11-v13/refreshNews/当前 L1-L5，回收 iteration4 过时项
+- T-12 技术债清理 — `home.js` 诊断 console.log 清零（保留 console.error）；searchNews 历史引用经审查不批量删
+- TASK_BOARD T-06~T-12 全部 ✅
+
+### 变更文件
+- 新增：`docs/03-技术方案/` 降级策略-L1-L5-权威文档.md、阅读模式-技术方案.md、技术方案-L1-L5对齐总览.md、接口文档.md、API-Key环境变量管理规范.md
+- 新增：`docs/04-开发实现/代码评审记录-v2.md`
+- 修改：`docs/03-技术方案/技术方案文档.md`、`实时新闻-技术方案.md`（加"⚠️ 已过时"指针）
+- 修改：`pages/home/home.js`（清理诊断 console.log，保留 console.error）
+- 修改：TASK_BOARD.md、COMMLOG.md
+
+### 遗留问题
+- 无（T-06~T-12 全部闭环）
+
+### 注意事项
+- 即席模式：未更新 RELAY 棒，不碰主线
+- 前端 home.js 改动需微信开发者工具重新编译预览才生效
+
 ---
 
 ## [2026-07-30] 接力棒机制 | 会话：[主]

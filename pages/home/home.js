@@ -35,7 +35,6 @@ Page({
   _lastTouchData: null,
 
   onLoad() {
-    console.log('[home] onLoad triggered')
     this.loadNews()
     // 侧边栏也加载一份数据（全部新闻）
     this.loadPanelNews()
@@ -490,17 +489,13 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
-    console.log('[home] onCardTap triggered, _lastSwipeTime =', this._lastSwipeTime)
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) {
-      console.log('[home] onCardTap blocked by debounce')
       return
     }
 
     const { currentIndex, newsList, currentCategory } = this.data
     const news = newsList[currentIndex]
-    console.log('[home] onCardTap news =', news ? news.id : 'undefined', 'currentIndex =', currentIndex)
     if (!news) {
-      console.log('[home] onCardTap: no news at currentIndex')
       return
     }
 
@@ -508,10 +503,8 @@ Page({
     app.globalData.detailContext = { category: currentCategory, list: newsList }
 
     const url = `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`
-    console.log('[home] navigateTo:', url)
     wx.navigateTo({
       url: url,
-      success: () => console.log('[home] navigateTo success'),
       fail: (err) => console.error('[home] navigateTo fail:', err)
     })
   },
