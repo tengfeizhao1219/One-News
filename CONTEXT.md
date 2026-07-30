@@ -14,7 +14,7 @@
 | 仓库 | `github.com/tengfeizhao1219/One-News` |
 | 技术栈 | 微信小程序原生 + WXS + Mock 数据（JavaScript） |
 | 当前分支 | `main` |
-| 最新提交 | `6b7598f` — v13: 卡片摘要补全 + 标题截断加固（数据层 v11-v13 已落地 main）|
+| 最新提交 | `0e70da9` — docs: role cards, fixed role sessions, baton identity check |
 
 ---
 
@@ -72,9 +72,10 @@ utils/
 
 | 文件 | 用途 |
 |------|------|
+| `ROLE_CARDS.md` | 8 个角色的身份卡（权限、参与阶段） |
 | `RELAY.md` 🔥 | **接力棒** — 当前该谁做什么，启动指令 |
 | `CONTEXT.md`（本文件） | 项目速览，新会话第一读 |
-| `COLLABORATION.md` | 多会话协作协议 |
+| `COLLABORATION.md` | 多会话协作协议（v2.2） |
 | `TASK_BOARD.md` | 任务看板（当前任务、进行中、已完成） |
 | `COMMLOG.md` | 会话沟通记录（交接用） |
 | `docs/项目日志.md` | 完整项目历史 |
@@ -95,4 +96,4 @@ utils/
 
 ---
 
-> **最后更新**：2026-07-29 | **更新者**：主会话（数据层）
+> **最后更新**：2026-07-30 | **更新者**：项目经理
