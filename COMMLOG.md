@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-07-30] 项目实时看板上线（GitHub Pages + 自动刷新） | 会话：项目经理（PJM）
+
+### 完成内容
+- 将项目看板升级为**在线实时版**：`docs/index.html`（GitHub Pages 根路径，公开 URL，手机/任意平台可访问）
+  - 页面前端通过 `fetch` 实时拉取 `raw.githubusercontent.com` 的约定文件（CONTEXT / TASK_BOARD / 项目整体计划 / COMMLOG，CORS 已确认 `access-control-allow-origin: *`）
+  - **自动刷新**：打开即拉取 + 每 60 秒轮询 + 标签页重新可见时刷新；任何角色 push 更新，看板 1 分钟内自动同步
+  - 彻底摆脱手填 `DATA` 对象：数据全部由解析器从仓库 Markdown 实时聚合（模块状态 / 六阶段任务 / 决策点 / 风险 / 待办 / 动态）
+- 原 `docs/00-规划/项目看板.html` 改为**重定向页**，跳转至 `../index.html`（旧链接仍可用）
+- 解析器按约定文件结构定制（表头定位 + 状态/优先级 emoji 映射），单段解析失败不影响整页
+
+### 变更文件
+- `docs/index.html` — 新建（在线实时看板，含解析器 + 自动刷新）
+- `docs/00-规划/项目看板.html` — 改为重定向页（→ `../index.html`）
+- `CONTEXT.md` — 协作框架表看板入口改为 `docs/index.html`（实时版）
+- `COMMLOG.md` — 本记录
+
+### 遗留问题 / 待办
+- **需启用 GitHub Pages**：仓库 Settings → Pages → Source 选 `main` 分支 `/docs` 目录；或用 API 一条命令开启。启用后约 1 分钟生成公开 URL `https://tengfeizhao1219.github.io/One-News/`
+- 若仓库约定文件结构（表头/列名）大幅调整，需同步更新 `index.html` 解析器
+
+### 注意事项
+- 看板为「实时视图层」，单一事实源仍是各约定文件；不再维护静态快照
+- 建议将看板 URL 同步给 8 个角色，作为每日进度对齐的统一入口
+
+---
+
 ## [2026-07-30] 项目整体看板（网页版）交付 | 会话：项目经理（PJM）
 
 ### 完成内容
