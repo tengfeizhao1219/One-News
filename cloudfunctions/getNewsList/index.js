@@ -184,6 +184,8 @@ exports.main = async (event) => {
     console.log('[getNewsList] 开始同步写入 news 集合...')
     await syncNewsToCollection(result.list)
     console.log('[getNewsList] news 集合同步写入完成')
+    // B-08: L2 内存缓存写入（L1 成功后缓存，供 L2 降级使用）
+    cache.set(`news:list:${category}:${pageNum}`, responseData, { ttl: config.cache.memoryTTL })
     return { code: 0, data: responseData, meta: { source: 'tian_api', synced: true } }
 
   } catch (tianErr) {
