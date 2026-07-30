@@ -3,438 +3,387 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>一页 One-News · 项目实时看板</title>
+<title>一页 One-News · 项目看板</title>
 <style>
-  :root {
-    --bg: #f1f5f9; --card: #fff; --ink: #0f172a; --muted: #64748b; --line: #e2e8f0;
-    --brand: #2563eb; --brand-d: #1e3a8a;
-    --green: #16a34a; --red: #dc2626; --amber: #d97706; --blue: #2563eb;
-    --indigo: #4f46e5; --slate: #475569;
-    --shadow: 0 1px 3px rgba(15,23,42,.08), 0 1px 2px rgba(15,23,42,.04);
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--ink); line-height:1.55; font-size:14px; }
-  a { color:var(--brand); text-decoration:none; }
-  header { background:linear-gradient(135deg,var(--brand-d),var(--brand)); color:#fff; padding:20px 24px 16px; }
-  .hdr-top { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px; }
-  .hdr-top h1 { margin:0; font-size:22px; letter-spacing:.5px; }
-  .hdr-top .sub { opacity:.85; font-size:13px; }
-  .meta-row { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:10px; font-size:12.5px; opacity:.92; }
-  .meta-row b { font-weight:600; opacity:.8; }
-  .commit { font-family:ui-monospace,Menlo,monospace; background:rgba(255,255,255,.15); padding:1px 7px; border-radius:5px; }
-  .ctrls { margin-top:10px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; font-size:12.5px; }
-  .ctrls button { background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:7px; padding:5px 12px; cursor:pointer; font-size:12.5px; }
-  .ctrls button:hover { background:rgba(255,255,255,.3); }
-  .live-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#4ade80; margin-right:5px; box-shadow:0 0 0 0 rgba(74,222,128,.6); animation:pulse 1.8s infinite; }
-  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(74,222,128,.6)} 70%{box-shadow:0 0 0 7px rgba(74,222,128,0)} 100%{box-shadow:0 0 0 0 rgba(74,222,128,0)} }
-  nav { position:sticky; top:0; z-index:50; background:#0f172a; color:#cbd5e1; display:flex; flex-wrap:wrap; gap:4px 14px; padding:8px 24px; font-size:12.5px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
-  nav a { color:#cbd5e1; padding:3px 0; border-bottom:2px solid transparent; }
-  nav a:hover { color:#fff; border-bottom-color:var(--brand); }
-  main { max-width:1180px; margin:0 auto; padding:22px 20px 60px; }
-  section { margin-bottom:30px; }
-  .sec-title { display:flex; align-items:center; gap:8px; font-size:16px; font-weight:700; margin:0 0 14px; }
-  .sec-title .tick { width:4px; height:18px; background:var(--brand); border-radius:2px; }
-  .sec-title .hint { font-size:12px; font-weight:400; color:var(--muted); margin-left:auto; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); }
-  .narrative p { margin:0 0 10px; } .narrative p:last-child { margin-bottom:0; } .narrative strong { color:var(--brand-d); }
-  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:14px; }
-  .kpi { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden; }
-  .kpi::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:var(--brand); }
-  .kpi .big { font-size:26px; font-weight:800; line-height:1.1; } .kpi .lbl { font-size:12.5px; color:var(--muted); margin-top:4px; }
-  .kpi.k-green::before { background:var(--green); } .kpi.k-amber::before { background:var(--amber); }
-  .kpi.k-red::before { background:var(--red); } .kpi.k-indigo::before { background:var(--indigo); }
-  .pipe { display:flex; flex-wrap:wrap; align-items:stretch; gap:0; }
-  .pnode { flex:1 1 150px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 14px; box-shadow:var(--shadow); }
-  .pnode.active { border-color:var(--brand); box-shadow:0 0 0 2px rgba(37,99,235,.18),var(--shadow); }
-  .pnode .pn-id { font-size:11px; color:var(--muted); } .pnode .pn-name { font-weight:700; margin:2px 0 6px; }
-  .pnode .pn-lead { font-size:12px; color:var(--muted); } .pnode .pn-bar { height:6px; background:var(--line); border-radius:4px; margin-top:8px; overflow:hidden; }
-  .pnode .pn-bar > i { display:block; height:100%; background:var(--green); } .pnode .pn-prog { font-size:11.5px; color:var(--slate); margin-top:4px; }
-  .arrow { display:flex; align-items:center; color:var(--slate); font-size:18px; padding:0 4px; }
-  .mods { display:grid; grid-template-columns:repeat(auto-fill,minmax(255px,1fr)); gap:12px; }
-  .mod { background:var(--card); border:1px solid var(--line); border-left:4px solid var(--slate); border-radius:10px; padding:12px 14px; box-shadow:var(--shadow); }
-  .mod.s-done { border-left-color:var(--green); } .mod.s-todo { border-left-color:var(--red); } .mod.s-warn { border-left-color:var(--amber); }
-  .mod .m-top { display:flex; align-items:center; gap:8px; } .mod .m-name { font-weight:600; flex:1; }
-  .mod .m-note { font-size:12.5px; color:var(--muted); margin-top:6px; }
-  .badge { display:inline-flex; align-items:center; gap:4px; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:999px; white-space:nowrap; }
-  .st-done { background:#dcfce7; color:#166534; } .st-todo { background:#fee2e2; color:#991b1b; }
-  .st-warn { background:#fef3c7; color:#92400e; } .st-claim { background:#dbeafe; color:#1e40af; }
-  .st-wait { background:#f1f5f9; color:#475569; } .st-doing { background:#e0e7ff; color:#3730a3; }
-  .st-block { background:#fecaca; color:#7f1d1d; } .st-cancel { background:#e2e8f0; color:#64748b; }
-  .prio { font-size:13px; }
-  .task-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:8px; }
-  .task { display:flex; align-items:center; gap:8px; background:#fff; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:12.5px; }
-  .task .t-id { font-family:ui-monospace,Menlo,monospace; font-weight:700; color:var(--brand-d); min-width:42px; }
-  .task .t-name { flex:1; } .task .t-role { color:var(--muted); font-size:11.5px; }
-  table.tbl { width:100%; border-collapse:collapse; font-size:13px; }
-  table.tbl th, table.tbl td { text-align:left; padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
-  table.tbl th { background:#f8fafc; color:var(--slate); font-weight:600; font-size:12px; }
-  table.tbl tr:last-child td { border-bottom:none; }
-  table.tbl td.id { font-family:ui-monospace,Menlo,monospace; font-weight:700; color:var(--brand-d); white-space:nowrap; }
-  .act { position:relative; padding-left:18px; } .act::before { content:""; position:absolute; left:4px; top:4px; bottom:4px; width:2px; background:var(--line); }
-  .act .item { position:relative; margin-bottom:12px; } .act .item::before { content:""; position:absolute; left:-16px; top:6px; width:8px; height:8px; border-radius:50%; background:var(--brand); }
-  .act .a-date { font-size:11.5px; color:var(--muted); font-family:ui-monospace,Menlo,monospace; }
-  .act .a-title { font-weight:600; } .act .a-by { font-size:12px; color:var(--slate); }
-  .legend { display:flex; flex-wrap:wrap; gap:10px 18px; font-size:12.5px; color:var(--slate); } .legend .lg { display:inline-flex; align-items:center; gap:5px; }
-  .phase-block { margin-bottom:16px; } .phase-h { font-weight:700; font-size:14px; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
-  .phase-h .cnt { font-size:12px; color:var(--muted); font-weight:400; }
-  .empty { color:var(--muted); font-style:italic; }
-  .banner { display:none; background:#fef3c7; color:#92400e; border:1px solid #fde68a; border-radius:10px; padding:10px 14px; margin-bottom:18px; font-size:13px; }
-  footer { text-align:center; color:var(--muted); font-size:12px; padding:24px 16px 40px; }
-  footer code { background:#e2e8f0; padding:1px 6px; border-radius:4px; }
-  #statusbar { position:fixed; left:0; right:0; bottom:0; background:#0f172a; color:#cbd5e1; font-size:12px; padding:6px 16px; display:flex; justify-content:space-between; align-items:center; z-index:60; }
-  #statusbar .err { color:#fca5a5; }
-  @media (max-width:620px){ .arrow{display:none;} .pnode{flex-basis:100%;} }
+:root {
+  --bg:#f1f5f9; --card:#fff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+  --brand:#2563eb; --brand-d:#1e3a8a; --brand-l:#eff6ff;
+  --green:#16a34a; --red:#dc2626; --amber:#d97706; --indigo:#4f46e5; --slate:#475569;
+  --shadow:0 1px 3px rgba(15,23,42,.08),0 1px 2px rgba(15,23,42,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--ink);font-size:14px;line-height:1.55}
+
+/* ── Header ── */
+header{background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff;padding:16px 24px}
+.h-row{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 18px}
+.h-row h1{font-size:21px;letter-spacing:.4px}
+.h-row .sub{opacity:.75;font-size:13px}
+.h-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:6px;font-size:12px;opacity:.82}
+.h-meta code{background:rgba(255,255,255,.13);padding:1px 6px;border-radius:4px;font-size:11.5px}
+.h-ctrl{margin-top:8px;display:flex;align-items:center;gap:10px;font-size:12px}
+.h-ctrl button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:12px}
+.h-ctrl button:hover{background:rgba(255,255,255,.25)}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.dot.live{background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.5);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.5)}70%{box-shadow:0 0 0 6px rgba(74,222,128,0)}100%{box-shadow:0 0 0 0 rgba(74,222,128,0)}}
+
+/* ── Tab Bar ── */
+.tab-bar{display:flex;background:var(--brand-d);padding:0 24px;gap:0}
+.tab-bar button{background:none;border:none;color:rgba(255,255,255,.6);padding:10px 22px;font-size:13.5px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;transition:all .15s}
+.tab-bar button:hover{color:#fff}
+.tab-bar button.active{color:#fff;border-bottom-color:#60a5fa}
+
+/* ── Main Layout ── */
+main{max-width:1160px;margin:0 auto;padding:20px 22px 50px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ── Cards ── */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
+.card h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.card h2 .tick{width:3px;height:16px;background:var(--brand);border-radius:2px;flex-shrink:0}
+.card h2 .tag{font-size:11.5px;font-weight:400;color:var(--muted);margin-left:auto}
+
+/* ── KPI Row ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
+.kpi .big{font-size:24px;font-weight:800;line-height:1.15}
+.kpi .lbl{font-size:12px;color:var(--muted);margin-top:3px}
+.kpi.k-g::before{background:var(--green)}.kpi.k-a::before{background:var(--amber)}.kpi.k-r::before{background:var(--red)}.kpi.k-i::before{background:var(--indigo)}
+
+/* ── Pipeline ── */
+.pipe{display:flex;gap:0;align-items:stretch}
+.pnode{flex:1 1 140px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:var(--shadow);position:relative}
+.pnode.done{opacity:.7}.pnode.done .pn-bar i{background:var(--green)}
+.pnode.active{border-color:var(--brand);box-shadow:0 0 0 2px rgba(37,99,235,.15),var(--shadow)}
+.pnode .pn-id{font-size:10.5px;color:var(--muted)}
+.pnode .pn-name{font-weight:700;font-size:13px;margin:2px 0 4px}
+.pnode .pn-lead{font-size:11.5px;color:var(--muted)}
+.pnode .pn-bar{height:5px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden}
+.pnode .pn-bar i{display:block;height:100%;background:var(--brand);border-radius:3px}
+.pnode .pn-prog{font-size:11px;color:var(--slate);margin-top:3px}
+.arr{display:flex;align-items:center;color:var(--slate);font-size:16px;padding:0 2px;flex-shrink:0}
+
+/* ── Status Badges ── */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.s-done{background:#dcfce7;color:#166534}.s-doing{background:#e0e7ff;color:#3730a3}
+.s-claim{background:#dbeafe;color:#1e40af}.s-wait{background:#f1f5f9;color:#475569}
+.s-todo{background:#fee2e2;color:#991b1b}.s-warn{background:#fef3c7;color:#92400e}
+.s-block{background:#fecaca;color:#7f1d1d}
+
+/* ── Tables ── */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl th{background:#f8fafc;color:var(--slate);font-weight:600;font-size:11.5px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl .id{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--brand-d);white-space:nowrap;font-size:12px}
+
+/* ── Activity Feed ── */
+.feed{position:relative;padding-left:16px}
+.feed::before{content:"";position:absolute;left:3px;top:3px;bottom:3px;width:2px;background:var(--line)}
+.feed .item{position:relative;margin-bottom:10px}
+.feed .item::before{content:"";position:absolute;left:-15px;top:5px;width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.feed .a-date{font-size:11px;color:var(--muted);font-family:ui-monospace,Menlo,monospace}
+.feed .a-title{font-weight:600;font-size:13px}.feed .a-by{font-size:11.5px;color:var(--slate)}
+
+/* ── Detail: Phase Blocks ── */
+.phase{margin-bottom:14px}
+.phase-h{font-weight:700;font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.phase-h .cnt{font-size:11.5px;color:var(--muted);font-weight:400}
+.task-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+.task{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px}
+.task .tid{font-family:ui-monospace,Menlo,monospace;font-weight:700;color:var(--brand-d);min-width:38px;font-size:12px}
+.task .tname{flex:1}.task .trole{color:var(--muted);font-size:11px}
+
+/* ── Next Steps ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.step-group{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;box-shadow:var(--shadow)}
+.step-group h3{font-size:13.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.step-group ul{margin:0;padding-left:18px;font-size:13px;color:var(--slate)}
+.step-group li{margin-bottom:4px}
+
+/* ── Footer ── */
+footer{text-align:center;color:var(--muted);font-size:12px;padding:0 16px 30px}
+footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
+#statusbar{position:fixed;left:0;right:0;bottom:0;background:#0f172a;color:#cbd5e1;font-size:11.5px;padding:5px 16px;display:flex;justify-content:space-between;z-index:60}
+#statusbar .err{color:#fca5a5}
+.banner{display:none;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--slate)}
+.legend span{display:inline-flex;align-items:center;gap:3px}
+.empty{color:var(--muted);font-style:italic}
+@media(max-width:620px){.arr{display:none}.pnode{flex-basis:100%}}
 </style>
 </head>
 <body>
+
 <header>
-  <div class="hdr-top">
+  <div class="h-row">
     <h1 id="h-name">一页（One-News）</h1>
     <span class="sub" id="h-sub">微信小程序 · AI 新闻速览</span>
   </div>
-  <div class="meta-row" id="h-meta"></div>
-  <div class="ctrls">
-    <button id="refreshBtn">🔄 立即刷新</button>
-    <span><span class="live-dot"></span>自动刷新：<b id="autoState">开（60s）</b></span>
+  <div class="h-meta" id="h-meta"></div>
+  <div class="h-ctrl">
+    <button onclick="refresh()">🔄 立即刷新</button>
+    <span><span class="dot live"></span>自动刷新 <b id="autoState">开（60s）</b></span>
     <span id="lastUpd">加载中…</span>
   </div>
 </header>
 
-<nav>
-  <a href="#overview">概括</a><a href="#kpi">指标</a><a href="#pipeline">阶段流水线</a>
-  <a href="#modules">功能模块</a><a href="#tasks">任务看板</a><a href="#decisions">决策点</a>
-  <a href="#risks">风险</a><a href="#todos">待办</a><a href="#activity">近期动态</a>
-</nav>
+<div class="tab-bar">
+  <button class="active" onclick="switchTab('overview',this)">📊 总览</button>
+  <button onclick="switchTab('detail',this)">📋 明细</button>
+</div>
 
 <main>
   <div class="banner" id="banner"></div>
 
-  <section id="overview">
-    <h2 class="sec-title"><span class="tick"></span>项目概括<span class="hint" id="ov-date"></span></h2>
-    <div class="card narrative" id="ov-summary"><p class="empty">加载中…</p></div>
-  </section>
+  <!-- ═══════════ TAB 1: 总览 ═══════════ -->
+  <div class="tab-content active" id="tab-overview">
 
-  <section id="kpi"><h2 class="sec-title"><span class="tick"></span>关键指标</h2><div class="kpis" id="kpi-row"><p class="empty">加载中…</p></div></section>
+    <!-- KPI -->
+    <div class="kpis" id="kpi-row"><p class="empty">加载中…</p></div>
 
-  <section id="pipeline">
-    <h2 class="sec-title"><span class="tick"></span>六阶段流水线<span class="hint">需求规划 → 产品设计 → 技术方案 → 开发实现 → 测试验收 → 上线复盘</span></h2>
-    <div class="card"><div class="pipe" id="pipe"><p class="empty">加载中…</p></div></div>
-  </section>
+    <!-- 流水线 + 当前阶段 -->
+    <div class="card">
+      <h2><span class="tick"></span>六阶段流水线<span class="tag" id="pipe-tag"></span></h2>
+      <div class="pipe" id="pipe"></div>
+    </div>
 
-  <section id="modules"><h2 class="sec-title"><span class="tick"></span>功能模块状态<span class="hint" id="mod-hint"></span></h2><div class="mods" id="mods"><p class="empty">加载中…</p></div></section>
+    <!-- 当前焦点：下一步行动 -->
+    <div class="card">
+      <h2><span class="tick"></span>🔴 下一步行动</h2>
+      <div class="steps" id="next-steps"><p class="empty">加载中…</p></div>
+    </div>
 
-  <section id="tasks"><h2 class="sec-title"><span class="tick"></span>任务看板<span class="hint">来源 TASK_BOARD.md · 拉式认领</span></h2><div id="task-board"><p class="empty">加载中…</p></div></section>
+    <!-- 风险 + 阻塞（左右两列） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <h2><span class="tick"></span>⚠️ 风险清单<span class="tag" id="risk-tag"></span></h2>
+        <table class="tbl" id="risk-tbl"></table>
+      </div>
+      <div class="card">
+        <h2><span class="tick"></span>🚫 阻塞项<span class="tag">来源 TASK_BOARD</span></h2>
+        <table class="tbl" id="block-tbl"></table>
+      </div>
+    </div>
 
-  <section id="decisions"><h2 class="sec-title"><span class="tick"></span>关键决策点<span class="hint">解锁阶段二~四的前置条件</span></h2><div class="card"><table class="tbl" id="decision-tbl"></table></div></section>
+    <!-- 近期动态 -->
+    <div class="card">
+      <h2><span class="tick"></span>📡 近期动态<span class="tag">来源 COMMLOG · 最近 8 条</span></h2>
+      <div class="feed" id="act-feed"><p class="empty">加载中…</p></div>
+    </div>
 
-  <section id="risks"><h2 class="sec-title"><span class="tick"></span>风险清单<span class="hint">来源 项目整体计划</span></h2><div class="card"><table class="tbl" id="risk-tbl"></table></div></section>
+    <!-- 图例 -->
+    <div class="card">
+      <h2><span class="tick"></span>图例</h2>
+      <div class="legend">
+        <span>✅ 已完成</span><span>🔄 进行中</span><span>📋 待认领</span><span>⏳ 等待前置</span>
+        <span>🚫 阻塞中</span><span>❌ 已取消</span><span>🔴 高优</span><span>🟡 中</span><span>🟢 低</span>
+      </div>
+    </div>
+  </div>
 
-  <section id="todos"><h2 class="sec-title"><span class="tick"></span>待办优先级<span class="hint">来源 CONTEXT 待办</span></h2><div class="card"><table class="tbl" id="todo-tbl"></table></div></section>
+  <!-- ═══════════ TAB 2: 明细 ═══════════ -->
+  <div class="tab-content" id="tab-detail">
+    <div id="detail-phases"><p class="empty">加载中…</p></div>
 
-  <section id="activity"><h2 class="sec-title"><span class="tick"></span>近期动态<span class="hint">来源 COMMLOG.md（倒序）</span></h2><div class="card"><div class="act" id="act-feed"><p class="empty">加载中…</p></div></div></section>
+    <div class="card">
+      <h2><span class="tick"></span>交付物索引</h2>
+      <table class="tbl" id="deliverables-tbl"></table>
+    </div>
+  </div>
 
-  <section id="legend"><h2 class="sec-title"><span class="tick"></span>图例</h2><div class="card"><div class="legend" id="legend-row"></div></div></section>
 </main>
 
 <footer>
-  本看板为<b>实时视图</b>：每次打开及每 60 秒自动从仓库 <code>main</code> 分支拉取约定文件（CONTEXT / TASK_BOARD / 项目整体计划 / COMMLOG）渲染。<br/>
-  任何角色 push 更新后，本页将在 1 分钟内自动同步。单一事实源仍为上述约定文件。
+  本看板为<b>实时视图</b>：每 60 秒自动从仓库 <code>main</code> 分支拉取 CONTEXT / TASK_BOARD / 项目整体计划 / COMMLOG 渲染。<br/>
+  单一事实源仍为上述约定文件。Tab1「总览」一眼看完核心状态，Tab2「明细」展开每阶段任务。
 </footer>
 
 <div id="statusbar"><span id="sb-left">初始化…</span><span id="sb-right"></span></div>
 
 <script>
-/* ===== 配置 ===== */
-const REPO = "tengfeizhao1219/One-News";
-const BRANCH = "main";
-const PATHS = {
-  context:  "CONTEXT.md",
-  taskboard:"TASK_BOARD.md",
-  plan:     "docs/00-规划/项目整体计划.md",
-  commlog:  "COMMLOG.md"
-};
-const BASE = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/`;
-const REFRESH_MS = 60000;
+/* ===== Config ===== */
+const REPO="tengfeizhao1219/One-News", BRANCH="main";
+const PATHS={context:"CONTEXT.md",taskboard:"TASK_BOARD.md",plan:"docs/00-规划/项目整体计划.md",commlog:"COMMLOG.md"};
+const BASE=`https://raw.githubusercontent.com/${REPO}/${BRANCH}/`;
+const REFRESH_MS=60000;
 
-async function getText(p){
-  const r = await fetch(BASE + encodeURI(p), { cache:"no-store" });
-  if(!r.ok) throw new Error(`拉取 ${p} 失败：HTTP ${r.status}`);
-  return await r.text();
+/* ===== Utils ===== */
+const $=id=>document.getElementById(id);
+const esc=s=>(s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+async function getText(p){const r=await fetch(BASE+encodeURI(p),{cache:"no-store"});if(!r.ok)throw new Error(`拉取 ${p} 失败：HTTP ${r.status}`);return await r.text()}
+function L(md){return md.split(/\r?\n/)}
+function splitRow(line){return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(s=>s.trim())}
+function findHeading(ls,text){for(let i=0;i<ls.length;i++){if(/^#{1,6}\s/.test(ls[i])&&ls[i].includes(text))return i}return -1}
+function parseTableAfter(ls,from){
+  let i=from;while(i<ls.length&&!ls[i].trim().startsWith('|'))i++;if(i>=ls.length)return null;
+  const header=splitRow(ls[i]);let j=i+1;if(ls[j]&&/^\s*\|[\s:|-]+\|\s*$/.test(ls[j]))j++;
+  const rows=[];for(;j<ls.length;j++){if(!ls[j].trim().startsWith('|'))break;const cells=splitRow(ls[j]);if(cells.every(c=>c===''))continue;const obj={};header.forEach((h,k)=>obj[h]=cells[k]!==undefined?cells[k]:'');rows.push(obj)}
+  return{header,rows}
 }
+function tableAfterHeading(md,heading){const ls=L(md);const idx=findHeading(ls,heading);if(idx<0)return null;return parseTableAfter(ls,idx)}
+function keyValueTable(md,heading){const t=tableAfterHeading(md,heading);if(!t)return{};const out={};t.rows.forEach(r=>{const k=Object.keys(r)[0];if(k)out[k]=r[k]||''});return out}
 
-/* ===== 解析工具 ===== */
-function L(md){ return md.split(/\r?\n/); }
-function splitRow(line){
-  return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(s=>s.trim());
-}
-function findHeading(ls, text){
-  for(let i=0;i<ls.length;i++){ if(/^#{1,6}\s/.test(ls[i]) && ls[i].includes(text)) return i; }
-  return -1;
-}
-function parseTableAfter(ls, from){
-  let i=from;
-  while(i<ls.length && !ls[i].trim().startsWith('|')) i++;
-  if(i>=ls.length) return null;
-  const header = splitRow(ls[i]);
-  let j=i+1;
-  if(ls[j] && /^\s*\|[\s:|-]+\|\s*$/.test(ls[j])) j++;   // 跳过分隔行
-  const rows=[];
-  for(; j<ls.length; j++){
-    if(!ls[j].trim().startsWith('|')) break;
-    const cells = splitRow(ls[j]);
-    if(cells.every(c=>c==='')) continue;
-    const obj={};
-    header.forEach((h,k)=> obj[h] = cells[k]!==undefined ? cells[k] : '');
-    rows.push(obj);
-  }
-  return { header, rows };
-}
-function tableAfterHeading(md, heading){
-  const ls=L(md); const idx=findHeading(ls, heading);
-  if(idx<0) return null;
-  return parseTableAfter(ls, idx);
-}
-function keyValueTable(md, heading){
-  const t = tableAfterHeading(md, heading);
-  if(!t) return {};
-  const out={};
-  t.rows.forEach(r=>{ const k=Object.keys(r)[0]; if(k) out[k]=r[k]||''; });
-  return out;
-}
 function parsePhases(md){
-  const ls=L(md); const phases=[];
-  for(let i=0;i<ls.length;i++){
-    const m = ls[i].match(/^###\s*阶段([一二三四五六])\s*[：:]\s*(.+)$/);
-    if(m){ const t=parseTableAfter(ls,i); if(t) phases.push({id:m[1], name:m[2].trim(), rows:t.rows}); }
-  }
-  return phases;
-}
-function parseBacklog(md){
-  const ls=L(md); const idx=findHeading(ls,"临时新增任务")<0?findHeading(ls,"Backlog"):findHeading(ls,"临时新增任务");
-  if(idx<0) return [];
-  const t=parseTableAfter(ls,idx); return t? t.rows : [];
+  const ls=L(md),phases=[];
+  for(let i=0;i<ls.length;i++){const m=ls[i].match(/^###\s*(阶段[一二三四五六].*)$/);if(m){const t=parseTableAfter(ls,i);if(t)phases.push({name:m[1].trim(),rows:t.rows})}}
+  return phases
 }
 function parseActivity(md){
-  const out=[];
-  L(md).forEach(l=>{
-    const m=l.match(/^##\s*\[([^\]]+)\]\s*(.+?)\s*\|\s*会话[:：]?\s*(.*)$/);
-    if(m) out.push({date:m[1], title:m[2].trim(), by:m[3].trim()});
-  });
-  return out.slice(0,6);
+  const out=[];L(md).forEach(l=>{const m=l.match(/^##\s*\[([^\]]+)\]\s*(.+?)\s*\|\s*会话[:：]?\s*(.*)$/);if(m)out.push({date:m[1],title:m[2].trim(),by:m[3].trim()})});
+  return out.slice(0,8)
 }
-
-/* ===== 状态映射 ===== */
-function mapStatus(cell, mode){
+function mapStatus(cell,mode){
   const c=cell||"";
-  if(mode==="module"){
-    if(c.includes("✅")) return {cls:"st-done",icon:"✅",label:"已完成"};
-    if(c.includes("⚠"))  return {cls:"st-warn",icon:"⚠️",label:"待核实"};
-    if(c.includes("❌")) return {cls:"st-todo",icon:"❌",label:"待开发"};
-    return {cls:"st-wait",icon:"—",label:c.trim()||"—"};
-  } else {
-    if(c.includes("✅")) return {cls:"st-done",icon:"✅",label:"已完成"};
-    if(c.includes("📋")) return {cls:"st-claim",icon:"📋",label:"待认领"};
-    if(c.includes("⏳")) return {cls:"st-wait",icon:"⏳",label:"等待前置"};
-    if(c.includes("🔄")) return {cls:"st-doing",icon:"🔄",label:"进行中"};
-    if(c.includes("🚫")) return {cls:"st-block",icon:"🚫",label:"阻塞中"};
-    if(c.includes("❌")) return {cls:"st-cancel",icon:"❌",label:"已取消"};
-    return {cls:"st-wait",icon:"—",label:c.trim()||"—"};
-  }
+  if(mode==="module"){if(c.includes("✅"))return{cls:"s-done",icon:"✅",label:"已完成"};if(c.includes("⚠"))return{cls:"s-warn",icon:"⚠️",label:"待核实"};if(c.includes("❌"))return{cls:"s-todo",icon:"❌",label:"待开发"};return{cls:"s-wait",icon:"—",label:c.trim()||"—"}}
+  else{if(c.includes("✅"))return{cls:"s-done",icon:"✅",label:"已完成"};if(c.includes("📋"))return{cls:"s-claim",icon:"📋",label:"待认领"};if(c.includes("⏳"))return{cls:"s-wait",icon:"⏳",label:"等待"};if(c.includes("🔄"))return{cls:"s-doing",icon:"🔄",label:"进行中"};if(c.includes("🚫"))return{cls:"s-block",icon:"🚫",label:"阻塞"};if(c.includes("❌"))return{cls:"s-todo",icon:"❌",label:"已取消"};return{cls:"s-wait",icon:"—",label:c.trim()||"—"}}
 }
-function prioBadge(cell){
-  const c=cell||""; let cls="st-wait", icon="—";
-  if(c.includes("🔴")){cls="st-todo";icon="🔴";}
-  else if(c.includes("🟡")){cls="st-warn";icon="🟡";}
-  else if(c.includes("🟢")){cls="st-done";icon="🟢";}
-  else if(c.includes("✅")){cls="st-done";icon="✅";}
-  return `<span class="badge ${cls}">${icon}</span>`;
-}
-function cell(rows, key){ return (rows&&rows[key]) ? rows[key] : ""; }
+function prioBadge(cell){const c=cell||"";let cls="s-wait",icon="—";if(c.includes("🔴")){cls="s-todo";icon="🔴"}else if(c.includes("🟡")){cls="s-warn";icon="🟡"}else if(c.includes("🟢")){cls="s-done";icon="🟢"}else if(c.includes("✅")){cls="s-done";icon="✅"}return`<span class="badge ${cls}">${icon}</span>`}
 
-/* ===== 渲染 ===== */
-function $(id){ return document.getElementById(id); }
-function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-
-function renderHeader(ctx){
-  const name = cell(ctx, "项目名") || "一页（One-News）";
-  const sub  = cell(ctx, "定位") || "微信小程序 · AI 新闻速览";
-  const stack= cell(ctx, "技术栈");
-  const branch=cell(ctx, "当前分支");
-  const commit=cell(ctx, "最新提交");
-  $("h-name").textContent = name;
-  $("h-sub").textContent = sub;
-  let meta = "";
-  if(stack) meta += `<span><b>技术栈</b> ${esc(stack)}</span>`;
-  if(branch) meta += `<span><b>分支</b> ${esc(branch)}</span>`;
-  if(commit) meta += `<span><b>最新提交</b> <span class="commit">${esc(commit)}</span></span>`;
-  $("h-meta").innerHTML = meta;
+/* ===== Render: Tab 1 总览 ===== */
+function renderKPI(phases,risks,acts){
+  const allTasks=[].concat(...phases.map(p=>p.rows));
+  const done=allTasks.filter(r=>/✅/.test(r["状态"]||"")).length;
+  const total=allTasks.length;
+  let activeIdx=-1;for(let i=0;i<phases.length;i++){const d=phases[i].rows.filter(r=>/✅/.test(r["状态"]||"")).length;if(d<phases[i].rows.length){activeIdx=i;break}}
+  const activeName=activeIdx>=0?phases[activeIdx].name.replace(/^阶段[一二三四五六][：:]?\s*/,""):"—";
+  const activeId=activeIdx>=0?activeIdx+1:"—";
+  const riskCount=risks.filter(r=>!r["状态"]||!r["状态"].includes("已消除")).length;
+  const riskActive=risks.filter(r=>r["状态"]&&r["状态"].includes("监控")).length;
+  $("kpi-row").innerHTML=[
+    {big:done+"/"+total,lbl:"任务完成",cls:"k-g"},
+    {big:"阶段 "+activeId,lbl:activeName+"（进行中）",cls:"k-i"},
+    {big:riskCount,lbl:"风险项（"+riskActive+" 监控中）",cls:riskCount?"k-a":"k-g"},
+    {big:acts.length,lbl:"近期动态",cls:""}
+  ].map(k=>`<div class="kpi ${k.cls}"><div class="big">${k.big}</div><div class="lbl">${k.lbl}</div></div>`).join("")
 }
 
-function renderModules(rows){
-  const mods = rows.map(r=>({ name:r["模块"]||"", status:mapStatus(r["状态"],"module"), note:r["备注"]||"" })).filter(m=>m.name);
-  const done=mods.filter(m=>m.status.cls==="st-done").length;
-  const todo=mods.filter(m=>m.status.cls==="st-todo").length;
-  const warn=mods.filter(m=>m.status.cls==="st-warn").length;
-  $("mod-hint").textContent = `共 ${mods.length} 个 · ✅${done} ❌${todo} ⚠️${warn}`;
-  if(!mods.length){ $("mods").innerHTML='<p class="empty">未在 CONTEXT 当前状态表中解析到模块</p>'; return mods; }
-  $("mods").innerHTML = mods.map(m=>
-    `<div class="mod ${m.status.cls}"><div class="m-top"><span class="m-name">${esc(m.name)}</span>`+
-    `<span class="badge ${m.status.cls}">${m.status.icon} ${m.status.label}</span></div>`+
-    (m.note?`<div class="m-note">${esc(m.note)}</div>`:"")+`</div>`).join("");
-  return mods;
-}
-
-function renderPhases(phases){
-  if(!phases.length){ $("pipe").innerHTML='<p class="empty">未在 TASK_BOARD 解析到阶段任务</p>'; return; }
-  let activeSet=false;
-  const html = phases.map((p,i)=>{
-    const total=p.rows.length;
+function renderPipe(phases){
+  let activeFound=false;
+  const html=phases.map((p,i)=>{
     const done=p.rows.filter(r=>/✅/.test(r["状态"]||"")).length;
-    const pct= total? Math.round(done/total*100):0;
-    const active = (!activeSet && done<total);
-    if(active) activeSet=true;
-    const node=`<div class="pnode ${active?'active':''}"><div class="pn-id">阶段 ${p.id}</div>`+
-      `<div class="pn-name">${esc(p.name)}</div><div class="pn-lead">主导：${esc(p.rows[0]?p.rows[0]["角色"]:"—")}</div>`+
-      `<div class="pn-bar"><i style="width:${pct}%;"></i></div>`+
-      `<div class="pn-prog">${done}/${total} 任务 · ${active?"进行中":"等待"}</div></div>`;
-    const arrow=(i<phases.length-1)?`<div class="arrow">→</div>`:"";
-    return node+arrow;
+    const pct=Math.round(done/p.rows.length*100);
+    const doneAll=done===p.rows.length;
+    const active=!activeFound&&!doneAll;if(active)activeFound=true;
+    const cls=doneAll?"done":active?"active":"";
+    const name=p.name.replace(/^阶段[一二三四五六][：:]?\s*/,"").split("·")[0]||p.name;
+    const lead=p.rows[0]?p.rows[0]["负责人"]||p.rows[0]["角色"]||"":"—";
+    return`<div class="pnode ${cls}"><div class="pn-id">${esc(name)}</div><div class="pn-bar"><i style="width:${pct}%"></i></div><div class="pn-prog">${done}/${p.rows.length} · ${doneAll?"✅":"🔄"}</div></div>`+
+      (i<phases.length-1?`<div class="arr">→</div>`:"")
   }).join("");
-  $("pipe").innerHTML=html;
+  $("pipe").innerHTML=html
 }
 
-function taskChip(t){
-  const st=mapStatus(t["状态"],"task");
-  return `<div class="task"><span class="t-id">${esc(t["ID"]||"")}</span>`+
-    `<span class="t-name">${esc(t["任务"]||"")}</span>`+
-    `<span class="badge ${st.cls}">${st.icon} ${st.label}</span>`+
-    `<span class="prio">${t["优先级"]||""}</span>`+
-    `<span class="t-role">${esc(t["角色"]||"")}</span></div>`;
-}
-function renderTasks(phases, backlog){
+function renderNextSteps(phases){
+  const activeIdx=phases.findIndex(p=>{const d=p.rows.filter(r=>/✅/.test(r["状态"]||"")).length;return d<p.rows.length});
+  if(activeIdx<0){$("next-steps").innerHTML='<p class="empty">全部阶段已完成 🎉</p>';return}
+  const pending=phases[activeIdx].rows.filter(r=>!/✅/.test(r["状态"]||""));
+  const doing=pending.filter(r=>/🔄/.test(r["状态"]||""));
+  const claim=pending.filter(r=>/📋/.test(r["状态"]||""));
+  const wait=pending.filter(r=>/⏳/.test(r["状态"]||""));
+
   let html="";
-  phases.forEach(p=>{
-    const cnt=`${p.rows.filter(r=>/✅/.test(r["状态"]||"")).length}/${p.rows.length} 完成`;
-    html+=`<div class="phase-block"><div class="phase-h">阶段 ${p.id} · ${esc(p.name)}<span class="cnt">${cnt}</span></div>`+
-      `<div class="task-list">${p.rows.map(taskChip).join("")}</div></div>`;
-  });
-  const bcnt=`${backlog.filter(r=>/✅/.test(r["状态"]||"")).length}/${backlog.length} 完成`;
-  html+=`<div class="phase-block"><div class="phase-h">临时新增（Backlog · A-xx）<span class="cnt">${bcnt} · 即席，不阻塞主线</span></div>`+
-    `<div class="task-list">${backlog.map(taskChip).join("")}</div></div>`;
-  $("task-board").innerHTML=html;
+  if(doing.length)html+=`<div class="step-group"><h3>🔄 进行中</h3><ul>${doing.map(r=>`<li><b>${esc(r["ID"]||"")}</b> ${esc(r["任务"]||"")} — ${esc(r["负责人"]||r["角色"]||"")}</li>`).join("")}</ul></div>`;
+  if(claim.length)html+=`<div class="step-group"><h3>📋 待认领（立即行动）</h3><ul>${claim.map(r=>`<li><b>${esc(r["ID"]||"")}</b> ${esc(r["任务"]||"")} → ${esc(r["负责人"]||r["角色"]||"待分配")}</li>`).join("")}</ul></div>`;
+  if(wait.length)html+=`<div class="step-group"><h3>⏳ 等待前置</h3><ul>${wait.map(r=>`<li><b>${esc(r["ID"]||"")}</b> ${esc(r["任务"]||"")} — 依赖 ${esc(r["依赖"]||"—")}</li>`).join("")}</ul></div>`;
+  if(!html)html='<p class="empty">当前阶段全部完成，等待下一阶段解锁</p>';
+  $("next-steps").innerHTML=html
 }
 
-function renderTable(id, rows, cols){
-  if(!rows||!rows.length){ $(id).innerHTML='<p class="empty">未解析到数据</p>'; return; }
-  let h='<thead><tr>'+cols.map(c=>`<th>${esc(c.label)}</th>`).join("")+'</tr></thead><tbody>';
-  rows.forEach(r=>{ h+='<tr>'+cols.map(c=>{
-    let v=r[c.key]||"";
-    if(c.type==="status"){ const s=mapStatus(v,c.mode||"task"); return `<td><span class="badge ${s.cls}">${s.icon} ${s.label}</span></td>`; }
-    if(c.type==="prio"){ return `<td>${prioBadge(v)}</td>`; }
-    if(c.cls==="id"){ return `<td class="id">${esc(v)}</td>`; }
-    return `<td>${esc(v)}</td>`;
-  }).join("")+'</tr>'; });
-  h+='</tbody>'; $(id).innerHTML=h;
+function renderRisks(risks){
+  if(!risks.length){$("risk-tbl").innerHTML='<p class="empty">无风险项</p>';$("risk-tag").textContent="0 项";return}
+  const active=risks.filter(r=>r["状态"]&&r["状态"].includes("监控"));$("risk-tag").textContent=risks.length+" 项（"+active.length+" 监控中）";
+  $("risk-tbl").innerHTML='<thead><tr><th>#</th><th>风险</th><th>影响</th><th>状态</th></tr></thead><tbody>'+risks.map(r=>{
+    const st=r["状态"]||"";const cls=st.includes("已消除")?"s-done":st.includes("监控")?"s-warn":"s-wait";
+    return`<tr><td class="id">${esc(r["#"]||"")}</td><td>${esc(r["风险"]||"")}</td><td>${esc(r["影响"]||"")}</td><td><span class="badge ${cls}">${esc(st)}</span></td></tr>`
+  }).join("")+'</tbody>'
+}
+
+function renderBlocks(blockRows){
+  if(!blockRows||!blockRows.length||blockRows.every(r=>(r["阻塞原因"]||"").includes("暂无"))){$("block-tbl").innerHTML='<tr><td colspan="3" style="color:var(--green);font-weight:600">✅ 当前无阻塞项</td></tr>';return}
+  $("block-tbl").innerHTML='<thead><tr><th>原因</th><th>谁解决</th><th>时间</th></tr></thead><tbody>'+blockRows.map(r=>`<tr><td>${esc(r["阻塞原因"]||"")}</td><td>${esc(r["谁来解决"]||"")}</td><td>${esc(r["记录时间"]||"")}</td></tr>`).join("")+'</tbody>'
 }
 
 function renderActivity(acts){
-  if(!acts.length){ $("act-feed").innerHTML='<p class="empty">未解析到动态</p>'; return; }
-  $("act-feed").innerHTML=acts.map(a=>
-    `<div class="item"><div class="a-date">${esc(a.date)}</div><div class="a-title">${esc(a.title)}</div><div class="a-by">${esc(a.by)}</div></div>`).join("");
+  if(!acts.length){$("act-feed").innerHTML='<p class="empty">暂无动态</p>';return}
+  $("act-feed").innerHTML=acts.map(a=>`<div class="item"><div class="a-date">${esc(a.date)}</div><div class="a-title">${esc(a.title)}</div><div class="a-by">${esc(a.by)}</div></div>`).join("")
 }
 
-function renderLegend(){
-  const items=[["✅","已完成"],["📋","待认领"],["⏳","等待前置"],["🔄","进行中"],["🚫","阻塞中"],["❌","待开发/已取消"],["⚠️","待核实"],["🔴","高优先级"],["🟡","中优先级"],["🟢","低优先级"]];
-  $("legend-row").innerHTML=items.map(([ic,lb])=>`<span class="lg">${ic} ${lb}</span>`).join("");
+/* ===== Render: Tab 2 明细 ===== */
+function renderDetailPhases(phases){
+  let html="";
+  phases.forEach(p=>{
+    const done=p.rows.filter(r=>/✅/.test(r["状态"]||"")).length;
+    const name=p.name;
+    html+=`<div class="card phase"><h2><span class="tick"></span>${esc(name)}<span class="tag">${done}/${p.rows.length} 完成</span></h2><div class="task-grid">`;
+    p.rows.forEach(r=>{
+      const st=mapStatus(r["状态"],"task");
+      html+=`<div class="task"><span class="tid">${esc(r["ID"]||"")}</span><span class="tname">${esc(r["任务"]||"")}</span><span class="badge ${st.cls}">${st.icon} ${st.label}</span><span class="trole">${esc(r["负责人"]||r["角色"]||"")}</span></div>`;
+    });
+    html+=`</div></div>`;
+  });
+  $("detail-phases").innerHTML=html
 }
 
-function renderOverview(mods, taskTotal, taskDone, activeId, decisions, risks, acts){
-  const modDone=mods.filter(m=>m.status.cls==="st-done").length;
-  const modTotal=mods.length;
-  const latest=acts.length?`最近动态：${acts[0].title}（${acts[0].by}）`:"";
-  $("ov-date").textContent="实时";
-  $("ov-summary").innerHTML =
-    `<p><strong>「一页 One-News」</strong>当前功能模块 <strong>${modDone}/${modTotal}</strong> 已完成；计划任务 <strong>${taskDone}/${taskTotal}</strong> 完成，当前处于<strong>阶段 ${activeId}</strong>（进行中）。</p>`+
-    `<p>关键决策点 <strong>${decisions.length}</strong> 项待产品经理确认（D1 阅读模式范围 / D2 聚合独立分类 tab / D3 版本范围），是解锁阶段二~四的前置条件；风险清单 <strong>${risks.length}</strong> 项待跟踪。</p>`+
-    (latest?`<p>${esc(latest)}</p>`:"")+
-    `<p style="color:var(--muted)">本页每 60 秒自动从仓库 main 分支拉取最新约定文件渲染，数据以 CONTEXT / TASK_BOARD / 项目整体计划 / COMMLOG 为准。</p>`;
+function renderDeliverables(phases){
+  const items=[];
+  phases.forEach(p=>{p.rows.forEach(r=>{const dl=r["交付物"];if(dl&&dl.trim()&&dl.trim()!=="—")items.push({phase:p.name.replace(/^阶段[一二三四五六][：:]?\s*/,"").split("·")[0]||"",id:r["ID"]||"",name:r["任务"]||"",dl:dl})})});
+  if(!items.length){$("deliverables-tbl").innerHTML='<p class="empty">暂无交付物记录</p>';return}
+  $("deliverables-tbl").innerHTML='<thead><tr><th>阶段</th><th>ID</th><th>任务</th><th>交付物</th></tr></thead><tbody>'+items.map(i=>`<tr><td>${esc(i.phase)}</td><td class="id">${esc(i.id)}</td><td>${esc(i.name)}</td><td><code>${esc(i.dl)}</code></td></tr>`).join("")+'</tbody>'
 }
 
-/* ===== 主流程 ===== */
+/* ===== Header ===== */
+function renderHeader(ctx){
+  $("h-name").textContent=ctx["项目名"]||"一页（One-News）";
+  $("h-sub").textContent=ctx["定位"]||"微信小程序 · AI 新闻速览";
+  let m="";if(ctx["技术栈"])m+=`<span><b>技术栈</b> ${esc(ctx["技术栈"])}</span>`;
+  if(ctx["当前分支"])m+=`<span><b>分支</b> ${esc(ctx["当前分支"])}</span>`;
+  if(ctx["最新提交"])m+=`<span><b>提交</b> <code>${esc(ctx["最新提交"])}</code></span>`;
+  $("h-meta").innerHTML=m
+}
+
+/* ===== Tab Switch ===== */
+function switchTab(name,btn){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(e=>e.classList.remove('active'));
+  $("tab-"+name).classList.add('active');btn.classList.add('active')
+}
+
+/* ===== Main ===== */
 let timer=null;
-function setStatus(left, err){
-  $("sb-left").textContent=left;
-  if(err){ $("sb-left").className="err"; } else { $("sb-left").className=""; }
-}
+function setStatus(left,err){$("sb-left").textContent=left;if(err)$("sb-left").className="err";else $("sb-left").className=""}
 async function refresh(){
   setStatus("正在拉取仓库数据…");
   try{
-    const [ctx, tb, plan, log] = await Promise.all([
-      getText(PATHS.context), getText(PATHS.taskboard), getText(PATHS.plan), getText(PATHS.commlog)
-    ]);
-    // 基本信息
-    const info = keyValueTable(ctx, "基本信息");
-    renderHeader(info);
-    // 模块
-    const modTbl = tableAfterHeading(ctx, "当前状态");
-    const mods = renderModules(modTbl?modTbl.rows:[]);
-    // 阶段任务
-    const phases = parsePhases(tb);
-    renderPhases(phases);
-    const backlog = parseBacklog(tb);
-    // 任务汇总
-    const allTasks=[].concat(...phases.map(p=>p.rows), backlog);
-    const taskDone=allTasks.filter(r=>/✅/.test(r["状态"]||"")).length;
-    const activePhase=phases.find(p=>p.rows.filter(r=>/✅/.test(r["状态"]||"")).length < p.rows.length);
-    const activeId=activePhase?activePhase.id:"—";
-    renderTasks(phases, backlog);
-    // 决策点
-    const decT=tableAfterHeading(plan,"关键决策点");
-    const decisions=decT?decT.rows:[];
-    renderTable("decision-tbl", decisions, [
-      {key:"#",label:"#",cls:"id"},{key:"决策项",label:"决策项"},{key:"谁决策",label:"决策人"},{key:"影响范围",label:"影响范围"},{key:"状态",label:"状态",type:"status",mode:"task"}
-    ]);
-    // 风险
-    const riskT=tableAfterHeading(plan,"风险清单");
-    const risks=riskT?riskT.rows:[];
-    renderTable("risk-tbl", risks, [
-      {key:"#",label:"#",cls:"id"},{key:"风险",label:"风险"},{key:"影响",label:"影响"},{key:"概率",label:"概率"},{key:"缓解措施",label:"缓解措施"}
-    ]);
-    // 待办（CONTEXT）
-    const todoT=tableAfterHeading(ctx,"待办优先级");
-    const todos=todoT?todoT.rows:[];
-    renderTable("todo-tbl", todos, [
-      {key:"#",label:"#",cls:"id"},{key:"任务",label:"任务"},{key:"优先级",label:"优先级",type:"prio"},{key:"依赖",label:"当前状态/依赖"}
-    ]);
-    // 动态
+    const[ctx,tb,plan,log]=await Promise.all([getText(PATHS.context),getText(PATHS.taskboard),getText(PATHS.plan),getText(PATHS.commlog)]);
+    const info=keyValueTable(ctx,"基本信息");renderHeader(info);
+    const phases=parsePhases(tb);
+    // Tab 1
+    const riskT=tableAfterHeading(plan,"风险清单");const risks=riskT?riskT.rows:[];
     const acts=parseActivity(log);
+    renderKPI(phases,risks,acts);
+    renderPipe(phases);
+    renderNextSteps(phases);
+    renderRisks(risks);
+    const blockT=tableAfterHeading(tb,"阻塞项");renderBlocks(blockT?blockT.rows:[]);
     renderActivity(acts);
-    // 概括 + KPI
-    renderOverview(mods, allTasks.length, taskDone, activeId, decisions, risks, acts);
-    $("kpi-row").innerHTML = [
-      {big:`${modDone}/${modTotal}`, lbl:"功能模块已完成", cls:"k-green"},
-      {big:`${taskDone}/${allTasks.length}`, lbl:"计划任务已完成", cls:""},
-      {big:`阶段 ${activeId}`, lbl:"当前阶段（进行中）", cls:"k-indigo"},
-      {big:`${decisions.length}`, lbl:"待决策点", cls:"k-amber"},
-      {big:`${risks.length}`, lbl:"风险项", cls:"k-red"}
-    ].map(k=>`<div class="kpi ${k.cls}"><div class="big">${k.big}</div><div class="lbl">${k.lbl}</div></div>`).join("");
-    renderLegend();
-    const now=new Date();
-    $("lastUpd").textContent="上次刷新："+now.toLocaleTimeString("zh-CN");
+    // Tab 2
+    renderDetailPhases(phases);
+    renderDeliverables(phases);
+    const now=new Date();$("lastUpd").textContent="上次刷新："+now.toLocaleTimeString("zh-CN");
+    $("sb-right").textContent="v3.0 · "+now.toLocaleTimeString("zh-CN");
     setStatus("✅ 已同步 · 数据源 main 分支");
   }catch(e){
-    setStatus("⚠️ 刷新失败："+e.message, true);
-    const b=$("banner"); b.style.display="block";
-    b.textContent="无法拉取仓库数据（"+e.message+"）。请检查网络，或确认本页通过 GitHub Pages / 可访问 raw.githubusercontent.com 的环境打开。下方可能显示上次成功的结果。";
+    setStatus("⚠️ 刷新失败："+e.message,true);
+    const b=$("banner");b.style.display="block";b.textContent="无法拉取仓库数据（"+e.message+"）。请检查网络，或确认本页通过 GitHub Pages 打开。"
   }
 }
-
-function startAuto(){ if(timer) clearInterval(timer); timer=setInterval(refresh, REFRESH_MS); }
-$("refreshBtn").addEventListener("click", ()=>{ refresh(); });
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refresh(); });
-
-refresh();
-startAuto();
+function startAuto(){if(timer)clearInterval(timer);timer=setInterval(refresh,REFRESH_MS)}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+refresh();startAuto();
 </script>
 </body>
 </html>
