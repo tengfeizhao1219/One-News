@@ -43,7 +43,7 @@ App({
     } catch (e) { /* ignore */ }
 
     if (stored !== null && stored !== undefined && stored !== '') {
-      // 已有记忆：直接恢复
+      // UX-FIX03: 已有记忆直接恢复，不检查 fromSystem（存储值优先）
       this.globalData.fontScale = Number(stored)
       this._applyFontScale(this.globalData.fontScale)
       return
@@ -65,6 +65,7 @@ App({
 
     try {
       wx.setStorageSync('fontScale', systemTier)
+      wx.setStorageSync('fontScaleFromSystem', true)
     } catch (e) { /* ignore */ }
   },
 
@@ -77,6 +78,8 @@ App({
     this._applyFontScale(tier)
     try {
       wx.setStorageSync('fontScale', tier)
+      // UX-FIX03: 标记手动调整，之后不再跟随系统字号
+      wx.setStorageSync('fontScaleFromSystem', false)
     } catch (e) { /* ignore */ }
   },
 

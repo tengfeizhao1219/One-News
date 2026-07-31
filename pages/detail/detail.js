@@ -44,6 +44,8 @@ Page({
     // 收藏
     isFavorited: false,
     heartAnim: false,
+    // 字体档位（UX-FIX04 截断保护用）
+    fontScaleTier: 0,
   },
 
   // 引擎实例
@@ -60,7 +62,11 @@ Page({
     var index = parseInt(options.index, 10) || 0
     var category = options.category || 'recommend'
 
-    this.setData({ category: category, currentIndex: index })
+    // UX-FIX04: 同步字体档位用于截断保护
+    var app = getApp()
+    var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
+
+    this.setData({ category: category, currentIndex: index, fontScaleTier: tier })
 
     // 初始化跨分类阅读引擎（方案 A：全量预拉 + localCache 缓存注入）
     this._initEngine(id, index, category)
@@ -118,6 +124,9 @@ Page({
         isFirst: engine.isFirst(),
         isLast: engine.isLast(),
       })
+
+      // UX-FIX02: 预生成分享占位图（Canvas 异步，提前缓存）
+      that._pregenPlaceholder()
 
       // 加载入口新闻详情
       return engine.loadCurrentDetail()
@@ -347,7 +356,35 @@ Page({
     wx.navigateBack()
   },
 
-  // ============ 分享（B-05） ============
+  // ============ 分享（B-05 + UX-FIX02 占位图预缓存） ============
+
+  /**
+   * UX-FIX02: 预生成当前新闻分类的占位图 base64
+   * 在引擎初始化后调用，Canvas 异步 → 缓存到 _placeholderCache
+   * onShareAppMessage 同步读取缓存
+   */
+  _pregenPlaceholder: function () {
+    var that = this
+    var news = this.data.news
+    var category = (news && news.category) || this.data.category || 'recommend'
+    var isDark = this._isSystemDark()
+
+    // 延迟等待 Canvas 组件 attached（组件在 wxml 中渲染后需要时间初始化）
+    setTimeout(function () {
+      try {
+        var shareComp = that.selectComponent('#share-card')
+        if (shareComp && typeof shareComp.generateImage === 'function') {
+          shareComp.generateImage(category, isDark).then(function (dataUrl) {
+            that._placeholderCache = dataUrl
+          }).catch(function () {
+            that._placeholderCache = null
+          })
+        }
+      } catch (e) {
+        that._placeholderCache = null
+      }
+    }, 300)
+  },
 
   /**
    * 微信原生分享（button open-type="share" 触发）
@@ -356,31 +393,20 @@ Page({
   onShareAppMessage: function () {
     var news = this.data.news || {}
     var title = news.title || '一页 · 新闻速览'
+
+    // UX-FIX05: 先加前缀再截断
+    title = '一页 | ' + title
     if (title.length > 30) {
       title = title.slice(0, 29) + '\u2026'
     }
-    title = '一页 | ' + title
 
     var path = '/pages/detail/detail'
     if (news.id) {
       path += '?id=' + news.id + '&index=' + this.data.currentIndex + '&category=' + this.data.category
     }
 
-    // 有图用图，无图用占位（由 share-card 组件预生成）
-    var imageUrl = news.picUrl || ''
-    if (!imageUrl) {
-      try {
-        var isDark = this._isSystemDark()
-        var shareComp = this.selectComponent('#share-card')
-        if (shareComp && shareComp.generateImage) {
-          imageUrl = this._getDefaultPlaceholder(news.category, isDark)
-        } else {
-          imageUrl = ''
-        }
-      } catch (e) {
-        imageUrl = ''
-      }
-    }
+    // UX-FIX02: 优先读预缓存的占位图 base64
+    var imageUrl = news.picUrl || this._placeholderCache || ''
 
     return {
       title: title,

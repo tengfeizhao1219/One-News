@@ -1,6 +1,7 @@
 <!-- 详情页 - 跨分类阅读模式 + 底部操作栏 -->
 <view
   class="page"
+  data-font-scale="{{fontScaleTier}}"
   bindtouchstart="onTouchStart"
   bindtouchend="onTouchEnd">
 

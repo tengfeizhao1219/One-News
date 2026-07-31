@@ -6,8 +6,8 @@
   catchtouchmove="noop">
 </view>
 
-<!-- 面板主体 -->
-<view class="setting-panel {{visible ? 'show' : ''}}">
+<!-- 面板主体（触摸时重置 3s 自动关闭定时器） -->
+<view class="setting-panel {{visible ? 'show' : ''}}" bindtouchstart="_resetAutoClose">
 
   <!-- 标题 -->
   <view class="panel-title">字体大小</view>

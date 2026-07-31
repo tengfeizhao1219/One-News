@@ -312,3 +312,24 @@
     color: var(--color-favorite-active);
   }
 }
+
+/* UX-FIX04: 超大字号（tier 3）截断保护 */
+[data-font-scale="3"] .detail-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+[data-font-scale="3"] .text-p {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+[data-font-scale="3"] .detail-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
