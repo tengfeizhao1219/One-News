@@ -8,6 +8,36 @@
 
 ---
 
+## [2026-07-31] UX-FIX01~06 全部修复 ✅ | 会话：[前端开发]
+
+### 完成内容
+交互设计师走查发现的 6 项修复全部完成：
+
+| ID | 严重度 | 修复内容 | 变更文件 |
+|------|:---:|------|------|
+| UX-FIX01 | 🔴 | 字体面板 3s 自动关闭：observers.visible 定时器 + 面板触摸重置 | `font-panel.js` + `font-panel.wxml` |
+| UX-FIX02 | 🔴 | 分享占位图预缓存：`_pregenPlaceholder()` 引擎初始化后预生成 base64 → `onShareAppMessage` 同步读取 | `detail.js` |
+| UX-FIX03 | 🟡 | fromSystem 标记：`setFontScale` 写入 `fontScaleFromSystem: false` | `app.js` |
+| UX-FIX04 | 🟡 | 超大字号截断保护：`[data-font-scale="3"]` CSS 规则 | `detail.wxss` + `home.wxss` + `detail.wxml` + `home.wxml` + `detail.js` |
+| UX-FIX05 | 🟢 | 分享标题先加前缀再截断：「一页 \| 」+ title → slice(0,29) | `detail.js` |
+| UX-FIX06 | 🟢 | 预览文字缩放取整注释 | `font-panel.js` |
+
+### 变更文件
+- `components/font-panel/font-panel.{js,wxml}` — UX-FIX01 + UX-FIX06
+- `app.js` — UX-FIX03
+- `pages/detail/detail.{js,wxml,wxss}` — UX-FIX02 + UX-FIX04 + UX-FIX05
+- `pages/home/home.{wxml,wxss}` — UX-FIX04
+- `TASK_BOARD.md` — UX-FIX01~06 📋→✅
+- `COMMLOG.md` — 本记录
+
+### 注意事项
+- UX-FIX02 `_pregenPlaceholder` 依赖 Canvas 2d API（基础库 ≥2.9.0），300ms 延迟等待组件 attached
+- UX-FIX04 `[data-font-scale="3"]` 选择器仅在 tier 3 时生效
+
+> **下一条记录请追加在上方（时间倒序）**
+
+---
+
 ## [2026-07-31] 🔴 测试工程师交棒：阶段五 Q-01~Q-06 测试用例全部交付 | 会话：[QA]
 
 ### 交付了什么
