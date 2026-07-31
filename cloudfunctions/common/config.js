@@ -1,15 +1,34 @@
 /**
- * 云函数配置模块 v3.2
+ * 云函数配置模块 v4.0 — 智谱+DeepSeek 双引擎
  *
- * 数据源优先级：
- *   getNewsList: 天行实时 API(第一优先级) → 内存缓存 → 云数据库 → 聚合降级 → AI静态缓存(兜底)
- *   searchNews:  内存缓存 → 云数据库搜索 → AI静态缓存 → 外部API
- *   refreshNews: 阿里百炼 DeepSeek 联网搜索 → 校验 → 写入云数据库
+ * 数据源优先级（v4.0 百炼→智谱+DeepSeek 改造）：
+ *   getNewsList: news_cache(智谱/DeepSeek生成) → 天行降级 → 聚合降级 → 内存缓存 → AI静态兜底
+ *   refreshNews: 智谱 GLM-4-Flash 联网搜索(主力) → DeepSeek API(降级) → 校验 → 写入 news_cache
+ *
+ * 环境变量：
+ *   ZHIPU_API_KEY  — 智谱 GLM-4-Flash（必填，主力）
+ *   DEEPSEEK_API_KEY — DeepSeek API（必填，降级）
+ *   TIAN_API_KEY   — 天行数据（可选，降级）
+ *   JUHE_API_KEY   — 聚合数据（可选，降级）
+ *   DASHSCOPE_API_KEY — 百炼（已废弃，v4.0 不再使用）
  */
 
 module.exports = {
-  // 阿里百炼 DeepSeek API（refreshNews 主力数据源）
-  // 安全：key 仅从环境变量读取，禁止硬编码（已存入 /root/.secrets/bailian_api_key）
+  // 智谱 GLM-4-Flash API（refreshNews 主力数据源）🆕
+  zhipu: {
+    apiKey: process.env.ZHIPU_API_KEY || '',
+    model: 'glm-4-flash',
+    timeout: 45000,
+  },
+
+  // DeepSeek API（refreshNews 降级数据源）🆕
+  deepseek: {
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+    model: 'deepseek-chat',
+    timeout: 45000,
+  },
+
+  // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
   bailian: {
     apiKey: process.env.DASHSCOPE_API_KEY || '',
     model: 'deepseek-v3.2',
@@ -34,11 +53,11 @@ module.exports = {
     timeout: 6000,
   },
 
-  // 缓存配置（v3.1 降权：缩短 TTL，让天行实时数据成为主力）
+  // 缓存配置（v4.0：每小时刷新，DB 缓存 65min 覆盖刷新间隔）
   cache: {
-    memoryTTL: 2 * 60 * 1000,        // 内存缓存 2 分钟（原 5min）
-    searchTTL: 5 * 60 * 1000,        // 搜索缓存 5 分钟（原 10min）
-    dbCacheTTL: 10 * 60 * 1000,      // 云数据库缓存 10 分钟（原 24h）
+    memoryTTL: 2 * 60 * 1000,        // 内存缓存 2 分钟
+    searchTTL: 5 * 60 * 1000,        // 搜索缓存 5 分钟
+    dbCacheTTL: 65 * 60 * 1000,      // 云数据库缓存 65 分钟（适配每小时刷新）
     maxCachePages: 3,
   },
 

@@ -1,16 +1,18 @@
-// 新闻自动刷新云函数 v3.1
-// 调用阿里百炼 DeepSeek 联网搜索 → 质量校验 → 内容安全审核 → 写入云数据库
+// 新闻自动刷新云函数 v4.0 — 智谱+DeepSeek 双引擎
+// 智谱 GLM-4-Flash 联网搜索(主力) → DeepSeek API(降级) → 质量校验 → 内容安全审核 → 写入 news_cache
 // B-02: 接入微信 msgSecCheck（命中拦截 + API 不可用保守放行 + 告警）
 //
 // 触发方式：
-//   1. 定时触发器（6:00 / 11:00 / 20:00）
+//   1. 定时触发器（每小时：0 * * * *）
 //   2. 小程序手动调用（用户点击刷新按钮）
+//
+// v4.0 改造：百炼→智谱+DeepSeek 双引擎，每分类 15 条，每小时刷新
 
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const { searchAllCategories } = require('../common/llmSearch')
+const { searchAllCategories } = require('../common/zhipuSearch')
 const { validateAndClean } = require('../common/validator')
 const { SecurityCheck } = require('../common/securityCheck')
 const config = require('../common/config')

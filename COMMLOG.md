@@ -8,6 +8,54 @@
 
 ---
 
+## [2026-07-31] 🏗️ ADR-002：百炼→智谱+DeepSeek 双引擎 L1 架构改造 | 会话：技术负责人（TL）
+
+### 决策背景
+- 用户对天行/聚合的新闻质量不满意，要求使用大模型联网搜索作为 L1 主数据源
+- 百炼 `DASHSCOPE_API_KEY` 已搁置，需替换为免费的替代方案
+- 用户提供智谱 Key + DeepSeek Key
+
+### 用户决策
+| # | 决策 |
+|---|------|
+| Q1 | 天行/聚合保留为 L2/L3 降级 |
+| Q2 | refreshNews 加密到**每小时**（24班/天） |
+| Q3 | 每分类 **15 条**（5×15=75条/次） |
+
+### 完成内容（B-15）
+- 🆕 `cloudfunctions/common/zhipuSearch.js` — 智谱 GLM-4-Flash web_search + DeepSeek API 降级
+- 🔧 `cloudfunctions/common/config.js` — 新增 zhipu/deepseek 配置，TBailian 标记废弃
+- 🔧 `cloudfunctions/refreshNews/index.js` — 切换到 zhipuSearch，每小时 15 条/分类
+- 🔧 `cloudfunctions/getNewsList/index.js` — L1-L5 重排：news_cache→天行→聚合→内存→AI兜底
+- 📄 `docs/03-技术方案/ADR-002-百炼迁移至智谱DeepSeek双引擎.md` — 架构决策记录
+- 📄 `docs/03-技术方案/API-Key环境变量管理规范.md` — v4.0 更新
+- 📄 `docs/03-技术方案/技术方案-L1-L5对齐总览.md` — v4.0 更新
+
+### 变更文件
+- `cloudfunctions/common/zhipuSearch.js` — 新建
+- `cloudfunctions/common/config.js` — v4.0
+- `cloudfunctions/refreshNews/index.js` — v4.0
+- `cloudfunctions/getNewsList/index.js` — v4.0
+- `docs/03-技术方案/ADR-002-*.md` — 新建
+- `docs/03-技术方案/API-Key环境变量管理规范.md` — v4.0
+- `docs/03-技术方案/技术方案-L1-L5对齐总览.md` — v4.0
+- `TASK_BOARD.md` — B-15 🔄 + B-13 ❌取消
+- `COMMLOG.md` — 本记录
+
+### 🔴 部署注意事项（重要！）
+1. **必须新增环境变量**：微信云开发 → `refreshNews` → 环境变量 → 新增 `ZHIPU_API_KEY`（用户已提供）+ `DEEPSEEK_API_KEY`（用户已提供）
+2. **重新部署云函数**：`refreshNews`（切换引擎）+ `getNewsList`（L1 重排）→ 两个都需重新部署
+3. **定时触发器改为每小时**：`refreshNews` config.json → `triggers[0].config` = `0 * * * *`
+4. **百炼可保留不清空**：代码不再引用，保留环境变量不删
+5. **首次刷新**：部署后立刻手动触发一次 refreshNews，让 news_cache 有数据
+
+### 遗留
+- B-12 限流策略：待后续决策（天行/聚合配额保护）
+- B-14 enrichMissingSummaries 并发控制：待后端开发
+- B-10/B-11 后端自查修复：待后端开发
+
+---
+
 ## [2026-07-31] 📋 第二轮实测反馈 3 项：UX-BUG11/12/13 指派前端开发 | 会话：项目经理
 
 ### 用户反馈

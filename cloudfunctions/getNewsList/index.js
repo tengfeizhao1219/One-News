@@ -1,4 +1,4 @@
-// 获取新闻列表云函数 — 天行实时第一优先级
+// 获取新闻列表云函数 v4.0 — 智谱+DeepSeek 双引擎，news_cache 第一优先级
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -16,8 +16,7 @@ const { extractSummary } = require('../common/contentExtractor')
 // ─── 缓存查询 ────────────────────────────────────────
 
 /**
- * 从云数据库缓存读取（第2层 — 主力数据源）
- * 由 refreshNews 云函数定期从 GitHub 拉取写入
+ * 从云数据库缓存读取（L1 主力数据源 — 智谱/DeepSeek refreshNews 每小时写入）
  */
 async function getFromDbCache(category, pageNum, pageSize) {
   try {
@@ -164,59 +163,58 @@ async function syncNewsToCollection(list) {
   console.log('[syncNewsToCollection] 完成')
 }
 
-// ─── 主函数 ─────────────────────────────────────────
+// ─── 主函数 v4.0：news_cache(智谱) → 天行 → 聚合 → 内存 → AI兜底 ──
 
 exports.main = async (event) => {
   const category = event.category || 'all'
   const pageNum = Math.max(1, parseInt(event.pageNum) || 1)
   const pageSize = Math.min(config.pagination.maxPageSize, Math.max(1, parseInt(event.pageSize) || config.pagination.defaultPageSize))
 
-  console.log(`[getNewsList] category=${category} page=${pageNum} size=${pageSize}`)
+  console.log(`[getNewsList] v4.0 category=${category} page=${pageNum} size=${pageSize}`)
 
-  // ── L1：天行实时 API（第一优先级，每次直连）──
+  // ── L1：云数据库 news_cache（智谱/DeepSeek refreshNews 每小时生成，主力数据源）🆕 ──
+  const dbCached = await getFromDbCache(category, pageNum, pageSize)
+  if (dbCached && dbCached.list.length > 0) {
+    console.log(`[getNewsList] L1 news_cache 命中，返回 ${dbCached.list.length} 条`)
+    return { code: 0, data: dbCached, meta: { source: 'db_cache' } }
+  }
+
+  // ── L2：天行 API（降级备选）──
   try {
     const result = await fetchFromTianApi(category, pageNum, pageSize)
     const responseData = { list: result.list, total: result.total, hasMore: result.hasMore }
-    console.log(`[getNewsList] L1 天行 API 成功，返回 ${result.list.length} 条`)
-    // 缺摘要的条目抓取正文首段兜底（结果随下方同步写回 news 集合缓存）
+    console.log(`[getNewsList] L2 天行 API 成功，返回 ${result.list.length} 条`)
     await enrichMissingSummaries(result.list)
-    // 同步落地到 news 集合（写入 ~100ms），供 getNewsDetail 使用
     console.log('[getNewsList] 开始同步写入 news 集合...')
     await syncNewsToCollection(result.list)
     console.log('[getNewsList] news 集合同步写入完成')
-    // B-08: L2 内存缓存写入（L1 成功后缓存，供 L2 降级使用）
+    // 写入内存缓存供 L4 使用
     cache.set(`news:list:${category}:${pageNum}`, responseData, { ttl: config.cache.memoryTTL })
     return { code: 0, data: responseData, meta: { source: 'tian_api', synced: true } }
 
   } catch (tianErr) {
-    console.warn('[getNewsList] 天行 API 失败:', tianErr.message)
+    console.warn('[getNewsList] L2 天行 API 失败:', tianErr.message)
 
-    // ── L2：内存缓存（天行失败后尝试）──
-    const memoryKey = `news:list:${category}:${pageNum}`
-    const memoryCached = cache.get(memoryKey)
-    if (memoryCached) {
-      console.log('[getNewsList] L2 内存缓存命中')
-      return { code: 0, data: memoryCached, meta: { source: 'memory_cache' } }
-    }
-
-    // ── L3：云数据库缓存（refreshNews 写入，TTL 10min）──
-    const dbCached = await getFromDbCache(category, pageNum, pageSize)
-    if (dbCached && dbCached.list.length > 0) {
-      console.log(`[getNewsList] L3 DB 缓存命中，返回 ${dbCached.list.length} 条`)
-      return { code: 0, data: dbCached, meta: { source: 'db_cache' } }
-    }
-
-    // ── L4：聚合数据降级（可选，需 JUHE_API_KEY）──
+    // ── L3：聚合数据 Juhe（进一步降级）──
     try {
       const fallbackResult = await fetchFromJuheApi(category, pageNum, pageSize)
       const responseData = { list: fallbackResult.list, total: fallbackResult.total, hasMore: fallbackResult.hasMore }
-      console.log(`[getNewsList] L4 聚合 API 降级成功，返回 ${fallbackResult.list.length} 条`)
-      // 同样补全缺摘要条目
+      console.log(`[getNewsList] L3 聚合 API 降级成功，返回 ${fallbackResult.list.length} 条`)
       await enrichMissingSummaries(fallbackResult.list)
+      // 写入内存缓存
+      cache.set(`news:list:${category}:${pageNum}`, responseData, { ttl: config.cache.memoryTTL })
       return { code: 0, data: responseData, meta: { source: 'juhe_fallback' } }
 
     } catch (juheErr) {
-      console.warn('[getNewsList] 聚合 API 也失败:', juheErr.message)
+      console.warn('[getNewsList] L3 聚合 API 也失败:', juheErr.message)
+
+      // ── L4：内存缓存（天行/聚合成功后写入的缓存）──
+      const memoryKey = `news:list:${category}:${pageNum}`
+      const memoryCached = cache.get(memoryKey)
+      if (memoryCached) {
+        console.log('[getNewsList] L4 内存缓存命中')
+        return { code: 0, data: memoryCached, meta: { source: 'memory_cache' } }
+      }
 
       // ── L5：AI 静态缓存（终极兜底）──
       const aiResult = aiNews.getByCategory(category, pageNum, pageSize)
