@@ -8,43 +8,159 @@
 
 ---
 
-## [2026-07-31] 🔗 交接：B-06 → B-01 + B-04 | 上游：后端开发 → 下游：前端开发
+## [2026-07-31] 🚪 PM 关口检查：阶段四 ✅ → 阶段五 🔴 | 会话：项目经理
 
-### 我交付了什么
-- `utils/localCache.js`：统一本地存储封装（TTL + LRU + 内存热层 + Storage 双写，20 单测通过）
-  - API：`cache.get(key)` / `cache.set(key, value, ttl?)` / `cache.remove(key)` / `cache.clear()`
-  - 特性：命名空间 `lc:` 前缀、默认 200 条上限、默认 7 天 TTL、惰性淘汰
-- `cloudfunctions/common/securityCheck.js`：内容安全审核（msgSecCheck 串行接入 refreshNews）
+### 检查结果
+- 产出物完整性 ✅：B-01~B-07 全部提交推送
+- 完成标准达标 ✅：7 个子任务全部 ✅
+- 交接任务就绪 ✅：Q-01~Q-06 📋，D-05 📋
+- 阻塞项清零 ✅
+- 遗留问题登记 ✅：后端 B-08~B-14（非阻塞）、TL B-09/B-12 待决策
 
-### 下游需要做什么
+### 关口通过操作
+- 流水线：阶段四 ✅ → 阶段五 🔴
+- 激活任务：Q-01~Q-06（测试工程师）、D-05（视觉设计师）
+- 广播区已更新
 
-**B-01 跨分类阅读引擎**（7 子任务，约 4d）：
-- [ ] B-01.1：创建 `pages/detail/reading-engine.js` 状态机模块（READING / CROSSING / BOUNDARY）
-- [ ] B-01.2：实现 mergedList 构建（detail.js onLoad 并行 getNewsList × 5 分类）
-- [ ] B-01.3：跨分类翻页逻辑（next/prev + 分类切换 + 边界检测）
-- [ ] B-01.4：进度指示升级（"3 / 20 · 科技" 替代当前页码）
-- [ ] B-01.5：预取窗口 ±2 条 getNewsDetail（减少翻页白屏）
-- [ ] B-01.6：返回定位 `_detailReturnState` 扩展（回传分类索引给 home.js）
-- [ ] B-01.7：弱网兜底 + 边界 Toast
+### 给测试工程师的交接说明
+- 测试范围：跨分类阅读引擎 / 内容安全审核 / 字体面板 / 收藏 / 分享 / 返回定位
+- 测试用例：Q-新01 阅读模式用例 ⏳ 待编写，Q-新02 真机兼容计划 ✅
+- 参考：`docs/05-测试验收/`、`docs/03-技术方案/阅读模式-技术方案.md`
+- 上游联系人：前端开发（阅读引擎/UI）、后端开发（安全审核/存储）
 
-**B-04 收藏功能**（4 子任务，约 1.5d）：
-- [ ] B-04.1：创建 `favorite-btn` 组件（🤍↔❤️ 状态机 + heartBeat 动画）
-- [ ] B-04.2：底部操作栏布局完善（毛玻璃 + 收藏左/分享右，与 B-05 已完成 UI 整合）
-- [ ] B-04.3：侧边栏「❤️ 收藏」Tab + 收藏列表渲染（读 localCache.get('favorites')）
-- [ ] B-04.4：收藏容量上限 200 条 + 满提示
+### 变更文件
+- TASK_BOARD.md、COMMLOG.md
 
-### 关键注意事项
-- ⚠️ **WXS 红线**：纯 ES5，不能用 `try/catch`、`let/const`、箭头函数、模板字符串
-- ⚠️ **WXS 不要 `return false`**：会阻止子元素 `bindtap` 事件
-- ⚠️ **`scroll-view` 在 flex 容器**：用 `flex: 1` + `min-height: 0`，不用 `height: 100%`
-- ⚠️ **`getApp()` 不能放模块顶层**：必须在方法内部调用并做 null 检查
-- ⚠️ **localCache API**：`cache.get('favorites')` 返回数组或 null；写入用 `cache.set('favorites', list)`；已内置 TTL + LRU，无需额外封装
-- 📎 参考文件：`docs/03-技术方案/T-05-任务拆分清单.md`（子任务拆分）、`docs/02-产品设计/D-02-交互原型-阶段二功能增强.md`（交互规格）、`docs/02-产品设计/D-03-视觉设计-阶段二视觉稿.md`（视觉规格）、`pages/detail/detail.js`（当前基础版，有 onShareAppMessage 和收藏 UI 占位）
+---
+
+## [2026-07-31] 🔴 前端开发交棒：阶段四全部完成 → 激活阶段五测试 | 会话：[前端开发]
+
+### 交付了什么
+
+阶段四 B-01~B-07 全部完成并合入 main：
+
+| 任务 | 产出 | 路径 |
+|------|------|------|
+| B-01 跨分类阅读引擎 | 状态机 + localCache 缓存注入（分类列表 10min / 详情 30min TTL） | `pages/detail/reading-engine.js` (372行) |
+| B-02 内容安全审核 | 已由后端完成 | `cloudfunctions/common/securityCheck.js` |
+| B-03 字体面板 | 4 档即时生效 + 系统字号跟随 | `components/font-panel/` |
+| B-04 收藏功能 | 侧边栏「❤️ 收藏」Tab + 列表渲染 + localCache 存储 + 200 上限 | `pages/home/home.js` + `home.wxml` + `home.wxss` |
+| B-05 分享+Canvas | 分享卡片 + 底部操作栏（收藏♡/♥ + 分享↗） | `components/share-card/` + `pages/detail/detail.js` |
+| B-06 本地存储 | 已由后端完成（TTL + LRU + 内存双写） | `utils/localCache.js` |
+| B-07 返回定位 | 新旧格式兼容 + newsId 精确匹配 + 侧边栏同步 | `pages/home/home.js` `_handleDetailReturn` |
+
+### 🔴 测试工程师 [QA] — 请认领 Q-01~Q-06
+
+**Q-01 跨分类阅读测试**：
+- 从任意分类卡片进入详情 → 上下滑翻页
+- 验证跨分类切换时闪烁条动画（200ms）+ 进度指示更新（"3 / 20 · 科技"）
+- 验证第一条/最后一条边界 Chip 提示（2s 自动消失）
+- 验证网络异常时黄色 Toast "网络开小差，下拉重试"（3s 自动消失）
+- 冷启动：通过分享链接 `pages/detail/detail?id=xxx` 直达 → 降级单条渲染
+- 参考：`docs/02-产品设计/A-12b-交互评审-跨分类字体收藏分享.md` §F-01
+
+**Q-02 字体面板测试**：
+- 首页 ⚙️ 图标 → 底部半屏面板 → 4 档切换即时生效
+- 验证 card-title / summary-p / card-meta / panel-item-title 等元素字号变化
+- 首次启动跟随系统字号（`wx.getSystemInfoSync().fontSizeSetting`），后续记忆
+- 暗色模式切换后字体面板配色正确
+- 参考：`docs/02-产品设计/D-03-视觉设计-阶段二视觉稿.md` §字体面板
+
+**Q-03 收藏功能测试**：
+- 详情页底部 ♡ → 点击变 ♥（heartBeat 动画 350ms）
+- 再次点击取消收藏（♡）
+- 首页左滑侧边栏 → 最右侧「❤️ 收藏」Tab → 列表按时间倒序
+- 收藏空态：♡ 图标 + "还没有收藏任何新闻" + 引导文案
+- 收藏列表项点击 → 跳转详情页（跨分类阅读上下文）
+- 200 条容量上限 → Toast "收藏已满，请清理后重试"
+- 幂等保护：重复收藏同一新闻不产生重复条目
+- 参考：`docs/02-产品设计/A-12b-交互评审-跨分类字体收藏分享.md` §F-04
+
+**Q-04 分享功能测试**：
+- 详情页底部 ↗ 按钮 → 微信原生分享面板
+- 标题截断 ≤30 中文字符（"一页 | xxx…"）
+- 分享 path 含 `id/index/category`，接收方点击可直达该新闻
+- 有 picUrl 时使用封面图，无图时使用默认占位
+- 参考：`docs/02-产品设计/A-12c-视觉评审-字号收藏分享暗色模式.md`
+
+**Q-05 返回定位测试**：
+- 在详情页跨分类阅读后返回首页 → 验证分类切换 + 定位到正确新闻
+- 同一分类内翻页后返回 → 定位到当前新闻位置
+- 冷启动（分享链接进入详情）→ 返回首页正常加载
+- 参考：`docs/02-产品设计/A-12b-交互评审-跨分类字体收藏分享.md` §F-07
+
+**Q-06 回归测试**：
+- 首页卡片流：上下滑切换 + 导航点 + 骨架屏 + 错误态 + 空态 + 下拉刷新
+- 侧边栏：分类切换 + 列表项点击 → 首页跳转定位
+- 暗色模式全页面适配
+- 参考：`docs/05-测试验收/A-12d-测试策略预审.md`
+
+### ⚠️ 关键注意事项
+
+1. **缓存验证**：B-06 localCache 已注入 reading-engine。二次进入同一新闻详情应走缓存（网络请求减少）。收藏数据也存储在 localCache 中。
+2. **WXS 红线**：WXS 层禁止 `try/catch/let/const/箭头/模板字符串`。组件 JS 使用 `var`/`function` 保持兼容。
+3. **Canvas 2d 兼容**：分享占位图的 `toDataURL` 需基础库 ≥2.9.0（微信 7.0.0+）。`imageUrl` 为空时微信使用默认小程序图标。
+4. **font-scale 机制**：通过 `theme.json` 默认 `"1"` + app.js 动态注入 `_fontScaleValue` 到 page data，文字用 `calc(Xrpx * var(--font-scale))`。
+5. **Bug 修复指引**：发现 Bug 请创建事项分配给前端开发，附复现步骤 + 环境 + 截图，关联回原需求。
 
 ### 有问题找谁
-- 上游（技术实现）：后端开发（localCache API / securityCheck 调用方式）
-- 决策（交互逻辑）：产品经理（跨分类行为 / 收藏上限 / 分享规则）
-- 决策（技术架构）：技术负责人（reading-engine 状态机设计 / mergedList 构建策略）
+
+- 前端代码问题 → [前端开发]
+- 后端接口/缓存问题 → [后端开发]
+- 交互/视觉验收 → [交互设计师] / [视觉设计师]
+- 需求口径 → [产品经理]
+
+> **下一条记录请追加在上方（时间倒序）**
+
+---
+
+## [2026-07-31] B-01 + B-04 + B-07 全部完成 ✅ | 会话：[前端开发]
+
+### 完成内容
+依赖 B-06 (`utils/localCache.js`) 就绪后，一次性完成 B-01/B-04/B-07 三个任务：
+
+**B-01 跨分类阅读引擎（合入 + localCache 注入）**：
+- `pages/detail/reading-engine.js`：从 feature/b01-reading-engine 合入 + 注入 B-06 缓存层
+  - `_fetchCategoryWithCache()`：分类列表缓存（TTL 10min），命中跳过网络请求
+  - `loadCurrentDetail()`：详情缓存（TTL 30min），先读缓存再网络
+  - 缓存失败静默降级，不阻塞主流程
+- `pages/detail/detail.js`（488行）：引擎集成 + 回补 B-05 分享占位图代码（`_isSystemDark`/`_getDefaultPlaceholder`）
+- `pages/detail/detail.wxml` + `detail.wxss`：跨分类视觉元素 + 底部操作栏
+
+**B-04 收藏侧边栏**：
+- `pages/home/home.wxml`：侧边栏新增「❤️ 收藏」Tab + 收藏列表渲染 + 空态引导
+  - 收藏列表项显示：标题 + 来源/分类名 + 相对时间（刚刚/分钟前/小时前/天前）
+  - 空态：♡ 图标 + "还没有收藏任何新闻" + "浏览新闻时点击 ♥ 即可收藏"
+- `pages/home/home.js`：
+  - `panelCategories` 扩展含 `__favorites__`
+  - `_loadFavorites()`：从 localCache 读取收藏 + 计算相对时间
+  - `onPanelItemTap`：收藏项点击 → wx.navigateTo detail
+  - `onCategoryChange`：收藏 Tab 特殊处理
+- `pages/home/home.wxss`：收藏列表元信息行 + 空态样式
+- `pages/detail/detail.js`：收藏存储迁移到 `localCache.get/set('favorites')`（TTL=0 永不过期）
+
+**B-07 返回定位兼容**：
+- `pages/home/home.js` `_handleDetailReturn()` 重写：
+  - 格式检测：`categoryIndex`（新格式）vs `readingIndex`（旧格式）
+  - 优先用 `newsId` 精确匹配（`findIndex`），兜底用 `readingIndex`
+  - 返回后同步 `panelCategory`（侧边栏高亮正确分类）
+
+### 变更文件
+- `pages/detail/reading-engine.js` — 新建 + localCache 注入 (372 行)
+- `pages/detail/detail.js` — 重写 (488 行，含 B-01/B-04/B-05 全部逻辑)
+- `pages/detail/detail.wxml` — 替换 (97 行)
+- `pages/detail/detail.wxss` — 替换 (314 行)
+- `pages/home/home.js` — B-04 收藏逻辑 + B-07 返回定位 (687 行)
+- `pages/home/home.wxml` — B-04 收藏 Tab + 列表 + 空态 (168 行)
+- `pages/home/home.wxss` — B-04 收藏样式 (543 行)
+- `TASK_BOARD.md` — B-01/B-04/B-07 📋→✅
+- `COMMLOG.md` — 本记录
+
+### 依赖链状态
+- ✅ B-01 ✅ B-02 ✅ B-03 ✅ B-04 ✅ B-05 ✅ B-06 ✅ B-07 — 阶段四全部完成
+- ⏳ 阶段五 测试验收（Q-01~Q-06）待启动
+
+> **下一条记录请追加在上方（时间倒序）**
 
 ---
 
