@@ -153,7 +153,13 @@ ReadingEngine.prototype._buildMergedList = function (results) {
   // 如果按 ID 没找到，用分类+索引定位
   if (!foundEntry && this._entryCategory) {
     var catStart = indexes[this._entryCategory] || 0
-    entryGlobalIndex = catStart + Math.min(this._entryIndex, (merged.length - catStart - 1))
+    var catSize = merged.length - catStart
+    if (catSize <= 0) {
+      // BUG-001: 空分类兜底到首条，而非越界定位到上一分类末条
+      entryGlobalIndex = 0
+    } else {
+      entryGlobalIndex = catStart + Math.min(this._entryIndex, catSize - 1)
+    }
   }
 
   this._mergedList = merged

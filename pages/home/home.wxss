@@ -402,7 +402,7 @@
   color: var(--bg-card);
   padding: 28rpx 48rpx;
   border-radius: 28rpx;
-  font-size: 26rpx;
+  font-size: calc(26rpx * var(--font-scale));  /* D-05#5 */
   z-index: 20;
   text-align: center;
   line-height: 1.7;
@@ -521,7 +521,7 @@
 }
 
 .state-message {
-  font-size: 28rpx;
+  font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
   color: var(--text-secondary);
   margin-bottom: 40rpx;
   text-align: center;
@@ -531,7 +531,7 @@
 .state-retry {
   padding: 16rpx 48rpx;
   border-radius: 32rpx;
-  font-size: 28rpx;
+  font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
   font-weight: 600;
   color: var(--bg-card);
   background-color: var(--text-primary);
