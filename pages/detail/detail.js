@@ -68,6 +68,9 @@ Page({
 
     this.setData({ category: category, currentIndex: index, fontScaleTier: tier })
 
+    // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
+    this._pregenPlaceholder(category)
+
     // 初始化跨分类阅读引擎（方案 A：全量预拉 + localCache 缓存注入）
     this._initEngine(id, index, category)
   },
@@ -131,9 +134,6 @@ Page({
         isFirst: engine.isFirst(),
         isLast: engine.isLast(),
       })
-
-      // UX-FIX02: 预生成分享占位图（Canvas 异步，提前缓存）
-      that._pregenPlaceholder()
 
       // 加载入口新闻详情
       return engine.loadCurrentDetail()
@@ -370,18 +370,17 @@ Page({
    * 在引擎初始化后调用，Canvas 异步 → 缓存到 _placeholderCache
    * onShareAppMessage 同步读取缓存
    */
-  _pregenPlaceholder: function () {
+  _pregenPlaceholder: function (category) {
     var that = this
-    var news = this.data.news
-    var category = (news && news.category) || this.data.category || 'recommend'
+    var cat = category || this.data.category || 'recommend'
     var isDark = this._isSystemDark()
 
-    // 延迟等待 Canvas 组件 attached（组件在 wxml 中渲染后需要时间初始化）
+    // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）
     setTimeout(function () {
       try {
         var shareComp = that.selectComponent('#share-card')
         if (shareComp && typeof shareComp.generateImage === 'function') {
-          shareComp.generateImage(category, isDark).then(function (dataUrl) {
+          shareComp.generateImage(cat, isDark).then(function (dataUrl) {
             that._placeholderCache = dataUrl
           }).catch(function () {
             that._placeholderCache = null
@@ -390,7 +389,7 @@ Page({
       } catch (e) {
         that._placeholderCache = null
       }
-    }, 300)
+    }, 150)
   },
 
   /**
