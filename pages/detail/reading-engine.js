@@ -42,6 +42,10 @@ function ReadingEngine(options) {
   this._onError = options.onError || function () {}
   this._cache = options.cache || null
 
+  // UX-BUG09: 首页透传数据 — 跳过 init() 网络请求，直接使用预加载列表
+  this._preloadedList = options.preloadedList || null
+  this._preloadedCategory = options.preloadedCategory || null
+
   // 状态
   this._mergedList = []       // 全分类合并列表 [{ news, category, categoryIndex }]
   this._globalIndex = 0       // 当前在 mergedList 中的位置
@@ -61,6 +65,11 @@ ReadingEngine.prototype.init = function () {
   if (that._initializing) return Promise.resolve()
   that._initializing = true
 
+  // UX-BUG09: 快速通道 — 首页透传了预加载数据，跳过网络请求
+  if (that._preloadedList && that._preloadedList.length > 0) {
+    return that._initFromPreloaded(that._preloadedList, that._preloadedCategory)
+  }
+
   // 并行拉取 7 个分类（方案 A + B-06 缓存注入）
   var fetches = []
   for (var i = 0; i < READING_CATEGORIES.length; i++) {
@@ -72,6 +81,111 @@ ReadingEngine.prototype.init = function () {
 
   return Promise.all(fetches).then(function (results) {
     return that._buildMergedList(results)
+  })
+}
+
+/**
+ * UX-BUG09: 从首页透传数据构建合并列表（快速通道，零网络请求）
+ * @param {Array} preloadedList 首页已加载的新闻列表
+ * @param {string} preloadedCategory 首页当前分类
+ */
+ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedCategory) {
+  var that = this
+  var seen = {}
+  var merged = []
+  var indexes = {}
+  var entryGlobalIndex = 0
+  var foundEntry = false
+
+  // 先将透传分类的数据加入
+  var catId = preloadedCategory || that._entryCategory
+  indexes[catId] = 0
+  for (var i = 0; i < preloadedList.length; i++) {
+    var item = preloadedList[i]
+    var nid = item.id || item._id
+    if (!nid || seen[nid]) continue
+    seen[nid] = true
+    var entry = {
+      id: nid,
+      title: item.title || '',
+      summary: item.summary || '',
+      category: catId,
+      categoryName: item.categoryName || '',
+      source: item.source || '',
+      sourceUrl: item.sourceUrl || '',
+      picUrl: item.picUrl || '',
+      time: item.time || '',
+    }
+    merged.push(entry)
+    if (nid === that._entryNewsId) {
+      entryGlobalIndex = merged.length - 1
+      foundEntry = true
+    }
+  }
+
+  // 补拉其余分类（后台静默加载，不阻塞入口渲染）
+  that._fetchRemainingCategories(catId)
+
+  // 未找到入口新闻时用 index 定位
+  if (!foundEntry && that._entryIndex >= 0 && that._entryIndex < merged.length) {
+    entryGlobalIndex = that._entryIndex
+  }
+
+  that._mergedList = merged
+  that._globalIndex = entryGlobalIndex
+  that._total = merged.length
+  that._categoryIndexes = indexes
+  that._initialized = true
+
+  return Promise.resolve()
+}
+
+/**
+ * UX-BUG09: 后台静默补拉其余分类（不阻塞入口渲染）
+ */
+ReadingEngine.prototype._fetchRemainingCategories = function (skipCategoryId) {
+  var that = this
+  var fetches = []
+  for (var i = 0; i < READING_CATEGORIES.length; i++) {
+    var catId = READING_CATEGORIES[i].id
+    if (catId === skipCategoryId) continue
+    fetches.push(that._fetchCategoryWithCache(catId))
+  }
+
+  Promise.all(fetches).then(function (results) {
+    if (that._destroyed) return
+    // 将补拉数据追加到 _mergedList 末尾
+    var seen = {}
+    for (var j = 0; j < that._mergedList.length; j++) {
+      seen[that._mergedList[j].id] = true
+    }
+    for (var r = 0; r < results.length; r++) {
+      var list = results[r].list
+      var catId = results[r].categoryId
+      if (!that._categoryIndexes[catId]) {
+        that._categoryIndexes[catId] = that._mergedList.length
+      }
+      for (var k = 0; k < list.length; k++) {
+        var item = list[k]
+        var nid = item.id || item._id
+        if (!nid || seen[nid]) continue
+        seen[nid] = true
+        that._mergedList.push({
+          id: nid,
+          title: item.title || '',
+          summary: item.summary || '',
+          category: catId,
+          categoryName: item.categoryName || '',
+          source: item.source || '',
+          sourceUrl: item.sourceUrl || '',
+          picUrl: item.picUrl || '',
+          time: item.time || '',
+        })
+      }
+    }
+    that._total = that._mergedList.length
+  }).catch(function () {
+    // 后台补拉失败静默降级，跨分类翻页受限但不影响当前分类阅读
   })
 }
 

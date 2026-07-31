@@ -36,14 +36,12 @@
         <!-- 标题 -->
         <view class="detail-title">{{news.title}}</view>
 
-        <!-- 元信息（UX-BUG07: 查看原文移入同行，字号统一为 22rpx） -->
+        <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
           <text>{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-          <text wx:if="{{news.sourceUrl && news.time}}">·</text>
-          <text class="meta-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">📎 原文</text>
         </view>
 
         <!-- 分隔线 -->
@@ -61,12 +59,6 @@
       </view>
     </view>
   </scroll-view>
-
-  <!-- 上下翻页按钮 -->
-  <view class="pager-hint" wx:if="{{total > 1}}">
-    <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
-    <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
-  </view>
 
   <!-- 边界提示 Chip -->
   <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">

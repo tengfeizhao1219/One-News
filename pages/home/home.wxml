@@ -81,12 +81,14 @@
     </block>
   </view>
 
-  <!-- 导航指示点 -->
+  <!-- 导航指示点（UX-IMPROVE06: 支持点击跳转） -->
   <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
     <view 
       wx:for="{{newsList}}" 
       wx:key="id" 
-      class="nav-dot {{index === currentIndex ? 'active' : ''}}">
+      class="nav-dot {{index === currentIndex ? 'active' : ''}}"
+      data-index="{{index}}"
+      bindtap="onNavDotTap">
     </view>
   </view>
 
@@ -151,11 +153,6 @@
         暂无新闻
       </view>
     </scroll-view>
-  </view>
-
-  <!-- 首次引导 -->
-  <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>^ 上滑阅读下一条\n&lt;- 左滑查看今日列表\n- 点击卡片进入阅读</text>
   </view>
 
   <!-- 字体设置面板（底部半屏） -->
