@@ -9,17 +9,27 @@ const { API_TIMEOUT, API_RETRY_DELAY } = { API_TIMEOUT: config.tian.timeout, API
  * 带超时的 HTTP 请求
  */
 function fetchWithTimeout(url, timeout) {
+  const MAX_RESPONSE_SIZE = 5 * 1024 * 1024 // 5MB 上限（B-11）
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('API_TIMEOUT')), timeout)
-
-    const https = require('https')
-    const http = require('http')
-    const client = url.startsWith('https') ? https : http
-
-    client.get(url, (res) => {
+    const req = (url.startsWith('https') ? require('https') : require('http')).get(url, (res) => {
       clearTimeout(timer)
+      // B-11: 检查 HTTP 状态码
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        const err = new Error(`HTTP_${res.statusCode}`)
+        err.code = 'HTTP_STATUS_ERROR'
+        return reject(err)
+      }
       let data = ''
-      res.on('data', chunk => { data += chunk })
+      let dataSize = 0
+      res.on('data', chunk => {
+        dataSize += chunk.length
+        // B-11: 响应体大小上限
+        if (dataSize > MAX_RESPONSE_SIZE) {
+          req.destroy()
+          return reject(new Error('RESPONSE_TOO_LARGE'))
+        }
+        data += chunk
+      })
       res.on('end', () => {
         try {
           resolve(JSON.parse(data))
@@ -27,7 +37,14 @@ function fetchWithTimeout(url, timeout) {
           reject(new Error('API_INVALID_RESPONSE'))
         }
       })
-    }).on('error', (err) => {
+    })
+    const timer = setTimeout(() => {
+      // B-11: 超时时销毁底层 socket，防止连接泄漏
+      req.destroy()
+      reject(new Error('API_TIMEOUT'))
+    }, timeout)
+
+    req.on('error', (err) => {
       clearTimeout(timer)
       reject(err)
     })
@@ -35,8 +52,10 @@ function fetchWithTimeout(url, timeout) {
 }
 
 /**
- * 带重试的 API 调用
+ * 带重试的 API 调用（B-11: 不重试不可恢复错误）
  */
+const NON_RETRYABLE = ['API_KEY_INVALID', 'API_NOT_APPLIED']
+
 async function callWithRetry(url, retries = 2) {
   let lastError
 
@@ -46,6 +65,10 @@ async function callWithRetry(url, retries = 2) {
       return result
     } catch (err) {
       lastError = err
+      // B-11: 不可恢复错误不重试
+      if (err.code && NON_RETRYABLE.includes(err.code)) {
+        break
+      }
       if (i < retries) {
         const delay = API_RETRY_DELAY[i] || 1000
         await new Promise(resolve => setTimeout(resolve, delay))
@@ -90,8 +113,8 @@ async function callTianApi({ endpoint = 'generalnews', word, page = 1, num = 10 
 
   const result = await callWithRetry(url)
 
-  // 天行数据状态码处理
-  if (result.code === 200) {
+  // 天行数据状态码处理（B-11: 宽松比较，兼容字符串 "200"）
+  if (Number(result.code) === 200) {
     // 天行分类接口返回的新闻数组字段统一为 newslist（部分旧接口为 list，做兼容）
     const list = result.result?.newslist || result.result?.list || []
     return {
