@@ -35,6 +35,8 @@
 | `测试策略总纲.md` | 测试分层策略、自动化范围、环境要求 |
 | `A-12d-测试策略预审.md` | 阶段二 D-01 PRD §7 验收标准测试策略预审 |
 | `Q-新02-真机兼容性测试计划.md` | 真机兼容性测试计划（设备矩阵+网络场景+执行步骤+通过标准） |
+| `Q-新07-性能基线采集方案.md` | 性能基线采集方案（7 核心指标 + 4 辅助指标，P50/P95 目标） |
+| `Q-新08-降级链路端到端测试方案.md` | 🆕 降级链路测试方案（10 条用例，L1→L5 故障注入 + ALL_DOWN） |
 
 ### 回归脚本（`test/`）
 | 脚本 | 用例数 | 覆盖 |
@@ -46,6 +48,8 @@
 | `v5-regression-touch-architecture.js` | 7 | 手势架构 |
 | `v6-regression-bug1-bug2.js` | 25 | Bug1/2 修复 |
 | `v7-regression-reading-mode.js` | 37 | 阅读模式（⚠️ 仅静态检查） |
+| `v7-regression-reading-mode-runtime.js` | 43 | 🆕 阅读模式运行时（Mock 全通过） |
+| `b06-localcache-test.js` | 20 | B-06 localCache 单元测试 |
 
 ---
 
@@ -61,4 +65,4 @@ node test/v6-regression-bug1-bug2.js
 node test/v7-regression-reading-mode.js
 ```
 
-> 维护者：测试工程师 | 最后更新：2026-07-31（阶段五 Q-01~Q-06 测试用例交付）
+> 维护者：测试工程师 | 最后更新：2026-07-31（BUG-005/006 修复 + Bug清单闭环 + Q-新08 降级链路方案）
