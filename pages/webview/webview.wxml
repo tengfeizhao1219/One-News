@@ -1,2 +1,0 @@
-<!-- UX-BUG06: WebView 容器 — 微信内直接打开原文 -->
-<web-view src="{{url}}"></web-view>

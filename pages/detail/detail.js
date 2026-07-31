@@ -490,23 +490,29 @@ Page({
     return ''
   },
 
-  // UX-BUG06: 优先 WebView 打开原文（微信内），降级为复制链接
+  // UX-BUG06: 打开原文链接 — 因新闻源域名随机，无法预设 WebView 白名单
+  // 改用 wx.showModal 预览 + 剪贴板复制（用户明确确认后再复制）
   openSourceUrl: function () {
     var url = this.data.news.sourceUrl
     if (!url) return
 
-    // 优先尝试 WebView 打开（需小程序后台配置业务域名白名单）
-    var encodedUrl = encodeURIComponent(url)
-    wx.navigateTo({
-      url: '/pages/webview/webview?url=' + encodedUrl,
-      fail: function () {
-        // WebView 不可用时降级为复制链接
-        wx.setClipboardData({
-          data: url,
-          success: function () {
-            wx.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none', duration: 2500 })
-          },
-        })
+    var that = this
+    var displayUrl = url.length > 60 ? url.substring(0, 60) + '...' : url
+
+    wx.showModal({
+      title: '查看原文',
+      content: displayUrl + '\n\n原文链接将在浏览器中打开',
+      confirmText: '复制链接',
+      cancelText: '取消',
+      success: function (res) {
+        if (res.confirm) {
+          wx.setClipboardData({
+            data: url,
+            success: function () {
+              wx.showToast({ title: '已复制，请在浏览器粘贴打开', icon: 'none', duration: 2000 })
+            },
+          })
+        }
       },
     })
   },
