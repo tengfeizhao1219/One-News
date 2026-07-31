@@ -38,6 +38,86 @@
 
 ---
 
+## [2026-07-31] 🏗️ v4.2 架构简化：移除所有降级兜底数据源，全链路只走智谱/DeepSeek 真实数据 | 会话：技术负责人（TL）
+
+### 变更
+- 移除天行、聚合、百炼等降级兜底数据源，全链路只走智谱/DeepSeek
+- getNewsList 移除 news_cache→天行→聚合→内存→AI兜底 多级降级，简化为纯智谱/DeepSeek
+
+---
+
+## [2026-07-31] 🏗️ v4.1 结构修复：云函数改为「平铺自包含」，根治 Cannot find module | 会话：技术负责人（TL）
+
+### 问题
+用户多次部署后持续报 `Cannot find module '../common/cache'`（及 `../common/zhipuSearch`）。
+根因：云函数 index.js 用 `../common/xxx` 引用兄弟目录的共享模块，但 **CloudBase 部署只打包函数自身目录**，
+`common/` 子目录不会进包 → 运行时必崩。项目本有 `scripts/deploy-cloudfunctions.sh` 在部署前把 common 复制进函数目录，
+但用户是**手动从开发者工具部署、未跑该脚本**，故云端始终缺模块。
+
+### 修复（v4.1）
+放弃 monorepo 兄弟目录模式，改为**平铺自包含**：
+- 把 `cloudfunctions/common/*.js`（12 个共享模块）平铺到每个函数**根目录**
+- `index.js` 的 `require('../common/X')` 全部改为 `require('./X')`
+- 删除孤儿源目录 `cloudfunctions/common/`（已无人引用）
+- 重写 `scripts/deploy-cloudfunctions.sh`：改为 `cp -r 整个函数目录`（旧版只拷 index.js+package.json 会漏掉平铺模块）
+
+### 验证（全过）
+- ✅ 三函数 index.js require 均为 `./X` 且文件存在
+- ✅ 平铺模块内部 `require('./config')` 等同级引用仍解析正常
+- ✅ `node --check` 全部语法通过
+- ✅ `cloudfunctions/` 内已无 `../common/` 残留
+
+### 变更文件
+- `cloudfunctions/getNewsList/*` — 平铺 12 模块 + index.js 改写
+- `cloudfunctions/refreshNews/*` — 同上
+- `cloudfunctions/getNewsDetail/*` — 同上（此前缺 common/，本次一并补齐）
+- `cloudfunctions/common/` — **删除**（孤儿源目录）
+- `scripts/deploy-cloudfunctions.sh` — 改写：整目录复制 + 注释更新
+
+### 🔴 部署注意事项（重要！）
+1. **本次无需任何预处理脚本**：函数已自包含，直接用微信开发者工具「上传并部署」即可
+2. **先 pull 再部署**：本地 `git pull origin main` 拿到 v4.1 平铺结构，否则仍是旧代码
+3. **三个函数都要重新部署**：getNewsList / refreshNews / getNewsDetail
+4. 部署后手动触发 refreshNews 一次，让 news/news_cache 带正文
+5. ⚠️ 后续改共享逻辑需同步改各函数根目录副本，不再有单一 common 源
+
+---
+
+## [2026-07-31] 🔧 v4.0 续修：大模型新闻详情页正文(content)打通 | 会话：技术负责人（TL）
+
+### 背景
+用户明确要求：通过大模型拉取的新闻**必须提供完整详情页正文，不能只有标题**。
+根因：v4.0 把 L1 改为 `news_cache` 后，`refreshNews` 只写入 `news_cache`，未写入 `news` 集合；`getNewsDetail` 查 `news` → NO_DATA。且 `zhipuSearch` 的 prompt/解析未要求 `content` 字段。
+
+### 完成内容
+- 🔧 `common/zhipuSearch.js`：prompt 与解析（智谱+DeepSeek）均要求并提取 `content`（300-500字正文）
+- 🔧 `refreshNews/index.js`：`batchInsert` 向 `news_cache` 与 `news` **双集合均写入** `content`（优先大模型正文，缺失降级 summary）
+- 🔄 同步刷新 `getNewsList/common/zhipuSearch.js` 与 `refreshNews/common/zhipuSearch.js`
+
+### 数据流（详情页正文）
+```
+zhipuSearch/DeepSeek → item.content(300-500字)
+  → refreshNews.batchInsert → news_cache.content + news.content
+  → getNewsDetail(查 news) → 直接返回 content（不再回退抓取原文）
+```
+
+### 变更文件
+- `cloudfunctions/common/zhipuSearch.js` — content 字段贯通
+- `cloudfunctions/refreshNews/index.js` — batchInsert 双写 content
+- `cloudfunctions/getNewsList/common/zhipuSearch.js` — 副本同步
+- `cloudfunctions/refreshNews/common/zhipuSearch.js` — 副本同步
+
+### 🔴 部署注意事项
+1. **重新部署两个云函数**：`refreshNews`（双写 content）+ `getNewsList`（副本同步）
+2. **首次刷新**：部署后手动触发一次 `refreshNews`，让 `news_cache`/`news` 带 content
+3. **Key 不变**：`ZHIPU_API_KEY` / `DEEPSEEK_API_KEY` 已在 ADR-002 部署时配置，本次无需改动
+
+### 遗留
+- B-12 限流策略：待后端/TL 决策
+- B-10/B-11/B-14 后端自查修复：待后端开发
+
+---
+
 ## [2026-07-31] 🏗️ ADR-002：百炼→智谱+DeepSeek 双引擎 L1 架构改造 | 会话：技术负责人（TL）
 
 ### 决策背景

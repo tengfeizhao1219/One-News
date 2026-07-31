@@ -12,10 +12,10 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const { searchAllCategories } = require('../common/zhipuSearch')
-const { validateAndClean } = require('../common/validator')
-const { SecurityCheck } = require('../common/securityCheck')
-const config = require('../common/config')
+const { searchAllCategories } = require('./zhipuSearch')
+const { validateAndClean } = require('./validator')
+const { SecurityCheck } = require('./securityCheck')
+const config = require('./config')
 
 // ─── 数据库操作 ─────────────────────────────────────
 
@@ -35,7 +35,9 @@ async function clearOldCache(category) {
 }
 
 /**
- * 批量写入新闻到云数据库
+ * 批量写入新闻到云数据库（news_cache + news 双集合）
+ * news_cache：供 getNewsList 列表查询
+ * news：供 getNewsDetail 详情查询
  */
 async function batchInsert(newsList) {
   const now = Date.now()
@@ -45,11 +47,13 @@ async function batchInsert(newsList) {
 
   for (const item of newsList) {
     try {
+      // 1. 写入 news_cache（列表数据源）
       await db.collection('news_cache').add({
         data: {
           id: item.id,
           title: item.title,
           summary: item.summary,
+          content: item.content || '',  // 🆕 L4 详情正文（大模型已生成）
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
@@ -59,6 +63,33 @@ async function batchInsert(newsList) {
           createdAt: now,
         },
       })
+
+      // 2. 🆕 同步写入 news（详情数据源）
+      // 先查是否已存在（避免重复）
+      const exist = await db.collection('news').where({ id: item.id }).get()
+      const doc = {
+        id: item.id,
+        title: item.title || '',
+        summary: item.summary || '',
+        content: item.content || item.summary || '',  // 🆕 优先用大模型生成的完整正文
+        category: item.category || 'recommend',
+        categoryName: item.categoryName || '',
+        source: item.source || '',
+        sourceUrl: item.sourceUrl || '',
+        picUrl: item.picUrl || '',
+        publishTime: item.publishTime || '',
+        updatedAt: now,
+      }
+      if (exist.data && exist.data.length > 0) {
+        // 更新（保留 viewCount）
+        await db.collection('news').doc(exist.data[0]._id).update({ data: doc })
+      } else {
+        // 新增
+        await db.collection('news').add({
+          data: { ...doc, viewCount: 0, createdAt: now },
+        })
+      }
+
       inserted++
     } catch (err) {
       if (err.errCode === -1) {

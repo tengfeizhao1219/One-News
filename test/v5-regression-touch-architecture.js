@@ -64,7 +64,7 @@ function isStrictUtf8(buf) {
 // 1) 根视图 .page 不得绑定触摸手势
 {
   const wxml = read(files.wxml)
-  const pageOpen = /<view\s+class="page"\s*>/.test(wxml)
+  const pageOpen = /<view\s+class="page"/.test(wxml)
   const pageWithTouch = /<view\s+class="page"[^>]*bindtouch(start|move|end)/.test(wxml)
   check('根视图 .page 不绑定触摸手势', pageOpen && !pageWithTouch,
     pageWithTouch ? '在 .page 上发现 bindtouch* 绑定' : '')
