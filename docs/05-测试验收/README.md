@@ -50,6 +50,13 @@
 | `v7-regression-reading-mode.js` | 37 | 阅读模式（⚠️ 仅静态检查） |
 | `v7-regression-reading-mode-runtime.js` | 43 | 🆕 阅读模式运行时（Mock 全通过） |
 | `b06-localcache-test.js` | 20 | B-06 localCache 单元测试 |
+| `v9-regression-content-safety.js` | 32 | 🆕 AC-RQ10 内容安全审核（Mock 全通过） |
+
+### 即席测试方案
+| 文件 | 说明 |
+|------|------|
+| `Q-新08-降级链路端到端测试方案.md` | 降级链路测试方案（10 条用例，L1→L5 故障注入 + ALL_DOWN） |
+| `Q-新11-AC-RQ10-内容安全审核测试用例.md` | 🆕 AC-RQ10 内容安全审核测试用例（7 条，含 Mock 脚本） |
 
 ---
 
@@ -63,6 +70,9 @@ node test/v4-regression-llmsearch.js
 node test/v5-regression-touch-architecture.js
 node test/v6-regression-bug1-bug2.js
 node test/v7-regression-reading-mode.js
+node test/v7-regression-reading-mode-runtime.js
+node test/b06-localcache-test.js
+node test/v9-regression-content-safety.js
 ```
 
-> 维护者：测试工程师 | 最后更新：2026-07-31（BUG-005/006 修复 + Bug清单闭环 + Q-新08 降级链路方案）
+> 维护者：测试工程师 | 最后更新：2026-07-31（AC-RQ10 内容安全审核测试用例补充 — 阻断项已解除）
