@@ -3,6 +3,55 @@
 > **用途**：每个会话结束时的交接记录。按时间倒序排列。
 > **格式**：时间戳 + 会话标识 + 完成内容 + 变更文件 + 遗留问题 + 注意事项。
 
+> **最后更新**：2026-07-31
+
+---
+
+## [2026-07-31] B-03 + B-05 前端开发 | 会话：前端开发
+
+### 完成内容
+- **B-03 字体面板**：`components/font-panel/` 底部半屏组件（4 档即时生效、首入跟随系统）
+  - theme.json 扩展 `--font-scale` + 10 个新颜色 Token（D-03 §1）
+  - app.js 字体初始化（首入跟随 wx.getSystemInfoSync().fontSizeSetting，后续读 storage 记忆）
+  - home.wxml 新增 ⚙️ 设置入口 + `<font-panel>` 组件引用
+  - home/home.wxss / detail/detail.wxss 文字元素改用 `calc(Xrpx * var(--font-scale))`
+  - 侧边栏标题/Tab/列表项同步缩放
+- **B-05 分享+Canvas**：`components/share-card/` Canvas 占位图组件（400×300，8 分类主题色）
+  - detail.js `onShareAppMessage`（标题≤30字截断 + path 可回看 + picUrl 优先）
+  - detail.wxml 底部操作栏（收藏♡/♥ + 分享↗ button open-type="share"）
+  - detail.wxss 底部毛玻璃栏样式 + heartBeat 动画
+  - 收藏 UI 层已实现（storage 读写 + 200 上限 + 幂等保护 + 心跳动画）
+- TASK_BOARD B-03 / B-05 状态 📋 → ✅
+
+### 变更文件
+| 文件 | 说明 |
+|------|------|
+| `components/font-panel/font-panel.{json,wxml,wxss,js}` | 🆕 字体面板组件 |
+| `components/share-card/share-card.{json,wxml,wxss,js}` | 🆕 分享 Canvas 组件 |
+| `theme.json` | ➕ `--font-scale` + 颜色 Token（D-03 §1） |
+| `app.js` | ➕ 字体初始化（_initFontScale / setFontScale / _applyFontScale） |
+| `pages/home/home.json` | ➕ font-panel 组件注册 |
+| `pages/home/home.wxml` | ➕ ⚙️ 设置图标 + `<font-panel>` 组件 |
+| `pages/home/home.wxss` | ➕ 设置图标样式 + card/sidebar 文字 `--font-scale` |
+| `pages/home/home.js` | ➕ 字体面板事件（_syncFontScale / onOpenSettings / onCloseFontPanel / onFontPanelChange） |
+| `pages/detail/detail.json` | ➕ share-card 组件注册 |
+| `pages/detail/detail.wxml` | ➕ 底部操作栏 + `<share-card>` |
+| `pages/detail/detail.wxss` | ➕ 底部毛玻璃栏 + heartBeat 动画 + 文字 `--font-scale` |
+| `pages/detail/detail.js` | ➕ onShareAppMessage + onToggleFavorite + _checkFavorite + isFavorited/heartAnim data |
+| `TASK_BOARD.md` | B-03 ✅ / B-05 ✅ |
+| `COMMLOG.md` | 本记录 |
+
+### 遗留问题
+- B-04 收藏功能：侧边栏「❤️ 收藏」Tab + 收藏列表渲染待后续实现（收藏数据读写已在 detail.js 就绪）
+- Canvas 2d 的 `toDataURL` 在小程序基础库 < 2.9.0 不可用（微信 7.0.0+ 已支持）；实际微信分享 `imageUrl` 为空时会使用小程序默认图标
+- B-01（跨分类引擎）等 B-06 localCache.js 完成后启动
+
+### 注意事项
+- 前端组件均遵循 WXS 红线：无 `try/catch/let/const/箭头/模板字符串` 在 WXS 层；组件 JS 使用 `var`/`function` 风格保持兼容
+- 底部操作栏 `z-index: 20`，不干扰 WXS 触摸手势（`z-index: 1`）
+- `--font-scale` 变量通过 `theme.json` 默认 `"1"` + app.js `_applyFontScale` 动态注入 `_fontScaleValue` 到 page data
+- 收藏按钮状态在翻页时通过 `renderDetail` → `_checkFavorite` 自动刷新
+
 ---
 
 ## [2026-07-31] 📢 项目经理广播：阶段四启动 — BE认领B-06/B-02，FE认领B-03/B-05
@@ -851,7 +900,6 @@
 | Q-01~06 | 视觉 6 项待确认（font-scale 注入方案等） | A-12c | 技术负责人 + 产品经理 |
 
 > **下一条记录请追加在上方（时间倒序）**
-
 ---
 
 ## [2026-07-31] D-03 视觉设计完成 ✅ | 会话：[视觉设计师][即席]

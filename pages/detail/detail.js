@@ -19,6 +19,9 @@ Page({
     isLast: false,
     loading: false,
     animClass: '',        // 切换动画类
+    // 收藏
+    isFavorited: false,   // 当前新闻是否已收藏
+    heartAnim: false,     // 收藏按钮动画状态
   },
 
   // 当前分类的新闻列表（来自首页 globalData）
@@ -102,6 +105,10 @@ Page({
       scrollTop: 0,
       loading: false,
     })
+    // 检查收藏状态
+    if (news && news.id) {
+      this._checkFavorite(news.id)
+    }
   },
 
   /**
@@ -184,6 +191,74 @@ Page({
     wx.navigateBack()
   },
 
+  // ============ 分享 ============
+
+  /**
+   * 微信原生分享（button open-type="share" 触发）
+   * 转发卡片：标题（≤30字）+ 封面图/分类占位图 + path 可回看
+   */
+  onShareAppMessage() {
+    var news = this.data.news || {}
+    var title = news.title || '一页 · 新闻速览'
+    // 截断 ≤ 30 中文字符
+    if (title.length > 30) {
+      title = title.slice(0, 29) + '\u2026'
+    }
+    title = '一页 | ' + title
+
+    var path = '/pages/detail/detail'
+    if (news.id) {
+      path += '?id=' + news.id + '&index=' + this.data.currentIndex + '&category=' + this.data.category
+    }
+
+    // 有图用图，无图用占位（由 share-card 组件预生成）
+    var imageUrl = news.picUrl || ''
+    var that = this
+    if (!imageUrl) {
+      // 尝试从组件获取占位图
+      try {
+        var isDark = this._isSystemDark()
+        var shareComp = this.selectComponent('#share-card')
+        if (shareComp && shareComp.generateImage) {
+          // 同步生成（微信 onShareAppMessage 不支持异步 Promise）
+          // 用默认占位兜底
+          imageUrl = this._getDefaultPlaceholder(news.category, isDark)
+        } else {
+          imageUrl = ''
+        }
+      } catch (e) {
+        imageUrl = ''
+      }
+    }
+
+    return {
+      title: title,
+      path: path,
+      imageUrl: imageUrl || undefined,
+    }
+  },
+
+  /**
+   * 判断系统是否暗色模式
+   */
+  _isSystemDark: function () {
+    try {
+      var info = wx.getSystemInfoSync()
+      return info.theme === 'dark'
+    } catch (e) {
+      return false
+    }
+  },
+
+  /**
+   * 返回默认分类占位（无法使用 Canvas 时的 fallback）
+   * 微信小程序 onShareAppMessage 不支持异步，Canvas 2d 需要异步获取 node
+   * 实际场景中 imageUrl 为空时微信会使用默认小程序图标
+   */
+  _getDefaultPlaceholder: function (category, isDark) {
+    return ''
+  },
+
   // 打开原始新闻链接（复制链接）
   openSourceUrl() {
     const url = this.data.news.sourceUrl
@@ -194,5 +269,72 @@ Page({
         wx.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none', duration: 2500 })
       }
     })
-  }
+  },
+
+  // ============ 收藏（UI 层，持久化待 B-04 完整实现） ============
+
+  /**
+   * 检查当前新闻是否已收藏（从 storage 读取）
+   */
+  _checkFavorite(newsId) {
+    try {
+      var favorites = wx.getStorageSync('favorites') || []
+      var found = false
+      for (var i = 0; i < favorites.length; i++) {
+        if (favorites[i].id === newsId) { found = true; break }
+      }
+      this.setData({ isFavorited: found })
+    } catch (e) {
+      this.setData({ isFavorited: false })
+    }
+  },
+
+  /**
+   * 收藏 / 取消收藏切换
+   */
+  onToggleFavorite() {
+    var news = this.data.news
+    if (!news || !news.id) return
+
+    var isFav = this.data.isFavorited
+    try {
+      var favorites = wx.getStorageSync('favorites') || []
+
+      if (isFav) {
+        // 取消收藏
+        favorites = favorites.filter(function (f) { return f.id !== news.id })
+        wx.setStorageSync('favorites', favorites)
+        this.setData({ isFavorited: false })
+      } else {
+        // 添加收藏（容量上限 200）
+        if (favorites.length >= 200) {
+          wx.showToast({ title: '收藏已满，请清理后重试', icon: 'none' })
+          return
+        }
+        // 幂等保护
+        var exists = false
+        for (var i = 0; i < favorites.length; i++) {
+          if (favorites[i].id === news.id) { exists = true; break }
+        }
+        if (!exists) {
+          favorites.unshift({
+            id: news.id,
+            title: news.title || '',
+            category: news.category || '',
+            categoryName: news.categoryName || '',
+            source: news.source || '',
+            picUrl: news.picUrl || '',
+            addedAt: Date.now(),
+          })
+          wx.setStorageSync('favorites', favorites)
+        }
+        // heartBeat 动画
+        this.setData({ isFavorited: true, heartAnim: true })
+        var that = this
+        setTimeout(function () { that.setData({ heartAnim: false }) }, 350)
+      }
+    } catch (e) {
+      wx.showToast({ title: isFav ? '取消收藏失败' : '收藏失败，请稍后重试', icon: 'none' })
+    }
+  },
 })

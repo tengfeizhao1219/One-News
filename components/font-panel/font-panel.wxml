@@ -1,0 +1,46 @@
+<!-- 字体面板 - 底部半屏设置面板 -->
+<!-- 遮罩层（点击关闭） -->
+<view
+  class="panel-overlay {{visible ? 'show' : ''}}"
+  bindtap="onClose"
+  catchtouchmove="noop">
+</view>
+
+<!-- 面板主体 -->
+<view class="setting-panel {{visible ? 'show' : ''}}">
+
+  <!-- 标题 -->
+  <view class="panel-title">字体大小</view>
+
+  <!-- 档位选择（4行） -->
+  <view class="tier-list">
+    <view
+      wx:for="{{tiers}}"
+      wx:key="value"
+      class="tier-row {{currentTier === item.value ? 'selected' : ''}}"
+      data-tier="{{item.value}}"
+      bindtap="onSelectTier">
+
+      <!-- 单选框 -->
+      <view class="radio-circle {{currentTier === item.value ? 'checked' : ''}}">
+        <view wx:if="{{currentTier === item.value}}" class="radio-dot"></view>
+      </view>
+
+      <!-- 标签 -->
+      <view class="tier-label">{{item.label}}</view>
+
+      <!-- 预览文字（按对应档位缩放） -->
+      <view class="tier-preview" style="font-size: {{item.previewSize}}rpx;">
+        预览文字效果预览
+      </view>
+    </view>
+  </view>
+
+  <!-- 分割线 -->
+  <view class="panel-divider"></view>
+
+  <!-- 关于·反馈 -->
+  <view class="panel-footer">
+    <text class="footer-text">关于 · 反馈</text>
+  </view>
+</view>

@@ -1,5 +1,7 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "font-panel": "../../components/font-panel/font-panel"
+  },
   "navigationStyle": "custom",
   "disableScroll": true,
   "enablePullDownRefresh": true,

@@ -3,11 +3,14 @@
 
 <view class="page">
 
-  <!-- 固定顶部栏：刷新（左侧）+ 搜索（右侧） -->
+  <!-- 固定顶部栏：刷新（左侧）+ 设置（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
       <view class="top-bar-refresh" bindtap="onRefreshNews">
         <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
+      </view>
+      <view class="top-bar-settings" bindtap="onOpenSettings">
+        <text class="settings-icon">⚙</text>
       </view>
     </view>
   </view>
@@ -131,4 +134,12 @@
   <view class="guide-overlay" wx:if="{{showGuide}}">
     <text>^ 上滑阅读下一条\n&lt;- 左滑查看今日列表\n- 点击卡片进入阅读</text>
   </view>
+
+  <!-- 字体设置面板（底部半屏） -->
+  <font-panel
+    visible="{{showFontPanel}}"
+    currentTier="{{fontScaleTier}}"
+    bind:change="onFontPanelChange"
+    bind:close="onCloseFontPanel">
+  </font-panel>
 </view>
