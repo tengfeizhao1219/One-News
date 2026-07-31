@@ -163,7 +163,7 @@
 /* ============ 正文排版 ============ */
 
 .detail-body {
-  padding: 16rpx 64rpx 80rpx;
+  padding: 32rpx 64rpx 80rpx;  /* UX-IMPROVE05: 16→32 标题与状态栏间增加呼吸感 */
 }
 
 .detail-title {
@@ -184,15 +184,6 @@
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
   flex-wrap: wrap;
-}
-
-/* UX-BUG07: 查看原文链接统一样式（与分类标签字号一致） */
-.meta-source-link {
-  font-size: 22rpx;
-  color: var(--text-link, #576b95);
-  padding: 2rpx 12rpx;
-  border-radius: 8rpx;
-  background-color: var(--bg-subtle, rgba(87, 107, 149, 0.06));
 }
 
 .detail-divider {

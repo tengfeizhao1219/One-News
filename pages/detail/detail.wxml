@@ -36,14 +36,12 @@
         <!-- 标题 -->
         <view class="detail-title">{{news.title}}</view>
 
-        <!-- 元信息（UX-BUG07: 查看原文移入同行，字号统一为 22rpx） -->
+        <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
           <text>{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-          <text wx:if="{{news.sourceUrl && news.time}}">·</text>
-          <text class="meta-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">📎 原文</text>
         </view>
 
         <!-- 分隔线 -->

@@ -12,6 +12,7 @@
   position: absolute;
   top: 0;
   left: 0;
+  width: 100%;  /* UX-IMPROVE04: 确保 space-between 生效 */
   z-index: 15;
   pointer-events: none;
 }
@@ -194,6 +195,10 @@
   background-color: var(--text-secondary);
   opacity: 0.35;
   transition: all 0.35s ease;
+  /* UX-IMPROVE06: 扩展触摸热区到 44×44rpx，满足微信无障碍建议 */
+  padding: 18rpx 18rpx;
+  margin: -18rpx -18rpx;
+  background-clip: content-box;
 }
 
 .nav-dot.active {
@@ -308,9 +313,19 @@
   background-color: var(--tag-bg);
 }
 
-/* 当前阅读的新闻高亮 */
+/* 当前阅读的新闻高亮（UX-BUG14: 浅蓝底色 + 左侧色条，增强可辨识度） */
 .panel-item.current {
-  background-color: var(--tag-bg);
+  background-color: rgba(0, 122, 255, 0.08);
+  border-left: 4rpx solid #007AFF;
+  padding-left: 36rpx;
+}
+
+/* 暗色模式下高亮适配 */
+@media (prefers-color-scheme: dark) {
+  .panel-item.current {
+    background-color: rgba(96, 165, 250, 0.12);
+    border-left-color: #60A5FA;
+  }
 }
 
 .panel-item-title {
