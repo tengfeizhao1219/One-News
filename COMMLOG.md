@@ -53,6 +53,44 @@
 
 ---
 
+## [2026-07-31] 🚀 DEP-01 云函数部署任务建单：ADR-002 双引擎上线 | 会话：项目经理
+
+### 做了什么
+- 用户确认「更新一下」，PM 将 ADR-002 云函数部署缺口正式建单并指派技术负责人（TL）
+- 此前已确认（git 巡检）：ADR-002（commit `4b11859`）双引擎改造代码已合入 main，但**云函数尚未部署到微信云控制台**——线上仍是旧引擎（百炼已废弃），降级链实际断裂
+- 在 TASK_BOARD 新增 **DEP-01（🆕 云函数部署专项）**，指派 TL，🔴 高优，📋 待认领
+- Q-06.2（云函数部署确认）标记为被 DEP-01 阻塞；阻塞项表同步登记
+
+### 关键结论
+- **git 提交 ≠ 云部署**：代码在 main 只是源码落地，必须经过微信云控制台「上传部署」+「环境变量配置」才生效
+- **PM 权责边界**：PM 无微信云控制台权限，且按机制 PM 不写业务代码 → 部署动作只能由 TL 执行，PM 仅做确认（Q-06.2）
+- **环境变量**：必须新增 `ZHIPU_API_KEY` + `DEEPSEEK_API_KEY`（用户已提供）；百炼 `DASHSCOPE_API_KEY` 可保留不删
+- **定时触发器**：`refreshNews` config.json `triggers[0].config` 改 `0 * * * *`（每小时）
+
+### 变更文件
+- `TASK_BOARD.md` — v4.3：新增 DEP-01 部署专项 + 广播区 TL 通知 + Q-06.2 阻塞标记 + 阻塞项登记
+- `COMMLOG.md` — 本记录
+
+### 🔴 下一步（技术负责人）
+1. `git pull` → 读 DEP-01 任务 → 认领 📋→🔄
+2. 微信云控制台：refreshNews + getNewsList 重新上传部署
+3. 环境变量新增 `ZHIPU_API_KEY` + `DEEPSEEK_API_KEY`
+4. refreshNews 定时触发器改每小时 `0 * * * *`
+5. 部署后手动触发一次 refreshNews，确认 news_cache 有数据
+6. 完成后通知 PM → PM 执行 Q-06.2 确认 → 关闭阻塞
+
+> **下一条记录请追加在上方（时间倒序）**
+
+---
+
+## [2026-07-31] 🏗️ v4.2 架构简化：移除所有降级兜底数据源，全链路只走智谱/DeepSeek 真实数据 | 会话：技术负责人（TL）
+
+### 变更
+- 移除天行、聚合、百炼等降级兜底数据源，全链路只走智谱/DeepSeek
+- getNewsList 移除 news_cache→天行→聚合→内存→AI兜底 多级降级，简化为纯智谱/DeepSeek
+
+---
+
 ## [2026-07-31] 🏗️ v4.1 结构修复：云函数改为「平铺自包含」，根治 Cannot find module | 会话：技术负责人（TL）
 
 ### 问题
@@ -80,14 +118,13 @@
 - `cloudfunctions/getNewsDetail/*` — 同上（此前缺 common/，本次一并补齐）
 - `cloudfunctions/common/` — **删除**（孤儿源目录）
 - `scripts/deploy-cloudfunctions.sh` — 改写：整目录复制 + 注释更新
-- 提交后将 push 至 origin/main
 
 ### 🔴 部署注意事项（重要！）
 1. **本次无需任何预处理脚本**：函数已自包含，直接用微信开发者工具「上传并部署」即可
 2. **先 pull 再部署**：本地 `git pull origin main` 拿到 v4.1 平铺结构，否则仍是旧代码
 3. **三个函数都要重新部署**：getNewsList / refreshNews / getNewsDetail
 4. 部署后手动触发 refreshNews 一次，让 news/news_cache 带正文
-5. ⚠️ 后续改共享逻辑需同步改各函数根目录副本（getNewsList/config.js、refreshNews/zhipuSearch.js 等），不再有单一 common 源
+5. ⚠️ 后续改共享逻辑需同步改各函数根目录副本，不再有单一 common 源
 
 ---
 
@@ -100,7 +137,7 @@
 ### 完成内容
 - 🔧 `common/zhipuSearch.js`：prompt 与解析（智谱+DeepSeek）均要求并提取 `content`（300-500字正文）
 - 🔧 `refreshNews/index.js`：`batchInsert` 向 `news_cache` 与 `news` **双集合均写入** `content`（优先大模型正文，缺失降级 summary）
-- 🔄 同步刷新 `getNewsList/common/zhipuSearch.js` 与 `refreshNews/common/zhipuSearch.js`（源改动后副本已滞后）
+- 🔄 同步刷新 `getNewsList/common/zhipuSearch.js` 与 `refreshNews/common/zhipuSearch.js`
 
 ### 数据流（详情页正文）
 ```
@@ -114,13 +151,11 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 - `cloudfunctions/refreshNews/index.js` — batchInsert 双写 content
 - `cloudfunctions/getNewsList/common/zhipuSearch.js` — 副本同步
 - `cloudfunctions/refreshNews/common/zhipuSearch.js` — 副本同步
-- 提交 `65a102f`（本地，待 push）
 
 ### 🔴 部署注意事项
-1. **重新部署两个云函数**：`refreshNews`（双写 content）+ `getNewsList`（副本同步）— 必须重新上传云端
+1. **重新部署两个云函数**：`refreshNews`（双写 content）+ `getNewsList`（副本同步）
 2. **首次刷新**：部署后手动触发一次 `refreshNews`，让 `news_cache`/`news` 带 content
 3. **Key 不变**：`ZHIPU_API_KEY` / `DEEPSEEK_API_KEY` 已在 ADR-002 部署时配置，本次无需改动
-4. `common/` 模块已内联进各函数目录，无需额外操作
 
 ### 遗留
 - B-12 限流策略：待后端/TL 决策
