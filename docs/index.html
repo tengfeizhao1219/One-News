@@ -46,7 +46,8 @@ main{max-width:1160px;margin:0 auto;padding:20px 22px 50px}
 .card h2 .tag{font-size:11.5px;font-weight:400;color:var(--muted);margin-left:auto}
 
 /* ── KPI Row ── */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:680px){.kpis{grid-template-columns:repeat(4,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
 .kpi .big{font-size:24px;font-weight:800;line-height:1.15}
@@ -128,6 +129,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <button onclick="refresh()">🔄 立即刷新</button>
     <span><span class="dot live"></span>自动刷新 <b id="autoState">开（60s）</b></span>
     <span id="lastUpd">加载中…</span>
+    <span style="margin-left:auto;opacity:.55;font-size:11px">v3.1 · 修复解析器 + 上下串行</span>
   </div>
 </header>
 
@@ -157,16 +159,15 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       <div class="steps" id="next-steps"><p class="empty">加载中…</p></div>
     </div>
 
-    <!-- 风险 + 阻塞（左右两列） -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="card">
-        <h2><span class="tick"></span>⚠️ 风险清单<span class="tag" id="risk-tag"></span></h2>
-        <table class="tbl" id="risk-tbl"></table>
-      </div>
-      <div class="card">
-        <h2><span class="tick"></span>🚫 阻塞项<span class="tag">来源 TASK_BOARD</span></h2>
-        <table class="tbl" id="block-tbl"></table>
-      </div>
+    <!-- 风险 + 阻塞（上下串行） -->
+    <div class="card">
+      <h2><span class="tick"></span>⚠️ 风险清单<span class="tag" id="risk-tag"></span></h2>
+      <table class="tbl" id="risk-tbl"></table>
+    </div>
+
+    <div class="card">
+      <h2><span class="tick"></span>🚫 阻塞项<span class="tag">来源 TASK_BOARD</span></h2>
+      <table class="tbl" id="block-tbl"></table>
     </div>
 
     <!-- 近期动态 -->
@@ -229,7 +230,28 @@ function keyValueTable(md,heading){const t=tableAfterHeading(md,heading);if(!t)r
 
 function parsePhases(md){
   const ls=L(md),phases=[];
-  for(let i=0;i<ls.length;i++){const m=ls[i].match(/^###\s*(阶段[一二三四五六].*)$/);if(m){const t=parseTableAfter(ls,i);if(t)phases.push({name:m[1].trim(),rows:t.rows})}}
+  const phaseRe=/^##\s*(阶段[一二三四五六][：:].*)$/;
+  for(let i=0;i<ls.length;i++){
+    const m=ls[i].match(phaseRe);if(!m)continue;
+    const phaseName=m[1].trim();
+    // 扫描阶段内所有 |...| 行直到遇到下一个 ## 阶段X
+    let j=i+1,lines=[];
+    while(j<ls.length&&!phaseRe.test(ls[j])){
+      if(ls[j].trim().startsWith("|"))lines.push(ls[j]);
+      j++;
+    }
+    if(!lines.length)continue;
+    // 第一行是表头；过滤表头分隔行
+    const header=lines[0].trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(s=>s.trim());
+    const dataLines=lines.slice(1).filter(l=>!/^[\s|:\-]+$/.test(l.trim()));
+    const rows=dataLines.map(l=>{
+      const cells=l.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(s=>s.trim());
+      const o={};header.forEach((h,k)=>o[h]=cells[k]!==undefined?cells[k]:'');
+      return o;
+    });
+    if(rows.length)phases.push({name:phaseName,rows});
+    i=j-1;
+  }
   return phases
 }
 function parseActivity(md){
@@ -374,7 +396,7 @@ async function refresh(){
     renderDetailPhases(phases);
     renderDeliverables(phases);
     const now=new Date();$("lastUpd").textContent="上次刷新："+now.toLocaleTimeString("zh-CN");
-    $("sb-right").textContent="v3.0 · "+now.toLocaleTimeString("zh-CN");
+    $("sb-right").textContent="v3.1 · "+now.toLocaleTimeString("zh-CN");
     setStatus("✅ 已同步 · 数据源 main 分支");
   }catch(e){
     setStatus("⚠️ 刷新失败："+e.message,true);
