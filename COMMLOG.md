@@ -7,6 +7,56 @@
 
 ---
 
+## [2026-07-31] B-01 + B-04 + B-07 全部完成 ✅ | 会话：[前端开发]
+
+### 完成内容
+依赖 B-06 (`utils/localCache.js`) 就绪后，一次性完成 B-01/B-04/B-07 三个任务：
+
+**B-01 跨分类阅读引擎（合入 + localCache 注入）**：
+- `pages/detail/reading-engine.js`：从 feature/b01-reading-engine 合入 + 注入 B-06 缓存层
+  - `_fetchCategoryWithCache()`：分类列表缓存（TTL 10min），命中跳过网络请求
+  - `loadCurrentDetail()`：详情缓存（TTL 30min），先读缓存再网络
+  - 缓存失败静默降级，不阻塞主流程
+- `pages/detail/detail.js`（488行）：引擎集成 + 回补 B-05 分享占位图代码（`_isSystemDark`/`_getDefaultPlaceholder`）
+- `pages/detail/detail.wxml` + `detail.wxss`：跨分类视觉元素 + 底部操作栏
+
+**B-04 收藏侧边栏**：
+- `pages/home/home.wxml`：侧边栏新增「❤️ 收藏」Tab + 收藏列表渲染 + 空态引导
+  - 收藏列表项显示：标题 + 来源/分类名 + 相对时间（刚刚/分钟前/小时前/天前）
+  - 空态：♡ 图标 + "还没有收藏任何新闻" + "浏览新闻时点击 ♥ 即可收藏"
+- `pages/home/home.js`：
+  - `panelCategories` 扩展含 `__favorites__`
+  - `_loadFavorites()`：从 localCache 读取收藏 + 计算相对时间
+  - `onPanelItemTap`：收藏项点击 → wx.navigateTo detail
+  - `onCategoryChange`：收藏 Tab 特殊处理
+- `pages/home/home.wxss`：收藏列表元信息行 + 空态样式
+- `pages/detail/detail.js`：收藏存储迁移到 `localCache.get/set('favorites')`（TTL=0 永不过期）
+
+**B-07 返回定位兼容**：
+- `pages/home/home.js` `_handleDetailReturn()` 重写：
+  - 格式检测：`categoryIndex`（新格式）vs `readingIndex`（旧格式）
+  - 优先用 `newsId` 精确匹配（`findIndex`），兜底用 `readingIndex`
+  - 返回后同步 `panelCategory`（侧边栏高亮正确分类）
+
+### 变更文件
+- `pages/detail/reading-engine.js` — 新建 + localCache 注入 (372 行)
+- `pages/detail/detail.js` — 重写 (488 行，含 B-01/B-04/B-05 全部逻辑)
+- `pages/detail/detail.wxml` — 替换 (97 行)
+- `pages/detail/detail.wxss` — 替换 (314 行)
+- `pages/home/home.js` — B-04 收藏逻辑 + B-07 返回定位 (687 行)
+- `pages/home/home.wxml` — B-04 收藏 Tab + 列表 + 空态 (168 行)
+- `pages/home/home.wxss` — B-04 收藏样式 (543 行)
+- `TASK_BOARD.md` — B-01/B-04/B-07 📋→✅
+- `COMMLOG.md` — 本记录
+
+### 依赖链状态
+- ✅ B-01 ✅ B-02 ✅ B-03 ✅ B-04 ✅ B-05 ✅ B-06 ✅ B-07 — 阶段四全部完成
+- ⏳ 阶段五 测试验收（Q-01~Q-06）待启动
+
+> **下一条记录请追加在上方（时间倒序）**
+
+---
+
 ## [2026-07-31] 📢 项目经理广播：B-06 ✅ 已就绪 — 前端开发请接棒 B-01 + B-04
 
 > B-06 localCache.js 已由后端开发完成并合并到 main。前端 B-01（跨分类阅读引擎）和 B-04（收藏功能）的依赖已解除。

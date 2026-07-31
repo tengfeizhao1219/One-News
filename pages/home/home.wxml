@@ -105,7 +105,7 @@
     <!-- 分类标签（当前分类高亮，切换不关闭面板） -->
     <scroll-view class="panel-tabs" scroll-x enable-flex>
       <view 
-        wx:for="{{categories}}" 
+        wx:for="{{panelCategories}}" 
         wx:key="id"
         class="panel-tab {{panelCategory === item.id ? 'active' : ''}}"
         data-cat="{{item.id}}"
@@ -114,8 +114,31 @@
       </view>
     </scroll-view>
 
-    <!-- 新闻列表 -->
-    <scroll-view class="panel-list" scroll-y>
+    <!-- B-04 收藏列表（当选中「❤️ 收藏」时） -->
+    <scroll-view class="panel-list" scroll-y wx:if="{{panelCategory === '__favorites__'}}">
+      <view 
+        wx:for="{{favList}}" 
+        wx:key="id"
+        class="panel-item"
+        data-index="{{index}}"
+        data-is-fav="true"
+        bindtap="onPanelItemTap">
+        <view class="panel-item-title">{{item.title}}</view>
+        <view class="panel-item-meta">
+          <text class="fav-source">{{item.source || item.categoryName}}</text>
+          <text class="fav-time">{{item._timeAgo}}</text>
+        </view>
+      </view>
+      <!-- 收藏空态 -->
+      <view wx:if="{{favList.length === 0}}" class="panel-empty panel-empty-fav">
+        <view class="empty-fav-icon">♡</view>
+        <view class="empty-fav-text">还没有收藏任何新闻</view>
+        <view class="empty-fav-hint">浏览新闻时点击 ♥ 即可收藏</view>
+      </view>
+    </scroll-view>
+
+    <!-- 新闻列表（非收藏 Tab） -->
+    <scroll-view class="panel-list" scroll-y wx:else>
       <view 
         wx:for="{{filteredNewsList}}" 
         wx:key="id"

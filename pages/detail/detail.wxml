@@ -1,4 +1,4 @@
-<!-- 详情页 - 极简阅读 + 上下翻页 -->
+<!-- 详情页 - 跨分类阅读模式 + 底部操作栏 -->
 <view
   class="page"
   bindtouchstart="onTouchStart"
@@ -7,13 +7,19 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：返回（左）+ 位置指示（右） -->
+  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
   <view class="nav-bar">
     <view class="nav-back" bindtap="goBack">
       <text>← 返回</text>
     </view>
-    <view class="nav-position" wx:if="{{total > 1}}">{{positionText}}</view>
+    <view class="nav-position" wx:if="{{total > 1}}">
+      <text>{{positionText}}</text>
+      <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
+    </view>
   </view>
+
+  <!-- 跨分类闪烁条 -->
+  <view wx:if="{{flashVisible}}" class="category-flash" style="background-color: {{flashColor}};"></view>
 
   <!-- 内容 -->
   <scroll-view
@@ -57,15 +63,22 @@
     </view>
   </scroll-view>
 
-  <!-- 上下翻页手势提示 / 触发区 -->
+  <!-- 上下翻页按钮 -->
   <view class="pager-hint" wx:if="{{total > 1}}">
     <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
     <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
   </view>
 
-  <!-- 首/尾提示 -->
-  <view class="edge-tip" wx:if="{{total > 1 && isFirst}}">已经是第一条，上滑返回</view>
-  <view class="edge-tip" wx:if="{{total > 1 && isLast}}">已经是最后一条</view>
+  <!-- 边界提示 Chip -->
+  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
+    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
+    <text wx:else>{{boundaryText}}</text>
+  </view>
+
+  <!-- 网络兜底 Toast -->
+  <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
+    <text>🟡 网络开小差，下拉重试</text>
+  </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->
   <view class="detail-bottom-bar">

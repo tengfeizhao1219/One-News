@@ -345,6 +345,53 @@
   color: var(--text-secondary);
 }
 
+/* B-04: 收藏列表项元信息 */
+.panel-item-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+}
+
+.fav-source {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.fav-time {
+  flex-shrink: 0;
+}
+
+/* B-04: 收藏空态 */
+.panel-empty-fav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 160rpx 0;
+}
+
+.empty-fav-icon {
+  font-size: 80rpx;
+  color: var(--text-tertiary);
+  margin-bottom: 24rpx;
+  opacity: 0.5;
+}
+
+.empty-fav-text {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  margin-bottom: 12rpx;
+}
+
+.empty-fav-hint {
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+}
+
 /* ============ 引导遮罩 ============ */
 .guide-overlay {
   position: absolute;
