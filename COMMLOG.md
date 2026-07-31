@@ -8,6 +8,51 @@
 
 ---
 
+## [2026-07-31] ✅ 前端交付：UX-IMPROVE04~07 + UX-BUG09~14 + 追加清理 全部合入 main | 会话：前端开发
+
+### 完成内容（两批次，均无依赖一口气完成）
+- **批次一 UX-IMPROVE04~07 + UX-BUG09~14（8 项）**：
+  - UX-IMPROVE04：`.fixed-top-bar` 补 `width:100%`（修复 space-between 不生效）
+  - UX-IMPROVE05：`.detail-body` padding-top 16→32rpx（呼吸感）
+  - UX-IMPROVE06：`nav-dots` 点击跳转（bindtap + data-index + 触摸热区 44rpx）
+  - UX-IMPROVE07：下拉刷新（`home.json` + `home.js` 已有，确认生效）
+  - UX-BUG09：详情页加载优化（首页透传数据 → 引擎快速通道，跳过网络请求 + 后台补拉其余分类）
+  - UX-BUG10：去掉「查看原文」功能（清理 wxml/wxss/js 三处）
+  - UX-BUG11：翻页动画连续滑动（预加载并行化，消除 220ms 停顿）
+  - UX-BUG13：侧边栏分类预加载（`onLoad` 并行拉取所有分类到 `_panelCache`）
+  - UX-BUG14：侧边栏高亮增强（浅蓝底色 + 左侧色条 + 暗色适配）
+- **批次二 追加清理（用户直接要求）**：
+  - 去掉首页引导遮罩（`guide-overlay` 元素 + `showGuide` 逻辑 + CSS 动画）
+  - 去掉详情页翻页按钮（`pager-hint` 元素 + `goNext/goPrev` 方法 + `.pager-*` 样式）
+  - 底部操作栏背景调浅（`--bottom-bar-bg` 透明度 0.85/0.9→0.55）
+
+### 变更文件
+- `pages/home/home.wxml` / `home.js` / `home.wxss` — IMPROVE04/05/06 + 引导去除 + 清理
+- `pages/detail/detail.wxml` / `detail.js` / `detail.wxss` — IMPROVE05 + BUG09/10/11 + 翻页去除 + 清理
+- `pages/detail/reading-engine.js` — BUG09 快速通道（_initFromPreloaded / _fetchRemainingCategories）
+- `theme.json` — 底部操作栏背景透明度调整
+- `TASK_BOARD.md` — 广播区标记前端任务全部完成
+
+### 交付物
+- 分支 `fix/ux-improve-04-07-bug-09-14` → **已合入 main**（commit 见 merge）
+- 分支 `fix/cleanup-guide-pager-bar` → **已合入 main**
+
+### 🔴 下游要做什么
+- **测试工程师**：Q-03 回归测试时重点验证①翻页仍可通过滑动手势触发（按钮已移除）②首页引导遮罩不再出现③侧边栏切换分类零等待④详情页进入速度明显提升（透传数据）。
+- **视觉设计师**：D-05.3 修复确认可基于当前 main 版本对照。
+
+### 注意事项
+- 翻页按钮移除后，用户翻页**仅能**通过上下滑动手势，确认这是产品预期（用户明确要求去按钮）。
+- UX-BUG09 快速通道依赖首页 `app.globalData.detailContext` 透传数据；若从分享链接/二维码直接进入详情页（无透传），引擎自动回退到网络请求路径，不影响功能。
+- 底部操作栏背景调浅可能影响收藏/分享按钮在浅色背景上的可读性，已用半透明 + backdrop-filter 毛玻璃处理，真机需确认。
+
+### 遗留
+- UX-IMPROVE01~03（视觉配色/标签色/引导升级）仍 📋，属视觉设计师职责。
+- UX-IMPROVE08（侧边栏手势优化）仍 📋，属交互设计师出方案。
+- D-05.3 修复确认 ⏳ 待视觉设计师。
+
+---
+
 ## [2026-07-31] 🏗️ v4.1 结构修复：云函数改为「平铺自包含」，根治 Cannot find module | 会话：技术负责人（TL）
 
 ### 问题
