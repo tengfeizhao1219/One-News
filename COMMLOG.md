@@ -8,6 +8,44 @@
 
 ---
 
+## [2026-07-31] 🏗️ v4.1 结构修复：云函数改为「平铺自包含」，根治 Cannot find module | 会话：技术负责人（TL）
+
+### 问题
+用户多次部署后持续报 `Cannot find module '../common/cache'`（及 `../common/zhipuSearch`）。
+根因：云函数 index.js 用 `../common/xxx` 引用兄弟目录的共享模块，但 **CloudBase 部署只打包函数自身目录**，
+`common/` 子目录不会进包 → 运行时必崩。项目本有 `scripts/deploy-cloudfunctions.sh` 在部署前把 common 复制进函数目录，
+但用户是**手动从开发者工具部署、未跑该脚本**，故云端始终缺模块。
+
+### 修复（v4.1）
+放弃 monorepo 兄弟目录模式，改为**平铺自包含**：
+- 把 `cloudfunctions/common/*.js`（12 个共享模块）平铺到每个函数**根目录**
+- `index.js` 的 `require('../common/X')` 全部改为 `require('./X')`
+- 删除孤儿源目录 `cloudfunctions/common/`（已无人引用）
+- 重写 `scripts/deploy-cloudfunctions.sh`：改为 `cp -r 整个函数目录`（旧版只拷 index.js+package.json 会漏掉平铺模块）
+
+### 验证（全过）
+- ✅ 三函数 index.js require 均为 `./X` 且文件存在
+- ✅ 平铺模块内部 `require('./config')` 等同级引用仍解析正常
+- ✅ `node --check` 全部语法通过
+- ✅ `cloudfunctions/` 内已无 `../common/` 残留
+
+### 变更文件
+- `cloudfunctions/getNewsList/*` — 平铺 12 模块 + index.js 改写
+- `cloudfunctions/refreshNews/*` — 同上
+- `cloudfunctions/getNewsDetail/*` — 同上（此前缺 common/，本次一并补齐）
+- `cloudfunctions/common/` — **删除**（孤儿源目录）
+- `scripts/deploy-cloudfunctions.sh` — 改写：整目录复制 + 注释更新
+- 提交后将 push 至 origin/main
+
+### 🔴 部署注意事项（重要！）
+1. **本次无需任何预处理脚本**：函数已自包含，直接用微信开发者工具「上传并部署」即可
+2. **先 pull 再部署**：本地 `git pull origin main` 拿到 v4.1 平铺结构，否则仍是旧代码
+3. **三个函数都要重新部署**：getNewsList / refreshNews / getNewsDetail
+4. 部署后手动触发 refreshNews 一次，让 news/news_cache 带正文
+5. ⚠️ 后续改共享逻辑需同步改各函数根目录副本（getNewsList/config.js、refreshNews/zhipuSearch.js 等），不再有单一 common 源
+
+---
+
 ## [2026-07-31] 🔧 v4.0 续修：大模型新闻详情页正文(content)打通 | 会话：技术负责人（TL）
 
 ### 背景

@@ -3,15 +3,15 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
-const cache = require('../common/cache')
-const aiNews = require('../common/aiNewsService')
-const config = require('../common/config')
+const cache = require('./cache')
+const aiNews = require('./aiNewsService')
+const config = require('./config')
 
 // ─── 外部 API 降级（终极兜底）───
-const { callTianApi } = require('../common/tianApi')
-const { callJuheApi } = require('../common/juheApi')
-const { adaptNewsList, APP_TO_TIAN_ENDPOINT, APP_TO_JUHE_TYPE, CATEGORY_NAMES } = require('../common/adapter')
-const { extractSummary } = require('../common/contentExtractor')
+const { callTianApi } = require('./tianApi')
+const { callJuheApi } = require('./juheApi')
+const { adaptNewsList, APP_TO_TIAN_ENDPOINT, APP_TO_JUHE_TYPE, CATEGORY_NAMES } = require('./adapter')
+const { extractSummary } = require('./contentExtractor')
 
 // ─── 缓存查询 ────────────────────────────────────────
 

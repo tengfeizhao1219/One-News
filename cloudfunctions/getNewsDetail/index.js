@@ -8,8 +8,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const aiNews = require('../common/aiNewsService')
-const { extractContent } = require('../common/contentExtractor')
+const aiNews = require('./aiNewsService')
+const { extractContent } = require('./contentExtractor')
 
 /**
  * 同步抓取原文正文并更新 news 集合（3s 超时保护）。

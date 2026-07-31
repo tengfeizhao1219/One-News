@@ -12,10 +12,10 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
-const { searchAllCategories } = require('../common/zhipuSearch')
-const { validateAndClean } = require('../common/validator')
-const { SecurityCheck } = require('../common/securityCheck')
-const config = require('../common/config')
+const { searchAllCategories } = require('./zhipuSearch')
+const { validateAndClean } = require('./validator')
+const { SecurityCheck } = require('./securityCheck')
+const config = require('./config')
 
 // ─── 数据库操作 ─────────────────────────────────────
 
