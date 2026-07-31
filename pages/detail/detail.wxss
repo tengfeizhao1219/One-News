@@ -82,36 +82,6 @@
 .article.in-up    { transform: translateY(100%);  opacity: 0; }
 .article.in-down  { transform: translateY(100%);  opacity: 0; }
 
-/* 上下翻页按钮 */
-.pager-hint {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 220rpx;  /* BUG-005: 140→220 避开底部操作栏(100rpx+safe-area) + 间距 */
-  display: flex;
-  justify-content: space-between;
-  padding: 0 48rpx;
-  pointer-events: none;
-  z-index: 22;  /* BUG-005: 18→22 确保在操作栏(z-index:20)上方 */
-}
-.pager-btn {
-  pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 40rpx;
-  line-height: 1.1;
-  color: var(--text-secondary);
-  background-color: var(--tag-bg, rgba(0,0,0,0.04));
-  padding: 14rpx 22rpx;
-  border-radius: 20rpx;
-}
-.pager-btn text {
-  font-size: calc(22rpx * var(--font-scale));
-  margin-top: 4rpx;
-  letter-spacing: 1rpx;
-}
-
 /* ============ 边界提示 Chip ============ */
 
 .boundary-chip {

@@ -332,14 +332,6 @@ Page({
     }, 220)
   },
 
-  // 按钮翻页
-  goNext: function () {
-    if (!this.data.isLast) this._swipeToNext()
-  },
-  goPrev: function () {
-    if (!this.data.isFirst) this._swipeToPrev()
-  },
-
   // ============ 跨分类视觉 ============
 
   /**

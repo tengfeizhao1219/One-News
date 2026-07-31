@@ -153,11 +153,6 @@
     </scroll-view>
   </view>
 
-  <!-- 首次引导 -->
-  <view class="guide-overlay" wx:if="{{showGuide}}">
-    <text>^ 上滑阅读下一条\n&lt;- 左滑查看今日列表\n- 点击卡片进入阅读</text>
-  </view>
-
   <!-- 字体设置面板（底部半屏） -->
   <font-panel
     visible="{{showFontPanel}}"

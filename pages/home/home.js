@@ -16,7 +16,6 @@ Page({
     cards: [],              // 卡片渲染数据（仅3张）
     currentIndex: 0,        // 当前卡片索引
     showPanel: false,       // 侧边栏是否显示
-    showGuide: true,        // 首次引导
     categories: CATEGORIES,
     panelCategories: PANEL_CATEGORIES,  // B-04: 侧边栏分类（含收藏 Tab）
     currentCategory: 'all', // 首页当前分类
@@ -152,10 +151,6 @@ Page({
 
       this.setData({ newsList: list, pageState: 'ready', currentPage: 1 })
       this.renderCards(list)
-
-      setTimeout(() => {
-        this.setData({ showGuide: false })
-      }, 4000)
     } catch (err) {
       const msg = handleApiError(err.errorCode, err.message)
       this.setData({ pageState: 'error', errorMessage: msg })
