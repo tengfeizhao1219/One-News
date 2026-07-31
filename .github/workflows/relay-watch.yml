@@ -1,4 +1,4 @@
-name: Relay Watch — 任务看板自动巡检
+name: Relay Watch — 任务看板自动巡检 + 角色待办提醒
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
     paths:
       - 'TASK_BOARD.md'
       - 'RELAY.md'
-  workflow_dispatch:   # 允许手动触发
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,25 +23,53 @@ jobs:
         id: parse
         run: |
           chmod +x scripts/pending-tasks.sh
-          OUTPUT=$(scripts/pending-tasks.sh --github 2>&1) || true
-          echo "$OUTPUT"
+          scripts/pending-tasks.sh --github 2>&1 | tee /tmp/relay-summary.md
 
           # 提取 JSON 摘要
           PENDING_TOTAL=$(scripts/pending-tasks.sh 2>/dev/null | tail -1 | python3 -c "import sys,json; print(json.load(sys.stdin)['pending_total'])" 2>/dev/null || echo "0")
           echo "pending_total=$PENDING_TOTAL" >> "$GITHUB_OUTPUT"
 
           # 写入 GitHub Actions 摘要页
-          echo "$OUTPUT" >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/relay-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 按角色分组输出待办
+        id: role_summary
+        run: |
+          echo "## 👥 按角色待办速览" > /tmp/role-summary.md
+          echo "" >> /tmp/role-summary.md
+
+          for ROLE in "前端开发" "后端开发" "技术负责人" "产品经理" "交互设计师" "视觉设计师" "测试工程师" "项目经理"; do
+            RESULT=$(scripts/pending-tasks.sh --role="$ROLE" 2>/dev/null || true)
+            COUNT=$(echo "$RESULT" | tail -1 | python3 -c "import sys,json; print(json.load(sys.stdin)['pending_total'])" 2>/dev/null || echo "0")
+            if [ "$COUNT" != "0" ]; then
+              echo "### 🔴 $ROLE — $COUNT 项待认领" >> /tmp/role-summary.md
+              echo "$RESULT" | grep "^   " >> /tmp/role-summary.md || true
+              echo "" >> /tmp/role-summary.md
+            fi
+          done
+
+          cat /tmp/role-summary.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: 创建/更新 Relay 状态 Issue
-        if: ${{ steps.parse.outputs.pending_total != '0' }}
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
 
-            // 查找已有的 "Relay Status" issue
+            // 合并摘要
+            const mainSummary = fs.readFileSync('/tmp/relay-summary.md', 'utf8');
+            const roleSummary = fs.readFileSync('/tmp/role-summary.md', 'utf8');
+
+            const body = `## 🤖 自动巡检 — ${new Date().toISOString().slice(0,10)}
+
+            ${mainSummary}
+
+            ${roleSummary}
+
+            ---
+            > 由 [Relay Watch](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/relay-watch.yml) 自动生成，每次 push 到 main 时更新。
+            > 各角色请查看上方待办，` + '`git pull`' + ` 后优先认领 🔴 任务。`;
+
             const { data: existingIssues } = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -50,14 +78,7 @@ jobs:
               per_page: 1
             });
 
-            const body = `## 🤖 自动巡检 — ${new Date().toISOString().slice(0,10)}
-
-            ${summary}
-
-            > 由 [Relay Watch](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/workflows/relay-watch.yml) 自动生成，每次 push 到 main 时更新。`;
-
             if (existingIssues.length > 0) {
-              // 更新已有 issue
               await github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -66,7 +87,6 @@ jobs:
               });
               console.log(`已更新 Issue #${existingIssues[0].number}`);
             } else {
-              // 新建 issue
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
