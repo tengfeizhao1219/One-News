@@ -53,6 +53,7 @@ async function batchInsert(newsList) {
           id: item.id,
           title: item.title,
           summary: item.summary,
+          content: item.content || '',  // 🆕 L4 详情正文（大模型已生成）
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
@@ -70,7 +71,7 @@ async function batchInsert(newsList) {
         id: item.id,
         title: item.title || '',
         summary: item.summary || '',
-        content: item.summary || '',  // 初始用 summary 作为 content 占位
+        content: item.content || item.summary || '',  // 🆕 优先用大模型生成的完整正文
         category: item.category || 'recommend',
         categoryName: item.categoryName || '',
         source: item.source || '',

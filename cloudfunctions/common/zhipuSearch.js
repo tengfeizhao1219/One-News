@@ -52,58 +52,38 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
   })
 }
 
-// ─── 分类 Prompt 模板（每分类 15 条）─────────────────
+// ─── 分类 Prompt 模板（每分类 15 条，含 content 正文）──
 
 const PER_CATEGORY_COUNT = 15
 
-const CATEGORY_PROMPTS = {
-  recommend: `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条国内要闻：
-新闻源：xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com
+/**
+ * 生成分类搜索 Prompt（统一要求 content 正文）
+ */
+function buildPrompt(categoryName, sources) {
+  return `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条${categoryName}：
+新闻源：${sources}
 
 要求：
 1. 必须是最近发布的最新新闻
 2. 每条新闻输出为 JSON 对象，包含以下字段：
    - title: 新闻标题（字符串，不超过50字）
-   - summary: 新闻摘要（字符串，100-200字）
+   - summary: 新闻摘要（字符串，80-150字，概括核心）
+   - content: 新闻正文（字符串，300-500字，完整叙述事件背景、经过、影响，分段用\\n分隔）
    - source: 来源（必须是上述新闻源之一）
    - url: 原文链接（真实网页 URL，以 http/https 开头）
 3. 所有${PER_CATEGORY_COUNT}条放在一个 JSON 数组中返回
 4. 只返回 JSON 数组，不要其他文字
 
 返回格式示例：
-[{"title":"...","summary":"...","source":"新华社","url":"https://www.news.com/xxx"}]`,
+[{"title":"...","summary":"...","content":"第一段\\n\\n第二段","source":"新华社","url":"https://www.news.com/xxx"}]`
+}
 
-  tech: `请从以下可信科技新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条科技新闻：
-新闻源：36kr.com, huxiu.com, techcrunch.com
-
-要求：
-1. 必须是最近发布的最新科技/互联网/AI 相关新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
-3. 只返回 JSON 数组`,
-
-  sports: `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条体育新闻：
-新闻源：xinhuanet.com, cctv.com, thepaper.cn, reuters.com
-
-要求：
-1. 必须是最近发布的最新体育新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
-3. 只返回 JSON 数组`,
-
-  international: `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条国际新闻：
-新闻源：reuters.com, bbc.com, apnews.com, huanqiu.com, chinanews.com
-
-要求：
-1. 必须是最近发布的最新国际新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
-3. 只返回 JSON 数组`,
-
-  life: `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条社会生活新闻：
-新闻源：people.com.cn, thepaper.cn, chinanews.com, cctv.com
-
-要求：
-1. 必须是最近发布的最新社会/生活/民生类新闻
-2. 每条输出 JSON：title(标题), summary(摘要), source(来源), url(原文链接，真实网页URL)
-3. 只返回 JSON 数组`,
+const CATEGORY_PROMPTS = {
+  recommend: buildPrompt('国内要闻', 'xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com'),
+  tech: buildPrompt('科技新闻', '36kr.com, huxiu.com, techcrunch.com'),
+  sports: buildPrompt('体育新闻', 'xinhuanet.com, cctv.com, thepaper.cn, reuters.com'),
+  international: buildPrompt('国际新闻', 'reuters.com, bbc.com, apnews.com, huanqiu.com, chinanews.com'),
+  life: buildPrompt('社会生活新闻', 'people.com.cn, thepaper.cn, chinanews.com, cctv.com'),
 }
 
 // ─── JSON 解析 ────────────────────────────────────
@@ -151,7 +131,8 @@ function parseNewsFromContent(content, category) {
     .map((item, i) => ({
       id: `zhipu_${category}_${Date.now()}_${i}`,
       title: String(item.title || '').trim(),
-      summary: String(item.summary || '').trim(),
+      summary: String(item.summary || item.content?.slice(0, 150) || '').trim(),
+      content: String(item.content || item.summary || '').trim(),  // 🆕 完整正文
       category,
       categoryName: categoryNames[category] || category,
       sourceUrl: String(item.url || item.sourceUrl || '').trim(),
@@ -183,7 +164,7 @@ async function searchWithZhipu(category) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用 web_search 工具从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 url 字段，且 url 必须是该新闻最初发布的真实网页链接（以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻搜索助手。使用 web_search 工具从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（300-500字完整正文）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
       },
       { role: 'user', content: prompt }
     ],
@@ -195,7 +176,7 @@ async function searchWithZhipu(category) {
       }
     }],
     temperature: 0.1,
-    max_tokens: 6000,
+    max_tokens: 16000,
   })
 
   const result = await httpsRequest({
@@ -229,13 +210,13 @@ async function searchWithDeepSeek(category) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 url 字段，且 url 必须是该新闻最初发布的真实网页链接（以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（300-500字完整正文）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
       },
       { role: 'user', content: prompt }
     ],
     enable_search: true,
     temperature: 0.1,
-    max_tokens: 6000,
+    max_tokens: 16000,
   })
 
   const result = await httpsRequest({
