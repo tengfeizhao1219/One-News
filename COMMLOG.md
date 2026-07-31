@@ -1242,6 +1242,20 @@
 - D-05 设计走查 ⏳ 待阶段四开发完成后启动
 - `app.wxss` 暗色 `!important` 兜底块清理 → 建议阶段四处理
 
+## [2026-07-31] Q-新05 v7 运行时回归补充完成 ✅ | 会话：[QA]
+
+### 完成内容
+- 编写 `test/v7-regression-reading-mode-runtime.js`：基于 Mock 数据对 ReadingEngine 进行运行时测试
+- 覆盖：初始化/入口定位/goNext/goPrev/跨分类检测/边界/去重/返回定位/loadCurrentDetail/缓存命中/预取窗口/全链路遍历
+- **43/43 全部通过**（补充了原 v7 回归仅有的 37 条静态检查）
+
+### 变更文件
+- `test/v7-regression-reading-mode-runtime.js` — 新建（43 条运行时测试）
+- `TASK_BOARD.md` — Q-新05 ✅
+- `COMMLOG.md` — 本记录
+
+### QA 即席任务进度：8/10 完成（Q-新06 真机执行 + Q-新08 后端配合 待后续）
+
 ---
 
 ## [2026-07-31] D-05 设计走查完成 ✅ | 会话：[视觉设计师][即席]
