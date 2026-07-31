@@ -44,7 +44,7 @@ const SWIPE_ANIMATION_MS = 300   // 翻页动画时长
 const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
 
 // 请求配置
-const PAGE_SIZE = 10
+const PAGE_SIZE = 15  // UX-BUG05: 从 10 提升至 15（精选场景上限）
 // v5 起：小程序只读取云端真实新闻，不再启用 Mock 模式。
 
 module.exports = {

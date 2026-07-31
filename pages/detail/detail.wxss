@@ -80,7 +80,7 @@
 .article.out-up   { transform: translateY(-100%); opacity: 0; }
 .article.out-down { transform: translateY(100%);  opacity: 0; }
 .article.in-up    { transform: translateY(100%);  opacity: 0; }
-.article.in-down  { transform: translateY(-100%); opacity: 0; }
+.article.in-down  { transform: translateY(100%);  opacity: 0; }
 
 /* 上下翻页按钮 */
 .pager-hint {
@@ -179,22 +179,18 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: 22rpx;
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
+  flex-wrap: wrap;
 }
 
-.detail-source-link {
-  margin-bottom: 36rpx;
-}
-
-.detail-source-link text {
-  display: inline-flex;
-  align-items: center;
-  font-size: calc(26rpx * var(--font-scale));
+/* UX-BUG07: 查看原文链接统一样式（与分类标签字号一致） */
+.meta-source-link {
+  font-size: 22rpx;
   color: var(--text-link, #576b95);
-  padding: 8rpx 16rpx;
+  padding: 2rpx 12rpx;
   border-radius: 8rpx;
   background-color: var(--bg-subtle, rgba(87, 107, 149, 0.06));
 }

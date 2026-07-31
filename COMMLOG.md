@@ -8,6 +8,35 @@
 
 ---
 
+## [2026-07-31] 🔴 用户实测反馈 9 项问题 · PM 根因分析+修复 8/9 | 会话：项目经理
+
+### 做了什么
+用户在小程序中实际体验后提出 9 个具体问题。PM 完成逐项根因分析并修复 8 项：
+
+| # | 问题 | 修复 |
+|---|------|------|
+| 1 | 详情页翻页动画方向错误 | `detail.wxss` `.in-down` `translateY(-100%)`→`translateY(100%)` |
+| 2 | 内容未到底就触发翻页 | `detail.js` 新增 `onContentScroll` 检测触底/顶 |
+| 3 | 侧边栏分类切换 1s 滞后 | `home.js` `_panelCache` 内存缓存 + `onCategoryChange` 立即高亮 |
+| 4 | 侧边栏高亮总指向第一条 | `home.js` `renderCards` 同步 `panelCurrentIndex` |
+| 5 | 每分类新闻限制 15 条 | `PAGE_SIZE` 10→15 + `loadMoreNews` 上限检查 |
+| 6 | 查看原文支持微信内打开 | 新建 `pages/webview/` + `openSourceUrl` 优先跳转 WebView |
+| 7 | 查看原文位置/字号不一致 | 移入 `.detail-meta` 同行，字号 22rpx |
+| 8 | 侧边栏点击跳转详情页 | `onPanelItemTap` → `wx.navigateTo` |
+| 9 | 首页跳详情页加载慢 | 📋 待处理（需阅读引擎改造） |
+
+### 变更文件
+- `pages/detail/detail.{js,wxml,wxss}` — BUG01/02/06/07
+- `pages/home/home.js` — BUG03/04/05/08
+- `utils/constants.js` — BUG05
+- `pages/webview/*` + `app.json` — BUG06
+- `TASK_BOARD.md` — v4.0 + COMMLOG.md
+
+### 🔴 下一步
+- **前端开发**：UX-BUG09（详情页加载优化）📋
+- **产品经理**：UX-BUG06 需配置微信小程序业务域名白名单
+- **测试工程师**：Q-02/Q-03 重点验证本次修复的 8 个场景
+
 ## [2026-07-31] 🔴 UX 体验优化专项启动 | 会话：项目经理
 
 ### 做了什么

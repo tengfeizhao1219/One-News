@@ -162,15 +162,34 @@ Page({
     }
   },
 
-  // 侧边栏数据加载（全部新闻，独立于首页分类）
+  // UX-BUG03: 侧边栏分类数据内存缓存
+  _panelCache: {},
+
+  // 侧边栏数据加载（全部新闻，独立于首页分类）—— 带缓存
   async loadPanelNews(category) {
     const cat = category || 'all'
+    var that = this
+
+    // UX-BUG03: 优先读取内存缓存，命中则跳过云函数调用
+    if (this._panelCache[cat]) {
+      this.setData({
+        filteredNewsList: this._panelCache[cat],
+        panelCategory: cat
+      })
+      return
+    }
+
     try {
       // 侧边栏需要全部数据，不分页
-      const res = await getNewsList({ category: cat, pageSize: 100 })
+      const res = await getNewsList({ category: cat, pageSize: PAGE_SIZE })
       const list = res.list || []
+      var mapped = list.map(function (item, i) { return Object.assign({}, item, { _originalIndex: i }) })
+
+      // UX-BUG03: 写入缓存
+      that._panelCache[cat] = mapped
+
       this.setData({
-        filteredNewsList: list.map((item, i) => ({ ...item, _originalIndex: i })),
+        filteredNewsList: mapped,
         panelCategory: cat
       })
     } catch (err) {
@@ -246,6 +265,11 @@ Page({
     if (idx < total - 1 && safeList[idx + 1]) cards.push(this.buildCard(safeList[idx + 1], 1))
 
     this.setData({ currentIndex: idx, cards })
+
+    // UX-BUG04: 同步侧边栏高亮位置
+    if (idx !== this.data.panelCurrentIndex) {
+      this.setData({ panelCurrentIndex: idx })
+    }
   },
 
   buildCard(item, position) {
@@ -491,6 +515,13 @@ Page({
   async loadMoreNews() {
     if (this.data.loadingMore) return
     const { currentCategory, currentPage, newsList } = this.data
+
+    // UX-BUG05: 每分类上限 15 条，达到上限不加载更多
+    const MAX_NEWS = 15
+    if (newsList.length >= MAX_NEWS) {
+      wx.showToast({ title: '已展示全部精选新闻', icon: 'none' })
+      return
+    }
     this.setData({ loadingMore: true })
     wx.showToast({ title: '加载更多…', icon: 'loading', duration: 800 })
     try {
@@ -573,7 +604,10 @@ Page({
 
   onCategoryChange(e) {
     var cat = e.currentTarget.dataset.cat
-    // B-04: 收藏 Tab 特殊处理
+    // UX-BUG03: 立即切换高亮，不等待数据（消除 ~1s 滞后感）
+    this.setData({ panelCategory: cat })
+
+    // B-04: 收藏 Tab 特殊处理（同步读取，无网络延迟）
     if (cat === '__favorites__') {
       this._loadFavorites()
       return
@@ -626,34 +660,32 @@ Page({
       return
     }
 
-    // 标准分类列表项点击
+    // 标准分类列表项点击（UX-BUG08: 直接跳转到对应新闻的详情页）
     const { filteredNewsList } = this.data
     if (idx === undefined || idx >= filteredNewsList.length) return
 
     const item = filteredNewsList[idx]
     const cat = this.data.panelCategory
+    const newsId = item.id || item._id
+    if (!newsId) return
 
+    // 先关闭面板
+    this.setData({ showPanel: false })
+
+    // 设置详情页上下文
     if (cat !== this.data.currentCategory) {
       this.setData({ currentCategory: cat })
-      getNewsList({ category: cat }).then(res => {
-        const list = res.list || []
-        const realIdx = Math.min(idx, list.length - 1)
-        this.setData({
-          newsList: list,
-          currentIndex: realIdx,
-          currentPage: 1,
-          loadingMore: false,
-          showPanel: false
-        })
-        this.renderCards(list, realIdx)
-      })
+      app.globalData.detailContext = { category: cat, list: [] }
     } else {
-      this.setData({
-        currentIndex: idx,
-        showPanel: false
-      })
-      this.renderCards(this.data.newsList, idx)
+      app.globalData.detailContext = { category: cat, list: this.data.newsList }
     }
+
+    // 跳转详情页
+    var url = '/pages/detail/detail?id=' + newsId + '&index=' + idx + '&category=' + cat
+    wx.navigateTo({
+      url: url,
+      fail: function (err) { console.error('[home] navigateTo panel fail:', err) }
+    })
   },
 
   // ============ 搜索 ============

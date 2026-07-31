@@ -28,24 +28,22 @@
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
-    show-scrollbar="{{false}}">
+    show-scrollbar="{{false}}"
+    bindscroll="onContentScroll">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
         <!-- 标题 -->
         <view class="detail-title">{{news.title}}</view>
 
-        <!-- 元信息 -->
+        <!-- 元信息（UX-BUG07: 查看原文移入同行，字号统一为 22rpx） -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
           <text>{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-        </view>
-
-        <!-- 查看原文链接 -->
-        <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
-          <text>📎 查看原文</text>
+          <text wx:if="{{news.sourceUrl && news.time}}">·</text>
+          <text class="meta-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">📎 原文</text>
         </view>
 
         <!-- 分隔线 -->

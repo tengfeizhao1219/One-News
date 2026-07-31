@@ -66,6 +66,17 @@ Page({
     var app = getApp()
     var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
 
+    // UX-BUG02: 初始化滚动状态 + 获取可视区高度
+    this._isAtTop = true
+    this._isAtBottom = false
+    try {
+      var sysInfo = wx.getSystemInfoSync()
+      // scroll-view 可用高度 ≈ 屏幕高度 - 顶部栏(~50px) - 底部操作栏(~100px)
+      this._clientHeight = sysInfo.windowHeight - 150
+    } catch (e) {
+      this._clientHeight = 500
+    }
+
     this.setData({ category: category, currentIndex: index, fontScaleTier: tier })
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
@@ -110,6 +121,9 @@ Page({
           scrollTop: 0,
           loading: false,
         })
+        // UX-BUG02: 内容加载后重置滚动状态
+        that._isAtTop = true
+        that._isAtBottom = false
         if (news && news.id) {
           that._checkFavorite(news.id)
         }
@@ -188,15 +202,33 @@ Page({
     var dt = Date.now() - this._touchStartT
     if (Math.abs(dy) < 70 || dt > 500) return
 
+    // UX-BUG02: 只有滚动到边界时才触发翻页
+    // 上滑(dy<0)→下一条：需内容已触底；下滑(dy>0)→上一条：需内容已触顶
     if (dy < 0 && !this.data.isLast) {
-      this._swipeToNext()
+      if (this._isAtBottom) {
+        this._swipeToNext()
+      }
     } else if (dy > 0 && !this.data.isFirst) {
-      this._swipeToPrev()
+      if (this._isAtTop) {
+        this._swipeToPrev()
+      }
     } else if (dy < 0 && this.data.isLast) {
       this._showBoundary('已经是最后一条 · ← 返回首页', 'back')
     } else if (dy > 0 && this.data.isFirst) {
       this._showBoundary('已经是第一条 · 上滑返回', '')
     }
+  },
+
+  /**
+   * UX-BUG02: 监听 scroll-view 滚动位置，判断是否触顶/触底
+   */
+  onContentScroll: function (e) {
+    var scrollTop = e.detail.scrollTop
+    var scrollHeight = e.detail.scrollHeight
+    var clientHeight = this._clientHeight || 500
+    // 触顶阈值 10px，触底阈值 50px（微信 scroll-view 可能无法精确到 0）
+    this._isAtTop = scrollTop <= 10
+    this._isAtBottom = scrollTop + clientHeight >= scrollHeight - 50
   },
 
   // ============ 跨分类翻页 ============
@@ -458,14 +490,23 @@ Page({
     return ''
   },
 
-  // 打开原始新闻链接（复制链接）
+  // UX-BUG06: 优先 WebView 打开原文（微信内），降级为复制链接
   openSourceUrl: function () {
     var url = this.data.news.sourceUrl
     if (!url) return
-    wx.setClipboardData({
-      data: url,
-      success: function () {
-        wx.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none', duration: 2500 })
+
+    // 优先尝试 WebView 打开（需小程序后台配置业务域名白名单）
+    var encodedUrl = encodeURIComponent(url)
+    wx.navigateTo({
+      url: '/pages/webview/webview?url=' + encodedUrl,
+      fail: function () {
+        // WebView 不可用时降级为复制链接
+        wx.setClipboardData({
+          data: url,
+          success: function () {
+            wx.showToast({ title: '链接已复制，请在浏览器中打开', icon: 'none', duration: 2500 })
+          },
+        })
       },
     })
   },
