@@ -1,5 +1,6 @@
-// 新闻自动刷新云函数 v3
-// 调用阿里百炼 DeepSeek 联网搜索 → 质量校验 → 写入云数据库
+// 新闻自动刷新云函数 v3.1
+// 调用阿里百炼 DeepSeek 联网搜索 → 质量校验 → 内容安全审核 → 写入云数据库
+// B-02: 接入微信 msgSecCheck（命中拦截 + API 不可用保守放行 + 告警）
 //
 // 触发方式：
 //   1. 定时触发器（6:00 / 11:00 / 20:00）
@@ -11,6 +12,7 @@ const db = cloud.database()
 
 const { searchAllCategories } = require('../common/llmSearch')
 const { validateAndClean } = require('../common/validator')
+const { SecurityCheck } = require('../common/securityCheck')
 const config = require('../common/config')
 
 // ─── 数据库操作 ─────────────────────────────────────
@@ -100,14 +102,24 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 拒绝详情:', JSON.stringify(rejected.slice(0, 5)))
   }
 
-  // 3. 如果有效新闻太少，记录警告但继续
-  if (valid.length < 5) {
-    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${valid.length} 条，可能影响用户体验`)
+  // 3. 内容安全审核（B-02：微信 msgSecCheck，命中拦截 + API 不可用保守放行）
+  const security = new SecurityCheck()
+  const secResult = await security.checkBatch(valid)
+  const { passed: secPassed, blocked: secBlocked, stats: securityStats } = secResult
+
+  console.log(`[refreshNews] 安全审核: ${secPassed.length} 通过, ${secBlocked.length} 拦截`)
+  if (secBlocked.length > 0) {
+    console.warn('[refreshNews] 拦截详情:', JSON.stringify(secBlocked.map(b => ({ id: b.id, title: b.title?.slice(0, 40) }))))
   }
 
-  // 4. 按分类分组写入
+  // 4. 如果有效新闻太少，记录警告但继续
+  if (secPassed.length < 5) {
+    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${secPassed.length} 条（安全审核后），可能影响用户体验`)
+  }
+
+  // 5. 按分类分组写入
   const categories = {}
-  valid.forEach(item => {
+  secPassed.forEach(item => {
     const cat = item.category || 'unknown'
     if (!categories[cat]) categories[cat] = []
     categories[cat].push(item)
@@ -130,12 +142,14 @@ exports.main = async (event) => {
 
   const elapsed = Date.now() - startTime
 
-  // 5. 返回结果
+  // 6. 返回结果
   return {
     code: 0,
     message: `刷新完成，共 ${totalInserted} 条新闻`,
     data: {
       total: valid.length,
+      securityPassed: secPassed.length,
+      securityBlocked: secBlocked.length,
       inserted: totalInserted,
       failed: totalFailed,
       cleared: totalCleared,
@@ -144,6 +158,7 @@ exports.main = async (event) => {
       ),
       searchStats: searchResult.stats,
       validation: validationStats,
+      security: securityStats,
       elapsedMs: elapsed,
     },
   }
