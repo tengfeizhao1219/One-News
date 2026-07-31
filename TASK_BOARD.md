@@ -104,7 +104,7 @@
 | ID | 任务 | 负责人 | 优先级 | 状态 | 依赖 | 交付物 |
 |----|------|--------|:---:|:---:|------|------|
 | B-01 | 跨分类阅读引擎（7子任务） | 前端开发 | 🔴 | 📋 | B-06 | `pages/detail/reading-engine.js` |
-| B-02 | 内容安全审核接入（4子任务） | 后端开发 | 🟡 | 📋 | 无 | `cloudfunctions/common/securityCheck.js` |
+| B-02 | 内容安全审核接入（4子任务） | 后端开发 | 🟡 | ✅ 后端开发 | 无 | `cloudfunctions/common/securityCheck.js` + refreshNews 串接 |
 | B-03 | 字体面板组件（4子任务） | 前端开发 | 🟢 | 📋 | 无 | `components/font-panel/` |
 | B-04 | 收藏功能（4子任务） | 前端开发 | 🟡 | 📋 | B-06 | `components/favorite-btn/` |
 | B-05 | 分享+Canvas占位图（3子任务） | 前端开发 | 🟢 | 📋 | 无 | `components/share-card/` |
@@ -186,6 +186,7 @@
 | D-02 | 交互原型（终稿） | 2026-07-31 | 交互设计师 |
 | D-03 | 视觉设计 | 2026-07-31 | 视觉设计师 |
 | B-06 | 统一本地存储封装 localCache.js | 2026-07-31 | 后端开发 |
+| B-02 | 内容安全审核接入 securityCheck.js | 2026-07-31 | 后端开发 |
 
 ---
 
