@@ -70,7 +70,7 @@
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text>{{item.source}}</text>
-            <text> - </text>
+            <text wx:if="{{item.source && item.time}}"> - </text>
             <text>{{item.time}}</text>
           </view>
         </view>

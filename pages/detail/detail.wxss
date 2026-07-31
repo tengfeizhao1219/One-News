@@ -87,12 +87,12 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 140rpx;
+  bottom: 220rpx;  /* BUG-005: 140→220 避开底部操作栏(100rpx+safe-area) + 间距 */
   display: flex;
   justify-content: space-between;
   padding: 0 48rpx;
   pointer-events: none;
-  z-index: 18;
+  z-index: 22;  /* BUG-005: 18→22 确保在操作栏(z-index:20)上方 */
 }
 .pager-btn {
   pointer-events: auto;
