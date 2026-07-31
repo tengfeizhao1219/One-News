@@ -8,6 +8,43 @@
 
 ---
 
+## [2026-07-31] 🔧 v4.0 续修：大模型新闻详情页正文(content)打通 | 会话：技术负责人（TL）
+
+### 背景
+用户明确要求：通过大模型拉取的新闻**必须提供完整详情页正文，不能只有标题**。
+根因：v4.0 把 L1 改为 `news_cache` 后，`refreshNews` 只写入 `news_cache`，未写入 `news` 集合；`getNewsDetail` 查 `news` → NO_DATA。且 `zhipuSearch` 的 prompt/解析未要求 `content` 字段。
+
+### 完成内容
+- 🔧 `common/zhipuSearch.js`：prompt 与解析（智谱+DeepSeek）均要求并提取 `content`（300-500字正文）
+- 🔧 `refreshNews/index.js`：`batchInsert` 向 `news_cache` 与 `news` **双集合均写入** `content`（优先大模型正文，缺失降级 summary）
+- 🔄 同步刷新 `getNewsList/common/zhipuSearch.js` 与 `refreshNews/common/zhipuSearch.js`（源改动后副本已滞后）
+
+### 数据流（详情页正文）
+```
+zhipuSearch/DeepSeek → item.content(300-500字)
+  → refreshNews.batchInsert → news_cache.content + news.content
+  → getNewsDetail(查 news) → 直接返回 content（不再回退抓取原文）
+```
+
+### 变更文件
+- `cloudfunctions/common/zhipuSearch.js` — content 字段贯通
+- `cloudfunctions/refreshNews/index.js` — batchInsert 双写 content
+- `cloudfunctions/getNewsList/common/zhipuSearch.js` — 副本同步
+- `cloudfunctions/refreshNews/common/zhipuSearch.js` — 副本同步
+- 提交 `65a102f`（本地，待 push）
+
+### 🔴 部署注意事项
+1. **重新部署两个云函数**：`refreshNews`（双写 content）+ `getNewsList`（副本同步）— 必须重新上传云端
+2. **首次刷新**：部署后手动触发一次 `refreshNews`，让 `news_cache`/`news` 带 content
+3. **Key 不变**：`ZHIPU_API_KEY` / `DEEPSEEK_API_KEY` 已在 ADR-002 部署时配置，本次无需改动
+4. `common/` 模块已内联进各函数目录，无需额外操作
+
+### 遗留
+- B-12 限流策略：待后端/TL 决策
+- B-10/B-11/B-14 后端自查修复：待后端开发
+
+---
+
 ## [2026-07-31] 🏗️ ADR-002：百炼→智谱+DeepSeek 双引擎 L1 架构改造 | 会话：技术负责人（TL）
 
 ### 决策背景
