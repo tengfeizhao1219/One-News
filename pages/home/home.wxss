@@ -392,32 +392,6 @@
   color: var(--text-tertiary);
 }
 
-/* ============ 引导遮罩 ============ */
-.guide-overlay {
-  position: absolute;
-  bottom: 160rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: var(--text-primary);
-  color: var(--bg-card);
-  padding: 28rpx 48rpx;
-  border-radius: 28rpx;
-  font-size: calc(26rpx * var(--font-scale));  /* D-05#5 */
-  z-index: 20;
-  text-align: center;
-  line-height: 1.7;
-  animation: fadeInOut 4s ease forwards;
-  pointer-events: none;
-  letter-spacing: 1rpx;
-}
-
-@keyframes fadeInOut {
-  0% { opacity: 0; transform: translateX(-50%) translateY(20rpx); }
-  12% { opacity: 1; transform: translateX(-50%) translateY(0); }
-  78% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 /* ============ 骨架屏 ============ */
 .skeleton-stage {
   position: absolute;
