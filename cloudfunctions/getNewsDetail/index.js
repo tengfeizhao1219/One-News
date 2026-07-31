@@ -1,34 +1,9 @@
-// 获取新闻详情云函数 v3
-// v3: 主源 news 集合（由 getNewsList L1 天行成功时同步写入）。
-//     查询用 where({ id: newsId })（id 是自定义字段，非 CloudBase 的 _id）。
-//     若正文 content 为空（天行仅给摘要），则同步抓取原文 URL 获取完整正文，
-//     失败时用 summary 兜底；AI 静态缓存作为终极兜底。
+// 获取新闻详情云函数 v4.2 — 纯 news 集合（refreshNews 写入），不降级兜底
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const _ = db.command
-const aiNews = require('./aiNewsService')
-const { extractContent } = require('./contentExtractor')
-
-/**
- * 同步抓取原文正文并更新 news 集合（3s 超时保护）。
- * 成功后返回正文字符串，失败返回 null。
- */
-async function fetchAndPersistContent(realId, sourceUrl) {
-  if (!sourceUrl) return null
-  try {
-    const paras = await extractContent(sourceUrl)
-    if (!paras || paras.length === 0) return null
-    const content = paras.join('\n')
-    db.collection('news').doc(realId).update({
-      data: { content, contentFetchedAt: Date.now() },
-    }).catch(() => {})
-    return content
-  } catch (_) {
-    return null
-  }
-}
 
 exports.main = async (event) => {
   const { newsId } = event
@@ -37,7 +12,7 @@ exports.main = async (event) => {
     return { code: -1, message: '缺少 newsId 参数' }
   }
 
-  // ── L1：news 集合（where id=newsId，id 是自定义字段）──
+  // ── news 集合（refreshNews 双写，content 由大模型生成）──
   try {
     console.log('[getNewsDetail] 查询 where id=', newsId)
     const res = await db.collection('news').where({ id: newsId }).get()
@@ -52,28 +27,12 @@ exports.main = async (event) => {
         data: { viewCount: _.inc(1) },
       }).catch(() => {})
 
-      const data = { ...doc }
-
-      // 正文为空时：同步抓原文 → 拿到完整正文或 summary 兜底
-      if (!data.content || data.content.length < 30) {
-        const fetched = await fetchAndPersistContent(realId, data.sourceUrl)
-        data.content = fetched || data.summary || ''
-      }
-
-      return { code: 0, data, meta: { source: 'db_news' } }
+      return { code: 0, data: doc, meta: { source: 'news', engine: 'zhipu/deepseek' } }
     }
   } catch (e) {
-    console.log('[getNewsDetail] news 集合未命中 newsId=', newsId, e && e.message)
+    console.warn('[getNewsDetail] news 集合未命中:', newsId, e && e.message)
   }
 
-  // ── L2：AI 静态缓存兜底 ──
-  const aiItem = aiNews.getById(newsId)
-  if (aiItem) {
-    console.log('[getNewsDetail] AI 缓存兜底命中')
-    return { code: 0, data: aiItem, meta: { source: 'ai_cache' } }
-  }
-
-  // 全部未命中
   return {
     code: -1,
     message: '新闻不存在或已过期',
