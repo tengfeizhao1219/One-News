@@ -145,13 +145,13 @@
 
 | ID | 任务 | 负责人 | 优先级 | 状态 | 依赖 | 交付物 |
 |----|------|--------|:---:|:---:|------|------|
-| B-01 | 跨分类阅读引擎（7子任务） | 前端开发 | 🔴 | 📋 | B-06 | `pages/detail/reading-engine.js` |
+| B-01 | 跨分类阅读引擎（7子任务） | 前端开发 | 🔴 | ✅ 前端开发 | B-06 | `pages/detail/reading-engine.js` |
 | B-02 | 内容安全审核接入（4子任务） | 后端开发 | 🟡 | ✅ 后端开发 | 无 | `cloudfunctions/common/securityCheck.js` + refreshNews 串接 |
 | B-03 | 字体面板组件（4子任务） | 前端开发 | 🟢 | ✅ 前端开发 | 无 | `components/font-panel/` |
-| B-04 | 收藏功能（4子任务） | 前端开发 | 🟡 | 📋 | B-06 | `components/favorite-btn/` |
+| B-04 | 收藏功能（4子任务） | 前端开发 | 🟡 | ✅ 前端开发 | B-06 | `components/favorite-btn/` + home 侧边栏收藏 Tab |
 | B-05 | 分享+Canvas占位图（3子任务） | 前端开发 | 🟢 | ✅ 前端开发 | 无 | `components/share-card/` |
 | B-06 | 统一本地存储封装（1子任务） | 后端开发 | 🟢 | ✅ 后端开发 | 无 | `utils/localCache.js`（+ 20 单测通过） |
-| B-07 | 返回定位兼容（2子任务） | 前端开发 | 🟢 | 📋 | B-01 | `detail.js` + `home.js` |
+| B-07 | 返回定位兼容（2子任务） | 前端开发 | 🟢 | ✅ 前端开发 | B-01 | `detail.js` + `home.js` |
 
 > **依赖链**：B-06 → B-01 → B-07；B-06 → B-04；B-02/B-03/B-05 独立先行。
 > **建议顺序**：B-06 + B-02 先行（Day1-2）→ B-01 + B-03 + B-05 并行（Day2-5）→ B-04（Day5-6）→ B-07（Day6-7）→ 联调（Day7-8）

@@ -2,8 +2,12 @@
 
 const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
+const { localCache } = require('../../utils/localCache')
 
 const app = getApp()
+
+// 侧边栏分类列表（标准 8 分类 + 收藏 Tab）
+var PANEL_CATEGORIES = CATEGORIES.concat([{ id: '__favorites__', name: '❤️ 收藏' }])
 
 Page({
   data: {
@@ -14,10 +18,12 @@ Page({
     showPanel: false,       // 侧边栏是否显示
     showGuide: true,        // 首次引导
     categories: CATEGORIES,
+    panelCategories: PANEL_CATEGORIES,  // B-04: 侧边栏分类（含收藏 Tab）
     currentCategory: 'all', // 首页当前分类
     panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: [],   // 侧边栏过滤后的列表
+    favList: [],             // B-04: 收藏列表
     // 页面状态
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
     errorMessage: '',       // 错误提示文案
@@ -71,8 +77,11 @@ Page({
   },
 
   /**
-   * 处理从详情页阅读模式返回后的定位
-   * 如果用户在阅读模式中切到了不同分类的新闻，需要切换分类并定位
+   * B-07: 处理从详情页阅读模式返回后的定位
+   * 兼容新旧两种返回格式：
+   *   新格式（引擎）: { category, categoryIndex, newsId, total }
+   *   旧格式（降级）: { category, readingIndex }
+   * 策略：优先用 newsId 精确匹配，其次用 categoryIndex/readingIndex 估算
    */
   _handleDetailReturn() {
     const app = getApp()
@@ -82,28 +91,46 @@ Page({
     // 清除状态，防止重复处理
     app.globalData._detailReturnState = null
 
-    const { category, readingIndex } = state
-    const { currentCategory, newsList, currentIndex } = this.data
+    const { category } = state
+    var hasNewFormat = typeof state.categoryIndex === 'number'
+    var hasOldFormat = typeof state.readingIndex === 'number'
 
-    // 如果分类没变，直接定位
-    if (category === currentCategory && newsList.length > 0) {
-      const idx = Math.min(readingIndex, newsList.length - 1)
-      if (idx !== currentIndex) {
-        this.setData({ currentIndex: idx })
-        this.renderCards(newsList, idx)
+    // 决定目标索引：优先 newsId 精确匹配
+    var resolveIndex = function (list) {
+      if (!list || list.length === 0) return 0
+      // 新格式：用 newsId 精确匹配
+      if (hasNewFormat && state.newsId) {
+        for (var i = 0; i < list.length; i++) {
+          if ((list[i].id || list[i]._id) === state.newsId) return i
+        }
+      }
+      // 旧格式：用 readingIndex
+      if (hasOldFormat) {
+        return Math.min(state.readingIndex, list.length - 1)
+      }
+      // 兜底
+      return 0
+    }
+
+    // 场景 1: 分类没变，直接定位
+    if (category === this.data.currentCategory && this.data.newsList.length > 0) {
+      var idx = resolveIndex(this.data.newsList)
+      if (idx !== this.data.currentIndex) {
+        this.setData({ currentIndex: idx, panelCategory: category })
+        this.renderCards(this.data.newsList, idx)
       }
       return
     }
 
-    // 分类变了，需要切换分类并加载数据
-    if (category && category !== currentCategory) {
-      this.setData({ currentCategory: category })
-      getNewsList({ category: category }).then(res => {
-        const list = res.list || []
-        const idx = Math.min(readingIndex, list.length - 1)
+    // 场景 2: 分类变了，需要切换分类并加载数据
+    if (category && category !== this.data.currentCategory) {
+      this.setData({ currentCategory: category, panelCategory: category })
+      getNewsList({ category: category }).then(function (res) {
+        var list = res.list || []
+        var idx = resolveIndex(list)
         this.setData({ newsList: list, currentIndex: idx, currentPage: 1, loadingMore: false })
         this.renderCards(list, idx)
-      }).catch(() => {
+      }.bind(this)).catch(function () {
         // 加载失败，保持当前状态
       })
     }
@@ -545,12 +572,61 @@ Page({
   },
 
   onCategoryChange(e) {
-    const cat = e.currentTarget.dataset.cat
+    var cat = e.currentTarget.dataset.cat
+    // B-04: 收藏 Tab 特殊处理
+    if (cat === '__favorites__') {
+      this._loadFavorites()
+      return
+    }
     this.loadPanelNews(cat)
   },
 
+  /**
+   * B-04: 从 localCache 加载收藏列表
+   */
+  _loadFavorites: function () {
+    var favorites = localCache.get('favorites') || []
+    // 计算相对时间
+    var now = Date.now()
+    var list = favorites.map(function (item) {
+      var diff = now - (item.addedAt || 0)
+      var timeAgo = ''
+      if (diff < 60 * 1000) {
+        timeAgo = '刚刚'
+      } else if (diff < 60 * 60 * 1000) {
+        timeAgo = Math.floor(diff / (60 * 1000)) + '分钟前'
+      } else if (diff < 24 * 60 * 60 * 1000) {
+        timeAgo = Math.floor(diff / (60 * 60 * 1000)) + '小时前'
+      } else {
+        timeAgo = Math.floor(diff / (24 * 60 * 60 * 1000)) + '天前'
+      }
+      return Object.assign({}, item, { _timeAgo: timeAgo })
+    })
+    this.setData({
+      panelCategory: '__favorites__',
+      favList: list,
+    })
+  },
+
   onPanelItemTap(e) {
-    const idx = e.currentTarget.dataset.index
+    var idx = e.currentTarget.dataset.index
+    var isFav = e.currentTarget.dataset.isFav
+
+    // B-04: 收藏列表项点击 → 直接跳转详情页
+    if (isFav) {
+      var favItem = this.data.favList[idx]
+      if (!favItem) return
+      // 设置详情页上下文（收藏列表作为阅读上下文）
+      app.globalData.detailContext = { category: favItem.category, list: this.data.favList }
+      var url = '/pages/detail/detail?id=' + favItem.id + '&index=' + idx + '&category=' + (favItem.category || 'recommend')
+      wx.navigateTo({
+        url: url,
+        fail: function (err) { console.error('[home] navigateTo fav fail:', err) }
+      })
+      return
+    }
+
+    // 标准分类列表项点击
     const { filteredNewsList } = this.data
     if (idx === undefined || idx >= filteredNewsList.length) return
 

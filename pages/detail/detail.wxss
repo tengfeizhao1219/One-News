@@ -1,4 +1,4 @@
-/* 详情页样式 */
+/* 详情页样式 — 跨分类阅读模式 + 底部操作栏 */
 
 .page {
   height: 100vh;
@@ -6,6 +6,8 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ============ 顶部导航栏 ============ */
 
 .nav-bar {
   display: flex;
@@ -23,6 +25,9 @@
 }
 
 .nav-position {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
   font-size: 26rpx;
   color: var(--text-secondary);
   background-color: var(--tag-bg, rgba(0,0,0,0.04));
@@ -31,14 +36,44 @@
   letter-spacing: 1rpx;
 }
 
+/* 跨分类进度中的分类名（fadeIn 200ms） */
+.position-category {
+  font-weight: 600;
+  animation: fadeInCat 0.2s ease;
+}
+
+@keyframes fadeInCat {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============ 跨分类闪烁条 ============ */
+
+.category-flash {
+  width: 40rpx;
+  height: 4rpx;
+  border-radius: 2rpx;
+  margin: 0 auto;
+  animation: flashPulse 0.2s ease;
+}
+
+@keyframes flashPulse {
+  0%   { opacity: 0; }
+  50%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============ 正文区域 ============ */
+
 .content {
   flex: 1;
   overflow-y: auto;
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }
 
 /* 翻页动画容器 */
 .article {
-  transition: transform 0.26s ease, opacity 0.26s ease;
+  transition: transform 0.35s ease, opacity 0.35s ease;
   will-change: transform, opacity;
 }
 .article.out-up   { transform: translateY(-100%); opacity: 0; }
@@ -51,12 +86,12 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 40rpx;
+  bottom: 140rpx;
   display: flex;
   justify-content: space-between;
   padding: 0 48rpx;
   pointer-events: none;
-  z-index: 20;
+  z-index: 18;
 }
 .pager-btn {
   pointer-events: auto;
@@ -71,24 +106,60 @@
   border-radius: 20rpx;
 }
 .pager-btn text {
-  font-size: 22rpx;
+  font-size: calc(22rpx * var(--font-scale));
   margin-top: 4rpx;
   letter-spacing: 1rpx;
 }
 
-/* 首/尾边界提示 */
-.edge-tip {
+/* ============ 边界提示 Chip ============ */
+
+.boundary-chip {
   position: fixed;
-  left: 0;
-  right: 0;
-  top: 120rpx;
-  text-align: center;
-  font-size: 24rpx;
-  color: var(--text-secondary);
-  opacity: 0.7;
-  z-index: 15;
+  bottom: 180rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: var(--chip-bg);
+  color: var(--chip-text);
+  font-size: calc(26rpx * var(--font-scale));
+  padding: 20rpx 36rpx;
+  border-radius: 28rpx;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 0.3s ease;
 }
+
+.boundary-chip.show {
+  opacity: 1;
+}
+
+.chip-action {
+  text-decoration: underline;
+  pointer-events: auto;
+}
+
+/* ============ 网络兜底 Toast ============ */
+
+.network-toast {
+  position: fixed;
+  top: 120rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning);
+  font-size: calc(26rpx * var(--font-scale));
+  padding: 16rpx 32rpx;
+  border-radius: 16rpx;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.network-toast.show {
+  opacity: 1;
+}
+
+/* ============ 正文排版 ============ */
 
 .detail-body {
   padding: 16rpx 64rpx 80rpx;
@@ -120,7 +191,7 @@
 .detail-source-link text {
   display: inline-flex;
   align-items: center;
-  font-size: 26rpx;
+  font-size: calc(26rpx * var(--font-scale));
   color: var(--text-link, #576b95);
   padding: 8rpx 16rpx;
   border-radius: 8rpx;
@@ -143,6 +214,7 @@
   line-height: calc(2.2 * var(--font-scale));
   margin-bottom: 40rpx;
   letter-spacing: 1rpx;
+  text-indent: 2em;
 }
 
 .back-bottom {
@@ -154,6 +226,7 @@
 }
 
 /* ============ 底部操作栏（收藏 + 分享） ============ */
+
 .detail-bottom-bar {
   position: fixed;
   bottom: 0;
@@ -194,7 +267,6 @@
   transform: scale(0.9);
 }
 
-/* 重置 button 默认样式 */
 .share-btn-reset {
   margin: 0;
   padding: 20rpx 0;
@@ -220,12 +292,10 @@
   color: var(--text-secondary);
 }
 
-/* 已收藏态 */
 .bottom-bar-btn.is-favorited .bottom-bar-icon {
   color: var(--color-favorite);
 }
 
-/* 收藏动画 */
 @keyframes heartBeat {
   0%   { transform: scale(1); }
   30%  { transform: scale(1.25); }
@@ -237,14 +307,8 @@
   animation: heartBeat 0.3s ease-out;
 }
 
-/* 暗色模式 */
 @media (prefers-color-scheme: dark) {
   .bottom-bar-btn.is-favorited .bottom-bar-icon {
     color: var(--color-favorite-active);
   }
-}
-
-/* scroll-view 底部留白，避免被操作栏遮挡 */
-.content {
-  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }
