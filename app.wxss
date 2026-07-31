@@ -24,13 +24,13 @@ page {
     color: #FFFFFF !important;
   }
   .summary-p {
-    color: #D4D4D4 !important;
+    color: #A8A8A8 !important;
   }
   .card-meta {
     color: #999999 !important;
   }
   .swipe-hint {
-    color: #666666 !important;
+    color: #999999 !important;
   }
   .category-tag {
     background-color: #1C1C1E !important;

@@ -147,9 +147,9 @@
 
 .summary-p {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: calc(32rpx * var(--font-scale));
+  font-size: calc(30rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: calc(1.9 * var(--font-scale));
+  line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
   letter-spacing: 1rpx;
 }
@@ -165,13 +165,13 @@
 
 .swipe-hint {
   text-align: center;
-  padding: 32rpx 0 80rpx;
-  font-size: calc(22rpx * var(--font-scale));
+  padding: 24rpx 0 72rpx;
+  font-size: 18rpx;
   color: var(--text-secondary);
   flex-shrink: 0;
   letter-spacing: 4rpx;
   font-weight: 300;
-  opacity: 0.6;
+  opacity: 0.45;
 }
 
 /* ============ 导航指示点 ============ */
