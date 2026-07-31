@@ -98,11 +98,23 @@ Page({
     var that = this
     wx.showLoading({ title: '加载中...', mask: true })
 
+    // UX-BUG09: 检测首页透传数据 — 有则走快速通道，零网络请求
+    var app = getApp()
+    var ctx = app.globalData.detailContext
+    var preloadedList = null
+    var preloadedCategory = null
+    if (ctx && ctx.list && ctx.list.length > 0 && ctx.category === entryCategory) {
+      preloadedList = ctx.list
+      preloadedCategory = ctx.category
+    }
+
     var engine = new ReadingEngine({
       entryCategory: entryCategory,
       entryIndex: entryIndex,
       entryNewsId: newsId,
       cache: _cache,  // B-06: 注入 localCache 实例
+      preloadedList: preloadedList,        // UX-BUG09: 透传数据
+      preloadedCategory: preloadedCategory, // UX-BUG09: 透传分类
       onProgress: function (info) {
         // 进度回调（引擎 init 完成时触发）
         that.setData({
@@ -234,7 +246,8 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * 上滑 → 下一条（可能跨分类）
+   * UX-BUG11: 上滑 → 下一条（连续滑动动画，消除 220ms 停顿）
+   * 策略：预加载 + 一次性动画（out→in 连续，不等网络）
    */
   _swipeToNext: function () {
     var that = this
@@ -268,9 +281,14 @@ Page({
       animClass: 'out-up',
     })
 
-    // 加载内容
+    // UX-BUG11: 不等待 220ms — 在 out 动画期间预加载内容
+    // out-up 动画时长 ~350ms（CSS transition 0.35s），内容加载并行
+    var contentPromise = that._engine.loadCurrentDetail()
+
+    // 等 out 动画过半（~180ms）后开始 in 动画
     setTimeout(function () {
-      that._engine.loadCurrentDetail().then(function () {
+      contentPromise.then(function () {
+        // 内容就绪 → 立即切入 in 动画
         that.setData({ animClass: 'in-up' })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
@@ -281,11 +299,11 @@ Page({
         that._animating = false
         that._showNetworkToast()
       })
-    }, 220)
+    }, 180)
   },
 
   /**
-   * 下滑 → 上一条（可能跨分类）
+   * UX-BUG11: 下滑 → 上一条（连续滑动动画）
    */
   _swipeToPrev: function () {
     var that = this
@@ -317,8 +335,10 @@ Page({
       animClass: 'out-down',
     })
 
+    var contentPromise = that._engine.loadCurrentDetail()
+
     setTimeout(function () {
-      that._engine.loadCurrentDetail().then(function () {
+      contentPromise.then(function () {
         that.setData({ animClass: 'in-down' })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
@@ -329,7 +349,7 @@ Page({
         that._animating = false
         that._showNetworkToast()
       })
-    }, 220)
+    }, 180)
   },
 
   // ============ 跨分类视觉 ============
@@ -480,33 +500,6 @@ Page({
    */
   _getDefaultPlaceholder: function (category, isDark) {
     return ''
-  },
-
-  // UX-BUG06: 打开原文链接 — 因新闻源域名随机，无法预设 WebView 白名单
-  // 改用 wx.showModal 预览 + 剪贴板复制（用户明确确认后再复制）
-  openSourceUrl: function () {
-    var url = this.data.news.sourceUrl
-    if (!url) return
-
-    var that = this
-    var displayUrl = url.length > 60 ? url.substring(0, 60) + '...' : url
-
-    wx.showModal({
-      title: '查看原文',
-      content: displayUrl + '\n\n原文链接将在浏览器中打开',
-      confirmText: '复制链接',
-      cancelText: '取消',
-      success: function (res) {
-        if (res.confirm) {
-          wx.setClipboardData({
-            data: url,
-            success: function () {
-              wx.showToast({ title: '已复制，请在浏览器粘贴打开', icon: 'none', duration: 2000 })
-            },
-          })
-        }
-      },
-    })
   },
 
   // ============ 收藏（B-04：迁移到 localCache） ============

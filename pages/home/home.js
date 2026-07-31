@@ -47,6 +47,8 @@ Page({
     this.loadNews()
     // 侧边栏也加载一份数据（全部新闻）
     this.loadPanelNews()
+    // UX-BUG13: 并行预加载所有分类到 _panelCache，消除首次切换 ~1s 等待
+    this._preloadAllCategories()
     // 同步字体档位（由 app._initFontScale 初始化）
     this._syncFontScale()
   },
@@ -190,6 +192,28 @@ Page({
     } catch (err) {
       wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
     }
+  },
+
+  /**
+   * UX-BUG13: 预加载所有分类到 _panelCache
+   * onLoad 时并行发起，切换分类时零等待
+   */
+  _preloadAllCategories: function () {
+    var that = this
+    // 获取除「收藏」外的所有分类 ID
+    var catIds = CATEGORIES.map(function (c) { return c.id })
+    // 'all' 已经在 loadPanelNews 中加载，跳过
+    // 并行请求其余分类
+    catIds.forEach(function (cat) {
+      if (cat === 'all') return  // 已加载
+      getNewsList({ category: cat, pageSize: PAGE_SIZE }).then(function (res) {
+        var list = res.list || []
+        var mapped = list.map(function (item, i) { return Object.assign({}, item, { _originalIndex: i }) })
+        that._panelCache[cat] = mapped
+      }).catch(function () {
+        // 预加载失败静默降级，首次切换时走正常加载流程
+      })
+    })
   },
 
   // 下拉刷新
@@ -557,6 +581,37 @@ Page({
     } finally {
       this.setData({ loadingMore: false })
     }
+  },
+
+  // ============ 导航指示点点击（UX-IMPROVE06） ============
+
+  /**
+   * 点击右侧导航点，跳转到对应卡片
+   */
+  onNavDotTap(e) {
+    if (this._isAnimating) return
+    var targetIndex = e.currentTarget.dataset.index
+    if (targetIndex === undefined) return
+    var idx = parseInt(targetIndex)
+    if (isNaN(idx) || idx < 0 || idx >= this.data.newsList.length) return
+    if (idx === this.data.currentIndex) return
+
+    this._isAnimating = true
+    // 判断方向：目标在下方（上滑切换）还是上方（下滑切换）
+    if (idx > this.data.currentIndex) {
+      this._animateSwipeNext()
+    } else {
+      this._animateSwipePrev()
+    }
+
+    // 由于 _animateSwipeNext/Prev 只移动一步，需要链式跳转
+    // 改用直接渲染到目标位置
+    var that = this
+    this.renderCards(this.data.newsList, idx)
+    // 给 WXS 层一个短延迟让它感知到渲染变化
+    setTimeout(function () {
+      that._isAnimating = false
+    }, 50)
   },
 
   // ============ 卡片点击 ============
