@@ -67,15 +67,19 @@
   padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }
 
-/* 翻页动画容器 */
+/* 翻页动画容器 — 对标首页卡片逻辑 */
 .article {
   transition: transform 0.35s ease, opacity 0.35s ease;
   will-change: transform, opacity;
 }
+/* 上滑翻下一条：旧内容向上移出 */
 .article.out-up   { transform: translateY(-100%); opacity: 0; }
+/* 下滑翻上一条：旧内容向下移出 */
 .article.out-down { transform: translateY(100%);  opacity: 0; }
+/* 上滑翻下一条：新内容从下方滑入（+100%→0，由移除 class 触发 transition） */
 .article.in-up    { transform: translateY(100%);  opacity: 0; }
-.article.in-down  { transform: translateY(100%);  opacity: 0; }
+/* 下滑翻上一条：新内容从上方滑入（-100%→0） */
+.article.in-down  { transform: translateY(-100%); opacity: 0; }
 
 /*  边界提示 Chip + chip-action 已移除 */
 
