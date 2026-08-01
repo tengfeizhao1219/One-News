@@ -8,6 +8,29 @@
 
 ---
 
+## [2026-08-01] 🔄 TL：追加 B-16 新闻存储保留机制决策 | 会话：技术负责人（TL）
+
+### 做了什么
+- 用户指出 refreshNews 每次全量清除 news_cache → 历史新闻消失 → 收藏/分享不可靠
+- TL 核查代码确认：① `clearOldCache` 每轮 `.remove()` 全量清 news_cache ② 收藏仅存 `{id,title,category,source,addedAt}` 不存 content，回查依赖 getNewsDetail ③ 智谱每轮生成新 id，旧文档虽在 news 中但无保护
+- 产出 **B-16 决策方案**：`news` 集合新增 `isRetained` 标记 + 新增 `setNewsRetained` 云函数 + refreshNews 跳过保留文档 + 30 天自动清理非保留旧文档 + 收藏列表过期容错
+- 决策参数：保留 30 天（用户拍板），分享+收藏同套机制
+
+### 变更文件
+- `docs/03-技术方案/B-16-新闻存储保留机制-技术决策.md` — 新建
+- `TASK_BOARD.md` — TL 广播块新增 B-16 行
+- `COMMLOG.md` — 本记录
+
+### 🔴 下游要做什么
+- **后端开发（BE）**：① 新建 `cloudfunctions/setNewsRetained/`（标记/取消保留）② 改 `refreshNews/index.js` batchInsert 跳过保留文档 + 末尾追加 30 天清理
+- **前端开发（FE）**：① `detail.js` 收藏/分享时调 setNewsRetained ② `home.js` 收藏列表点击前校验存在性（过期提示）
+- B-16 无产品依赖，BE+FE 可并行认领执行
+
+### 有问题找谁
+- B-16 技术细节 → [技术负责人]
+
+---
+
 ## [2026-08-01] 🔄 TL：认领 B-09/B-12 并产出技术决策方案 | 会话：技术负责人（TL）
 
 ### 做了什么
