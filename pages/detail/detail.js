@@ -35,10 +35,6 @@ Page({
     showCrossingCategory: '',  // 进度指示中的分类名
     flashVisible: false,       // 闪烁条可见
     flashColor: '#007AFF',     // 闪烁条颜色
-    // 边界提示
-    boundaryVisible: false,
-    boundaryText: '',
-    boundaryAction: '',        // 'back' 表示可点击返回
     // 网络兜底
     networkToastVisible: false,
     // 收藏
@@ -225,9 +221,9 @@ Page({
         this._swipeToPrev()
       }
     } else if (dy < 0 && this.data.isLast) {
-      this._showBoundary('已经是最后一条 · ← 返回首页', 'back')
+      // 边界已移除
     } else if (dy > 0 && this.data.isFirst) {
-      this._showBoundary('已经是第一条 · 上滑返回', '')
+      // 边界已移除
     }
   },
 
@@ -257,9 +253,6 @@ Page({
     var result = that._engine.goNext()
     if (!result.canGo) {
       that._animating = false
-      if (result.reason === 'last') {
-        that._showBoundary('已经是最后一条 · ← 返回首页', 'back')
-      }
       return
     }
 
@@ -313,9 +306,6 @@ Page({
     var result = that._engine.goPrev()
     if (!result.canGo) {
       that._animating = false
-      if (result.reason === 'first') {
-        that._showBoundary('已经是第一条 · 上滑返回', '')
-      }
       return
     }
 
@@ -364,18 +354,6 @@ Page({
     setTimeout(function () {
       that.setData({ flashVisible: false })
     }, 200)
-  },
-
-  /**
-   * 边界提示 Chip（2s 自动消失）
-   */
-  _showBoundary: function (text, action) {
-    var that = this
-    this.setData({ boundaryVisible: true, boundaryText: text, boundaryAction: action || '' })
-    clearTimeout(this._boundaryTimer)
-    this._boundaryTimer = setTimeout(function () {
-      that.setData({ boundaryVisible: false })
-    }, 2000)
   },
 
   /**

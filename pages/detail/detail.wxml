@@ -8,11 +8,8 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
+  <!-- 顶部栏：进度指示 -->
   <view class="nav-bar">
-    <view class="nav-back" bindtap="goBack">
-      <text>← 返回</text>
-    </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
       <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
@@ -54,17 +51,12 @@
           </block>
         </view>
 
-        <!-- 底部返回 -->
-        <view class="back-bottom" bindtap="goBack">← 返回</view>
+        <!-- 底部返回已移除 -->
       </view>
     </view>
   </scroll-view>
 
-  <!-- 边界提示 Chip -->
-  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
-    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
-    <text wx:else>{{boundaryText}}</text>
-  </view>
+<!-- 边界提示已移除 -->
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
