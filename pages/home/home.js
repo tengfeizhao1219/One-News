@@ -219,13 +219,18 @@ Page({
   // 下拉刷新
   onPullDownRefresh() {
     this.loadNews().then(() => {
+      // BUG-20260801-007 修复：刷新后清空侧边栏缓存，下次打开重新拉取
+      this._panelCache = {}
       wx.stopPullDownRefresh()
     })
   },
 
   // 重试加载
   onRetry() {
-    this.loadNews()
+    this.loadNews().then(() => {
+      // BUG-20260801-007 修复：重试后清空侧边栏缓存
+      this._panelCache = {}
+    })
   },
 
   // 手动刷新新闻
@@ -258,6 +263,8 @@ Page({
     }
 
     await this.loadNews()
+    // BUG-20260801-007 修复：刷新后清空侧边栏缓存，下次打开重新拉取
+    this._panelCache = {}
     this.setData({ isRefreshing: false })
   },
 
@@ -413,10 +420,11 @@ Page({
     this._lastSwipeTime = Date.now()
 
     // 步骤2：动画完成后重建 cards（移除 transition，准备新的目标卡）
+    // BUG-20260801-009 修复：使用 this.data.newsList 最新值而非闭包快照
     const newIndex = currentIndex + 1
     setTimeout(() => {
       try {
-        this.renderCards(newsList, newIndex)
+        this.renderCards(this.data.newsList, newIndex)
       } catch (e) {
         console.error('renderCards failed', e)
       } finally {
@@ -454,9 +462,10 @@ Page({
     this._lastSwipeTime = Date.now()
 
     const newIndex = currentIndex - 1
+    // BUG-20260801-009 修复：使用 this.data.newsList 最新值而非闭包快照
     setTimeout(() => {
       try {
-        this.renderCards(newsList, newIndex)
+        this.renderCards(this.data.newsList, newIndex)
       } catch (e) {
         console.error('renderCards failed', e)
       } finally {

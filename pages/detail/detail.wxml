@@ -8,8 +8,11 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：进度指示 -->
+  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
   <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack">
+      <text>← 返回</text>
+    </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
       <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
@@ -25,8 +28,7 @@
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
-    show-scrollbar="{{false}}"
-    bindscroll="onContentScroll">
+    show-scrollbar="{{false}}">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
@@ -37,8 +39,13 @@
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
           <text>{{news.source}}</text>
-          <text wx:if="{{news.source && news.time}}">·</text>
-          <text>{{news.time}}</text>
+          <text wx:if="{{news.time}}">·</text>
+          <text wx:if="{{news.time}}">{{news.time}}</text>
+        </view>
+
+        <!-- 查看原文链接 -->
+        <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
+          <text>📎 查看原文</text>
         </view>
 
         <!-- 分隔线 -->
@@ -51,12 +58,23 @@
           </block>
         </view>
 
-        <!-- 底部返回已移除 -->
+        <!-- 底部返回 -->
+        <view class="back-bottom" bindtap="goBack">← 返回</view>
       </view>
     </view>
   </scroll-view>
 
-<!-- 边界提示已移除 -->
+  <!-- 上下翻页按钮 -->
+  <view class="pager-hint" wx:if="{{total > 1}}">
+    <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
+    <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
+  </view>
+
+  <!-- 边界提示 Chip -->
+  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
+    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
+    <text wx:else>{{boundaryText}}</text>
+  </view>
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
