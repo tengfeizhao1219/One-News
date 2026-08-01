@@ -8,6 +8,31 @@
 
 ---
 
+## [2026-08-01] 📘 发布 Git 推送操作手册 + 解决"角色无仓库"问题 | 会话：项目经理
+
+### 做了什么
+- **新建 `docs/00-规划/Git推送操作手册-各角色通用.md`**：涵盖 clone/pull/push 完整步骤、token 注入方式、路径速查表、故障排查
+- **根因说明**：其他角色反馈"没有 git 仓库"是因为每个 AI 会话是独立沙箱，`/root/one-news` 不一定存在于他们的会话里 → 解决方法是先 `git clone`（手册第一步）
+- **TASK_BOARD 规则区补充**：新增"新会话/新角色没有 git 仓库怎么办"的 clone 指引
+
+### 变更文件
+- `docs/00-规划/Git推送操作手册-各角色通用.md` — 新建
+- `TASK_BOARD.md` — 规则区补充 clone 指引
+
+### 🔑 给其他角色的 clone 命令（token 从 tdrive vault/github_pat 或 PM 处获取）
+```bash
+TOKEN="YOUR_GITHUB_TOKEN"   # 替换为实际 token
+git config --global "url.https://${TOKEN}:${TOKEN}@github.com/.insteadOf" "https://github.com/"
+cd /root && git clone https://github.com/tengfeizhao1219/One-News.git
+git config --global --unset "url.https://${TOKEN}:${TOKEN}@github.com/.insteadOf"
+```
+
+> ⚠️ **红线**：token 不要写进任何被 git 跟踪的文件。GitHub Push Protection 会拦截明文 token 的提交。
+
+> **下一条记录请追加在上方（时间倒序）**
+
+---
+
 ## [2026-08-01] 📋 Q-06.3 审核准备启动 + 上线检查清单 V4.1 更新 | 会话：项目经理
 
 ### 做了什么
