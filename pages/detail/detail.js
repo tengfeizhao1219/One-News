@@ -35,10 +35,6 @@ Page({
     showCrossingCategory: '',  // 进度指示中的分类名
     flashVisible: false,       // 闪烁条可见
     flashColor: '#007AFF',     // 闪烁条颜色
-    // 边界提示
-    boundaryVisible: false,
-    boundaryText: '',
-    boundaryAction: '',        // 'back' 表示可点击返回
     // 网络兜底
     networkToastVisible: false,
     // 收藏
@@ -225,9 +221,9 @@ Page({
         this._swipeToPrev()
       }
     } else if (dy < 0 && this.data.isLast) {
-      this._showBoundary('已经是最后一条 · ← 返回首页', 'back')
+      // 边界已移除
     } else if (dy > 0 && this.data.isFirst) {
-      this._showBoundary('已经是第一条 · 上滑返回', '')
+      // 边界已移除
     }
   },
 
@@ -246,8 +242,7 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * UX-BUG11: 上滑 → 下一条（连续滑动动画，消除 220ms 停顿）
-   * 策略：预加载 + 一次性动画（out→in 连续，不等网络）
+   * UX-BUG11: 上滑 → 下一条（对标首页卡片：out-up 移出 → 更新内容 → in-up 从下方滑入）
    */
   _swipeToNext: function () {
     var that = this
@@ -257,9 +252,6 @@ Page({
     var result = that._engine.goNext()
     if (!result.canGo) {
       that._animating = false
-      if (result.reason === 'last') {
-        that._showBoundary('已经是最后一条 · ← 返回首页', 'back')
-      }
       return
     }
 
@@ -281,15 +273,14 @@ Page({
       animClass: 'out-up',
     })
 
-    // UX-BUG11: 不等待 220ms — 在 out 动画期间预加载内容
-    // out-up 动画时长 ~350ms（CSS transition 0.35s），内容加载并行
+    // 在 out 动画期间预加载内容
     var contentPromise = that._engine.loadCurrentDetail()
 
-    // 等 out 动画过半（~180ms）后开始 in 动画
+    // out 动画 ~350ms，等它完成后再切入 in 动画
     setTimeout(function () {
       contentPromise.then(function () {
-        // 内容就绪 → 立即切入 in 动画
-        that.setData({ animClass: 'in-up' })
+        // 新内容就绪 → 先设 in-up（从下方 +100% 起始），然后立即清除触发 transition 滑入
+        that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
           that._animating = false
@@ -299,11 +290,11 @@ Page({
         that._animating = false
         that._showNetworkToast()
       })
-    }, 180)
+    }, 350)
   },
 
   /**
-   * UX-BUG11: 下滑 → 上一条（连续滑动动画）
+   * UX-BUG11: 下滑 → 上一条（对标首页卡片：out-down 移出 → 更新内容 → in-down 从上方滑入）
    */
   _swipeToPrev: function () {
     var that = this
@@ -313,9 +304,6 @@ Page({
     var result = that._engine.goPrev()
     if (!result.canGo) {
       that._animating = false
-      if (result.reason === 'first') {
-        that._showBoundary('已经是第一条 · 上滑返回', '')
-      }
       return
     }
 
@@ -339,7 +327,8 @@ Page({
 
     setTimeout(function () {
       contentPromise.then(function () {
-        that.setData({ animClass: 'in-down' })
+        // 新内容就绪 → 先设 in-down（从上方 -100% 起始），然后立即清除触发 transition 滑入
+        that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
           that._animating = false
@@ -349,7 +338,7 @@ Page({
         that._animating = false
         that._showNetworkToast()
       })
-    }, 180)
+    }, 350)
   },
 
   // ============ 跨分类视觉 ============
@@ -364,18 +353,6 @@ Page({
     setTimeout(function () {
       that.setData({ flashVisible: false })
     }, 200)
-  },
-
-  /**
-   * 边界提示 Chip（2s 自动消失）
-   */
-  _showBoundary: function (text, action) {
-    var that = this
-    this.setData({ boundaryVisible: true, boundaryText: text, boundaryAction: action || '' })
-    clearTimeout(this._boundaryTimer)
-    this._boundaryTimer = setTimeout(function () {
-      that.setData({ boundaryVisible: false })
-    }, 2000)
   },
 
   /**

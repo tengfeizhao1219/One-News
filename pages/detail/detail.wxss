@@ -12,17 +12,12 @@
 .nav-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16rpx 48rpx;
   flex-shrink: 0;
 }
 
-.nav-back {
-  font-size: calc(30rpx * var(--font-scale));  /* D-05#2: 参与字号缩放 */
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1rpx;
-}
+/*  nav-back 已移除 */
 
 .nav-position {
   display: flex;
@@ -72,42 +67,21 @@
   padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }
 
-/* 翻页动画容器 */
+/* 翻页动画容器 — 对标首页卡片逻辑 */
 .article {
   transition: transform 0.35s ease, opacity 0.35s ease;
   will-change: transform, opacity;
 }
+/* 上滑翻下一条：旧内容向上移出 */
 .article.out-up   { transform: translateY(-100%); opacity: 0; }
+/* 下滑翻上一条：旧内容向下移出 */
 .article.out-down { transform: translateY(100%);  opacity: 0; }
+/* 上滑翻下一条：新内容从下方滑入（+100%→0，由移除 class 触发 transition） */
 .article.in-up    { transform: translateY(100%);  opacity: 0; }
-.article.in-down  { transform: translateY(100%);  opacity: 0; }
+/* 下滑翻上一条：新内容从上方滑入（-100%→0） */
+.article.in-down  { transform: translateY(-100%); opacity: 0; }
 
-/* ============ 边界提示 Chip ============ */
-
-.boundary-chip {
-  position: fixed;
-  bottom: 180rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  font-size: calc(26rpx * var(--font-scale));
-  padding: 20rpx 36rpx;
-  border-radius: 28rpx;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.boundary-chip.show {
-  opacity: 1;
-}
-
-.chip-action {
-  text-decoration: underline;
-  pointer-events: auto;
-}
+/*  边界提示 Chip + chip-action 已移除 */
 
 /* ============ 网络兜底 Toast ============ */
 
@@ -175,14 +149,7 @@
   text-indent: 2em;
 }
 
-.back-bottom {
-  text-align: center;
-  padding: 80rpx 0 60rpx;
-  font-size: calc(24rpx * var(--font-scale));
-  color: var(--text-secondary);
-  letter-spacing: 1rpx;
-  opacity: 0.7;
-}
+/*  back-bottom 已移除 */
 
 /* ============ 底部操作栏（收藏 + 分享） ============ */
 
