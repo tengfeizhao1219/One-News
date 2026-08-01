@@ -134,6 +134,7 @@
 
 .card-summary {
   margin-bottom: 48rpx;
+  margin-top: 28rpx;
 }
 
 .summary-p {

@@ -49,9 +49,9 @@ page {
 /* 全局组件样式 */
 .category-tag {
   display: inline-block;
-  padding: 4rpx 18rpx;
+  padding: 3rpx 14rpx;
   border-radius: 18rpx;
-  font-size: 22rpx;
+  font-size: 18rpx;
   font-weight: 500;
   background-color: var(--tag-bg);
   color: var(--tag-text);
