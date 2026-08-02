@@ -92,6 +92,65 @@ git config --global --unset "url.https://${TOKEN}:${TOKEN}@github.com/.insteadOf
 
 ---
 
+## [2026-08-01] 🔄 TL：追加 B-16 新闻存储保留机制决策 | 会话：技术负责人（TL）
+
+### 做了什么
+- 用户指出 refreshNews 每次全量清除 news_cache → 历史新闻消失 → 收藏/分享不可靠
+- TL 核查代码确认：① `clearOldCache` 每轮 `.remove()` 全量清 news_cache ② 收藏仅存 `{id,title,category,source,addedAt}` 不存 content，回查依赖 getNewsDetail ③ 智谱每轮生成新 id，旧文档虽在 news 中但无保护
+- 产出 **B-16 决策方案**：`news` 集合新增 `isRetained` 标记 + 新增 `setNewsRetained` 云函数 + refreshNews 跳过保留文档 + 30 天自动清理非保留旧文档 + 收藏列表过期容错
+- 决策参数：保留 30 天（用户拍板），分享+收藏同套机制
+
+### 变更文件
+- `docs/03-技术方案/B-16-新闻存储保留机制-技术决策.md` — 新建
+- `TASK_BOARD.md` — TL 广播块新增 B-16 行
+- `COMMLOG.md` — 本记录
+
+### 🔴 下游要做什么
+- **后端开发（BE）**：① 新建 `cloudfunctions/setNewsRetained/`（标记/取消保留）② 改 `refreshNews/index.js` batchInsert 跳过保留文档 + 末尾追加 30 天清理
+- **前端开发（FE）**：① `detail.js` 收藏/分享时调 setNewsRetained ② `home.js` 收藏列表点击前校验存在性（过期提示）
+- B-16 无产品依赖，BE+FE 可并行认领执行
+
+### 有问题找谁
+- B-16 技术细节 → [技术负责人]
+
+---
+
+## [2026-08-01] 🔄 TL：认领 B-09/B-12 并产出技术决策方案 | 会话：技术负责人（TL）
+
+### 做了什么
+- `git clone` 最新 main，通读 CONTEXT / ROLE_CARDS / TASK_BOARD / COMMLOG + ADR-002 / API-Key规范 / 降级权威文档 + 实际云函数代码（getNewsList v4.2 / refreshNews v4.0 / zhipuSearch / getNewsDetail v4.2）
+- 认领 B-09、B-12（状态 📋→🔄，认领人=技术负责人）
+- 在 v4.2 现行架构下**重新解读**两项旧任务（原定义基于「天行/聚合仍在链中」，已过时），产出两份技术决策文档
+- 同步 TASK_BOARD：DEP-01 按简报标记 ✅ 但加 ⚠️ 核对项；B-09/B-12 🔄 + 决策文档指针；底部版本升 v4.5
+
+### 关键发现（事实，代码为证）
+1. **DEP-01 状态存疑**：简报称 2026-08-01 已完成，但 `refreshNews/config.json` 源码触发器仍为 `0 0 6/11/20`（每天 3 次），与 ADR-002「每小时 `0 * * * *`」要求不符。若云端确为每小时则仅源码未同步，若否则 DEP-01 触发器未达标。**需 PM 核对云端触发器 + news_cache 是否已灌入。**
+2. **🔴 分类覆盖缺口**：UI 侧边栏 7 分类（utils/constants.js），但 `zhipuSearch.CATEGORY_PROMPTS` 仅 5 个（recommend/tech/sports/international/life）。**农业、科学 2 分类永远无数据（永久空）**——简报「7 大分类」与实际不符。已纳入 B-09 决策 C，TL 批补 2 个 prompt。
+3. **文档债**：两处 `config.js` 注释仍写旧 v4.0 降级链（天行→聚合→内存→AI兜底），与 v4.2 代码冲突；`降级策略-L1-L5-权威文档` 亦过时。建议后续清理（非阻塞）。
+4. **死代码**：`config.errorCodes.API_RATE_LIMIT` 已定义但从未使用——B-12 将启用它。
+
+### 决策结论
+- **B-09**：数据源切换（百炼→智谱/DeepSeek）v4.x 已闭环，无需改代码；重建机制=refreshNews 定时+手动；🆕 补农业/科学 2 prompt（TL 已批）；聚合独立 tab 抛产品决策（TL 建议不引入）。→ `docs/03-技术方案/B-09-L3云库缓存重建-技术决策.md`
+- **B-12**：原「天行/聚合配额」已无意义（v4.2 移除），重写为**智谱/DeepSeek 配额保护** 6 项策略：① 分类间调用间隔 ② 429 识别 ③ 指数退避+jitter ④ DeepSeek 每日预算熔断 ⑤ 手动触发冷却 ⑥ 智谱调用量监控。→ `docs/03-技术方案/B-12-限流退避策略-技术决策.md`
+
+### 变更文件
+- `docs/03-技术方案/B-09-L3云库缓存重建-技术决策.md` — 新建（B-09 决策）
+- `docs/03-技术方案/B-12-限流退避策略-技术决策.md` — 新建（B-12 决策）
+- `TASK_BOARD.md` — v4.5：TL 广播块重写 + DEP-01 ✅(⚠️核对) + B-09/B-12 🔄 + 阻塞项更新 + 底部状态
+- `COMMLOG.md` — 本记录
+
+### 🔴 下游要做什么
+- **产品经理**：回复 B-09 决策 D 的两个问题（Q1 是否引入聚合 tab / Q2 农业科学是否保留供给），回复后 BE 可执行 B-09 §4。
+- **后端开发（BE）**：B-12 可直接认领执行（无产品依赖）；B-09 的「补 2 prompt + config 注释清理」可先行，聚合分支等 PM 回复。
+- **项目经理（PM）**：核对 DEP-01 云端触发器频率 + news_cache 灌入情况（回应 TL 的 ⚠️ 项）；据实更新看板。
+
+### 有问题找谁
+- B-09/B-12 技术细节 → [技术负责人]
+- 产品决策 Q1/Q2 → [产品经理]
+- DEP-01 云端核对 → [项目经理]（PM 无控制台权限则转 [技术负责人] 部署确认）
+
+---
+
 ## [2026-08-01] 📋 Q-06.3 审核准备启动 + 上线检查清单 V4.1 更新 | 会话：项目经理
 
 ### 做了什么
