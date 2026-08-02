@@ -407,3 +407,28 @@
 .state-retry:active {
   opacity: 0.7;
 }
+
+/* ============ 暗色模式兜底（修复 theme 变量偶发不生效）============ */
+@media (prefers-color-scheme: dark) {
+  .detail-title {
+    color: #FFFFFF;
+  }
+  .detail-meta,
+  .detail-meta text,
+  .source-link,
+  .nav-position,
+  .pager-btn,
+  .pager-btn text,
+  .bottom-bar-btn,
+  .bottom-bar-label,
+  .bottom-bar-icon,
+  .share-btn-reset {
+    color: #999999;
+  }
+  .text-p {
+    color: #A8A8A8;
+  }
+  .state-message {
+    color: #999999;
+  }
+}
