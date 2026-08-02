@@ -18,7 +18,12 @@
 - 判定：**owner 直连明确要求「禁止回退」，不作为缺陷推翻**。但按 D-02 §0「先标准后例外」，例外须显式登记，不能隐式存在。
 - 建议（待 owner 裁定）：① D-02 §6.4 增「例外登记表」录入本条（来源 `06bfa0b`）；② 折中 `calc(22rpx * min(var(--font-scale),1.15))`——最高只跟涨到 25rpx，守住版式又不完全冻结无障碍；③ 若坚持全冻结，则在 §6.4 注明「已知 WCAG 1.4.4 偏差，产品有意为之」。
 
-**2）沙箱推送阻塞修复（供其他角色复用）**
+**2）展示页已上线（owner 可直接点开）**
+- 🔗 **https://tengfeizhao1219.github.io/One-News/showcase/** —— GitHub Pages 已构建成功（HTTP 200 / 38KB）。
+- 位置调整：Pages 发布源是 `main:/docs`，故展示页由根目录 `showcase/` 移入 **`docs/showcase/index.html`**（`merge_docs.py` 只扫 `.md`，不会被卷进统一库；无 front matter/Liquid，Jekyll 原样发布）。
+- 同时在项目看板首页 `docs/index.html` 头部加了「🎨 设计语言展示页」入口按钮，避免必须记 URL。
+
+**3）沙箱推送阻塞修复（供其他角色复用）**
 - 根因：`/etc/resolv.conf` 被重置为腾讯云 DNS，不再走本地 dnsmasq → `github.com` 回落到污染 IP `198.18.0.14`；dnsmasq 进程虽在但未被使用。
 - 修复：直接写 `/etc/hosts` 绕过 DNS（`140.82.113.3 github.com` / `140.82.113.5 api.github.com`），并设 `git config --global http.version HTTP/1.1`。之后 `git fetch/push` 恢复正常。
 - 备注：期间 `gnutls_handshake() failed` 是 git 用 `libcurl-gnutls`（curl CLI 用 OpenSSL）叠加污染 IP 所致；hosts 修好后即消失。
