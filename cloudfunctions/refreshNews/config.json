@@ -1,19 +1,9 @@
 {
   "triggers": [
     {
-      "name": "morningRefresh",
+      "name": "hourlyRefresh",
       "type": "timer",
-      "config": "0 0 6 * * * *"
-    },
-    {
-      "name": "noonRefresh",
-      "type": "timer",
-      "config": "0 0 11 * * * *"
-    },
-    {
-      "name": "eveningRefresh",
-      "type": "timer",
-      "config": "0 0 20 * * * *"
+      "config": "0 0 * * * * *"
     }
   ]
 }

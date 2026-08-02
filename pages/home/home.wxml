@@ -1,16 +1,17 @@
 <!-- 首页 - 卡片流主视图 -->
 <wxs module="touch" src="./touch.wxs"></wxs>
 
-<view class="page" data-font-scale="{{fontScaleTier}}">
+<!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
+<view
+  class="page"
+  data-font-scale="{{fontScaleTier}}"
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
   <!-- 固定顶部栏：刷新（左侧）+ 设置（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
       <view class="top-bar-refresh" bindtap="onRefreshNews">
         <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
-      </view>
-      <view class="top-bar-settings" bindtap="onOpenSettings">
-        <text class="settings-icon">⚙</text>
       </view>
     </view>
   </view>
@@ -58,25 +59,27 @@
         <view class="card-body">
           <!-- 标题 -->
           <view class="card-title">{{item.title}}</view>
-          
+          <!-- 元信息（owner 直连：移至标题下方，与详情页布局一致） -->
+          <view class="card-meta">
+            <view class="category-tag">{{item.categoryName}}</view>
+            <text wx:if="{{item.source}}">{{item.source}}</text>
+            <text wx:if="{{item.source && item.time}}">·</text>
+            <text wx:if="{{item.time}}">{{item.time}}</text>
+          </view>
           <!-- 摘要 -->
           <view class="card-summary">
             <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
               <view class="summary-p">{{item}}</view>
             </block>
           </view>
-          
-          <!-- 元信息 -->
-          <view class="card-meta">
-            <view class="category-tag">{{item.categoryName}}</view>
-            <text>{{item.source}}</text>
-            <text wx:if="{{item.source && item.time}}"> - </text>
-            <text>{{item.time}}</text>
-          </view>
         </view>
 
         <!-- 底部提示 -->
-        <view class="swipe-hint">^ 上滑阅读下一条</view>
+        <!-- UX-FIX-F4: S2 图标化，提升可发现性（不恢复遮罩式引导） -->
+        <view class="swipe-hint">
+          <text class="swipe-hint-icon">⇅</text>
+          <text class="swipe-hint-text">上滑阅读下一条</text>
+        </view>
       </view>
     </block>
   </view>
@@ -90,6 +93,14 @@
       data-index="{{index}}"
       bindtap="onNavDotTap">
     </view>
+  </view>
+
+  <!-- BUG-20260802-006: 分类切换 0.5s 提示 -->
+  <view class="category-hint {{categoryHint ? 'show' : ''}}">{{categoryHint}}</view>
+
+  <!-- BUG-20260802-005: 设置按钮移至卡片右下角 3D 浮动层 -->
+  <view class="floating-settings {{showPanel || showFontPanel ? 'hidden' : ''}}" bindtap="onOpenSettings">
+    <text class="settings-icon">⚙</text>
   </view>
 
   <!-- 侧边栏遮罩（点击关闭） -->

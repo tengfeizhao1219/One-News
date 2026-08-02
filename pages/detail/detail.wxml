@@ -1,51 +1,65 @@
 <!-- 详情页 - 跨分类阅读模式 + 底部操作栏 -->
+<!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
 <view
   class="page"
   data-font-scale="{{fontScaleTier}}"
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};"
   bindtouchstart="onTouchStart"
   bindtouchend="onTouchEnd">
 
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
+  <!-- 骨架屏（加载中） -->
+  <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
+    <view class="sk-block sk-title"></view>
+    <view class="sk-block sk-line" style="width: 80%"></view>
+    <view class="sk-block sk-line" style="width: 65%"></view>
+    <view class="sk-block sk-line" style="width: 90%"></view>
+    <view class="sk-block sk-line" style="width: 50%"></view>
+  </view>
+
+  <!-- 错误 / 空状态 -->
+  <view class="state-container" wx:if="{{pageState === 'error' || pageState === 'empty'}}">
+    <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
+    <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
+    <view class="state-retry" bindtap="goBack">返回首页</view>
+  </view>
+
   <!-- 顶部栏：返回（左）+ 进度指示（右） -->
   <view class="nav-bar">
-    <view class="nav-back" bindtap="goBack">
-      <text>← 返回</text>
-    </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
       <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
     </view>
   </view>
 
-  <!-- 跨分类闪烁条 -->
-  <view wx:if="{{flashVisible}}" class="category-flash" style="background-color: {{flashColor}};"></view>
-
   <!-- 内容 -->
   <scroll-view
+    wx:if="{{pageState === 'ready'}}"
     class="content"
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
-    show-scrollbar="{{false}}">
+    show-scrollbar="{{false}}"
+    upper-threshold="10"
+    lower-threshold="50"
+    bindscroll="onContentScroll"
+    bindscrolltoupper="onScrollToUpper"
+    bindscrolltolower="onScrollToLower">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
         <!-- 标题 -->
-        <view class="detail-title">{{news.title}}</view>
+        <view class="detail-title {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
 
         <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
-          <text>{{news.source}}</text>
-          <text wx:if="{{news.time}}">·</text>
-          <text wx:if="{{news.time}}">{{news.time}}</text>
-        </view>
-
-        <!-- 查看原文链接 -->
-        <view class="detail-source-link" wx:if="{{news.sourceUrl}}" bindtap="openSourceUrl">
-          <text>📎 查看原文</text>
+          <text wx:if="{{news.source}}">{{news.source}}</text>
+          <text wx:if="{{news.source && news.time}}">·</text>
+          <text>{{news.time}}</text>
+          <text wx:if="{{news.sourceUrl}}" class="source-link" bindtap="openSourceUrl">原文↗</text>
         </view>
 
         <!-- 分隔线 -->
@@ -58,14 +72,13 @@
           </block>
         </view>
 
-        <!-- 底部返回 -->
-        <view class="back-bottom" bindtap="goBack">← 返回</view>
+        <!-- 底部返回已移除 -->
       </view>
     </view>
   </scroll-view>
 
   <!-- 上下翻页按钮 -->
-  <view class="pager-hint" wx:if="{{total > 1}}">
+  <view class="pager-hint" wx:if="{{pageState === 'ready' && total > 1}}">
     <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
     <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
   </view>
@@ -82,7 +95,7 @@
   </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->
-  <view class="detail-bottom-bar">
+  <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
       <text class="bottom-bar-icon">{{isFavorited ? '♥' : '♡'}}</text>
       <text class="bottom-bar-label">收藏</text>

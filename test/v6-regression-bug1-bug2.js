@@ -106,8 +106,15 @@ console.log('\n【静态】home.js 架构不变量')
   check('onWxsTouchEnd 整体被 try/catch 包裹', endTryCatch)
   const finallyCount = (js.match(/finally\s*\{\s*this\._isAnimating = false/g) || []).length
   check('动画 setTimeout 用 finally 重置 _isAnimating（3 处）', finallyCount === 3, 'finally 数=' + finallyCount)
-  const cpReset = (js.match(/currentPage: 1/g) || []).length
-  check('切换 / 加载分类均重置 currentPage（>=5 处）', cpReset >= 5, '出现 ' + cpReset + ' 次')
+  // BUG-20260802-004 后：切分类入口已收敛为 loadCategory -> loadNews，
+  // 原「currentPage: 1 出现 >=5 次」的计数启发式随之失效，改为直接校验各入口的不变量本身
+  function resetsCurrentPage(fnName) {
+    const m = js.match(new RegExp(fnName + '\\([^)]*\\)\\s*\\{[\\s\\S]*?\\n  \\},'))
+    return !!m && m[0].includes('currentPage: 1')
+  }
+  check('loadCategory 重置 currentPage', resetsCurrentPage('loadCategory'))
+  check('loadNews 重置 currentPage', resetsCurrentPage('async loadNews'))
+  check('refreshCurrentCategory 重置 currentPage', resetsCurrentPage('async refreshCurrentCategory'))
 }
 
 // ===== 静态检查：编码合规 =====

@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>一页 One-News · 设计语言 v2.0</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   Design Language v2.0 — Self-Documenting Style System
+   ═══════════════════════════════════════════════════ */
+
+/* ── Design Tokens (CSS Variables) ── */
+:root {
+  /* Color — Light Mode */
+  --bg-page: #F5F3F0;
+  --bg-card: #FAF9F7;
+  --text-primary: #1C1C1E;
+  --text-secondary: #A0A0A0;
+  --text-body: #5E5E60;
+  --divider: #E8E6E1;
+  --tag-bg: #EEECE8;
+  --tag-text: #7A7A7A;
+  --overlay: rgba(0, 0, 0, 0.25);
+
+  /* Accent / Flash Colors */
+  --flash-tech: #007AFF;
+  --flash-world: #5856D6;
+  --flash-sports: #FF9500;
+  --flash-life: #34C759;
+  --flash-finance: #FF3B30;
+  --flash-entertainment: #AF52DE;
+  --flash-science: #00C7BE;
+  --flash-health: #FF2D55;
+
+  /* Semantic */
+  --color-favorite: #FF3B30;
+  --color-warning: #F59E0B;
+  --bottom-bar-bg: rgba(250, 249, 247, 0.85);
+  --setting-panel-bg: rgba(250, 249, 247, 0.92);
+  --chip-bg: rgba(28, 28, 30, 0.85);
+  --chip-text: #FFFFFF;
+
+  /* Typography — Modular Scale (base 16rpx) */
+  --fs-hero: 52px;
+  --fs-h1: 36px;
+  --fs-h2: 32px;
+  --fs-h3: 28px;
+  --fs-h4: 24px;
+  --fs-body: 20px;
+  --fs-caption: 16px;
+  --fs-tiny: 12px;
+
+  /* Spacing — 8pt Grid */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* Motion */
+  --ease-fast: 150ms ease;
+  --ease-normal: 300ms ease;
+  --ease-slow: 400ms ease;
+  --ease-special: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 30px rgba(15, 23, 42, 0.12);
+
+  /* Layout */
+  --max-width: 1100px;
+}
+
+/* Dark Mode Override */
+[data-theme="dark"] {
+  --bg-page: #000000;
+  --bg-card: #0D0D0D;
+  --text-primary: #FFFFFF;
+  --text-secondary: #999999;
+  --text-body: #A8A8A8;
+  --divider: #1C1C1E;
+  --tag-bg: #1C1C1E;
+  --tag-text: #999999;
+  --overlay: rgba(0, 0, 0, 0.7);
+  --flash-tech: #60A5FA;
+  --flash-world: #818CF8;
+  --flash-sports: #FBBF24;
+  --flash-life: #34D399;
+  --flash-finance: #F87171;
+  --flash-entertainment: #C084FC;
+  --flash-science: #2DD4BF;
+  --flash-health: #FB7185;
+  --color-favorite: #FF453A;
+  --color-warning: #FBBF24;
+  --bottom-bar-bg: rgba(13, 13, 13, 0.9);
+  --setting-panel-bg: rgba(13, 13, 13, 0.92);
+  --chip-bg: rgba(255, 255, 255, 0.15);
+  --chip-text: #FFFFFF;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Reset & Base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+  line-height: 1.65;
+  transition: background var(--ease-normal), color var(--ease-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header ── */
+.site-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  color: #fff;
+  padding: var(--space-4) var(--space-4);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.header-inner h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.header-inner .sub {
+  font-size: 13px;
+  opacity: 0.75;
+}
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.theme-toggle {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  padding: 6px 16px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--ease-fast);
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.22); }
+.version-badge {
+  background: rgba(255,255,255,0.18);
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* ── Main Content ── */
+main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-3);
+}
+
+/* ── Section Cards ── */
+.section {
+  background: var(--bg-card);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-4);
+  margin-bottom: var(--space-3);
+  box-shadow: var(--shadow-sm);
+  transition: background var(--ease-normal), border-color var(--ease-normal), box-shadow var(--ease-normal);
+}
+.section:hover {
+  box-shadow: var(--shadow-md);
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 2px solid var(--divider);
+}
+.section-header .dot {
+  width: 4px;
+  height: 22px;
+  background: #2563eb;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.section-header h2 {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+}
+.section-header .tag {
+  margin-left: auto;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* ── Color Swatches ── */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+}
+.color-swatch {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--divider);
+}
+.color-swatch .preview {
+  height: 60px;
+  transition: transform var(--ease-fast);
+}
+.color-swatch:hover .preview { transform: scale(1.03); }
+.color-swatch .info {
+  padding: 8px 10px;
+  font-size: var(--fs-caption);
+  background: var(--bg-card);
+}
+.color-swatch .info .name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.color-swatch .info .hex {
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  color: var(--text-secondary);
+  font-size: var(--fs-tiny);
+}
+
+/* Dual-mode color pair */
+.color-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--divider);
+  margin-bottom: var(--space-2);
+}
+.color-pair .swatch-half {
+  padding: 16px 14px;
+  text-align: center;
+}
+.color-pair .swatch-half.light { background: #FAF9F7; color: #1C1C1E; }
+.color-pair .swatch-half.dark { background: #0D0D0D; color: #FFFFFF; }
+.color-pair .swatch-half .label {
+  font-size: var(--fs-tiny);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.6;
+  margin-bottom: 4px;
+}
+.color-pair .swatch-half .value {
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  font-size: var(--fs-caption);
+  font-weight: 600;
+}
+
+/* ── Typography Showcase ── */
+.type-scale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--divider);
+}
+.type-row:last-child { border-bottom: none; }
+.type-row .spec {
+  flex-shrink: 0;
+  min-width: 100px;
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.type-row .spec strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: var(--fs-body);
+}
+.type-row .sample {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.type-row .sample.fs-hero { font-size: var(--fs-hero); line-height: 1.25; }
+.type-row .sample.fs-h1 { font-size: var(--fs-h1); line-height: 1.3; }
+.type-row .sample.fs-h2 { font-size: var(--fs-h2); line-height: 1.35; }
+.type-row .sample.fs-h3 { font-size: var(--fs-h3); line-height: 1.4; }
+.type-row .sample.fs-h4 { font-size: var(--fs-h4); line-height: 1.45; }
+.type-row .sample.fs-body { font-size: var(--fs-body); line-height: 1.65; font-weight: 400; }
+.type-row .sample.fs-caption { font-size: var(--fs-caption); line-height: 1.5; font-weight: 400; color: var(--text-secondary); }
+
+/* ── Spacing Demo ── */
+.spacing-demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.spacing-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.spacing-row .label {
+  min-width: 70px;
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.spacing-row .bar {
+  height: 8px;
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  border-radius: var(--radius-sm);
+  transition: width var(--ease-special);
+}
+
+/* ── Component Previews ── */
+.component-demo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.component-card {
+  background: var(--bg-page);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  min-width: 200px;
+  flex: 1;
+}
+
+/* Button Styles */
+.btn-row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all var(--ease-fast);
+  font-size: var(--fs-caption);
+  padding: 8px 20px;
+  white-space: nowrap;
+}
+.btn-primary { background: #2563eb; color: #fff; }
+.btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-secondary { background: var(--tag-bg); color: var(--text-primary); }
+.btn-secondary:hover { background: var(--divider); }
+.btn-ghost { background: transparent; color: #2563eb; }
+.btn-ghost:hover { background: rgba(37, 99, 235, 0.08); }
+.btn-sm { padding: 4px 14px; font-size: var(--fs-tiny); border-radius: var(--radius-sm); }
+.btn-lg { padding: 12px 28px; font-size: var(--fs-body); }
+
+/* Tag / Chip */
+.tag-demo {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+  background: var(--tag-bg);
+  color: var(--tag-text);
+}
+.tag-demo.accent { background: rgba(0, 122, 255, 0.12); color: var(--flash-tech); }
+
+/* Card Preview */
+.card-preview {
+  background: var(--bg-card);
+  border: 1px solid var(--divider);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-sm);
+}
+.card-preview .card-title {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+.card-preview .card-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
+}
+.card-preview .card-summary {
+  font-size: var(--fs-body);
+  color: var(--text-body);
+  line-height: 1.8;
+}
+
+/* ── Radius Showcase ── */
+.radius-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+.radius-box {
+  width: 64px;
+  height: 64px;
+  background: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: var(--fs-tiny);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ── Motion Demo ── */
+.motion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.motion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: var(--tag-bg);
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  transition: all var(--ease-fast);
+  border: 1px solid transparent;
+}
+.motion-chip:hover {
+  border-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.motion-chip .ease-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: breathe 2s ease-in-out infinite;
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.5); opacity: 1; }
+}
+
+/* ── Dark Mode Preview ── */
+.dark-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+@media (max-width: 700px) {
+  .dark-preview { grid-template-columns: 1fr; }
+}
+.preview-phone {
+  border-radius: 28px;
+  padding: var(--space-3);
+  text-align: center;
+  border: 3px solid var(--divider);
+}
+.preview-phone.light-mode {
+  background: #F5F3F0;
+  color: #1C1C1E;
+}
+.preview-phone.dark-mode {
+  background: #000000;
+  color: #FFFFFF;
+}
+.preview-phone .phone-title {
+  font-size: var(--fs-h3);
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+.preview-phone .phone-meta {
+  font-size: var(--fs-caption);
+  opacity: 0.6;
+  margin-bottom: var(--space-2);
+}
+.preview-phone .phone-body {
+  font-size: var(--fs-caption);
+  line-height: 1.7;
+  opacity: 0.8;
+  text-align: left;
+}
+.preview-phone .phone-tag {
+  display: inline-block;
+  margin-top: var(--space-2);
+  padding: 3px 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-tiny);
+  font-weight: 500;
+}
+.preview-phone.light-mode .phone-tag {
+  background: #EEECE8;
+  color: #7A7A7A;
+}
+.preview-phone.dark-mode .phone-tag {
+  background: #1C1C1E;
+  color: #999999;
+}
+
+/* ── Token Table ── */
+.token-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-caption);
+}
+.token-table th {
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--tag-bg);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: var(--fs-tiny);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--divider);
+}
+.token-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--divider);
+  vertical-align: top;
+}
+.token-table code {
+  font-family: "SF Mono", "JetBrains Mono", "Menlo", monospace;
+  font-size: var(--fs-tiny);
+  background: var(--tag-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #2563eb;
+}
+.token-table tr:hover td {
+  background: rgba(37, 99, 235, 0.03);
+}
+
+/* ── Footer ── */
+.site-footer {
+  text-align: center;
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--fs-caption);
+  border-top: 1px solid var(--divider);
+  margin-top: var(--space-4);
+}
+.site-footer a {
+  color: #2563eb;
+  text-decoration: none;
+}
+.site-footer a:hover { text-decoration: underline; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  :root {
+    --fs-hero: 36px;
+    --fs-h1: 28px;
+    --fs-h2: 24px;
+  }
+  .section { padding: var(--space-3) var(--space-2); }
+  .color-grid { grid-template-columns: repeat(2, 1fr); }
+  .component-demo { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div>
+      <h1>🎨 一页 One-News · 设计语言</h1>
+      <span class="sub">Design Language System v2.0</span>
+    </div>
+    <div class="header-actions">
+      <span class="version-badge">v2.0</span>
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 暗色模式</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §1: 设计原则 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>设计原则</h2>
+      <span class="tag">Design Principles</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3);">
+      <div>
+        <strong style="font-size:var(--fs-h3);">少即是多</strong>
+        <p style="color:var(--text-body);margin-top:var(--space-1);">每一个像素的存在都必须有充分的理由。去掉一切装饰性UI元素，让新闻内容本身成为界面。</p>
+      </div>
+      <div>
+        <strong style="font-size:var(--fs-h3);">手势即导航</strong>
+        <p style="color:var(--text-body);margin-top:var(--space-1);">没有按钮的界面，全靠直觉手势驱动。上下滑动切换新闻，左滑打开列表。</p>
+      </div>
+      <div>
+        <strong style="font-size:var(--fs-h3);">呼吸感</strong>
+        <p style="color:var(--text-body);margin-top:var(--space-1);">大量留白、宽松行距，让阅读像呼吸一样自然。8pt 网格体系保证视觉节奏。</p>
+      </div>
+      <div>
+        <strong style="font-size:var(--fs-h3);">一致性</strong>
+        <p style="color:var(--text-body);margin-top:var(--space-1);">全页面统一字体、间距、配色体系。跨页面字号强制对齐，无意外偏差。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §2: 配色系统 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>配色系统</h2>
+      <span class="tag">Color System · theme.json</span>
+    </div>
+    <p style="color:var(--text-body);margin-bottom:var(--space-3);">
+      双模式配色（浅色/暗色），以 <code style="background:var(--tag-bg);padding:2px 6px;border-radius:4px;">theme.json</code> 为唯一真值源。使用 CSS 变量注入，全站统一引用。
+    </p>
+
+    <h3 style="font-size:var(--fs-h4);margin-bottom:var(--space-2);">背景 &amp; 文字层级</h3>
+    <div class="color-pair">
+      <div class="swatch-half light">
+        <div class="label">浅色模式</div>
+        <div class="value" style="margin-bottom:8px;">bg-page: #F5F3F0</div>
+        <div class="value" style="margin-bottom:8px;">bg-card: #FAF9F7</div>
+        <div class="value">text-primary: #1C1C1E</div>
+      </div>
+      <div class="swatch-half dark">
+        <div class="label">暗色模式</div>
+        <div class="value" style="margin-bottom:8px;">bg-page: #000000</div>
+        <div class="value" style="margin-bottom:8px;">bg-card: #0D0D0D</div>
+        <div class="value">text-primary: #FFFFFF</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:var(--fs-h4);margin:var(--space-3) 0 var(--space-2);">分类强调色（Flash Colors）</h3>
+    <div class="color-grid">
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-tech);"></div><div class="info"><div class="name">科技</div><div class="hex">#007AFF / #60A5FA</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-world);"></div><div class="info"><div class="name">国际</div><div class="hex">#5856D6 / #818CF8</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-sports);"></div><div class="info"><div class="name">体育</div><div class="hex">#FF9500 / #FBBF24</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-life);"></div><div class="info"><div class="name">生活</div><div class="hex">#34C759 / #34D399</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-finance);"></div><div class="info"><div class="name">财经</div><div class="hex">#FF3B30 / #F87171</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-entertainment);"></div><div class="info"><div class="name">娱乐</div><div class="hex">#AF52DE / #C084FC</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-science);"></div><div class="info"><div class="name">科学</div><div class="hex">#00C7BE / #2DD4BF</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--flash-health);"></div><div class="info"><div class="name">健康</div><div class="hex">#FF2D55 / #FB7185</div></div></div>
+    </div>
+
+    <h3 style="font-size:var(--fs-h4);margin:var(--space-3) 0 var(--space-2);">语义色彩</h3>
+    <div class="color-grid">
+      <div class="color-swatch"><div class="preview" style="background:var(--color-favorite);"></div><div class="info"><div class="name">收藏已选</div><div class="hex">#FF3B30 / #FF453A</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--color-warning);"></div><div class="info"><div class="name">警告</div><div class="hex">#F59E0B / #FBBF24</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--tag-bg);"></div><div class="info"><div class="name">标签背景</div><div class="hex">#EEECE8 / #1C1C1E</div></div></div>
+      <div class="color-swatch"><div class="preview" style="background:var(--divider);"></div><div class="info"><div class="name">分割线</div><div class="hex">#E8E6E1 / #1C1C1E</div></div></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §3: 字体层级 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>字体层级</h2>
+      <span class="tag">Typography · PingFang SC</span>
+    </div>
+    <p style="color:var(--text-body);margin-bottom:var(--space-3);">
+      全站统一 <strong>PingFang SC</strong>（无衬线）。采用模块化 7 级字号体系，跨页面强制对齐。支持 <code>--font-scale</code> 四档缩放。
+    </p>
+
+    <div class="type-scale">
+      <div class="type-row">
+        <div class="spec"><strong>Hero · 52rpx</strong>700 · 1.25</div>
+        <div class="sample fs-hero">首页卡片标题</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>H1 · 36rpx</strong>700 · 1.30</div>
+        <div class="sample fs-h1">二级页面标题</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>H2 · 32rpx</strong>700 · 1.35</div>
+        <div class="sample fs-h2">首页卡片摘要 / 侧边栏标题</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>H3 · 28rpx</strong>700 · 1.40</div>
+        <div class="sample fs-h3">区块标题 / 设置面板选项</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>H4 · 24rpx</strong>600 · 1.45</div>
+        <div class="sample fs-h4">底部操作栏 / 辅助标题</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>Body · 20rpx</strong>400 · 1.65</div>
+        <div class="sample fs-body">卡片元信息行（分类标签 · 来源 · 时间）— 跨页面统一</div>
+      </div>
+      <div class="type-row">
+        <div class="spec"><strong>Caption · 16rpx</strong>400 · 1.50</div>
+        <div class="sample fs-caption">分类标签文字 / 辅助说明 / 时间戳</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §4: 间距系统 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>间距系统</h2>
+      <span class="tag">Spacing · 8pt Grid</span>
+    </div>
+    <p style="color:var(--text-body);margin-bottom:var(--space-3);">
+      基于 <strong>8px 基础单位</strong> 的间距体系，所有间距均为 8 的整数倍，保证视觉节奏一致。
+    </p>
+
+    <div class="spacing-demo">
+      <div class="spacing-row"><span class="label">8px</span><div class="bar" style="width:8px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-1 · 图标间距、tight 内边距</span></div>
+      <div class="spacing-row"><span class="label">16px</span><div class="bar" style="width:16px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-2 · 组件内间距、标签 gap</span></div>
+      <div class="spacing-row"><span class="label">24px</span><div class="bar" style="width:24px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-3 · 卡片内边距、段落间距</span></div>
+      <div class="spacing-row"><span class="label">32px</span><div class="bar" style="width:32px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-4 · 卡片横向内边距</span></div>
+      <div class="spacing-row"><span class="label">48px</span><div class="bar" style="width:48px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-6 · 区块间距</span></div>
+      <div class="spacing-row"><span class="label">64px</span><div class="bar" style="width:64px;"></div><span style="font-size:var(--fs-caption);color:var(--text-secondary);">space-8 · 页面级大间距</span></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §5: 组件预览 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>组件预览</h2>
+      <span class="tag">Components</span>
+    </div>
+
+    <!-- Buttons -->
+    <h3 style="font-size:var(--fs-h4);margin-bottom:var(--space-2);">按钮</h3>
+    <div class="btn-row">
+      <button class="btn btn-primary">主要按钮</button>
+      <button class="btn btn-secondary">次要按钮</button>
+      <button class="btn btn-ghost">文字按钮</button>
+      <button class="btn btn-primary btn-sm">小号</button>
+      <button class="btn btn-primary btn-lg">大号</button>
+    </div>
+
+    <!-- Tags -->
+    <h3 style="font-size:var(--fs-h4);margin:var(--space-3) 0 var(--space-2);">标签 / 分类胶囊</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-3);">
+      <span class="tag-demo">默认标签</span>
+      <span class="tag-demo accent">科技</span>
+      <span class="tag-demo" style="background:rgba(88,86,214,0.12);color:var(--flash-world);">国际</span>
+      <span class="tag-demo" style="background:rgba(255,149,0,0.12);color:var(--flash-sports);">体育</span>
+      <span class="tag-demo" style="background:rgba(52,199,89,0.12);color:var(--flash-life);">生活</span>
+    </div>
+
+    <!-- Card -->
+    <h3 style="font-size:var(--fs-h4);margin:var(--space-3) 0 var(--space-2);">新闻卡片</h3>
+    <div class="card-preview">
+      <div class="card-title">中国航天员乘组完成第三次出舱活动</div>
+      <div class="card-meta">
+        <span class="tag-demo accent">科技</span>
+        <span>新华社</span>
+        <span>·</span>
+        <span>3小时前</span>
+      </div>
+      <div class="card-summary">
+        据中国载人航天工程办公室消息，神舟二十号航天员乘组圆满完成第三次出舱活动。在约7小时的出舱活动中，航天员完成了空间站外部设备安装、舱外管路巡检等多项任务，进一步验证了空间站长期运行保障能力。
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §6: 圆角 & 动效 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>圆角 &amp; 动效</h2>
+      <span class="tag">Radius &amp; Motion</span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);">
+      <!-- Radius -->
+      <div>
+        <h3 style="font-size:var(--fs-h4);margin-bottom:var(--space-2);">圆角体系</h3>
+        <div class="radius-row">
+          <div class="radius-box" style="border-radius:var(--radius-sm);">SM<br>6px</div>
+          <div class="radius-box" style="border-radius:var(--radius-md);">MD<br>10px</div>
+          <div class="radius-box" style="border-radius:var(--radius-lg);">LG<br>16px</div>
+          <div class="radius-box" style="border-radius:var(--radius-xl);">XL<br>24px</div>
+          <div class="radius-box" style="border-radius:var(--radius-pill);">Pill<br>999px</div>
+        </div>
+        <table class="token-table" style="margin-top:var(--space-2);">
+          <tr><th>Token</th><th>值</th><th>用途</th></tr>
+          <tr><td><code>--radius-sm</code></td><td>6px</td><td>按钮、输入框小圆角</td></tr>
+          <tr><td><code>--radius-md</code></td><td>10px</td><td>卡片、面板</td></tr>
+          <tr><td><code>--radius-lg</code></td><td>16px</td><td>大卡片、弹窗</td></tr>
+          <tr><td><code>--radius-xl</code></td><td>24px</td><td>半屏面板顶部</td></tr>
+          <tr><td><code>--radius-pill</code></td><td>999px</td><td>胶囊标签、chip</td></tr>
+        </table>
+      </div>
+
+      <!-- Motion -->
+      <div>
+        <h3 style="font-size:var(--fs-h4);margin-bottom:var(--space-2);">动效参数</h3>
+        <div class="motion-row">
+          <div class="motion-chip"><span class="ease-dot"></span> 快速 150ms</div>
+          <div class="motion-chip"><span class="ease-dot" style="animation-duration:3s;"></span> 标准 300ms</div>
+          <div class="motion-chip"><span class="ease-dot" style="animation-duration:4s;"></span> 慢速 400ms</div>
+          <div class="motion-chip"><span class="ease-dot" style="animation-duration:5s;background:#FF9500;"></span> 弹性 500ms</div>
+        </div>
+        <table class="token-table" style="margin-top:var(--space-2);">
+          <tr><th>Token</th><th>值</th><th>用途</th></tr>
+          <tr><td><code>--ease-fast</code></td><td>150ms ease</td><td>hover、点击反馈</td></tr>
+          <tr><td><code>--ease-normal</code></td><td>300ms ease</td><td>面板出入、淡入淡出</td></tr>
+          <tr><td><code>--ease-slow</code></td><td>400ms ease</td><td>卡片切换、遮罩</td></tr>
+          <tr><td><code>--ease-special</code></td><td>500ms cubic-bezier</td><td>收藏动效、弹性动画</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §7: 暗色模式对比 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>双模式对比</h2>
+      <span class="tag">Light ↔ Dark</span>
+    </div>
+    <p style="color:var(--text-body);margin-bottom:var(--space-3);">
+      所有组件均支持浅色/暗色双模式，通过 <code>theme.json</code> + CSS 变量自动切换，无需额外代码。
+    </p>
+
+    <div class="dark-preview">
+      <div class="preview-phone light-mode">
+        <div class="phone-title">新闻标题</div>
+        <div class="phone-meta"><span class="phone-tag">科技</span> 新华社 · 3小时前</div>
+        <div class="phone-body">
+          这是一段新闻摘要正文内容，展示浅色模式下的文字排版效果。行距舒适，阅读体验自然流畅。
+        </div>
+      </div>
+      <div class="preview-phone dark-mode">
+        <div class="phone-title">新闻标题</div>
+        <div class="phone-meta"><span class="phone-tag">科技</span> 新华社 · 3小时前</div>
+        <div class="phone-body">
+          这是一段新闻摘要正文内容，展示暗色模式下的文字排版效果。行距舒适，阅读体验自然流畅。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §8: 设计 Token 完整清单 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>设计 Token 完整清单</h2>
+      <span class="tag">Design Tokens Reference</span>
+    </div>
+
+    <table class="token-table">
+      <thead>
+        <tr><th>分类</th><th>Token</th><th>浅色值</th><th>暗色值</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="2" style="font-weight:700;">背景</td><td><code>--bg-page</code></td><td>#F5F3F0</td><td>#000000</td><td>页面底色</td></tr>
+        <tr><td><code>--bg-card</code></td><td>#FAF9F7</td><td>#0D0D0D</td><td>卡片背景</td></tr>
+        <tr><td rowspan="3" style="font-weight:700;">文字</td><td><code>--text-primary</code></td><td>#1C1C1E</td><td>#FFFFFF</td><td>标题、主文字</td></tr>
+        <tr><td><code>--text-secondary</code></td><td>#A0A0A0</td><td>#999999</td><td>辅助文字</td></tr>
+        <tr><td><code>--text-body</code></td><td>#5E5E60</td><td>#A8A8A8</td><td>正文</td></tr>
+        <tr><td rowspan="2" style="font-weight:700;">标签</td><td><code>--tag-bg</code></td><td>#EEECE8</td><td>#1C1C1E</td><td>分类标签背景</td></tr>
+        <tr><td><code>--tag-text</code></td><td>#7A7A7A</td><td>#999999</td><td>分类标签文字</td></tr>
+        <tr><td rowspan="2" style="font-weight:700;">语义</td><td><code>--color-favorite</code></td><td>#FF3B30</td><td>#FF453A</td><td>收藏激活</td></tr>
+        <tr><td><code>--color-warning</code></td><td>#F59E0B</td><td>#FBBF24</td><td>网络警告</td></tr>
+        <tr><td rowspan="2" style="font-weight:700;">面板</td><td><code>--bottom-bar-bg</code></td><td>rgba(250,249,247,0.85)</td><td>rgba(13,13,13,0.9)</td><td>底部栏毛玻璃</td></tr>
+        <tr><td><code>--setting-panel-bg</code></td><td>rgba(250,249,247,0.92)</td><td>rgba(13,13,13,0.92)</td><td>设置面板毛玻璃</td></tr>
+        <tr><td rowspan="2" style="font-weight:700;">其他</td><td><code>--divider</code></td><td>#E8E6E1</td><td>#1C1C1E</td><td>分割线</td></tr>
+        <tr><td><code>--overlay</code></td><td>rgba(0,0,0,0.25)</td><td>rgba(0,0,0,0.7)</td><td>遮罩层</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- §9: 跨页面一致性清单 -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="dot"></span>
+      <h2>跨页面一致性清单</h2>
+      <span class="tag">Cross-Page Alignment</span>
+    </div>
+
+    <table class="token-table">
+      <thead>
+        <tr><th>元素</th><th>卡片页</th><th>详情页</th><th>侧边栏</th><th>底部栏</th><th>设置面板</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>标题</strong></td>
+          <td>52rpx / 700</td>
+          <td>48rpx / 700</td>
+          <td>30rpx / 600</td>
+          <td>—</td>
+          <td>34rpx / 600</td>
+        </tr>
+        <tr>
+          <td><strong>元信息行</strong></td>
+          <td><span style="background:#34C759;color:#fff;padding:1px 6px;border-radius:4px;font-size:11px;">20rpx / 400</span></td>
+          <td><span style="background:#34C759;color:#fff;padding:1px 6px;border-radius:4px;font-size:11px;">20rpx / 400</span></td>
+          <td>—</td>
+          <td>24rpx / 400</td>
+          <td>28rpx / 400</td>
+        </tr>
+        <tr>
+          <td><strong>分类标签</strong></td>
+          <td>16rpx / 500</td>
+          <td>16rpx / 500</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>摘要/正文</strong></td>
+          <td>32rpx / 400</td>
+          <td>34rpx / 400</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td><strong>标签背景</strong></td>
+          <td><code>var(--tag-bg)</code></td>
+          <td><code>var(--tag-bg)</code></td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:var(--space-3);padding:var(--space-2) var(--space-3);background:rgba(52,199,89,0.08);border-radius:var(--radius-md);border-left:3px solid #34C759;">
+      <strong style="color:#16a34a;">✅ 绿色标记</strong>
+      <span style="color:var(--text-body);"> = 已统一。卡片页和详情页的标题(52rpx)、元信息(20rpx)、分类标签(16rpx)已强制对齐。</span>
+    </div>
+  </div>
+
+</main>
+
+<footer class="site-footer">
+  <p>
+    <strong>一页 One-News</strong> · 设计语言系统 v2.0 · 
+    由 UI Designer 维护 · 
+    <a href="index.html">← 返回项目看板</a>
+  </p>
+  <p style="margin-top:4px;opacity:0.7;">
+    唯一真值源：<code>theme.json</code> · 字体：PingFang SC · 间距：8pt Grid · 圆角：6/10/16/24/999px
+  </p>
+</footer>
+
+<script>
+/* Theme Toggle */
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  if (isDark) {
+    html.removeAttribute('data-theme');
+    btn.textContent = '🌙 暗色模式';
+  } else {
+    html.setAttribute('data-theme', 'dark');
+    btn.textContent = '☀️ 浅色模式';
+  }
+}
+
+/* Respect system preference on load */
+if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  document.getElementById('themeBtn').textContent = '☀️ 浅色模式';
+}
+</script>
+</body>
+</html>

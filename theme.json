@@ -3,13 +3,19 @@
     "--bg-page": "#F5F3F0",
     "--bg-card": "#FAF9F7",
     "--text-primary": "#1C1C1E",
-    "--text-secondary": "#A0A0A0",
+    "--text-secondary": "#6B6B70",
     "--text-body": "#5E5E60",
+    "--text-tertiary": "#8A8A8E",
+    "--text-link": "#576b95",
+    "--bg-subtle": "#F0EEEA",
     "--divider": "#E8E6E1",
     "--tag-bg": "#EEECE8",
     "--tag-text": "#7A7A7A",
     "--overlay": "rgba(0, 0, 0, 0.25)",
     "--font-scale": "1",
+    "--font-scale-meta": "1",
+    "--primary": "#007AFF",
+    "--primary-subtle": "rgba(0, 122, 255, 0.12)",
     "--color-favorite": "#FF3B30",
     "--color-favorite-active": "#FF3B30",
     "--color-warning": "#F59E0B",
@@ -21,7 +27,8 @@
     "--flash-tech": "#007AFF",
     "--flash-world": "#5856D6",
     "--flash-sports": "#FF9500",
-    "--flash-life": "#34C759"
+    "--flash-life": "#34C759",
+    "--flash-tech-bg": "rgba(0, 122, 255, 0.08)"
   },
   "dark": {
     "--bg-page": "#000000",
@@ -29,11 +36,17 @@
     "--text-primary": "#FFFFFF",
     "--text-secondary": "#999999",
     "--text-body": "#A8A8A8",
+    "--text-tertiary": "#666666",
+    "--text-link": "#7FA7D9",
+    "--bg-subtle": "#1A1A1C",
     "--divider": "#1C1C1E",
     "--tag-bg": "#1C1C1E",
     "--tag-text": "#999999",
     "--overlay": "rgba(0, 0, 0, 0.7)",
     "--font-scale": "1",
+    "--font-scale-meta": "1",
+    "--primary": "#0A84FF",
+    "--primary-subtle": "rgba(10, 132, 255, 0.18)",
     "--color-favorite": "#FF453A",
     "--color-favorite-active": "#FF453A",
     "--color-warning": "#FBBF24",
@@ -45,6 +58,7 @@
     "--flash-tech": "#60A5FA",
     "--flash-world": "#818CF8",
     "--flash-sports": "#FBBF24",
-    "--flash-life": "#34D399"
+    "--flash-life": "#34D399",
+    "--flash-tech-bg": "rgba(96, 165, 250, 0.12)"
   }
 }

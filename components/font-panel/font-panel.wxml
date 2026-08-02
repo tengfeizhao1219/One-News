@@ -40,7 +40,7 @@
   <view class="panel-divider"></view>
 
   <!-- 关于·反馈 -->
-  <view class="panel-footer">
+  <view class="panel-footer" bindtap="onFooterTap">
     <text class="footer-text">关于 · 反馈</text>
   </view>
 </view>

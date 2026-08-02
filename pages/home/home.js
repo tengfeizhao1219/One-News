@@ -29,11 +29,13 @@ Page({
     skeletonCount: 3,       // 骨架屏卡片数量
     isRefreshing: false,    // 手动刷新中
     currentPage: 1,         // 当前分页（用于边界加载更多）
-    loadingMore: false,     // 边界加载更多/刷新中
+    loadingMore: false,    // 边界加载更多/刷新中
+    categoryHint: '',      // BUG-20260802-006: 分类切换 0.5s 提示文案
     // 字体面板
     showFontPanel: false,   // 字体面板是否显示
     fontScaleTier: 0,       // 当前字体档位 0-3
     _fontScaleValue: 1,     // CSS --font-scale 数值（由 app 注入）
+    _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
   },
 
   // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
@@ -44,11 +46,8 @@ Page({
   _lastTouchData: null,
 
   onLoad() {
+    // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
     this.loadNews()
-    // 侧边栏也加载一份数据（全部新闻）
-    this.loadPanelNews()
-    // UX-BUG13: 并行预加载所有分类到 _panelCache，消除首次切换 ~1s 等待
-    this._preloadAllCategories()
     // 同步字体档位（由 app._initFontScale 初始化）
     this._syncFontScale()
   },
@@ -72,8 +71,14 @@ Page({
     var app = getApp()
     var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
     var val = (app && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1
-    if (tier !== this.data.fontScaleTier || val !== this.data._fontScaleValue) {
-      this.setData({ fontScaleTier: tier, _fontScaleValue: val })
+    // UX-FIX-F12: 元信息缩放上限 1.15，globalData 缺失时按 val 封顶兜底
+    var metaVal = (app && typeof app.globalData._metaScaleValue === 'number')
+      ? app.globalData._metaScaleValue
+      : (val > 1.15 ? 1.15 : val)
+    if (tier !== this.data.fontScaleTier ||
+        val !== this.data._fontScaleValue ||
+        metaVal !== this.data._metaScaleValue) {
+      this.setData({ fontScaleTier: tier, _fontScaleValue: val, _metaScaleValue: metaVal })
     }
   },
 
@@ -125,21 +130,68 @@ Page({
 
     // 场景 2: 分类变了，需要切换分类并加载数据
     if (category && category !== this.data.currentCategory) {
-      this.setData({ currentCategory: category, panelCategory: category })
-      getNewsList({ category: category }).then(function (res) {
-        var list = res.list || []
-        var idx = resolveIndex(list)
-        this.setData({ newsList: list, currentIndex: idx, currentPage: 1, loadingMore: false })
-        this.renderCards(list, idx)
-      }.bind(this)).catch(function () {
-        // 加载失败，保持当前状态
-      })
+      this.loadCategory(category, resolveIndex)
     }
+  },
+
+  /**
+   * BUG-20260802-004: 切换分类的唯一入口
+   * 只发一次 getNewsList → 写入唯一数据源 newsList → 卡片与侧栏同时由它派生，
+   * 杜绝原先 loadNews / loadPanelNews 双请求 + _panelCache 造成的数据分叉
+   * @param {string} cat 目标分类 id
+   * @param {function} [resolveIndex] 可选，从列表解析初始定位下标
+   */
+  loadCategory(cat, resolveIndex) {
+    this.setData({ currentCategory: cat, panelCategory: cat, currentIndex: 0, currentPage: 1 })
+    return this.loadNews(resolveIndex)
+  },
+
+  /**
+   * BUG-20260802-004: 侧栏列表由唯一数据源 newsList 派生（替代已删除的 loadPanelNews/_panelCache）
+   * _originalIndex 取自 newsList 下标，保证侧栏点击与「正在阅读」高亮都能对齐卡片
+   */
+  _syncPanelList(list, index) {
+    const src = Array.isArray(list) ? list : (this.data.newsList || [])
+    const cat = this.data.currentCategory
+    const mapped = src.map(function (item, i) {
+      return Object.assign({}, item, { _originalIndex: i })
+    })
+    // newsList 已按 currentCategory 拉取，'all' 不过滤，其余按 category 过滤（同源保证）
+    const filtered = (!cat || cat === 'all')
+      ? mapped
+      : mapped.filter(function (it) { return it.category === cat })
+    this.setData({
+      filteredNewsList: filtered,
+      panelCurrentIndex: typeof index === 'number' ? index : this.data.currentIndex,
+    })
+  },
+
+  /**
+   * BUG-20260802-006: 分类切换 ~0.5s 分类名提示
+   * 在卡片页可见区域中央短暂展示分类名（面板关闭后/选中卡片时触发）
+   */
+  _showCategoryHint: function (catId) {
+    if (!catId) return
+    var name = ''
+    var cats = this.data.categories
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i].id === catId) { name = cats[i].name; break }
+    }
+    if (!name) return
+    var that = this
+    // BUG-20260802-006: 「刷新中…」「加载更多…」用的是 wx.showToast 原生浮层，
+    // 它盖在所有页面视图之上，不受 z-index 影响，必须先关掉才能看到分类提示
+    try { wx.hideToast() } catch (e) {}
+    clearTimeout(this._categoryHintTimer)
+    this.setData({ categoryHint: name })
+    this._categoryHintTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ categoryHint: '' })
+    }, 500)
   },
 
   // ============ 数据加载 ============
 
-  async loadNews() {
+  async loadNews(resolveIndex) {
     try {
       this.setData({ pageState: 'loading', errorMessage: '' })
 
@@ -148,89 +200,33 @@ Page({
 
       if (list.length === 0) {
         this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试' })
+        this._syncPanelList([], 0)
         return
       }
 
-      this.setData({ newsList: list, pageState: 'ready', currentPage: 1 })
-      this.renderCards(list)
+      // resolveIndex 由详情页返回定位使用；未传则沿用当前位置（renderCards 内会做边界钳制）
+      const idx = typeof resolveIndex === 'function' ? resolveIndex(list) : undefined
+      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false })
+      this.renderCards(list, idx)
+      // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
+      this._syncPanelList(list)
     } catch (err) {
       const msg = handleApiError(err.errorCode, err.message)
       this.setData({ pageState: 'error', errorMessage: msg })
     }
   },
 
-  // UX-BUG03: 侧边栏分类数据内存缓存
-  _panelCache: {},
-
-  // 侧边栏数据加载（全部新闻，独立于首页分类）—— 带缓存
-  async loadPanelNews(category) {
-    const cat = category || 'all'
-    var that = this
-
-    // UX-BUG03: 优先读取内存缓存，命中则跳过云函数调用
-    if (this._panelCache[cat]) {
-      this.setData({
-        filteredNewsList: this._panelCache[cat],
-        panelCategory: cat
-      })
-      return
-    }
-
-    try {
-      // 侧边栏需要全部数据，不分页
-      const res = await getNewsList({ category: cat, pageSize: PAGE_SIZE })
-      const list = res.list || []
-      var mapped = list.map(function (item, i) { return Object.assign({}, item, { _originalIndex: i }) })
-
-      // UX-BUG03: 写入缓存
-      that._panelCache[cat] = mapped
-
-      this.setData({
-        filteredNewsList: mapped,
-        panelCategory: cat
-      })
-    } catch (err) {
-      wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
-    }
-  },
-
-  /**
-   * UX-BUG13: 预加载所有分类到 _panelCache
-   * onLoad 时并行发起，切换分类时零等待
-   */
-  _preloadAllCategories: function () {
-    var that = this
-    // 获取除「收藏」外的所有分类 ID
-    var catIds = CATEGORIES.map(function (c) { return c.id })
-    // 'all' 已经在 loadPanelNews 中加载，跳过
-    // 并行请求其余分类
-    catIds.forEach(function (cat) {
-      if (cat === 'all') return  // 已加载
-      getNewsList({ category: cat, pageSize: PAGE_SIZE }).then(function (res) {
-        var list = res.list || []
-        var mapped = list.map(function (item, i) { return Object.assign({}, item, { _originalIndex: i }) })
-        that._panelCache[cat] = mapped
-      }).catch(function () {
-        // 预加载失败静默降级，首次切换时走正常加载流程
-      })
-    })
-  },
-
-  // 下拉刷新
+  // 下拉刷新（UX-FIX-F2：与顶栏「R」语义对齐，都走强制云刷新；
+  // FE-C1 后 onRefreshNews 已统一数据源（loadCategory/loadNews → _syncPanelList），无需再清侧栏缓存）
   onPullDownRefresh() {
-    this.loadNews().then(() => {
-      // BUG-20260801-007 修复：刷新后清空侧边栏缓存，下次打开重新拉取
-      this._panelCache = {}
+    this.onRefreshNews().finally(() => {
       wx.stopPullDownRefresh()
     })
   },
 
   // 重试加载
   onRetry() {
-    this.loadNews().then(() => {
-      // BUG-20260801-007 修复：重试后清空侧边栏缓存
-      this._panelCache = {}
-    })
+    this.loadNews()
   },
 
   // 手动刷新新闻
@@ -263,8 +259,6 @@ Page({
     }
 
     await this.loadNews()
-    // BUG-20260801-007 修复：刷新后清空侧边栏缓存，下次打开重新拉取
-    this._panelCache = {}
     this.setData({ isRefreshing: false })
   },
 
@@ -563,6 +557,8 @@ Page({
       const merged = newsList.concat(newItems)
       this.setData({ newsList: merged, currentPage: currentPage + 1, currentIndex: oldLen })
       this.renderCards(merged, oldLen)
+      // BUG-20260802-004: 新增页也要进侧栏，否则又出现卡片有、侧栏没有
+      this._syncPanelList(merged, oldLen)
       setTimeout(() => {
         wx.showToast({ title: '已加载 ' + newItems.length + ' 条', icon: 'none' })
       }, 400)
@@ -585,6 +581,8 @@ Page({
       const list = res.list || []
       this.setData({ newsList: list, currentPage: 1, currentIndex: 0 })
       this.renderCards(list, 0)
+      // BUG-20260802-004: 刷新后侧栏随卡片一起更新
+      this._syncPanelList(list, 0)
     } catch (err) {
       wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
     } finally {
@@ -650,13 +648,10 @@ Page({
 
   closePanel() {
     const { panelCategory, currentCategory } = this.data
-    if (panelCategory !== currentCategory) {
-      this.setData({ currentCategory: panelCategory })
-      getNewsList({ category: panelCategory }).then(res => {
-        const list = res.list || []
-        this.setData({ newsList: list, currentIndex: 0, currentPage: 1, loadingMore: false })
-        this.renderCards(list)
-      })
+    // BUG-20260802-004: 分类已在 onCategoryChange 统一切换，此处仅兜底（收藏 Tab 不参与切分类）
+    if (panelCategory !== currentCategory && panelCategory !== '__favorites__') {
+      this._showCategoryHint(panelCategory) // BUG-20260802-006: 实际切分类时提示
+      this.loadCategory(panelCategory)
     }
     this.setData({ showPanel: false })
   },
@@ -665,13 +660,20 @@ Page({
     var cat = e.currentTarget.dataset.cat
     // UX-BUG03: 立即切换高亮，不等待数据（消除 ~1s 滞后感）
     this.setData({ panelCategory: cat })
+    this._showCategoryHint(cat) // BUG-20260802-006: 切分类 0.5s 提示
 
     // B-04: 收藏 Tab 特殊处理（同步读取，无网络延迟）
     if (cat === '__favorites__') {
       this._loadFavorites()
       return
     }
-    this.loadPanelNews(cat)
+
+    // BUG-20260802-004: 侧栏与卡片同源 —— 切分类即切唯一数据源 newsList，侧栏由它派生
+    if (cat === this.data.currentCategory) {
+      this._syncPanelList()
+      return
+    }
+    this.loadCategory(cat)
   },
 
   /**
@@ -719,32 +721,14 @@ Page({
       return
     }
 
-    // 标准分类列表项点击（UX-BUG08: 直接跳转到对应新闻的详情页）
-    const { filteredNewsList } = this.data
-    if (idx === undefined || idx >= filteredNewsList.length) return
+    // 标准分类列表项点击
+    // BUG-20260802-003: 选中对应卡片（不再跳转详情页，用户澄清「侧栏标题→跳首页卡片页」）
+    // BUG-20260802-004: 侧栏与卡片同源，data-index 即 _originalIndex，可直接作为 newsList 下标
+    const { newsList } = this.data
+    if (idx === undefined || idx < 0 || idx >= newsList.length) return
 
-    const item = filteredNewsList[idx]
-    const cat = this.data.panelCategory
-    const newsId = item.id || item._id
-    if (!newsId) return
-
-    // 先关闭面板
-    this.setData({ showPanel: false })
-
-    // 设置详情页上下文
-    if (cat !== this.data.currentCategory) {
-      this.setData({ currentCategory: cat })
-      app.globalData.detailContext = { category: cat, list: [] }
-    } else {
-      app.globalData.detailContext = { category: cat, list: this.data.newsList }
-    }
-
-    // 跳转详情页
-    var url = '/pages/detail/detail?id=' + newsId + '&index=' + idx + '&category=' + cat
-    wx.navigateTo({
-      url: url,
-      fail: function (err) { console.error('[home] navigateTo panel fail:', err) }
-    })
+    this.setData({ showPanel: false, currentIndex: idx })
+    this.renderCards(newsList, idx)
   },
 
   // ============ 搜索 ============
