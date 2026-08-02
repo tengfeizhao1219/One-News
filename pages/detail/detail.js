@@ -242,7 +242,7 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * UX-BUG11: 上滑 → 下一条（对标首页卡片：out-up 移出 → 更新内容 → in-up 从下方滑入）
+   * UX-BUG11: 上滑 → 下一条（out-up 移出 → 更新内容 → in-down 从上往下滑入）
    */
   _swipeToNext: function () {
     var that = this
@@ -279,8 +279,8 @@ Page({
     // out 动画 ~350ms，等它完成后再切入 in 动画
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-up（从下方 +100% 起始），然后立即清除触发 transition 滑入
-        that.setData({ animClass: 'in-up', scrollTop: 0 })
+        // 新内容就绪 → 先设 in-down（从上方 -100% 起始），然后立即清除触发 transition 滑入（下一页：从上往下滑入）
+        that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
           that._animating = false
@@ -294,7 +294,7 @@ Page({
   },
 
   /**
-   * UX-BUG11: 下滑 → 上一条（对标首页卡片：out-down 移出 → 更新内容 → in-down 从上方滑入）
+   * UX-BUG11: 下滑 → 上一条（对标首页卡片：out-down 移出 → 更新内容 → in-up 从下方滑入）
    */
   _swipeToPrev: function () {
     var that = this
@@ -327,8 +327,8 @@ Page({
 
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-down（从上方 -100% 起始），然后立即清除触发 transition 滑入
-        that.setData({ animClass: 'in-down', scrollTop: 0 })
+        // 新内容就绪 → 先设 in-up（从下方 +100% 起始），然后立即清除触发 transition 滑入（上一条：从下往上滑入）
+        that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '', showCrossingCategory: '' })
           that._animating = false
