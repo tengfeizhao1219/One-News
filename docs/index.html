@@ -39,6 +39,14 @@ main{max-width:1160px;margin:0 auto;padding:20px 22px 50px}
 .tab-content{display:none}
 .tab-content.active{display:block}
 
+/* ── 设计语言展示页入口（UX-B6） ── */
+.ds-entry{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font-size:12px;font-weight:600;text-decoration:none;line-height:1.4;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease}
+.ds-entry:hover{background:var(--brand);border-color:var(--brand);color:#fff;transform:translateY(-1px)}
+.ds-entry:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
 /* ── Cards ── */
 .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);margin-bottom:16px}
 .card h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:12px}
@@ -129,6 +137,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <button onclick="refresh()">🔄 立即刷新</button>
     <span><span class="dot live"></span>自动刷新 <b id="autoState">开（60s）</b></span>
     <span id="lastUpd">加载中…</span>
+    <a class="ds-entry" href="./showcase/">🎨 设计语言展示页</a>
     <span style="margin-left:auto;opacity:.55;font-size:11px">v3.1 · 修复解析器 + 上下串行</span>
   </div>
 </header>
