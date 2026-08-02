@@ -9,9 +9,6 @@
       <view class="top-bar-refresh" bindtap="onRefreshNews">
         <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
       </view>
-      <view class="top-bar-settings" bindtap="onOpenSettings">
-        <text class="settings-icon">⚙</text>
-      </view>
     </view>
   </view>
 
@@ -70,7 +67,7 @@
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text wx:if="{{item.source}}">{{item.source}}</text>
-            <text wx:if="{{item.source && item.time}}"> - </text>
+            <text wx:if="{{item.source && item.time}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
         </view>
@@ -90,6 +87,14 @@
       data-index="{{index}}"
       bindtap="onNavDotTap">
     </view>
+  </view>
+
+  <!-- BUG-20260802-006: 分类切换 0.5s 提示 -->
+  <view class="category-hint {{categoryHint ? 'show' : ''}}">{{categoryHint}}</view>
+
+  <!-- BUG-20260802-005: 设置按钮移至卡片右下角 3D 浮动层 -->
+  <view class="floating-settings {{showPanel || showFontPanel ? 'hidden' : ''}}" bindtap="onOpenSettings">
+    <text class="settings-icon">⚙</text>
   </view>
 
   <!-- 侧边栏遮罩（点击关闭） -->
