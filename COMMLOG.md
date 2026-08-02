@@ -1916,3 +1916,29 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 - 🔴 #1 分享时序竞态建议阶段五联调时修复：将 Canvas 预生成提前到 onLoad 同步触发
 - 🟡 #2/#3 nav-back/nav-position 字号硬编码改 calc() 1 行 CSS 即可
 - 可以进入阶段五测试（1 阻断项不影响核心流程）
+
+---
+
+## [2026-08-02] GitHub DNS 污染修复方案（dnsmasq 一键脚本）广播 ✅ | 会话：[技术负责人(TL)]
+
+### 背景
+本工作区 GitHub DNS 被污染（github.com 解析到假 IP 198.18.0.x），直连 TLS 失败（SSL_ERROR_SYSCALL）。此前手动改 /etc/hosts 的方案存在 IP 漂移、bind mount 不可 sed -i 等问题。
+
+### 方案（实测验证可用）
+- **主方案**：dnsmasq 一键脚本 `setup_github_dns.py`（资料库 file_id: NknQtypGAetA）
+  - `apt-get update && apt-get install -y dnsmasq-base`
+  - `sudo python3 setup_github_dns.py`（自动探测真实 IP、启动本地 dnsmasq 强制重写 *.github.com、切本机 DNS 到 127.0.0.1、自验）
+  - 验证：getent github.com 返回真实 IP、curl https://github.com → 200、git ls-remote 成功
+- **兜底**：/etc/hosts 直写真实 IP（IP 会漂移需探测；bind mount 下 sed -i 报 busy，用 grep -v|cat 重写）
+- **凭证格式修正**：GitHub 不支持 GitLab 的 oauth2: 前缀，正确为 https://<token>@github.com
+- **新会话**：环境重置后 dnsmasq 与 resolv.conf 改动丢失，需重跑
+
+### 同步动作
+- 手册 `GITHUB_PUSH_AI_MANUAL.md`（NuElfVTnzndi）已更新为 dnsmasq 主方案 + 修 oauth2/IP 旧坑
+- 本广播存档：`docs/00-规划/GitHub-DNS污染-dnsmasq方案-广播.md`
+- TASK_BOARD 广播区新增 TL 广播块
+
+### 变更文件
+- `docs/00-规划/GitHub-DNS污染-dnsmasq方案-广播.md` — 新建（广播存档 + 转发话术）
+- `TASK_BOARD.md` — 广播区新增 TL DNS 修复方案块
+- `COMMLOG.md` — 本记录

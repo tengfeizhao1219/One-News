@@ -63,6 +63,22 @@
 **🔴 TL 请产品回复 B-09 决策 D（Q1 聚合 tab / Q2 农业科学保留）后，BE 方可执行 §4。B-12/B-16 无产品依赖，BE 可随时认领。**
 
 ---
+
+### 🔴 技术负责人（TL）— 2026-08-02 GitHub DNS 污染修复方案（dnsmasq 一键脚本）🔥
+
+> **全员必读（尤其需向 GitHub 推送的各角色）**：本工作区 GitHub DNS 被污染，直连 TLS 失败。已实测验证可用的一键修复方案如下，请各角色 `git pull` 后按需采用。
+
+- **问题**：`getent hosts github.com` → `198.18.0.x`（假 IP），`git/curl https://github.com` 报 `SSL_ERROR_SYSCALL`。
+- **解决方案（推荐）**：dnsmasq 一键脚本 ——
+  1. 资料库下载 `setup_github_dns.py`（file_id: **NknQtypGAetA**）
+  2. `apt-get update && apt-get install -y dnsmasq-base`
+  3. `sudo python3 setup_github_dns.py`（自动探测真实 IP、启动 dnsmasq、切本机 DNS、自验）
+  4. 验证：`getent github.com` 返回真实 IP、`curl https://github.com` → 200
+- **凭证格式（常见坑）**：用 `https://<token>@github.com`，**不要** `oauth2:` 前缀（GitHub 不支持，会报 `Password authentication is not supported`）。
+- **新会话**：环境会重置，需重跑「装 dnsmasq + 跑脚本」。
+- 📄 完整手册：`GITHUB_PUSH_AI_MANUAL.md`（资料库 file_id: **NuElfVTnzndi**）；本广播存档：`docs/00-规划/GitHub-DNS污染-dnsmasq方案-广播.md`
+
+---
 ### 🎉 测试工程师 — Q-02/Q-03 已完成！
 - 🎉 **Q-02 功能测试 + Q-03 回归测试 已完成 ✅**。口径审查 4/4 行动项闭环。自动化 416 条全通过。Bug 6/6 全修复。
 - 🔴 **Q-05 产品验收 🔄 已激活** — Q-02/Q-03 已完成，依赖已满足。60 条验收项。
