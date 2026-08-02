@@ -58,6 +58,24 @@ Component({
     noop: function () {},
 
     /**
+     * 关于·反馈（修复死热区：原 footer 无绑定）
+     */
+    onFooterTap: function () {
+      wx.showModal({
+        title: '一页 · One-News',
+        content: '极简新闻速览小程序。\n问题反馈请联系：tengfei@example.com',
+        showCancel: true,
+        cancelText: '关闭',
+        confirmText: '复制邮箱',
+        success: function (res) {
+          if (res.confirm) {
+            wx.setClipboardData({ data: 'tengfei@example.com' })
+          }
+        }
+      })
+    },
+
+    /**
      * 用户触摸面板内部时重置自动关闭定时器（3s）
      */
     _resetAutoClose: function () {

@@ -22,6 +22,8 @@ Page({
     news: {},
     paragraphs: [],
     scrollTop: 0,
+    pageState: 'loading',    // 'loading' | 'ready' | 'error' | 'empty'
+    errorMessage: '',
     // 翻页状态
     currentIndex: 0,
     total: 0,
@@ -136,7 +138,7 @@ Page({
    */
   _initEngine: function (newsId, entryIndex, entryCategory) {
     var that = this
-    wx.showLoading({ title: '加载中...', mask: true })
+    // 加载态由页面内骨架屏呈现（pageState=loading），不再使用原生 loading
 
     // UX-BUG09: 检测首页透传数据 — 有则走快速通道，零网络请求
     var app = getApp()
@@ -172,6 +174,7 @@ Page({
           paragraphs: paragraphs,
           scrollTop: 0,
           loading: false,
+        pageState: 'ready',
         }, function () {
           // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
           that._measureScroll()
@@ -222,25 +225,28 @@ Page({
   _loadFallback: function (newsId) {
     var that = this
     if (!newsId) {
+      that.setData({ pageState: 'error', errorMessage: '新闻加载失败' })
       wx.showToast({ title: '新闻加载失败', icon: 'none' })
       return
     }
     getNewsDetail(newsId).then(function (news) {
       var text = news.content || news.summary || ''
       var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-      that.setData({
-        news: news,
-        paragraphs: paragraphs,
-        total: 1,
-        currentIndex: 0,
-        isFirst: true,
-        isLast: true,
-        positionText: '1 / 1',
-        scrollTop: 0,
-        loading: false,
-      })
-      if (news && news.id) that._checkFavorite(news.id)
+        that.setData({
+          news: news,
+          paragraphs: paragraphs,
+          total: 1,
+          currentIndex: 0,
+          isFirst: true,
+          isLast: true,
+          positionText: '1 / 1',
+          scrollTop: 0,
+          loading: false,
+          pageState: 'ready',
+        })
+        if (news && news.id) that._checkFavorite(news.id)
     }).catch(function () {
+      that.setData({ pageState: 'error', errorMessage: '新闻详情暂不可用，请返回重试' })
       wx.showToast({ title: '新闻详情暂不可用，请返回重试', icon: 'none' })
     })
   },

@@ -10,7 +10,23 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：进度指示 -->
+  <!-- 骨架屏（加载中） -->
+  <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
+    <view class="sk-block sk-title"></view>
+    <view class="sk-block sk-line" style="width: 80%"></view>
+    <view class="sk-block sk-line" style="width: 65%"></view>
+    <view class="sk-block sk-line" style="width: 90%"></view>
+    <view class="sk-block sk-line" style="width: 50%"></view>
+  </view>
+
+  <!-- 错误 / 空状态 -->
+  <view class="state-container" wx:if="{{pageState === 'error' || pageState === 'empty'}}">
+    <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
+    <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
+    <view class="state-retry" bindtap="goBack">返回首页</view>
+  </view>
+
+  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
   <view class="nav-bar">
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -20,6 +36,7 @@
 
   <!-- 内容 -->
   <scroll-view
+    wx:if="{{pageState === 'ready'}}"
     class="content"
     scroll-y
     scroll-top="{{scrollTop}}"
@@ -60,7 +77,17 @@
     </view>
   </scroll-view>
 
-<!-- 边界提示已移除 -->
+  <!-- 上下翻页按钮 -->
+  <view class="pager-hint" wx:if="{{pageState === 'ready' && total > 1}}">
+    <view class="pager-btn pager-prev" wx:if="{{!isFirst}}" bindtap="goPrev">︿<text>上一篇</text></view>
+    <view class="pager-btn pager-next" wx:if="{{!isLast}}" bindtap="goNext">﹀<text>下一篇</text></view>
+  </view>
+
+  <!-- 边界提示 Chip -->
+  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
+    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
+    <text wx:else>{{boundaryText}}</text>
+  </view>
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
@@ -68,7 +95,7 @@
   </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->
-  <view class="detail-bottom-bar">
+  <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
       <text class="bottom-bar-icon">{{isFavorited ? '♥' : '♡'}}</text>
       <text class="bottom-bar-label">收藏</text>

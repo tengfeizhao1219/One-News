@@ -38,13 +38,36 @@
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  box-sizing: content-box;
+  /* 触摸热区扩至 ≥88rpx：padding 撑开命中区，background-clip 保证可见圆仍为 56rpx */
+  padding: 16rpx;
+  margin: -16rpx;
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
 }
 
 .top-bar-refresh:active {
   opacity: 0.6;
 }
 
+.top-bar-settings {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background-color: var(--tag-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  /* 触摸热区扩至 ≥88rpx */
+  padding: 16rpx;
+  margin: -16rpx;
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
+}
+
+.top-bar-settings:active {
+  opacity: 0.6;
+}
 .settings-icon {
   font-size: 28rpx;
   line-height: 1;
@@ -139,7 +162,7 @@
 
 .summary-p {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
   line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
@@ -166,7 +189,8 @@
   justify-content: center;
   gap: 6rpx;
   text-align: center;
-  padding: 20rpx 0 68rpx;
+  padding: 24rpx 0 72rpx;
+  font-size: 16rpx;
   color: var(--text-secondary);
   flex-shrink: 0;
   opacity: 0.45;
@@ -263,7 +287,7 @@
 }
 
 .panel-title {
-  font-size: calc(34rpx * var(--font-scale));
+  font-size: calc(36rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 1rpx;
@@ -280,8 +304,8 @@
 .panel-tab {
   display: inline-block;
   padding: 14rpx 32rpx;
-  border-radius: 32rpx;
-  font-size: calc(26rpx * var(--font-scale));
+  border-radius: 24rpx;
+  font-size: calc(24rpx * var(--font-scale));
   font-weight: 500;
   color: var(--text-secondary);
   background-color: transparent;
@@ -294,15 +318,6 @@
   background-color: var(--text-primary);
   font-weight: 700;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
-}
-
-/* 暗色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .panel-tab.active {
-    color: var(--bg-page);
-    background-color: var(--text-primary);
-    box-shadow: 0 2rpx 8rpx rgba(255, 255, 255, 0.08);
-  }
 }
 
 /* ============ 新闻列表 ============ */
@@ -323,21 +338,13 @@
 
 /* 当前阅读的新闻高亮（UX-BUG14: 浅蓝底色 + 左侧色条，增强可辨识度） */
 .panel-item.current {
-  background-color: rgba(0, 122, 255, 0.08);
-  border-left: 4rpx solid var(--primary);
+  background-color: var(--flash-tech-bg);
+  border-left: 4rpx solid var(--flash-tech);
   padding-left: 36rpx;
 }
 
-/* 暗色模式下高亮适配 */
-@media (prefers-color-scheme: dark) {
-  .panel-item.current {
-    background-color: rgba(96, 165, 250, 0.12);
-    border-left-color: #60A5FA;
-  }
-}
-
 .panel-item-title {
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale));
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.45;
@@ -350,15 +357,8 @@
 
 /* 当前阅读的新闻标题颜色高亮 */
 .panel-item-title.current {
-  color: var(--text-primary);
+  color: var(--flash-tech);
   font-weight: 700;
-}
-
-/* 暗色模式下保持蓝色高亮 */
-@media (prefers-color-scheme: dark) {
-  .panel-item-title.current {
-    color: #60A5FA;
-  }
 }
 
 .panel-empty {
@@ -527,7 +527,7 @@
 
 .state-retry {
   padding: 16rpx 48rpx;
-  border-radius: 32rpx;
+  border-radius: 24rpx;
   font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
   font-weight: 600;
   color: var(--bg-card);
