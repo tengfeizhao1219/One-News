@@ -1,1 +1,11 @@
 node_modules/wx-server-sdk
+
+# Notion 同步构建产物（章节切分可重建，仅保留 sync_state.json 用于幂等复用父页）
+.notion_build/ch*.md
+.notion_build/chapters.json
+
+# Python 缓存
+__pycache__/
+
+# Notion 集成 token（本地文件，绝不进仓库）
+.notion_token
