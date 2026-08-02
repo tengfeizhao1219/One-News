@@ -65,7 +65,7 @@ async function batchInsert(newsList) {
       })
 
       // 2. 🆕 同步写入 news（详情数据源）
-      // 先查是否已存在（避免重复）
+      // B-16: 先查是否已存在（避免重复 + 保留保护）
       const exist = await db.collection('news').where({ id: item.id }).get()
       const doc = {
         id: item.id,
@@ -81,12 +81,19 @@ async function batchInsert(newsList) {
         updatedAt: now,
       }
       if (exist.data && exist.data.length > 0) {
+        // B-16: 若已被收藏/分享引用 → 跳过，不覆盖
+        const existing = exist.data[0]
+        if (existing.isRetained) {
+          console.log(`[refreshNews] 跳过保留文档: ${item.id}`)
+          inserted++  // 计为成功（保留即成功）
+          continue
+        }
         // 更新（保留 viewCount）
-        await db.collection('news').doc(exist.data[0]._id).update({ data: doc })
+        await db.collection('news').doc(existing._id).update({ data: doc })
       } else {
-        // 新增
+        // 新增（B-16: 默认 isRetained = false）
         await db.collection('news').add({
-          data: { ...doc, viewCount: 0, createdAt: now },
+          data: { ...doc, viewCount: 0, isRetained: false, createdAt: now },
         })
       }
 
@@ -108,12 +115,37 @@ async function batchInsert(newsList) {
 
 exports.main = async (event) => {
   const startTime = Date.now()
-  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v3 大模型搜索) ==========')
+  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v4.0 智谱+DeepSeek 双引擎) ==========')
 
-  // 1. 调用大模型联网搜索所有分类
+  // ── B-12 策略5: 手动触发冷却（防突发叠加）──
+  const isManual = event && (event.source === 'manual' || event.trigger === 'manual')
+  if (isManual) {
+    try {
+      const cooldownMs = config.rateLimit.manualCooldownMs || 10 * 60 * 1000
+      const kvRes = await db.collection('system_kv').where({ key: 'ratelimit:lastRefresh' }).get()
+      const lastRefresh = (kvRes.data && kvRes.data.length > 0 && kvRes.data[0].value)
+        ? kvRes.data[0].value.lastRefreshAt || 0
+        : 0
+      const elapsed = Date.now() - lastRefresh
+      if (elapsed < cooldownMs) {
+        const remainSec = Math.ceil((cooldownMs - elapsed) / 1000)
+        console.log(`[refreshNews] 手动触发冷却中，距上次刷新 ${Math.round(elapsed / 1000)}s，需等待 ${remainSec}s`)
+        return {
+          code: 0,
+          message: `冷却中，请 ${remainSec} 秒后再刷新`,
+          data: { skipped: true, cooldownRemainSec: remainSec },
+        }
+      }
+    } catch (err) {
+      console.warn('[refreshNews] 读取冷却时间失败，放行:', err.message)
+      // 读失败时保守放行
+    }
+  }
+
+  // 1. 调用大模型联网搜索所有分类（B-12: 传入 db 用于配额读写）
   let searchResult
   try {
-    searchResult = await searchAllCategories()
+    searchResult = await searchAllCategories(null, db)
   } catch (err) {
     console.error('[refreshNews] 大模型搜索失败:', err.message)
     return {
@@ -175,7 +207,43 @@ exports.main = async (event) => {
 
   const elapsed = Date.now() - startTime
 
-  // 6. 返回结果
+  // ── B-12 策略5: 写入本次刷新时间戳（供下次冷却判断）──
+  try {
+    await db.collection('system_kv').where({ key: 'ratelimit:lastRefresh' }).get().then(async res => {
+      const now = Date.now()
+      if (res.data && res.data.length > 0) {
+        await db.collection('system_kv').doc(res.data[0]._id).update({
+          data: { value: { lastRefreshAt: now }, updatedAt: now }
+        })
+      } else {
+        await db.collection('system_kv').add({
+          data: { key: 'ratelimit:lastRefresh', value: { lastRefreshAt: now }, createdAt: now, updatedAt: now }
+        })
+      }
+    })
+  } catch (err) {
+    console.warn('[refreshNews] 写入刷新时间戳失败:', err.message)
+  }
+
+  // ── B-16: 清理 30 天前的非保留文档（防 news 集合无限膨胀）──
+  let cleanedExpired = 0
+  try {
+    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
+    const cleanRes = await db.collection('news')
+      .where({
+        isRetained: db.command.neq(true),
+        createdAt: db.command.lt(cutoff),
+      })
+      .remove()
+    cleanedExpired = cleanRes.stats?.removed || 0
+    if (cleanedExpired > 0) {
+      console.log(`[refreshNews] 清理 ${cleanedExpired} 条过期非保留文档（30天前）`)
+    }
+  } catch (err) {
+    console.warn('[refreshNews] 清理过期文档失败:', err.message)
+  }
+
+  // 6. 返回结果（B-12: 追加 quota；B-16: 追加 cleanedExpired）
   return {
     code: 0,
     message: `刷新完成，共 ${totalInserted} 条新闻`,
@@ -186,12 +254,14 @@ exports.main = async (event) => {
       inserted: totalInserted,
       failed: totalFailed,
       cleared: totalCleared,
+      cleanedExpired,
       categories: Object.fromEntries(
         Object.entries(categories).map(([k, v]) => [k, v.length])
       ),
       searchStats: searchResult.stats,
       validation: validationStats,
       security: securityStats,
+      quota: searchResult.quota || { zhipuCalls: 0, deepseekCalls: 0, deepseekCap: config.rateLimit.deepseekDailyCap },
       elapsedMs: elapsed,
     },
   }

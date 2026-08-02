@@ -68,6 +68,17 @@ module.exports = {
     maxPageSize: 50,
   },
 
+  // B-12 限流/退避策略配置
+  rateLimit: {
+    minCallGapMs: 1500,               // 分类间最小调用间隔（防智谱 RPM）
+    maxRetries: 3,                    // 429 限流最大重试次数
+    backoffBaseMs: 1000,              // 指数退避基数
+    backoffMaxMs: 8000,               // 指数退避上限
+    deepseekDailyCap: 40,             // DeepSeek 每日调用上限（熔断）
+    manualCooldownMs: 10 * 60 * 1000, // 手动触发冷却 10 分钟
+    zhipuWarnThreshold: 200,          // 智谱单日调用告警阈值
+  },
+
   // 错误码
   errorCodes: {
     API_TIMEOUT: 'API_TIMEOUT',
