@@ -8,6 +8,45 @@
 
 ---
 
+## [2026-08-02 16:30] ✅ 前端开发 完成无依赖任务：FE-B2/B3/B4/B5 + UX-SIMPLIFY01/05/07 | 会话：前端开发
+
+> **来源：用户直连指令「领取任务」** → 认领 → 实现 → 完成（同一次会话闭环）。
+> **结论**：5 项无依赖任务全部完成并合入 main；仅 FE-B1（真机自测）因依赖非「无」未认领。
+
+### 一、交付清单（已全部 ✅）
+
+| 编号 | 任务 | 交付内容 | 变更文件 |
+|------|------|----------|----------|
+| UX-SIMPLIFY01 | 移除底部返回按钮 | 代码早已随简化批次交付（`56ca73a`~`6b48788`），核对 main 确认 | — |
+| FE-B2 / UX-SIMPLIFY05 | 移除 category-flash 闪烁条 | 删 wxml `category-flash` view + wxss `.category-flash`/`@keyframes flashPulse` + js `_showFlash` 仅留 `flashColor` | `pages/detail/detail.{wxml,wxss,js}` |
+| FE-B3 / UX-SIMPLIFY07 | 原文链接 → ActionSheet | 重建「原文↗」低噪点入口（仅 `news.sourceUrl` 存在时显示）+ `openSourceUrl`：`wx.showActionSheet(['复制链接','分享给朋友'])`，复制→剪贴板；分享→引导底部「分享」按钮 | `pages/detail/detail.{wxml,wxss,js}` |
+| FE-B4 | UX 走查 v1.1 遗留 6 项 | BUG-STD-002 标题兜底 `{{news.title || '无标题'}}`；DEV-STD-04 元信息 `wx:if`；DEV-STD-05/08 首页 `time` `wx:if`；DEV-STD-06 content padding 修正；DEV-STD-02 经核实 `home.wxss` 死代码已不存在，无需改 | `pages/detail/detail.{wxml,wxss}` + `pages/home/home.wxml` |
+| FE-B5 / BUG-008 | ReadingEngine 复用 `detailContext.list` | 双端核实：home.js 写入 `globalData.detailContext` + detail.js `_initEngine` 消费走 `_initFromPreloaded` 快速通道（零网络请求） | 已闭环，无需改 |
+
+### 二、关键决策与偏差（已在看板广播同步）
+
+- **DEV-STD-06 修正**：走查报告给 `+220rpx` 系基于旧 220rpx 翻页按钮；该按钮已在简化中移除，底部操作栏现 100rpx。前端按「清开 100rpx + 48rpx 余量」修正，避免无谓大留白。
+- **FE-B3「分享给朋友」**：微信不支持以代码拉起分享面板，故「复制链接」走剪贴板、「分享给朋友」引导点击底部「分享」按钮，不强行调用不存在的 API。
+- **DEV-STD-02**：`home.wxss` 中 `.guide-overlay` / `@keyframes fadeInOut` 当前 main 已无，死代码早于本次清理移除，标记完成即可。
+
+### 三、变更文件（commit 级）
+
+- `pages/detail/detail.js` `546b7c7`
+- `pages/detail/detail.wxml` `6783fbb`
+- `pages/detail/detail.wxss` `d2bdcba`
+- `pages/home/home.wxml` `15756dd`
+- `TASK_BOARD.md` `81e896c`（状态 → ✅）
+- `COMMLOG.md` 本条 + 认领条
+
+### 四、下游激活 / 注意事项
+
+- **测试工程师（QA-B1 / QA-A1）**：FE-B1 真机自测专项请推进并复测 P0（BUG-P0-010）；本次详情页渲染改动建议纳入回归。
+- **交互设计师（UX-B3）**：FE-B4 关闭 6 项走查偏差后，请重跑走查 v1.2 出结论（DEV-STD-01~08 应全部闭合）。
+- **产品经理（PD-B1）**：FE-B3 入口形态若需改为独立「查看原文」按钮，请广播区确认，前端可 1 行切换。
+- 有问题找 → 详情页实现：[前端开发]；走查口径：[交互设计师]
+
+---
+
 ## [2026-08-02 16:00] 🟦 前端开发 领取无依赖任务：FE-B2/B3/B4/B5 + UX-SIMPLIFY01/05/07 | 会话：前端开发
 
 > **来源：用户直连指令「领取任务」**（按《用户直连沟通同步机制》同步）——用户要求前端开发认领并执行依赖为「无」的任务。
