@@ -265,18 +265,19 @@ Page({
     if (Math.abs(dy) < 70 || dt > 500) return
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
-    // 上滑(dy<0)→下一条：需内容已触底；下滑(dy>0)→上一条：需内容已触顶
-    if (dy < 0 && !this.data.isLast) {
+    // 下滑(dy>0)→下一条：需内容已触底（从底部向下拉，下一页从顶部滑下）
+    // 上滑(dy<0)→上一条：需内容已触顶（从顶部向上推，上一页从底部滑上）
+    if (dy > 0 && !this.data.isLast) {
       if (this._isAtBottom) {
         this._swipeToNext()
       }
-    } else if (dy > 0 && !this.data.isFirst) {
+    } else if (dy < 0 && !this.data.isFirst) {
       if (this._isAtTop) {
         this._swipeToPrev()
       }
-    } else if (dy < 0 && this.data.isLast) {
+    } else if (dy > 0 && this.data.isLast) {
       // 边界已移除
-    } else if (dy > 0 && this.data.isFirst) {
+    } else if (dy < 0 && this.data.isFirst) {
       // 边界已移除
     }
   },
@@ -316,7 +317,7 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * UX-BUG11: 上滑 → 下一条（out-up 移出 → 更新内容 → in-down 从上往下滑入）
+   * UX-BUG11: 下滑 → 下一条（out-down 移出 → 更新内容 → in-down 从上往下滑入）
    */
   _swipeToNext: function () {
     var that = this
@@ -349,7 +350,7 @@ Page({
       isFirst: that._engine.isFirst(),
       isLast: that._engine.isLast(),
       showCrossingCategory: result.isCrossing ? progress.categoryName : '',
-      animClass: 'out-up',
+      animClass: 'out-down',
     })
 
     // 在 out 动画期间预加载内容
@@ -373,7 +374,7 @@ Page({
   },
 
   /**
-   * UX-BUG11: 下滑 → 上一条（对标首页卡片：out-down 移出 → 更新内容 → in-up 从下方滑入）
+   * UX-BUG11: 上滑 → 上一条（out-up 移出 → 更新内容 → in-up 从下往上滑入）
    */
   _swipeToPrev: function () {
     var that = this
@@ -404,7 +405,7 @@ Page({
       isFirst: that._engine.isFirst(),
       isLast: that._engine.isLast(),
       showCrossingCategory: result.isCrossing ? progress.categoryName : '',
-      animClass: 'out-down',
+      animClass: 'out-up',
     })
 
     var contentPromise = that._engine.loadCurrentDetail()
