@@ -69,9 +69,9 @@
           <!-- 元信息 -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
-            <text>{{item.source}}</text>
+            <text wx:if="{{item.source}}">{{item.source}}</text>
             <text wx:if="{{item.source && item.time}}"> - </text>
-            <text>{{item.time}}</text>
+            <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
         </view>
 
