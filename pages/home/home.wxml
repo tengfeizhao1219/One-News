@@ -55,20 +55,20 @@
         <view class="card-body">
           <!-- 标题 -->
           <view class="card-title">{{item.title}}</view>
-          
-          <!-- 摘要 -->
-          <view class="card-summary">
-            <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
-              <view class="summary-p">{{item}}</view>
-            </block>
-          </view>
-          
-          <!-- 元信息 -->
+
+          <!-- 元信息（owner 直连：移至标题下方，与详情页布局一致） -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
             <text wx:if="{{item.source}}">{{item.source}}</text>
             <text wx:if="{{item.source && item.time}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
+          </view>
+
+          <!-- 摘要 -->
+          <view class="card-summary">
+            <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
+              <view class="summary-p">{{item}}</view>
+            </block>
           </view>
         </view>
 
