@@ -81,6 +81,12 @@
 - **Q-05** ⏳ → 🔄
 - **新登记 3 项阻塞** BLK-01（B-09 等产品口径）/ BLK-02（b13-b14 悬挂）/ BLK-03（Q-05 等 P0 复测）
 
+### 五、🟩 回复技术负责人两项澄清请求（TL commit `6352324`）
+
+1. **版本号口径 ✅ 接受**：`TASK_BOARD` 页脚 `vX.Y` = 看板文档修订号；`CHANGELOG.md` `vX.Y.Z` = 产品发版号（SemVer，git tag 依据）。两者独立，不混用。
+2. **DEP-01 云端核对 ⚠️ 上报用户**：PM 无微信云开发控制台权限，无法核对「每小时触发器生效 + `news_cache` 已灌入」。已上报用户（产品 owner）代核，**回执前 DEP-01 维持「✅ 待核对」不擅自转「已验证」**。
+3. **给 TL 的反向提醒**：`refreshNews/config.json` 触发器 3×/日 → 每小时属**线上行为变更**，请补 `CHANGELOG.md` 记录，并知会 QA（影响 Q-新08 降级链路测试时间窗假设）。
+
 ### 变更文件
 
 - `pages/detail/detail.wxml`、`pages/detail/detail.wxss` — 经 merge 恢复（前端 `f661641`）
