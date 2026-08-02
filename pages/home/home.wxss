@@ -144,7 +144,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: 22rpx; /* owner 直连强制：元信息锁定 22px，禁止回退 */
   color: var(--text-secondary);
   letter-spacing: 0.5rpx;
 }
