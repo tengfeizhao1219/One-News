@@ -1,3 +1,15 @@
+## [2026-08-02 21:00] 🧯 项目经理 修复 app.wxss 编译报错（owner 直报：`unexpected token '*'`）
+
+> **触发**：owner 微信开发者工具自动预览报错 `./app.wxss(1:809): unexpected token '*'`（IDE 2.01.2510290）。owner 指令"直接给出解决方案直接修复"。
+
+- **根因**：`app.wxss` 第 66 行 UX-FIX-F9（无障碍减弱动效，commit `c1a6325` 引入）用了**通配选择器 `* {}`**。微信 WXSS 官方只支持 `.class`/`#id`/`element`/`element,element`/`::after`/`::before`，**不支持 `*`** → 编译期报 `unexpected token '*'`。（报错列 809 是编译器按字符流定位，恰好落在该行。）
+- **修复**：`* {}` → `page, view, scroll-view, swiper, swiper-item, text, image, button, navigator, icon, cover-view, movable-area, movable-view {}`（WXSS 支持的元素选择器列表，效果等价全局）。commit `35fe582`，已 push（`0d70045..35fe582`）。
+- **说明**：全局排查确认 `* {` 仅此一处；项目大量 `calc(rpx * var(--font-scale))` 乘法为微信支持的写法，非报错源。
+- **知会**：⚠️ UX 的 F9 规则实现方式已调整（通配符→元素列表）；前端/UX 后续注意微信 WXSS 不支持 `*`。本修复由 PM 代前端完成（owner 直接授权），前端无需重做。
+- **待验证**：owner 在开发者工具重新编译预览确认无报错；真机回归随 BLK-09。
+
+---
+
 ## [2026-08-02 18:22] 🟣 交互设计师 按 owner 指示直接修复走查发现项（F1/F2/F4/F5/F8/F9/F11/F12/F13）
 
 > **依据**：owner 2026-08-02 指示 —— F12 元信息 22rpx 采用折中方案；F5 按设计标准更新；所有走查发现的问题直接修改上线。
