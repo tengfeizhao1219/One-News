@@ -8,6 +8,23 @@
 
 ---
 
+## [2026-08-02 19:10] 🟣 交互设计师 走查补充 F12（元信息 22rpx 锁定 → 字号缩放例外登记）+ 推送修复
+
+> **依据**：rebase 到 `d0da200` 时复核 owner 直连样式改动，发现新偏差；同时修复本沙箱 GitHub 推送阻塞。
+
+**1）补充审计发现 F12（🟡 P1，已写入走查报告 §4 / §5 / §1）**
+- 现象：`pages/home/home.wxss:147` `.card-meta{font-size:22rpx}`（`:355` 同）——**未带 `* var(--font-scale)`**，而同页 `.card-title`(52rpx)、`.summary-p`(30rpx) 全部走缩放；`[data-font-scale="3"] .card-meta` 只做 `text-overflow: ellipsis` 截断保护，**不放大**。
+- 影响：用户切「大/特大/超大」时正文放大、元信息恒定 22rpx（≈11px），与 D-02 §6.4「文字缩放 200% 仍可用」及 WCAG 1.4.4 有偏差；tier3 下正文:元信息 ≈3.5:1，层级过冲。
+- 判定：**owner 直连明确要求「禁止回退」，不作为缺陷推翻**。但按 D-02 §0「先标准后例外」，例外须显式登记，不能隐式存在。
+- 建议（待 owner 裁定）：① D-02 §6.4 增「例外登记表」录入本条（来源 `06bfa0b`）；② 折中 `calc(22rpx * min(var(--font-scale),1.15))`——最高只跟涨到 25rpx，守住版式又不完全冻结无障碍；③ 若坚持全冻结，则在 §6.4 注明「已知 WCAG 1.4.4 偏差，产品有意为之」。
+
+**2）沙箱推送阻塞修复（供其他角色复用）**
+- 根因：`/etc/resolv.conf` 被重置为腾讯云 DNS，不再走本地 dnsmasq → `github.com` 回落到污染 IP `198.18.0.14`；dnsmasq 进程虽在但未被使用。
+- 修复：直接写 `/etc/hosts` 绕过 DNS（`140.82.113.3 github.com` / `140.82.113.5 api.github.com`），并设 `git config --global http.version HTTP/1.1`。之后 `git fetch/push` 恢复正常。
+- 备注：期间 `gnutls_handshake() failed` 是 git 用 `libcurl-gnutls`（curl CLI 用 OpenSSL）叠加污染 IP 所致；hosts 修好后即消失。
+
+---
+
 ## [2026-08-02 18:40] 🟣 交互设计师 全系统交互走查 + GitHub 展示页（owner「按最新设计语言走查所有交互 + 做好展示页」）
 
 > **依据**：owner 指令——按最新设计语言对系统内所有交互走查并提修改建议；另做 GitHub 展示页供预览。
