@@ -38,6 +38,89 @@
 
 ---
 
+## [2026-08-02 20:48] 🧹 项目经理 远程分支清理（owner 指令）+ 代提交 FE-C1 修复落地
+
+> **背景**：owner 指令「远程有很多分支，处理一下，该合并合并，该删除删除」。PM 逐一核实 7 个分支，结论：**无分支需合并，7 个全部删除**（有效内容均已在 main 等价存在；`feature/be-b13-b14` 核实后确认合入有害）。
+
+### 一、交付内容（产出物 + 路径）
+- 🗑️ **已删除远程分支 7 个**（`git push origin --delete`）：
+  - 已合入 main 无独有提交：`fix/cleanup-guide-pager-bar`、`fix/detail-swipe-direction`、`fix/ux-improve-04-07-bug-09-14`、`qa/q02-q03-reports`
+  - 独有提交等价已合入：`fix/restore-detail-simplification`（P0 止血 f661641，main 已含 bindscroll）、`feature/be-b10-cloudtest`（B-10 单测已在 main）
+  - **TL 裁定废弃 + 代码核实合入有害**：`feature/be-b13-b14`（B-14 目标函数 `enrichMissingSummaries` 在 v4.2 单层架构已不存在；B-13 短路逻辑会误伤 v4.2 智谱/DeepSeek 双引擎刷新）
+- 📌 现在远程仅剩 `main`；本地跟踪引用已 prune。
+- 📄 TASK_BOARD：BLK-02 ✅ 关闭；20:48 分支清理广播 + 页脚 v4.21。
+
+### 二、重要：FE-C1 修复（#1/#4/#6）已由前端会话完成，本次一并提交落地
+- 前端开发会话在共享工作区完成了 **FE-C1 三处真实修复**（见下方 [2026-08-02 17:28] 前端条目）：#1 原生边界事件+实测高度 / #4 单一数据源（删 `_panelCache`/`loadPanelNews`）/ #6 hint z-index 40 + 120ms 过渡，**`test/v10-regression-fe-c1-bugfix.js` 53/53 通过**（PM 已复跑验证）。
+- ⚠️ **PM 代提交**：前端会话完成修复后未 commit（共享工作区未提交状态），PM 为避免工作丢失，与本次分支清理一并 commit + push。**代码属前端交付物，PM 仅代提交落地**；前端会话后续 pull 后无需重做。
+- 🔴 **仍需真机验证**：沙箱无真机，测试为逻辑级（53/53 通过 + 负向验证）。请测试工程师在 BLK-09 设备就绪后按验收点真机回归（重点 #1 双向翻页、#4 卡片≡侧栏、#6 提示可见）。
+
+### 三、遗留 / 注意事项
+- 🟡 前端 17:28 条目自述两点遗留：① v6 测试 1 条断言由「计数式启发式」改为「逐入口校验 currentPage 重置」（**请测试工程师复核**）；② `_preloadAllCategories` 预加载随 `_panelCache` 删除，切分类恢复一次网络等待（PM 方案B 既定取舍，后续可在唯一数据源上做带 TTL 预取）。
+- 🟡 前端激活子代理曾因接口限流（429）启动失败，但前端会话自身已并行完成修复，修复不受影响。
+
+### 四、找谁
+- 测试工程师（真机回归 + v6 断言复核）｜🔔 关注人：前端开发 + 产品经理
+
+---
+
+## [2026-08-02 17:28] 🟦 前端开发 FE-C1 修复 #1/#4/#6（真实修根因 + 行为验证）
+
+**背景**：PM 17:24 广播指出上一轮「代码已提交即闭环」被证伪（#1 根因 `_clientHeight` 估算从未被触达）。本轮按 PM 给的靶点修根因，并附行为验证结论，不以「已提交」结案。
+
+### BUG-20260802-001 详情页翻页单向
+
+- **根因确认（与 PM 一致）**：`detail.js` `_clientHeight = windowHeight - 150` 是估算值，`onContentScroll` 用 `scrollTop + 估算高度 >= scrollHeight - 50` 判触底。真实 scroll-view 高度比估算大 50px 以上时该式**永假** → `_isAtBottom` 恒为 false → 上滑翻下一条永不触发。
+- **补充发现（PM 描述外）**：还有第二条永假路径 —— **正文不足一屏时 scroll-view 根本不派发 `scroll` 事件**，`_isAtBottom` 停在 onLoad 的初始 false，短文章同样无法上滑翻页。只改高度估算修不到这一条。
+- **改动**（a+b 都做，互为兜底）：
+  - `pages/detail/detail.wxml`：scroll-view 增加 `bindscrolltolower="onScrollToLower"` / `bindscrolltoupper="onScrollToUpper"` + `upper-threshold="10"` / `lower-threshold="50"`，保留 `bindscroll` 用于位置计算。
+  - `pages/detail/detail.js`：新增 `onReady()` → `_measureScroll()`，用 `wx.createSelectorQuery` 实测 `.content`（scroll-view）与 `.article`（正文）真实高度覆盖估算值；内容不足一屏时直接置 `_isAtBottom = true`。`onDetailReady` 的 setData 回调里重测（每条正文长度不同）。
+  - `onContentScroll` 改为：触底以原生事件为准，本函数只在「明确离开底部」时复位，并用 `_bottomScrollTop` 校准，避免惯性滚动补发的 scroll 事件把原生事件刚置位的触底状态又清成 false（这是只加 `bindscrolltolower` 而不改 `onContentScroll` 会踩的坑）。
+- **验证**：`test/v10-regression-fe-c1-bugfix.js` 13 条断言全通过。含**旧逻辑失败复现**（真实高度 600 / 估算 517 时旧式子确为 false）、原生事件置位后补发 scroll 不被误清、上滑翻下一条与下拉翻上一条**两个方向均放行**、不足一屏直接可翻页、中间位置不误判边界。
+
+### BUG-20260802-004（=007/008）卡片 ≡ 侧栏
+
+- **改动（方案 B，单一数据源）** `pages/home/home.js`：
+  - **删除** `loadPanelNews()`、`_panelCache`、`_preloadAllCategories()`（预加载只为填缓存，随缓存一并移除）。
+  - **新增** `_syncPanelList(list, index)`：侧栏 `filteredNewsList` 一律由唯一数据源 `newsList` 派生（`_originalIndex` 取 `newsList` 下标，'all' 不过滤、其余按 `category` 过滤）。
+  - **新增** `loadCategory(cat, resolveIndex)` 作为切分类唯一入口 → 复用 `loadNews()` 的 loading/empty/error 处理，只发一次 `getNewsList`。
+  - 调用点收敛：`onLoad` / `onCategoryChange` / `closePanel` / `_handleDetailReturn` / `onPullDownRefresh` / `onRetry` / `onRefreshNews` / `loadMoreNews` / `refreshCurrentCategory` 全部走同一份 `newsList` 后重算侧栏。
+  - `onPanelItemTap` 简化：同源后 `data-index` 即 `newsList` 下标，直接定位卡片（原先按 `_originalIndex` 去索引 `filteredNewsList`，一旦过滤生效即错位）。
+- **验证**：22 条断言全通过。`onLoad` 请求数 **2 → 1**；首次加载/刷新/切分类/切回旧分类/加载更多后，卡片与侧栏标题列表**逐条全等**；切回旧分类会重新拉取（证明 `_panelCache` 永不失效问题消除）；侧栏「正在阅读」高亮项唯一且等于当前卡片。
+
+### BUG-20260802-006 切分类 0.5s 提示未出现
+
+- **根因确认 + 补充**：`.category-hint` `z-index: 20`，而 `.panel-overlay` 是 29、`.slide-panel` 是 30 —— 在侧栏里切分类时提示**被遮罩压在下面**，这是主因。另外两点 PM 未提及：① 「刷新中…」「加载更多…」用的是 `wx.showToast` **原生浮层，盖在所有页面视图之上，不受 z-index 影响**；② 淡入淡出 250ms 进 + 250ms 出几乎吃掉整个 500ms 展示窗口。
+- **改动**：`home.wxss` `.category-hint` z-index 20 → **40**（高于 29/30），transition 250ms → **120ms**；`home.js` `_showCategoryHint` 先 `wx.hideToast()` 再 `setData`，并把 `clearTimeout` 提到 `setData` 之前。
+- **保留**：`loadMoreNews` 的 `MAX_NEWS = 15`「每分类默认 15 条」分页行为**未改动**（已加静态断言守住）。
+- **验证**：9 条断言全通过 —— 提示立即出现、300ms 仍可见、~500ms 自动消失、加载/刷新流程走完不覆盖提示、连续快速切换不被上一个定时器提前清掉、显示前确实关闭了原生 toast。
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `pages/detail/detail.js` | `onReady`/`_measureScroll`/`onScrollToUpper`/`onScrollToLower` 新增，`onContentScroll` 改判定 |
+| `pages/detail/detail.wxml` | scroll-view 加原生边界事件与阈值 |
+| `pages/home/home.js` | 删双数据源、新增 `loadCategory`/`_syncPanelList`、`_showCategoryHint` 加 hideToast |
+| `pages/home/home.wxss` | `.category-hint` z-index 40 + transition 120ms |
+| `test/v10-regression-fe-c1-bugfix.js` | **新增** FE-C1 运行时回归 53 条 |
+| `test/v6-regression-bug1-bug2.js` | 1 条断言适配（见下方注意事项） |
+
+### 验证方式与结论
+
+- 新增 `test/v10-regression-fe-c1-bugfix.js`：mock `wx`/`Page`/数据层后 **真实 require 两个页面对象**并驱动用户操作序列，断言 data 与内部状态。**53 / 53 通过**。
+- **做了负向验证**（避免写出恒真测试）：分别故意还原三处修复（`_syncPanelList` 调用、`onScrollToLower` 置位、z-index 40 → 20），测试如期转红；恢复后重新全绿。
+- 既有回归：v5 `7/0`、v6 `17/0`、v7-runtime `43/0` 全通过。v7 静态 `55/6`，**该 6 条失败在我改动前的基线上完全一致**（UX-SIMPLIFY 早前移除边界提示 Chip/闪烁条所致），非本次引入。
+- ⚠️ **尚未真机复测**：沙箱内无微信开发者工具/真机，以上为逻辑级验证。请测试工程师在 BLK-09 设备就绪后按验收点补真机回归；若真机仍有偏差，我在 #1 已同时实现「原生边界事件 + 实测高度」两条独立路径，可据现象快速定位是哪条失效。
+
+### 注意事项 / 遗留
+
+- 🟡 **改了一条别人的测试断言**：`test/v6-regression-bug1-bug2.js` 原有 `currentPage: 1 出现 >=5 次` 是**计数式启发式**。#4 把切分类入口收敛成 `loadCategory → loadNews` 后自然降到 4 次，该断言转红但**不变量本身未被破坏**。已改为直接校验 `loadCategory` / `loadNews` / `refreshCurrentCategory` 三个入口各自都重置 `currentPage`（比原计数更强）。**请测试工程师复核这条改动是否认可**，不认可我改回去。
+- 🟡 `_preloadAllCategories`（UX-BUG13 首次切换预加载提速）随 `_panelCache` 一并删除，切分类会恢复一次网络等待。这是「单一数据源」与「预取缓存」的取舍，PM 方案 B 已明确选前者。若后续要找回速度，应在**唯一数据源之上**做带 TTL 的预取，而不是恢复独立的侧栏 fetch。
+- 未触碰 `cloudfunctions/`，未改 `TASK_BOARD.md`（红线遵守）。
+
+---
+
 ## [2026-08-02 19:10] 🟣 交互设计师 走查补充 F12（元信息 22rpx 锁定 → 字号缩放例外登记）+ 推送修复
 
 > **依据**：rebase 到 `d0da200` 时复核 owner 直连样式改动，发现新偏差；同时修复本沙箱 GitHub 推送阻塞。

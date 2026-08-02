@@ -605,7 +605,9 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
-  z-index: 20;
+  /* BUG-20260802-006: 必须高于 .panel-overlay(29) 与 .slide-panel(30)，
+     否则在侧栏内切分类时提示被遮罩盖住 → 用户看不到 */
+  z-index: 40;
   padding: 16rpx 48rpx;
   border-radius: 999rpx;
   background-color: var(--bg-card);
@@ -616,7 +618,9 @@
   box-shadow: 0 8rpx 32rpx var(--overlay);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  /* BUG-20260802-006: 淡入淡出缩短到 120ms，让 500ms 的展示时长真正被看见
+     （原 250ms 进/出几乎吃掉整个可见窗口） */
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
 .category-hint.show {

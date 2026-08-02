@@ -73,9 +73,11 @@ Page({
     // UX-BUG02: 初始化滚动状态 + 获取可视区高度
     this._isAtTop = true
     this._isAtBottom = false
+    this._bottomScrollTop = null
     try {
       var sysInfo = wx.getSystemInfoSync()
-      // scroll-view 可用高度 ≈ 屏幕高度 - 顶部栏(~50px) - 底部操作栏(~100px)
+      // BUG-20260802-001: 该值仅作 onReady 实测前的临时兜底，
+      // 真实高度由 _measureScroll() 实测覆盖（估算偏小会导致触底永不成立→单向翻页）
       this._clientHeight = sysInfo.windowHeight - 150
     } catch (e) {
       this._clientHeight = 500
@@ -96,9 +98,37 @@ Page({
     this._initEngine(id, index, category)
   },
 
+  onReady: function () {
+    this._measureScroll()
+  },
+
   // BUG-004: 页面销毁标记，防止回调中 setData
   onUnload: function () {
     this._destroyed = true
+  },
+
+  /**
+   * BUG-20260802-001: 实测 scroll-view 真实高度与内容高度
+   * 根因：原 _clientHeight = windowHeight - 150 是估算值，真实高度比它大 50px 以上时
+   *      `scrollTop + _clientHeight >= scrollHeight - 50` 永不成立 → 触底判定永假 → 只能下拉翻上一条
+   */
+  _measureScroll: function () {
+    var that = this
+    try {
+      wx.createSelectorQuery().in(this)
+        .select('.content').boundingClientRect()
+        .select('.article').boundingClientRect()
+        .exec(function (res) {
+          if (that._destroyed || !res || !res[0]) return
+          var viewH = res[0].height
+          var contentH = res[1] ? res[1].height : 0
+          if (viewH > 0) that._clientHeight = viewH
+          // 内容不足一屏时根本不会触发 scroll 事件，需直接视为已触底，否则上滑翻页永不可用
+          if (viewH > 0 && contentH > 0 && contentH <= viewH + 5) {
+            that._isAtBottom = true
+          }
+        })
+    } catch (e) {}
   },
 
   /**
@@ -142,10 +172,14 @@ Page({
           paragraphs: paragraphs,
           scrollTop: 0,
           loading: false,
+        }, function () {
+          // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
+          that._measureScroll()
         })
         // UX-BUG02: 内容加载后重置滚动状态
         that._isAtTop = true
         that._isAtBottom = false
+        that._bottomScrollTop = null
         if (news && news.id) {
           that._checkFavorite(news.id)
         }
@@ -248,9 +282,29 @@ Page({
     var scrollTop = e.detail.scrollTop
     var scrollHeight = e.detail.scrollHeight
     var clientHeight = this._clientHeight || 500
+    this._lastScrollTop = scrollTop
     // 触顶阈值 10px，触底阈值 50px（微信 scroll-view 可能无法精确到 0）
     this._isAtTop = scrollTop <= 10
-    this._isAtBottom = scrollTop + clientHeight >= scrollHeight - 50
+    // BUG-20260802-001: 触底以原生 scrolltolower 为准，此处只负责「明确离开底部」时复位，
+    // 避免高度实测失败时用估算值把原生事件已置位的触底状态又误清成 false
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      this._isAtBottom = true
+    } else if (this._bottomScrollTop == null || scrollTop < this._bottomScrollTop - 50) {
+      this._isAtBottom = false
+    }
+  },
+
+  /**
+   * BUG-20260802-001: scroll-view 原生边界事件 —— 触发即代表已到边界，判定以此为准
+   */
+  onScrollToUpper: function () {
+    this._isAtTop = true
+  },
+
+  onScrollToLower: function () {
+    this._isAtBottom = true
+    // 记录真实底部位置，供 onContentScroll 复位时校准
+    this._bottomScrollTop = this._lastScrollTop || 0
   },
 
   // ============ 跨分类翻页 ============

@@ -25,7 +25,11 @@
     scroll-top="{{scrollTop}}"
     enhanced
     show-scrollbar="{{false}}"
-    bindscroll="onContentScroll">
+    upper-threshold="10"
+    lower-threshold="50"
+    bindscroll="onContentScroll"
+    bindscrolltoupper="onScrollToUpper"
+    bindscrolltolower="onScrollToLower">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
