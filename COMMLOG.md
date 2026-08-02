@@ -8,6 +8,39 @@
 
 ---
 
+## [2026-08-02 17:25] 🔵 前端开发 认领并修复用户直报 6 项缺陷（BUG-20260802-001~006） | 会话：前端开发（响应 owner「领取任务」）
+
+> **依据**：广播区「6 项实现方，无依赖可并行认领」+ 项目规则「依赖=无 → 一口气全部认领完成」。代码已交付，文档已同步。TASK_BOARD 6 行 📋→✅。
+
+### 一、交付内容（产出物 + 路径）
+| Bug | 文件改动 | 状态 |
+|-----|----------|------|
+| BUG-20260802-001 | `pages/detail/detail.js` 翻页双向代码路径核对；`docs/04-开发实现/开发自测清单.md` 补「翻页双向」用例 | ✅ 前端交付（⚠️ 真机复测依赖设备，交 FE-B1 闭环） |
+| BUG-20260802-002 | `pages/home/home.wxml` 卡片元信息 ` - `→`·`；`pages/detail/detail.wxss` detail-meta 22rpx→24rpx(随档)；`设计走查清单.md` 补一致性项 | ✅ |
+| BUG-20260802-003 | `pages/home/home.js` `onPanelItemTap` 标准分支改为选中卡片（关闭面板+定位 currentIndex+renderCards，不再 navigateTo 详情） | ✅ |
+| BUG-20260802-004 | `pages/home/home.js` `_handleDetailReturn` 场景2 同步 `filteredNewsList`(带 _originalIndex)/`panelCurrentIndex`/`_panelCache` | ✅ 修复高亮错位根因 |
+| BUG-20260802-005 | `pages/home/home.wxml`+`home.wxss` 设置按钮移至卡片右下角浮动层（3D 投影+floatY 动效+active 缩放）；`开发自测清单.md` 补功能用例 | ✅ 功能/基础视觉完成（精确规格待视觉/交互） |
+| BUG-20260802-006 | 首页 `home.js` `_showCategoryHint`(500ms)+`home.wxml/wxss` 提示层；详情 `detail.js` `showCrossingCategory` 延长至 500ms | ✅ |
+
+### 二、下游要做什么（具体动作）
+- 🔴 **[测试工程师]**：对 BUG-20260802-001 安排真机复测（上滑翻下/下滑翻上双向），与 FE-B1 复测合并闭环；补充其余 5 项回归用例。
+- 🟡 **[视觉设计师]**：补 BUG-20260802-002 元信息精确排版规范、BUG-20260802-005 浮动按钮尺寸/间距/投影规格 → `docs/02-产品设计/`。
+- 🟡 **[交互设计师]**：补 BUG-20260802-005 3D 浮动动效定义、BUG-20260802-006 提示样式与时长 → 交互稿。
+- 🟡 **[产品经理]**：BUG-20260802-003 属交互流程变更（侧栏→卡片），请更新 PRD/交互流程文档并知会 QA 补用例（广播已提示）。
+
+### 三、关键注意事项（坑/红线/参考）
+- BUG-20260802-004 根因：详情返回跨分类时只切了 `currentCategory`/`newsList`，未同步 `filteredNewsList`，导致 `panelCurrentIndex` 指向旧分类列表 → 高亮错位。修复必须让 `filteredNewsList` 与 `newsList` 同形（带 `_originalIndex`），否则 `item._originalIndex === panelCurrentIndex` 恒不成立。
+- BUG-20260802-003 用面板已加载列表 `filteredNewsList` 直接作为首页 `newsList`，保证点击 index 与卡片对齐；未额外发请求，无闪烁。
+- BUG-20260802-006 提示仅在面板关闭后/选中卡片时对用户可见；面板 Tab 切换（`onCategoryChange`）触发时面板仍遮挡，故提示放在实际切分类的 BUG-003/closePanel 路径（仍按广播在 onCategoryChange 调用，但被遮挡不显示，属预期）。
+- BUG-20260802-001 未在代码层改动（避免回归 PM 已恢复的 P0 止血）：`onContentScroll` 双向阈值对称、`bindscroll` 已挂。真机复测若仍单向，优先查 `_clientHeight = windowHeight-150` 估算是否偏小导致 `_isAtBottom` 误判。
+- 有问题找谁：前端开发（实现）；QA（真机复测）；视觉/交互（规格）；PM（流程文档）。
+
+### 四、遗留问题
+- BUG-20260802-001 真机复测 pending（设备依赖）。
+- BUG-20260802-002/005 视觉/交互精确规格 pending（设计侧补充）。
+
+---
+
 ## [2026-08-02 17:xx] 🐞 用户直报 6 项缺陷/需求（PM 代 QA 录入+指派+文档更新提示） | 会话：项目经理（接收用户直连指令）
 
 > **来源：用户直连指令「现在还有几个 bug，我提交上来，你分析后指派出去，并让 qa 作为 bug 记录到文档中……把这些 bug/需求提给相应的角色，并提示他们对对应的文档进行更新」**。
