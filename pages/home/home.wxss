@@ -26,14 +26,19 @@
 }
 
 .top-bar-refresh {
+  /* UX-FIX-F11: 视觉保持 56rpx（owner 已定版式），但触控热区扩到 88rpx × 88rpx。
+     做法：padding 补足热区 + 负 margin 避免撑开布局，内容区用 box-sizing: content-box 保持居中。 */
   width: 56rpx;
   height: 56rpx;
+  padding: 16rpx;
+  margin: -16rpx;
   border-radius: 50%;
   background-color: var(--tag-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  box-sizing: content-box;
 }
 
 .top-bar-refresh:active {
@@ -144,21 +149,37 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: 22rpx; /* owner 直连强制：元信息锁定 22px，禁止回退 */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中）：由锁死 22rpx 改为「跟涨但封顶」。
+     --font-scale-meta 由 app.js 算好并封顶 1.15，故最大 25.3rpx。
+     仍显著小于正文，保住「元信息视觉退后」的版式意图，同时不再完全冻结无障碍缩放。 */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   margin-bottom: 20rpx; /* owner 直连：与详情页 detail-meta 间距对齐 */
   letter-spacing: 0.5rpx;
 }
 
 .swipe-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
   text-align: center;
-  padding: 24rpx 0 72rpx;
-  font-size: 18rpx;
+  padding: 20rpx 0 68rpx;
   color: var(--text-secondary);
   flex-shrink: 0;
+  opacity: 0.45;
+}
+
+.swipe-hint-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.swipe-hint-text {
+  font-size: 18rpx;
   letter-spacing: 4rpx;
   font-weight: 300;
-  opacity: 0.45;
 }
 
 /* ============ 导航指示点 ============ */
@@ -302,7 +323,7 @@
 /* 当前阅读的新闻高亮（UX-BUG14: 浅蓝底色 + 左侧色条，增强可辨识度） */
 .panel-item.current {
   background-color: rgba(0, 122, 255, 0.08);
-  border-left: 4rpx solid #007AFF;
+  border-left: 4rpx solid var(--primary);
   padding-left: 36rpx;
 }
 
@@ -352,7 +373,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 8rpx;
-  font-size: 22rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1)); /* UX-FIX-F12: 与卡片元信息同口径 */
   color: var(--text-tertiary);
 }
 

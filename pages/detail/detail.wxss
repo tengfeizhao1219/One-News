@@ -112,7 +112,8 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: 22rpx; /* owner 直连强制：元信息锁定 22px，禁止回退 */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中）：元信息由锁死 22rpx 改为跟涨但封顶 1.15 */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
@@ -121,8 +122,8 @@
 
 /* FE-B3 / UX-SIMPLIFY07: 原文链接低噪点入口 */
 .source-link {
-  color: var(--color-link, #007AFF);
-  font-size: 22rpx;
+  color: var(--color-link, var(--primary));
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   padding: 2rpx 12rpx;
   border: 1rpx solid var(--divider);
   border-radius: 20rpx;
@@ -179,7 +180,8 @@
   justify-content: center;
   gap: 4rpx;
   padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
-  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   transition: transform 0.15s ease;
   background: transparent;
@@ -199,7 +201,8 @@
 .share-btn-reset {
   margin: 0;
   padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
-  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中） */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -217,7 +220,8 @@
 }
 
 .bottom-bar-label {
-  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中） */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
 }
 
@@ -257,7 +261,8 @@
   overflow: hidden;
 }
 
-[data-font-scale="3"] .detail-meta {
+[data-font-scale="3"] .detail-meta,
+[data-font-scale="3"] .source-link {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

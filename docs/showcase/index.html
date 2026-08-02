@@ -469,33 +469,38 @@
       <p class="lead">全系统 25 项交互走查结论与优先修改建议，完整报告见 <a href="../docs/02-%E4%BA%A7%E5%93%81%E8%AE%BE%E8%AE%A1/D-02-%E5%A2%9E%E9%87%8F-%E5%85%A8%E7%B3%BB%E7%BB%9F%E4%BA%A4%E4%BA%92%E8%B5%B0%E6%9F%A5.md">D-02-增量-全系统交互走查.md</a>。</p>
       <div style="margin-top:24px">
         <div class="finding P0"><div class="badge">P0</div><div>
-          <h4>--primary 悬空引用</h4>
-          <p>标准与 RQ-15-D 多处引用 <code>var(--primary)</code>，但 theme.json 未定义，真机可能回退失效。</p>
-          <div class="owner">归属：视觉设计师 / 前端开发 · 补 --primary（浅 #007AFF / 暗 #0A84FF）</div>
+          <h4>--primary 悬空引用 — 已修复</h4>
+          <p>theme.json light/dark 已补 <code>--primary</code>（#007AFF/#0A84FF），并同步替换 wxss 中的硬编码。</p>
+          <div class="owner">已上线 · 视觉设计师 / 前端开发</div>
         </div></div>
         <div class="finding P0"><div class="badge">P0</div><div>
-          <h4>「R」刷新语义 ≠ 下拉刷新</h4>
-          <p>「R」调云函数强制拉新；下拉刷新仅重读列表。S4 简化不可零损合并，须让下拉也触发 refreshNews。</p>
-          <div class="owner">归属：PM（PD-B4 裁定 S4）/ 前端开发</div>
+          <h4>「R」刷新语义 ≠ 下拉刷新 — 已修复</h4>
+          <p><code>onPullDownRefresh</code> 已改为调用 <code>onRefreshNews()</code>，下拉与顶栏「R」语义等价，均走云函数强制拉新。</p>
+          <div class="owner">已上线 · PM（S4 是否合并入口仍待定）/ 前端开发</div>
         </div></div>
         <div class="finding P0"><div class="badge">P0</div><div>
-          <h4>顶栏按钮触控热区不足</h4>
-          <p>56rpx &lt; 88rpx 下限，且 D-02 §6.3 示例自相矛盾。补足热区并修订标准。</p>
-          <div class="owner">归属：交互设计师（修标准）/ 前端开发</div>
+          <h4>顶栏按钮触控热区不足 — 已修复</h4>
+          <p>视觉保持 56rpx，触控热区扩展至 88rpx×88rpx；D-02 §6.3 中自相矛盾的示例已勘误。</p>
+          <div class="owner">已上线 · 交互设计师 / 前端开发</div>
         </div></div>
         <div class="finding P1"><div class="badge">P1</div><div>
-          <h4>§3 边界反馈标准漂移</h4>
-          <p>标准写「边界 Chip 2000ms」，代码已改用 Toast。二选一固化并同步 D-02。</p>
-          <div class="owner">归属：交互设计师（修标准 §3/§10）</div>
+          <h4>§3 边界反馈标准漂移 — 已修复</h4>
+          <p>D-02 §3 已把「边界 Chip」固化为「边界 Toast」，与代码实际一致。</p>
+          <div class="owner">已上线 · 交互设计师</div>
         </div></div>
         <div class="finding P1"><div class="badge">P1</div><div>
-          <h4>配色暖白 vs 中性灰</h4>
-          <p>theme.json #F5F3F0 暖白 与 D-02 §9 中性 #F2F2F7 并存，需产品/视觉定调。</p>
+          <h4>元信息 22rpx 锁定 — 已按 owner 批准折中</h4>
+          <p>由完全冻结改为 <code>calc(22rpx * var(--font-scale-meta, 1))</code>，<code>--font-scale-meta</code> 由 app.js 封顶 1.15，最高 25.3rpx，并登记入 D-02 §6.4 例外表。</p>
+          <div class="owner">已上线 · 交互设计师 / 产品经理（PD-B7）</div>
+        </div></div>
+        <div class="finding P1"><div class="badge">P1</div><div>
+          <h4>配色暖白 vs 中性灰 — 已裁定</h4>
+          <p>按 D-03 v2.0（2026-07-31）以 theme.json 为唯一真值源，暖灰 #F5F3F0 是正式标准；#F2F2F7 为 v1.0 过时值，已同步修正三份旧文档。</p>
           <div class="owner">归属：视觉设计师 / 产品经理</div>
         </div></div>
         <div class="finding P2"><div class="badge">P2</div><div>
-          <h4>首启手势引导缺口</h4>
-          <p>引导遮罩已移除，swipe-hint 成唯一引导。建议 S2 图标化 + 一次性 coachmark。</p>
+          <h4>首启手势引导缺口 — 已优化</h4>
+          <p>引导遮罩已移除，swipe-hint 由纯文字改为 ⇅ + 文字，不恢复遮罩。</p>
           <div class="owner">归属：交互设计师 / 前端开发</div>
         </div></div>
       </div>

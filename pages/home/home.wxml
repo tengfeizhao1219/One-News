@@ -1,7 +1,11 @@
 <!-- 首页 - 卡片流主视图 -->
 <wxs module="touch" src="./touch.wxs"></wxs>
 
-<view class="page" data-font-scale="{{fontScaleTier}}">
+<!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
+<view
+  class="page"
+  data-font-scale="{{fontScaleTier}}"
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
   <!-- 固定顶部栏：刷新（左侧）+ 设置（右侧） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
@@ -73,7 +77,11 @@
         </view>
 
         <!-- 底部提示 -->
-        <view class="swipe-hint">^ 上滑阅读下一条</view>
+        <!-- UX-FIX-F4: S2 图标化，提升可发现性（不恢复遮罩式引导） -->
+        <view class="swipe-hint">
+          <text class="swipe-hint-icon">⇅</text>
+          <text class="swipe-hint-text">上滑阅读下一条</text>
+        </view>
       </view>
     </block>
   </view>

@@ -33,7 +33,7 @@ Page({
     animClass: '',
     // 跨分类视觉
     showCrossingCategory: '',  // 进度指示中的分类名
-    flashColor: '#007AFF',     // 跨分类进度分类名着色
+    flashColor: '',            // 跨分类进度分类名着色；空串触发 CSS fallback 到 var(--primary)
     // 网络兜底
     networkToastVisible: false,
     // 收藏
@@ -41,6 +41,10 @@ Page({
     heartAnim: false,
     // 字体档位（UX-FIX04 截断保护用）
     fontScaleTier: 0,
+    // UX-FIX-F13: CSS --font-scale 数值（此前详情页完全缺失，导致正文缩放失效）
+    _fontScaleValue: 1,
+    // UX-FIX-F12: 元信息/操作栏缩放（封顶 1.15）
+    _metaScaleValue: 1,
   },
 
   // 引擎实例
@@ -60,6 +64,11 @@ Page({
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
     var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
+    // UX-FIX-F13/F12: 同步缩放变量，供根节点 style 注入（此前详情页从未注入 → 正文不缩放）
+    var scaleVal = (app && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1
+    var metaVal = (app && typeof app.globalData._metaScaleValue === 'number')
+      ? app.globalData._metaScaleValue
+      : (scaleVal > 1.15 ? 1.15 : scaleVal)
 
     // UX-BUG02: 初始化滚动状态 + 获取可视区高度
     this._isAtTop = true
@@ -72,7 +81,13 @@ Page({
       this._clientHeight = 500
     }
 
-    this.setData({ category: category, currentIndex: index, fontScaleTier: tier })
+    this.setData({
+      category: category,
+      currentIndex: index,
+      fontScaleTier: tier,
+      _fontScaleValue: scaleVal,
+      _metaScaleValue: metaVal
+    })
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
     this._pregenPlaceholder(category)
@@ -357,7 +372,8 @@ Page({
    */
   _showFlash: function (categoryId) {
     // UX-SIMPLIFY05: 移除闪烁条，仅保留 flashColor 用于进度指示分类名着色
-    var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : '#007AFF'
+    // UX-FIX-F1: 分类色仍由 reading-engine 提供（分类色≠主色），无结果时留空让 CSS fallback 到 --primary
+    var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : ''
     this.setData({ flashColor: color })
   },
 

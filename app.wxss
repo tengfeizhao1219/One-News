@@ -56,3 +56,17 @@ page {
   background-color: var(--tag-bg);
   color: var(--tag-text);
 }
+
+/* UX-FIX-F9: 全局减弱动效偏好适配（D-02 §2.2）
+   所有动画、过渡 ≤100ms；保持 opacity/display 切换瞬达，
+   避免 vestibular disorder 用户在快速翻页/滚轮 snap 时产生眩晕。
+   小程序环境不支持 prefers-reduced-motion 媒体查询？实际上 iOS/Android 均可传递系统设置，
+   微信基础库 2.8.0+ 已支持；若旧设备不支持，本媒体查询只是静默失效，无负面影响。 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

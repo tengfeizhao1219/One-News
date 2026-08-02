@@ -35,6 +35,7 @@ Page({
     showFontPanel: false,   // 字体面板是否显示
     fontScaleTier: 0,       // 当前字体档位 0-3
     _fontScaleValue: 1,     // CSS --font-scale 数值（由 app 注入）
+    _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
   },
 
   // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
@@ -73,8 +74,14 @@ Page({
     var app = getApp()
     var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
     var val = (app && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1
-    if (tier !== this.data.fontScaleTier || val !== this.data._fontScaleValue) {
-      this.setData({ fontScaleTier: tier, _fontScaleValue: val })
+    // UX-FIX-F12: 元信息缩放上限 1.15，globalData 缺失时按 val 封顶兜底
+    var metaVal = (app && typeof app.globalData._metaScaleValue === 'number')
+      ? app.globalData._metaScaleValue
+      : (val > 1.15 ? 1.15 : val)
+    if (tier !== this.data.fontScaleTier ||
+        val !== this.data._fontScaleValue ||
+        metaVal !== this.data._metaScaleValue) {
+      this.setData({ fontScaleTier: tier, _fontScaleValue: val, _metaScaleValue: metaVal })
     }
   },
 
@@ -247,11 +254,9 @@ Page({
     })
   },
 
-  // 下拉刷新
+  // 下拉刷新（UX-FIX-F2：与顶栏「R」语义对齐，都走强制云刷新）
   onPullDownRefresh() {
-    this.loadNews().then(() => {
-      // BUG-20260801-007 修复：刷新后清空侧边栏缓存，下次打开重新拉取
-      this._panelCache = {}
+    this.onRefreshNews().finally(() => {
       wx.stopPullDownRefresh()
     })
   },

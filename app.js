@@ -1,10 +1,18 @@
 const { CATEGORIES } = require('./utils/constants')
 
+/**
+ * 元信息/操作栏字号缩放上限（UX-FIX-F12，owner 2026-08-02 批准）
+ * 正文可放大到 1.5，元信息最高只跟涨到 1.15（22rpx → 25.3rpx）。
+ */
+const META_SCALE_CAP = 1.15
+
 App({
   globalData: {
     currentCategory: 'all',
     categoryNames: {},
     fontScale: 0,
+    _fontScaleValue: 1,
+    _metaScaleValue: 1,
   },
 
   onLaunch() {
@@ -85,10 +93,22 @@ App({
 
   /**
    * 将档位映射为 CSS --font-scale 数值并注入到页面 style
+   *
+   * UX-FIX-F13：此前 wxml 根节点未绑定 style="--font-scale"，导致本方法算出的
+   * scale 从未真正进入 DOM，全站 22 处 calc(Xrpx * var(--font-scale)) 恒等于
+   * 基准值 —— 四档字号形同虚设。现由 home.wxml / detail.wxml 根节点绑定生效。
+   *
+   * UX-FIX-F12（owner 2026-08-02 批准折中）：元信息与操作栏不再锁死 22rpx，
+   * 改为跟随缩放但设 1.15 上限（最高 25.3rpx），既守住「元信息视觉退后」的
+   * 版式意图，又不完全冻结无障碍缩放。上限在 JS 层算好而非用 CSS min()，
+   * 规避低版本 WebView 对 min() 的兼容风险。
    */
   _applyFontScale(tier) {
     var scaleMap = [1, 1.15, 1.3, 1.5]
     var scale = scaleMap[tier] || 1
+
+    // 元信息/操作栏折中系数：跟涨但封顶 1.15
+    var metaScale = scale > META_SCALE_CAP ? META_SCALE_CAP : scale
 
     // 动态设置 page 级别的 CSS 变量（覆盖 theme.json 默认值）
     // 通过 getCurrentPages 注入到所有页面
@@ -96,12 +116,16 @@ App({
       var pages = getCurrentPages()
       for (var i = 0; i < pages.length; i++) {
         if (pages[i] && pages[i].setData) {
-          pages[i].setData({ _fontScaleValue: scale })
+          pages[i].setData({
+            _fontScaleValue: scale,
+            _metaScaleValue: metaScale
+          })
         }
       }
     } catch (e) { /* ignore */ }
 
     // 同时写入全局 data，供新页面 onLoad 时读取
     this.globalData._fontScaleValue = scale
+    this.globalData._metaScaleValue = metaScale
   }
 })

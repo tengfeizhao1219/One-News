@@ -1,3 +1,33 @@
+## [2026-08-02 18:22] 🟣 交互设计师 按 owner 指示直接修复走查发现项（F1/F2/F4/F5/F8/F9/F11/F12/F13）
+
+> **依据**：owner 2026-08-02 指示 —— F12 元信息 22rpx 采用折中方案；F5 按设计标准更新；所有走查发现的问题直接修改上线。
+
+### 一、已上线修改
+- **F1** `theme.json` 补 `--primary`（浅 `#007AFF` / 暗 `#0A84FF`）+ `--primary-subtle`；替换 wxss 硬编码主色。
+- **F2** `home.js:onPullDownRefresh` 改为调用 `onRefreshNews()`，下拉与顶栏「R」语义等价（均走云函数强制拉新）。
+- **F4** swipe-hint 由纯文字改为 `⇅` + 文字，不恢复遮罩。
+- **F5** 配色定调：按 D-03 v2.0 以 `theme.json` 暖灰 `#F5F3F0` 为正式标准；同步修正三份旧文档（`视觉风格与配色方案.md` / `设计规范文档.md` / `线框图与交互原型.md`），D-02 §9.2 补充浅色标准。
+- **F8** D-02 §3「边界 Chip」固化为「边界 Toast」，同步 §3.2 约束与 §10 简化清单。
+- **F9** `app.wxss` 增加全局 `@media (prefers-reduced-motion: reduce)`。
+- **F11** 顶栏「R」触控热区扩至 88rpx×88rpx（视觉保持 56rpx）；D-02 §6.3 勘误自相矛盾示例。
+- **F12** 元信息/操作栏由锁死 22rpx 改为 `calc(22rpx * var(--font-scale-meta, 1))`（封顶 1.15，最高 25.3rpx）；D-02 §6.4 增例外登记表。
+- **F13（本次新增发现）** 修复全站字号缩放断链：`home.wxml` / `detail.wxml` 根节点注入 `--font-scale` / `--font-scale-meta`；`detail.js` 补缺失字段；`app.js` 算好 `_metaScaleValue`。
+
+### 二、关键取舍说明
+- **F5 没有改代码回冷灰**：D-03 v2.0 已明确以 theme.json 为唯一真值源，暖灰 #F5F3F0 是正式标准；改回 #F2F2F7 会推翻设计师 4 天前的正式修订并造成色调割裂。
+- **F12 折中在 JS 层实现**：`--font-scale-meta = min(--font-scale, 1.15)`，避免低版本 WebView 对 CSS `min()` 的支持风险。
+
+### 三、仍待 PM 决策
+- S4 是否合并「R」与下拉刷新入口；S6「全部/推荐」合并；S7 原文链接策略。
+
+### 四、变更文件
+`app.js` / `app.wxss` / `theme.json` / `pages/home/*` / `pages/detail/*` / `docs/02-产品设计/D-02-交互语言标准-v1.0.md` / `docs/02-产品设计/D-02-增量-全系统交互走查.md` / `docs/showcase/index.html` / 三份配色 v1.0 文档。
+
+### 五、找谁
+- 交互设计师（本次修复人）｜🔔 关注人：产品经理 + 前端开发 + 测试工程师
+
+---
+
 # 会话沟通记录（Communication Log）
 
 > **用途**：每个会话结束时的交接记录。按时间倒序排列。
