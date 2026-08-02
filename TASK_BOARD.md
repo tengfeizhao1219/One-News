@@ -160,6 +160,25 @@
 
 ---
 
+### 🟦 2026-08-02 16:00 前端开发 领取无依赖任务（FE-B2/B3/B4/B5 + UX-SIMPLIFY01/05/07）
+
+> **依据**：广播区 v2 指派 + 项目规则「依赖=无 → 一口气全部认领完成」。前端开发在此认领并推进下列任务：
+
+| 编号 | 任务 | 优先级 | 状态 | 动作 |
+|------|------|:---:|:---:|------|
+| UX-SIMPLIFY01 | 移除底部返回按钮 | 🟡 | ✅ | 代码已随简化批次交付，核对 main 确认完成 |
+| FE-B2 / UX-SIMPLIFY05 | 移除 category-flash 闪烁条 | 🟡 | 🔄 | 实现中（wxml/wxss/js 三处） |
+| FE-B3 / UX-SIMPLIFY07 | 原文链接 → ActionSheet | 🟡 | 🔄 | 实现中（补回 link 入口 + `openSourceUrl`） |
+| FE-B4 | UX 走查 v1.1 遗留 6 项 | 🔴 | 🔄 | 实现中（BUG-STD-002/DEV-STD-02/04/05/06/08） |
+| FE-B5 / BUG-008 | ReadingEngine 复用 `detailContext.list` | 🟢 | ✅ | 已核实：home.js 写入 + detail.js `_initEngine` 消费，双端闭环 |
+
+> **⚠️ 两点需 PM/UX 知悉（非阻塞，按规则已开工）**：
+> 1. **FE-B3 源链接入口**：P0 修复（`6b48788`）将 `detail-source-link` 一并移除。本次按 SIMPLIFY07 重建为「元信息行内「原文↗」低噪点入口」（仅当 `news.sourceUrl` 存在时显示），与极致简化原则一致。若产品/交互希望保留独立「查看原文」按钮，请在广播区确认。
+> 2. **FE-B4 DEV-STD-06（content padding-bottom）**：走查报告基于旧 220rpx 翻页按钮给出 `+220rpx` 建议；简化后翻页按钮已移除、底部操作栏为 100rpx，原建议已不适用。前端开发按「清开当前 100rpx 操作栏」修正（100rpx + 安全区 + 48rpx 余量），避免无谓大留白。
+> **🚫 未认领**：FE-B1（P0 翻页真机自测）需微信开发者工具/真机 + 用户配合，依赖非「无」，按规则留作专项，不自动认领。
+
+---
+
 ### 🆘 2026-08-02 P0 事故通报 + 全员任务指派 `[已被上方 v2 版覆盖，保留存档]`
 
 #### 一、🔴 P0 事故：详情页「翻下一条」功能曾完全失效（已止血）
@@ -459,9 +478,9 @@
 
 | ID | 任务 | 负责人 | 优先级 | 状态 | 依赖 | 说明 |
 |----|------|--------|:---:|:---:|------|------|
-| UX-SIMPLIFY01 | 移除详情页底部"← 返回"按钮（back-bottom） | 前端开发 | 🟡 | 📋 | 无 | detail.wxml 删 `<view class="back-bottom">` + detail.wxss 删 `.back-bottom`；顶部 nav-back 与微信原生返回手势已覆盖，移除后释放正文末行空间、降噪 |
-| UX-SIMPLIFY05 | 移除跨分类闪烁条（category-flash），保留进度指示分类名 | 前端开发 | 🟡 | 📋 | 无 | detail.wxml 删 category-flash view + detail.wxss 删 `.category-flash` + detail.js 移除 `_showFlash` 的 flashVisible 切换（保留 flashColor 用于进度指示分类名着色）；跨分类时 "1/15 · 国际" 已含分类名 fadeIn，闪烁条信息重复 |
-| UX-SIMPLIFY07 | 原文链接交互优化：复制链接 → ActionSheet | 前端开发 | 🟡 | 📋 | 无 | detail.js `openSourceUrl` 改为 wx.showActionSheet(['复制链接', '分享给朋友'])；选择"复制链接"→ 现有 clipboard 逻辑；选择"分享给朋友"→ 触发 onShareAppMessage；详见 D-02 §5.5 |
+| UX-SIMPLIFY01 | 移除详情页底部"← 返回"按钮（back-bottom） | 前端开发 | 🟡 | ✅ | 无 | ✅ 代码已随简化批次 `56ca73a`~`6b48788` 交付：detail.wxml 已删 `back-bottom`、detail.wxss 已删 `.back-bottom`；顶部 nav 进度 + 微信原生返回手势已覆盖。前端开发 2026-08-02 核对 main 确认 ✅ |
+| UX-SIMPLIFY05 | 移除跨分类闪烁条（category-flash），保留进度指示分类名 | 前端开发 | 🟡 | 🔄 | 无 | 🔄 2026-08-02 前端开发认领并实现中：detail.wxml 删 `category-flash` view + detail.wxss 删 `.category-flash`/`@keyframes flashPulse` + detail.js `_showFlash` 仅保留 `flashColor`（进度分类名着色）。跨分类 "1/15 · 国际" 已含分类名 fadeIn |
+| UX-SIMPLIFY07 | 原文链接交互优化：复制链接 → ActionSheet | 前端开发 | 🟡 | 🔄 | 无 | 🔄 2026-08-02 前端开发认领并实现中：补回 `detail.wxml` 原文链接入口（P0 修复时随 detail-source-link 一并移除，本次按 SIMPLIFY07 以「源名旁原文↗」低噪点入口重建）+ detail.js 新增 `openSourceUrl`：`wx.showActionSheet(['复制链接','分享给朋友'])`；详见 D-02 §5.5 |
 
 ### 🔴 UX 走查修复项（来源：D-02 交互走查 B-03/B-05）
 
