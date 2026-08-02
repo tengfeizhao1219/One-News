@@ -40,21 +40,6 @@
   opacity: 0.6;
 }
 
-.top-bar-settings {
-  width: 56rpx;
-  height: 56rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-}
-
-.top-bar-settings:active {
-  opacity: 0.6;
-}
-
 .settings-icon {
   font-size: 28rpx;
   line-height: 1;
@@ -550,4 +535,69 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ============ BUG-20260802-005: 卡片右下角 3D 浮动设置按钮 ============ */
+.floating-settings {
+  position: absolute;
+  right: 40rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 26;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, var(--bg-card), var(--tag-bg));
+  box-shadow:
+    0 12rpx 28rpx rgba(0, 0, 0, 0.18),
+    0 4rpx 8rpx rgba(0, 0, 0, 0.12),
+    inset 0 1rpx 1rpx rgba(255, 255, 255, 0.6);
+  animation: floatY 3.2s ease-in-out infinite;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.floating-settings.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.8);
+}
+
+.floating-settings:active {
+  animation: none;
+  transform: scale(0.92);
+  box-shadow:
+    0 6rpx 16rpx rgba(0, 0, 0, 0.16),
+    inset 0 1rpx 1rpx rgba(255, 255, 255, 0.5);
+}
+
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10rpx); }
+}
+
+/* ============ BUG-20260802-006: 分类切换 0.5s 提示 ============ */
+.category-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  z-index: 20;
+  padding: 16rpx 48rpx;
+  border-radius: 999rpx;
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  font-size: calc(40rpx * var(--font-scale));
+  font-weight: 700;
+  letter-spacing: 2rpx;
+  box-shadow: 0 8rpx 32rpx var(--overlay);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.category-hint.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
 }
