@@ -12,17 +12,12 @@
 .nav-bar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 16rpx 48rpx;
   flex-shrink: 0;
 }
 
-.nav-back {
-  font-size: calc(30rpx * var(--font-scale));  /* D-05#2: 参与字号缩放 */
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1rpx;
-}
+/*  nav-back 已移除 */
 
 .nav-position {
   display: flex;
@@ -72,72 +67,21 @@
   padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
 }
 
-/* 翻页动画容器 */
+/* 翻页动画容器 — 对标首页卡片逻辑 */
 .article {
   transition: transform 0.35s ease, opacity 0.35s ease;
   will-change: transform, opacity;
 }
+/* 上滑翻下一条：旧内容向上移出 */
 .article.out-up   { transform: translateY(-100%); opacity: 0; }
+/* 下滑翻上一条：旧内容向下移出 */
 .article.out-down { transform: translateY(100%);  opacity: 0; }
+/* 上滑翻下一条：新内容从下方滑入（+100%→0，由移除 class 触发 transition） */
 .article.in-up    { transform: translateY(100%);  opacity: 0; }
+/* 下滑翻上一条：新内容从上方滑入（-100%→0） */
 .article.in-down  { transform: translateY(-100%); opacity: 0; }
 
-/* 上下翻页按钮 */
-.pager-hint {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 220rpx;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 48rpx;
-  pointer-events: none;
-  z-index: 18;
-}
-.pager-btn {
-  pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 40rpx;
-  line-height: 1.1;
-  color: var(--text-secondary);
-  background-color: var(--tag-bg, rgba(0,0,0,0.04));
-  padding: 14rpx 22rpx;
-  border-radius: 20rpx;
-}
-.pager-btn text {
-  font-size: calc(22rpx * var(--font-scale));
-  margin-top: 4rpx;
-  letter-spacing: 1rpx;
-}
-
-/* ============ 边界提示 Chip ============ */
-
-.boundary-chip {
-  position: fixed;
-  bottom: 180rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  font-size: calc(26rpx * var(--font-scale));
-  padding: 20rpx 36rpx;
-  border-radius: 28rpx;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.boundary-chip.show {
-  opacity: 1;
-}
-
-.chip-action {
-  text-decoration: underline;
-  pointer-events: auto;
-}
+/*  边界提示 Chip + chip-action 已移除 */
 
 /* ============ 网络兜底 Toast ============ */
 
@@ -163,7 +107,7 @@
 /* ============ 正文排版 ============ */
 
 .detail-body {
-  padding: 16rpx 64rpx 80rpx;
+  padding: 32rpx 64rpx 80rpx;  /* UX-IMPROVE05: 16→32 标题与状态栏间增加呼吸感 */
 }
 
 .detail-title {
@@ -179,24 +123,11 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: 22rpx;
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
-}
-
-.detail-source-link {
-  margin-bottom: 36rpx;
-}
-
-.detail-source-link text {
-  display: inline-flex;
-  align-items: center;
-  font-size: calc(26rpx * var(--font-scale));
-  color: var(--text-link, #576b95);
-  padding: 8rpx 16rpx;
-  border-radius: 8rpx;
-  background-color: var(--bg-subtle, rgba(87, 107, 149, 0.06));
+  flex-wrap: wrap;
 }
 
 .detail-divider {
@@ -210,21 +141,15 @@
 }
 
 .text-p {
-  font-size: calc(34rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: calc(2.2 * var(--font-scale));
+  line-height: calc(2.15 * var(--font-scale));
   margin-bottom: 40rpx;
   letter-spacing: 1rpx;
   text-indent: 2em;
 }
 
-.back-bottom {
-  text-align: center;
-  padding: 80rpx 0 60rpx;
-  font-size: calc(28rpx * var(--font-scale));
-  color: var(--text-secondary);
-  letter-spacing: 1rpx;
-}
+/*  back-bottom 已移除 */
 
 /* ============ 底部操作栏（收藏 + 分享） ============ */
 
