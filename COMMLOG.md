@@ -32,6 +32,39 @@
 - 原来 UX↔UI 之间需要交接的设计任务 → 产品设计师一人闭环
 - 原来 PM→QA 测试交接 → 产品经理一人负责需求到验收全链路
 
+## [2026-08-02 22:03] 🟣 owner 最终决策 S4/S6/S7 落地（已基于远端 8712135 重新应用并推送）
+
+> **依据**：owner 2026-08-02 20:50 指示 —— S4 取消 R 按钮、S6 合并「全部/推荐」、S7 删除原文链接；要求同步公告给所有人，并让产品经理更新对应文档。
+> **说明**：初次推送时因沙箱 GitHub TLS 中断导致本地提交落后于远端；已 reset 到远端最新 `8712135` 重新应用修改并再次推送。
+
+### 一、已落地修改
+- **S4 取消 R 按钮**：`pages/home/home.wxml` 已移除 `top-bar-refresh`；`home.wxss` 相关样式已废弃注释；`home.js` 中 `onRefreshNews` 改为私有方法 `_refreshNewsCloud()`，仅由下拉刷新调用。
+- **S6 合并「全部/推荐」**：`utils/constants.js` 已移除 `recommend`；`pages/detail/detail.js`、`pages/detail/reading-engine.js`、`pages/home/home.js` 中所有 `'recommend'` fallback 已替换为 `'all'`；`components/share-card/share-card.js` 兜底分类改为 `all`；`reading-engine.getCategoryFlashColor` 中 recommend 颜色移除。
+- **S7 删除原文链接**：`pages/detail/detail.wxml` 已移除 `source-link`；`detail.js` 删除 `openSourceUrl` 方法；`detail.wxss` 相关样式已废弃注释。
+
+### 二、已同步文档
+- `docs/02-产品设计/D-02-交互语言标准-v1.0.md` §10 简化清单：S4/S6/S7 已标「✅ 已落地」，S6/S7 从「评估中」移除。
+- `docs/02-产品设计/D-02-增量-全系统交互走查.md`：§4 新增 S4/S6/S7 已落地说明，§5 行动清单更新，H4/H5 走查结论更新。
+- `docs/showcase/index.html`：走查发现摘要已更新。
+
+### 三、待产品经理更新文档（PD-B8）
+- **PD-B8** 已加入 TASK_BOARD：请 PM 更新 `PRD-新闻速览小程序.md`、测试验收用例、产品文档统一库，以反映：
+  1. 首页刷新入口改为仅下拉刷新，无 R 按钮。
+  2. 分类 Tab 列表中无「推荐」，仅保留「全部」。
+  3. 详情页元信息不再显示「原文↗」入口。
+
+### 四、公告
+@所有人：owner 已最终裁定 S4/S6/S7，前端已完成代码修改并推送至 `main`。PM 请认领 PD-B8 文档同步；QA 请在下一轮真机回归中重点验证：
+1. 首页顶栏无 R 按钮，下拉刷新仍能成功拉取新新闻。
+2. 侧边栏/首页分类列表中无「推荐」Tab，仅保留「全部」。
+3. 详情页元信息不再显示「原文↗」入口。
+
+### 五、变更文件
+`pages/home/*` / `pages/detail/*` / `utils/constants.js` / `components/share-card/share-card.js` / `docs/02-产品设计/D-02-交互语言标准-v1.0.md` / `docs/02-产品设计/D-02-增量-全系统交互走查.md` / `docs/showcase/index.html`
+
+### 六、找谁
+- 交互设计师（本次修改人）｜🔔 关注人：产品经理 + 前端开发 + QA
+
 ---
 
 ## [2026-08-02 21:00] 🧯 项目经理 修复 app.wxss 编译报错（owner 直报：`unexpected token '*'`）

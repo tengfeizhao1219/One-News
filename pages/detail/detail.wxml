@@ -59,7 +59,7 @@
           <text wx:if="{{news.source}}">{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-          <text wx:if="{{news.sourceUrl}}" class="source-link" bindtap="openSourceUrl">原文↗</text>
+          <!-- S7: owner 2026-08-02 决策，删除原文链接入口 -->
         </view>
 
         <!-- 分隔线 -->

@@ -25,29 +25,9 @@
   align-items: center;
 }
 
-.top-bar-refresh {
-  /* UX-FIX-F11: 视觉保持 56rpx（owner 已定版式），但触控热区扩到 88rpx × 88rpx。
-     做法：padding 补足热区 + 负 margin 避免撑开布局，内容区用 box-sizing: content-box 保持居中。 */
-  width: 56rpx;
-  height: 56rpx;
-  padding: 16rpx;
-  margin: -16rpx;
-  border-radius: 50%;
-  background-color: var(--tag-bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  /* 触摸热区扩至 ≥88rpx：padding 撑开命中区，background-clip 保证可见圆仍为 56rpx */
-  padding: 16rpx;
-  margin: -16rpx;
-  background-clip: content-box;
-  -webkit-background-clip: content-box;
-}
-
-.top-bar-refresh:active {
-  opacity: 0.6;
-}
+/* S4: R 按钮已移除，以下样式废弃保留历史注释 */
+/* .top-bar-refresh { ... } */
+/* .refresh-icon { ... } */
 
 .top-bar-settings {
   width: 56rpx;
