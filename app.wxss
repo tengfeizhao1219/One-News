@@ -61,9 +61,12 @@ page {
    所有动画、过渡 ≤100ms；保持 opacity/display 切换瞬达，
    避免 vestibular disorder 用户在快速翻页/滚轮 snap 时产生眩晕。
    小程序环境不支持 prefers-reduced-motion 媒体查询？实际上 iOS/Android 均可传递系统设置，
-   微信基础库 2.8.0+ 已支持；若旧设备不支持，本媒体查询只是静默失效，无负面影响。 */
+   微信基础库 2.8.0+ 已支持；若旧设备不支持，本媒体查询只是静默失效，无负面影响。
+   ⚠️ 修复记录（2026-08-02 20:56, PM 代前端）：原写法用通配选择器 `* {}`，
+   微信 WXSS 不支持通配符（IDE 报 unexpected token '*'，app.wxss(1:809)），
+   已改为 WXSS 支持的元素选择器列表（element, element），效果等价全局。 */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  page, view, scroll-view, swiper, swiper-item, text, image, button, navigator, icon, cover-view, movable-area, movable-view {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
