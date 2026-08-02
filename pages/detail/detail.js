@@ -257,6 +257,11 @@ Page({
     // 跨分类闪烁条
     if (result.isCrossing) {
       that._showFlash(result.crossingCategory)
+      // BUG-20260802-006: 跨分类 ~0.5s 分类名提示（独立于内容加载，保证可见时长）
+      clearTimeout(that._crossingHintTimer)
+      that._crossingHintTimer = setTimeout(function () {
+        if (!that._destroyed) that.setData({ showCrossingCategory: '' })
+      }, 500)
     }
 
     // 更新进度
@@ -281,7 +286,7 @@ Page({
         // 新内容就绪 → 先设 in-up（从下方 +100% 起始），然后立即清除触发 transition 滑入
         that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
-          that.setData({ animClass: '', showCrossingCategory: '' })
+          that.setData({ animClass: '' }) // showCrossingCategory 由 500ms 定时器独立清除（BUG-20260802-006）
           that._animating = false
         }, 30)
       }).catch(function () {
@@ -308,6 +313,11 @@ Page({
 
     if (result.isCrossing) {
       that._showFlash(result.crossingCategory)
+      // BUG-20260802-006: 跨分类 ~0.5s 分类名提示
+      clearTimeout(that._crossingHintTimer)
+      that._crossingHintTimer = setTimeout(function () {
+        if (!that._destroyed) that.setData({ showCrossingCategory: '' })
+      }, 500)
     }
 
     var progress = that._engine.getProgress()
@@ -329,7 +339,7 @@ Page({
         // 新内容就绪 → 先设 in-down（从上方 -100% 起始），然后立即清除触发 transition 滑入
         that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
-          that.setData({ animClass: '', showCrossingCategory: '' })
+          that.setData({ animClass: '' }) // showCrossingCategory 由 500ms 定时器独立清除（BUG-20260802-006）
           that._animating = false
         }, 30)
       }).catch(function () {
