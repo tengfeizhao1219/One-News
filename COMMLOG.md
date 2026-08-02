@@ -135,6 +135,29 @@
 
 ---
 
+## [2026-08-02 17:02] 🚨 owner 直连：元信息 + 操作栏强制锁定 22px | 会话：前端开发（响应 owner「强制改成 22px 大小」）
+
+> **来源**：owner 直连指令「把详情页和卡片的元信息（新闻来源，时间等）以及分享，收藏等强制改成 22px 大小，并广播告诉所有人，后续不允许再修改回去」。
+> **结论**：前端开发已执行，覆盖 `.card-meta` / `.detail-meta` / `.bottom-bar-btn` / `.bottom-bar-label` / `.share-btn-reset` 共 5 处，全部从 `calc(24rpx * var(--font-scale))` 改为 `22rpx`，并标注 `/* owner 直连强制 */`。TASK_BOARD 广播区已留痕 + 标注红线。
+
+### 变更文件
+| 文件 | 改动 | 状态 |
+|------|------|------|
+| `pages/home/home.wxss` | `.card-meta` `calc(24rpx * var(--font-scale))` → `22rpx` | ✅ |
+| `pages/detail/detail.wxss` | `.detail-meta` `calc(24rpx * var(--font-scale))` → `22rpx` | ✅ |
+| `pages/detail/detail.wxss` | `.bottom-bar-btn` `calc(24rpx * var(--font-scale))` → `22rpx` | ✅ |
+| `pages/detail/detail.wxss` | `.share-btn-reset` `calc(24rpx * var(--font-scale))` → `22rpx` | ✅ |
+| `pages/detail/detail.wxss` | `.bottom-bar-label` `calc(24rpx * var(--font-scale))` → `22rpx` | ✅ |
+
+### ⚠️ 红线
+**元信息 + 操作栏 22px 为 owner 最终定案，任何人（含设计师）后续不得修改。如需调整，须 owner 本人确认。**
+
+### 注意事项
+- 本次推翻了上轮 BUG-20260802-002 的「卡片/详情元信息 24rpx 对齐」方案（24rpx→22rpx）。该 BUG 仍视为 ✅ 关闭，但最终字号由 owner 裁定为 22rpx。
+- 22rpx 为固定值，**不参与字体档位缩放**（移除了 `calc(…*var(--font-scale))`），与标题/正文的缩放体系解耦。
+
+---
+
 ## [2026-08-02 17:25] 🔵 前端开发 认领并修复用户直报 6 项缺陷（BUG-20260802-001~006） | 会话：前端开发（响应 owner「领取任务」）
 
 > **依据**：广播区「6 项实现方，无依赖可并行认领」+ 项目规则「依赖=无 → 一口气全部认领完成」。代码已交付，文档已同步。TASK_BOARD 6 行 📋→✅。
