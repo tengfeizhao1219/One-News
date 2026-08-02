@@ -2478,3 +2478,11 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 - `cloudfunctions/refreshNews/config.json` — 触发器改每小时
 - `TASK_BOARD.md` — B-16 后端行 + TL 区/页脚/bullet + DEP-01 准确性 + PM 澄清块
 - `COMMLOG.md` — 本记录
+---
+
+## [2026-08-02] 后端开发 认领 B-16（BE-B2）新闻存储保留机制 | 会话：[后端开发(BE)]
+
+- **认领**：B-16 / BE-B2（收藏/分享新闻 30 天保留）由后端开发认领，TASK_BOARD 后端表状态 📋 → 🔄。
+- **方案**：按 `docs/03-技术方案/B-16-新闻存储保留机制-技术决策.md` 实现 news 集合 `isRetained` 标记 + 新增 `setNewsRetained` 云函数 + `refreshNews` 跳过保留文档 + 30 天自动清理；FE 配合展示保留态。
+- **依赖**：无（TL 已决策并激活 §4）。另：B-12（限流）随 v4.2 数据源重写已 ❌ 作废（天行/聚合非活跃源），不在本次范围。
+- **变更文件**：`TASK_BOARD.md`（B-16 行 📋→🔄 + 下游激活汇总修正 B-12 作废说明）
