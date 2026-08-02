@@ -33,8 +33,7 @@ Page({
     animClass: '',
     // 跨分类视觉
     showCrossingCategory: '',  // 进度指示中的分类名
-    flashVisible: false,       // 闪烁条可见
-    flashColor: '#007AFF',     // 闪烁条颜色
+    flashColor: '#007AFF',     // 跨分类进度分类名着色
     // 网络兜底
     networkToastVisible: false,
     // 收藏
@@ -347,12 +346,9 @@ Page({
    * 分类闪烁条（200ms）
    */
   _showFlash: function (categoryId) {
-    var that = this
+    // UX-SIMPLIFY05: 移除闪烁条，仅保留 flashColor 用于进度指示分类名着色
     var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : '#007AFF'
-    this.setData({ flashVisible: true, flashColor: color })
-    setTimeout(function () {
-      that.setData({ flashVisible: false })
-    }, 200)
+    this.setData({ flashColor: color })
   },
 
   /**
@@ -382,6 +378,34 @@ Page({
       }
     }
     wx.navigateBack()
+  },
+
+  /**
+   * FE-B3 / UX-SIMPLIFY07: 原文链接交互 — ActionSheet（复制链接 / 分享给朋友）
+   */
+  openSourceUrl: function () {
+    var news = this.data.news || {}
+    var url = news.sourceUrl
+    if (!url) {
+      wx.showToast({ title: '暂无原文链接', icon: 'none' })
+      return
+    }
+    wx.showActionSheet({
+      itemList: ['复制链接', '分享给朋友'],
+      success: function (res) {
+        if (res.tapIndex === 0) {
+          wx.setClipboardData({
+            data: url,
+            success: function () {
+              wx.showToast({ title: '链接已复制', icon: 'success' })
+            },
+          })
+        } else if (res.tapIndex === 1) {
+          // 微信不支持以代码拉起分享面板，引导用户点击底部「分享」按钮
+          wx.showToast({ title: '点底部「分享」即可发给朋友', icon: 'none' })
+        }
+      },
+    })
   },
 
   // ============ 分享（B-05 + UX-FIX02 占位图预缓存） ============
