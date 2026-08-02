@@ -29,7 +29,8 @@ Page({
     skeletonCount: 3,       // 骨架屏卡片数量
     isRefreshing: false,    // 手动刷新中
     currentPage: 1,         // 当前分页（用于边界加载更多）
-    loadingMore: false,     // 边界加载更多/刷新中
+    loadingMore: false,    // 边界加载更多/刷新中
+    categoryHint: '',      // BUG-20260802-006: 分类切换 0.5s 提示文案
     // 字体面板
     showFontPanel: false,   // 字体面板是否显示
     fontScaleTier: 0,       // 当前字体档位 0-3
@@ -126,15 +127,45 @@ Page({
     // 场景 2: 分类变了，需要切换分类并加载数据
     if (category && category !== this.data.currentCategory) {
       this.setData({ currentCategory: category, panelCategory: category })
+      var that = this
       getNewsList({ category: category }).then(function (res) {
         var list = res.list || []
-        var idx = resolveIndex(list)
-        this.setData({ newsList: list, currentIndex: idx, currentPage: 1, loadingMore: false })
-        this.renderCards(list, idx)
+        // BUG-20260802-004: 与侧边栏列表同形（带 _originalIndex），保证 panelCurrentIndex 对齐
+        var mapped = list.map(function (item, i) { return Object.assign({}, item, { _originalIndex: i }) })
+        var idx = resolveIndex(mapped)
+        that.setData({
+          newsList: mapped,
+          currentPage: 1,
+          loadingMore: false,
+          filteredNewsList: mapped, // BUG-20260802-004: 同步侧栏列表，否则高亮错位
+          panelCurrentIndex: idx,   // BUG-20260802-004: 跨分类高亮定位
+        })
+        that._panelCache[category] = mapped
+        that.renderCards(mapped, idx)
       }.bind(this)).catch(function () {
         // 加载失败，保持当前状态
       })
     }
+  },
+
+  /**
+   * BUG-20260802-006: 分类切换 ~0.5s 分类名提示
+   * 在卡片页可见区域中央短暂展示分类名（面板关闭后/选中卡片时触发）
+   */
+  _showCategoryHint: function (catId) {
+    if (!catId) return
+    var name = ''
+    var cats = this.data.categories
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i].id === catId) { name = cats[i].name; break }
+    }
+    if (!name) return
+    var that = this
+    this.setData({ categoryHint: name })
+    clearTimeout(this._categoryHintTimer)
+    this._categoryHintTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ categoryHint: '' })
+    }, 500)
   },
 
   // ============ 数据加载 ============
@@ -652,6 +683,7 @@ Page({
     const { panelCategory, currentCategory } = this.data
     if (panelCategory !== currentCategory) {
       this.setData({ currentCategory: panelCategory })
+      this._showCategoryHint(panelCategory) // BUG-20260802-006: 实际切分类时提示（面板关闭后可见）
       getNewsList({ category: panelCategory }).then(res => {
         const list = res.list || []
         this.setData({ newsList: list, currentIndex: 0, currentPage: 1, loadingMore: false })
@@ -665,6 +697,7 @@ Page({
     var cat = e.currentTarget.dataset.cat
     // UX-BUG03: 立即切换高亮，不等待数据（消除 ~1s 滞后感）
     this.setData({ panelCategory: cat })
+    this._showCategoryHint(cat) // BUG-20260802-006: 切分类 0.5s 提示
 
     // B-04: 收藏 Tab 特殊处理（同步读取，无网络延迟）
     if (cat === '__favorites__') {
@@ -719,7 +752,8 @@ Page({
       return
     }
 
-    // 标准分类列表项点击（UX-BUG08: 直接跳转到对应新闻的详情页）
+    // 标准分类列表项点击
+    // BUG-20260802-003: 选中对应卡片（不再跳转详情页，用户澄清「侧栏标题→跳首页卡片页」）
     const { filteredNewsList } = this.data
     if (idx === undefined || idx >= filteredNewsList.length) return
 
@@ -731,20 +765,21 @@ Page({
     // 先关闭面板
     this.setData({ showPanel: false })
 
-    // 设置详情页上下文
     if (cat !== this.data.currentCategory) {
-      this.setData({ currentCategory: cat })
-      app.globalData.detailContext = { category: cat, list: [] }
+      // 跨分类：以面板已加载列表作为首页列表，保证 index 与点击项对齐（无额外请求/无闪烁）
+      this.setData({
+        currentCategory: cat,
+        newsList: filteredNewsList,
+        currentPage: 1,
+        loadingMore: false,
+      })
+      this.renderCards(filteredNewsList, idx)
+      this._showCategoryHint(cat) // BUG-20260802-006: 切分类 0.5s 提示
     } else {
-      app.globalData.detailContext = { category: cat, list: this.data.newsList }
+      // 同分类：直接定位选中卡片
+      this.setData({ currentIndex: idx })
+      this.renderCards(this.data.newsList, idx)
     }
-
-    // 跳转详情页
-    var url = '/pages/detail/detail?id=' + newsId + '&index=' + idx + '&category=' + cat
-    wx.navigateTo({
-      url: url,
-      fail: function (err) { console.error('[home] navigateTo panel fail:', err) }
-    })
   },
 
   // ============ 搜索 ============
