@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: 22rpx;
+  font-size: calc(24rpx * var(--font-scale)); /* BUG-20260802-002: 与卡片元信息 24rpx 对齐 */
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
