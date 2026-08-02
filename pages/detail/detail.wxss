@@ -42,29 +42,12 @@
   to   { opacity: 1; }
 }
 
-/* ============ 跨分类闪烁条 ============ */
-
-.category-flash {
-  width: 40rpx;
-  height: 4rpx;
-  border-radius: 2rpx;
-  /* D-05#8: 父容器 nav-bar 为 flex，margin:auto 可居中；非 flex 时降级为 text-align */
-  margin: 0 auto;
-  animation: flashPulse 0.2s ease;
-}
-
-@keyframes flashPulse {
-  0%   { opacity: 0; }
-  50%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 /* ============ 正文区域 ============ */
 
 .content {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 32rpx);
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 48rpx);
 }
 
 /* 翻页动画容器 — 对标首页卡片逻辑 */
@@ -119,6 +102,12 @@
   letter-spacing: -0.5rpx;
 }
 
+/* BUG-STD-002: 标题缺失时灰色兜底文案 */
+.detail-title--empty {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
 .detail-meta {
   display: flex;
   align-items: center;
@@ -128,6 +117,20 @@
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
   flex-wrap: wrap;
+}
+
+/* FE-B3 / UX-SIMPLIFY07: 原文链接低噪点入口 */
+.source-link {
+  color: var(--color-link, #007AFF);
+  font-size: 22rpx;
+  padding: 2rpx 12rpx;
+  border: 1rpx solid var(--divider);
+  border-radius: 20rpx;
+  margin-left: 4rpx;
+}
+
+.source-link:active {
+  opacity: 0.6;
 }
 
 .detail-divider {
