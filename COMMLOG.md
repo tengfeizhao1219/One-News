@@ -8,6 +8,45 @@
 
 ---
 
+## [2026-08-02 16:00] 🟦 前端开发 领取无依赖任务：FE-B2/B3/B4/B5 + UX-SIMPLIFY01/05/07 | 会话：前端开发
+
+> **来源：用户直连指令「领取任务」**（按《用户直连沟通同步机制》同步）——用户要求前端开发认领并执行依赖为「无」的任务。
+> **依据**：TASK_BOARD 广播区 v2 指派 + 项目规则「依赖=无 → 一口气全部认领完成」。
+
+### 一、认领清单（依赖=无，直接开工）
+
+| 编号 | 任务 | 优先级 | 状态 | 交付物 / 动作 |
+|------|------|:---:|:---:|------|
+| UX-SIMPLIFY01 | 移除详情页底部"← 返回"按钮 | 🟡 | ✅ 已完成 | 代码随简化批次 `56ca73a`~`6b48788` 交付，核对 main 确认 |
+| FE-B2 / UX-SIMPLIFY05 | 移除跨分类 category-flash 闪烁条 | 🟡 | 🔄 进行中 | detail.wxml 删 `category-flash` + detail.wxss 删 `.category-flash`/`@keyframes flashPulse` + detail.js `_showFlash` 仅留 `flashColor` |
+| FE-B3 / UX-SIMPLIFY07 | 原文链接 → ActionSheet | 🟡 | 🔄 进行中 | 重建「原文↗」低噪点入口（sourceUrl 存在时显示）+ `openSourceUrl`：`wx.showActionSheet(['复制链接','分享给朋友'])` |
+| FE-B4 | UX 走查 v1.1 遗留 6 项 | 🔴 | 🔄 进行中 | BUG-STD-002 标题兜底 + DEV-STD-04 元信息 wx:if + DEV-STD-05/08 首页 time wx:if + DEV-STD-06 content padding + DEV-STD-02（已清理，核实） |
+| FE-B5 / BUG-008 | ReadingEngine 复用 `detailContext.list` | 🟢 | ✅ 已完成 | 核实：home.js 写 `globalData.detailContext` + detail.js `_initEngine` 消费走 `_initFromPreloaded` 快速通道，双端闭环 |
+
+### 二、需 PM / UX 知悉（非阻塞，已开工）
+
+- **FE-B3 源链接入口形态**：P0 修复（`6b48788`）将 `detail-source-link` 一并移除。本次按 SIMPLIFY07 重建为元信息行内「原文↗」低噪点入口（仅 `news.sourceUrl` 存在时显示），契合极致简化。若产品/交互希望独立「查看原文」按钮，请广播区确认。
+- **FE-B4 DEV-STD-06 修正**：走查报告基于旧 220rpx 翻页按钮给 `+220rpx` 建议；简化后翻页按钮已移除、底部操作栏为 100rpx，原建议失效。前端按「清开当前 100rpx 操作栏 + 48rpx 余量」修正，避免无谓大留白。
+- **DEV-STD-02 已无需处理**：`home.wxss` 中 `.guide-overlay` / `@keyframes fadeInOut` 在当前 main 已不存在（早于本次清理），死代码已随某次提交移除，标记完成即可。
+
+### 三、🚫 未认领（依赖非「无」，留作专项）
+
+- **FE-B1**：P0 翻页真机自测需微信开发者工具 / 真机 + 用户配合，依赖非「无」，按规则不自动认领，待专项推进（关联 QA-B1 复测）。
+
+### 变更文件
+
+- `TASK_BOARD.md` — UX-SIMPLIFY01→✅、UX-SIMPLIFY05→🔄、UX-SIMPLIFY07→🔄，新增「前端开发 领取」广播条目
+- `COMMLOG.md` — 本条记录
+
+### 下游激活 / 注意事项
+
+- **测试工程师（QA-B1 / QA-A1）**：FE-B1 真机自测完成后请复测 P0（BUG-P0-010）并归因；本次 FE-B2/B3/B4 改动涉及详情页渲染，建议纳入回归。
+- **交互设计师（UX-B3）**：FE-B4 关闭 6 项走查偏差后，请重跑走查 v1.2 并出结论。
+- **产品经理（PD-B1）**：FE-B3 入口形态若需调整，请广播区确认，避免前端返工。
+- 有问题找 → 详情页实现：[前端开发]；走查口径：[交互设计师]
+
+---
+
 ## [2026-08-02 13:24] 📚 文档修订通知：14 份文档与代码脱节，按 owner 派发 | 会话：项目经理
 
 > **来源：用户直连指令**（按《用户直连沟通同步机制》同步）——用户要求「通知相关人更改文档」。
