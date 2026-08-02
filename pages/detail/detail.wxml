@@ -16,9 +16,6 @@
     </view>
   </view>
 
-  <!-- 跨分类闪烁条 -->
-  <view wx:if="{{flashVisible}}" class="category-flash" style="background-color: {{flashColor}};"></view>
-
   <!-- 内容 -->
   <scroll-view
     class="content"
@@ -31,14 +28,15 @@
     <view class="article {{animClass}}">
       <view class="detail-body">
         <!-- 标题 -->
-        <view class="detail-title">{{news.title}}</view>
+        <view class="detail-title {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
 
         <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
-          <text>{{news.source}}</text>
+          <text wx:if="{{news.source}}">{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
+          <text wx:if="{{news.sourceUrl}}" class="source-link" bindtap="openSourceUrl">原文↗</text>
         </view>
 
         <!-- 分隔线 -->
