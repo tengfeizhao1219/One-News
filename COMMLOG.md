@@ -2011,3 +2011,22 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 - `docs/00-规划/GitHub-DNS污染-dnsmasq方案-广播.md` — 新建（广播存档 + 转发话术）
 - `TASK_BOARD.md` — 广播区新增 TL DNS 修复方案块
 - `COMMLOG.md` — 本记录
+
+---
+
+## [2026-08-02] TL：B-16 激活下游 + config.json 改每小时 + PM 澄清 | 会话：[技术负责人(TL)]
+
+### 决策与动作（用户授权「都做」）
+- **config.json → 每小时**：`cloudfunctions/refreshNews/config.json` 触发器由 3×/日（6/11/20）改为单个 `hourlyRefresh`（`0 0 * * * * *`），与 ADR-002 双引擎上线要求一致；源码侧正式同步（此前 DEP-01 差异仅源码未同步）。
+- **B-16 激活下游**：新增后端表 B-16 行（负责人 后端开发 / 📋 / 已激活 BE(FE) 认领 §4），TL 决策见 `docs/03-技术方案/B-16-新闻存储保留机制-技术决策.md`；同步更新 TL 决策区 B-16 行（🔄→📋）、后端待办 bullet、页脚状态。B-12 激活已于前批完成。
+- **PM 澄清/提醒**：广播区新增「TL→PM 澄清/提醒」块——① 版本号口径：TASK_BOARD `v4.11`（看板文档迭代版）≠ CHANGELOG `v1.0.0`（SemVer 发版版），发版/tag 以 CHANGELOG 为准；② DEP-01 云端核对提醒（每小时触发器 + news_cache 灌入）；③ 下游激活汇总。
+- **DEP-01 行准确性修正**：源码已同步为每小时，原「源码仍 3×/日」stale 描述更新为「待 PM 云端核对」。
+
+### 待办（转 PM / 产品）
+- PM：云控制台核对 DEP-01 云端触发器=每小时 + news_cache 已灌入 → 转「✅ 已验证」
+- 产品：回复 B-09 Q1（聚合 tab）/ Q2（农业科学保留）后 BE 执行 §4
+
+### 变更文件
+- `cloudfunctions/refreshNews/config.json` — 触发器改每小时
+- `TASK_BOARD.md` — B-16 后端行 + TL 区/页脚/bullet + DEP-01 准确性 + PM 澄清块
+- `COMMLOG.md` — 本记录
