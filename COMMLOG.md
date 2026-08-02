@@ -8,6 +8,24 @@
 
 ---
 
+## [2026-08-02] 🧹 分支清理 + be-b13-b14 转 BE/TL 确认 | 会话：项目经理
+
+### 做了什么
+- **合入 B-10 单测（仅测试文件）**：取 `feature/be-b10-cloudtest` 的 `test/b02-securitycheck-test.js`（143 行，TC01~TC10 覆盖 securityCheck，10 通过），**避开其重复 UI 改动**（引导/翻页按钮 main 已合）。该分支其余 UI 提交不并入。
+- **删除冗余远端分支**：`fix/bugs-005-006`（BUG-005/006 main 已 ✅，冗余）、`test/push-verify`（临时验证分支）已从远端删除。
+- **feature/be-b13-b14 转 BE/TL 确认**：该分支实现 B-13 百炼短路 + B-14 并发控制；TL 在 v4.10 已结论 B-13❌已取消 / B-14❌过时（v4.0 已移除百炼）。已在 TASK_BOARD 广播请 BE/TL 确认是否合入，若无则 PM 将删分支以防误合。
+
+### 变更文件
+- `test/b02-securitycheck-test.js` — 新增（取自 feature/be-b10-cloudtest）
+- `TASK_BOARD.md` — 广播区加 be-b13-b14 确认广播
+- 远端分支：删 `fix/bugs-005-006`、`test/push-verify`
+
+### 待 BE/TL 动作
+- **后端开发 / 技术负责人**：`feature/be-b13-b14` 是否合入？请回复结论（默认：废弃 → PM 删分支）
+
+### ⚠️ 红线
+- be-b13-b14 **未经 BE/TL 确认不得合入 main**（避免重新引入百炼逻辑破坏 v4.0）
+
 ## [2026-08-02] 📣 用户直连沟通同步机制上线 | 会话：项目经理
 
 ### 做了什么
