@@ -2,7 +2,7 @@
 # 任务看板解析 & 接力棒状态速览 & 角色待办过滤 & 广播区提取
 # 用法：
 #   scripts/pending-tasks.sh                    # 一次性快照（全量）
-#   scripts/pending-tasks.sh --role=前端开发     # 只看某个角色的待办
+#   scripts/pending-tasks.sh --role=全栈开发     # 只看某个角色的待办
 #   scripts/pending-tasks.sh --role=me          # 同上（兼容旧习惯）
 #   scripts/pending-tasks.sh --broadcast         # 只看广播区
 #   scripts/pending-tasks.sh --watch            # 每 60 秒轮询，有变化时输出 diff
