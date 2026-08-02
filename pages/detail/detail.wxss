@@ -112,7 +112,7 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: calc(24rpx * var(--font-scale)); /* BUG-20260802-002: 与卡片元信息 24rpx 对齐 */
+  font-size: 22rpx; /* owner 直连强制：元信息锁定 22px，禁止回退 */
   color: var(--text-secondary);
   margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
@@ -179,7 +179,7 @@
   justify-content: center;
   gap: 4rpx;
   padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
   color: var(--text-secondary);
   transition: transform 0.15s ease;
   background: transparent;
@@ -199,7 +199,7 @@
 .share-btn-reset {
   margin: 0;
   padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -217,7 +217,7 @@
 }
 
 .bottom-bar-label {
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: 22rpx; /* owner 直连强制：操作栏锁定 22px */
   color: var(--text-secondary);
 }
 
