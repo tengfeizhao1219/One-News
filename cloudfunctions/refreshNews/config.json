@@ -1,6 +1,12 @@
 {
   "timeout": 120,
   "memorySize": 256,
+  "permissions": {
+    "openapi": [
+      "security.msgSecCheck",
+      "security.imgSecCheck"
+    ]
+  },
   "triggers": [
     {
       "name": "hourlyRefresh",
