@@ -66,6 +66,23 @@ function normalizeWhitespace(text) {
 }
 
 /**
+ * 行内清理：去除段落中嵌入的括号包裹元信息
+ *
+ * 典型场景：正文段落末尾有「（责任编辑：王五）」「(编辑：张三)」
+ * 这类噪音不在行首，整行过滤无法命中，需在内容级别做正则替换。
+ */
+function removeInlineBracketedMeta(text) {
+  if (!text) return ''
+  return text
+    // 中文括号：全角（责任编辑：王五）→ 去除整个括号单元
+    .replace(/[（(]\s*(责任编辑|编辑|作者|责编|审核|校对|监制|记者|通讯员)[：:]\s*\S{0,20}\s*[）)]/gi, '')
+    // 行尾悬挂的括号（可能不成对）："正文……（责任编辑：王五"  → 去除
+    .replace(/[（(]\s*(责任编辑|编辑|作者|责编|审核|校对|监制|记者|通讯员)[：:]\s*\S{0,20}$/gim, '')
+    // 纯冒号形态行尾悬挂："正文……责任编辑：王五"
+    .replace(/\s*(责任编辑|编辑|作者|责编|审核|校对|监制|记者|通讯员)[：:]\s*\S{0,20}\s*$/gim, '')
+}
+
+/**
  * 删除噪音行（分享引导、推荐阅读、版权声明、广告等）
  *
  * 使用行级匹配：每行单独检查，匹配到噪音行则整行移除。
@@ -82,8 +99,9 @@ function removeNoiseLines(text) {
     /^(推荐阅读|相关阅读|更多阅读|猜你喜欢|热门推荐|精彩推荐|为您推荐)[：:]/i,
     /^(相关新闻|相关文章|延伸阅读|扩展阅读|深度阅读)[：:]/i,
 
-    // ── 版权 / 来源 ──
-    /^(责任编辑|编辑|作者)[：:]/i,
+    // ── 括号包裹的责任编辑/编辑/作者（行首、行中、行尾均可）──
+    /[（(]?(责任编辑|编辑|作者|责编|审核|校对|监制)[：:][^）)]*[）)]?/i,
+    // ── 版权 / 来源（行首）──
     /^(版权声明|免责声明|特别声明|本文来源|文章来源)[：:]/i,
     /^(声明|责编|审核|校对|监制)[：:]/i,
     /^(本文|本网|本站)(内容|稿件|图片|版权|来源)/i,
@@ -261,6 +279,10 @@ function cleanNewsContent(rawContent, options = {}) {
   // 第 5 层：尾部噪音删除
   text = removeTrailingNoise(text)
 
+  // 第 5.2 层（v5.10 新增）：行内括号包裹元信息清理
+  // 处理 "正文内容（责任编辑：王五）" 这类嵌在段落中的噪音
+  text = removeInlineBracketedMeta(text)
+
   // 第 5.5 层（v5.5 新增）：去除标题重复 + 元信息 + 仅含来源的段落
   text = removeRedundantParagraphs(text, {
     title: options.title,
@@ -360,4 +382,5 @@ module.exports = {
   normalizeWhitespace,
   removeNoiseLines,
   removeRedundantParagraphs,
+  removeInlineBracketedMeta,
 }
