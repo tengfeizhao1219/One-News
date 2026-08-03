@@ -1,16 +1,18 @@
 /**
- * 云函数配置模块 v4.0 — 智谱+DeepSeek 双引擎
+ * 云函数配置模块 v5.0 — 天行 API 轻量列表缓存
  *
- * 数据源优先级（v4.0 百炼→智谱+DeepSeek 改造）：
- *   getNewsList: news_cache(智谱/DeepSeek生成) → 天行降级 → 聚合降级 → 内存缓存 → AI静态兜底
- *   refreshNews: 智谱 GLM-4-Flash 联网搜索(主力) → DeepSeek API(降级) → 校验 → 写入 news_cache
+ * 数据流架构（v5.0）：
+ *   refreshNews: 天行 API 多分类接口 → 清洗 → 写入 news_cache（仅标题列表，不含正文）
+ *   getNewsList: news_cache → 返回标题列表
+ *   getNewsDetail: news 集合（content 为空时从 sourceUrl 抓取 → 清洗 → 缓存）
+ *
+ * 回滚：git checkout v3-ai-dual-engine 可切回 AI 双引擎方案
  *
  * 环境变量：
- *   ZHIPU_API_KEY  — 智谱 GLM-4-Flash（必填，主力）
- *   DEEPSEEK_API_KEY — DeepSeek API（必填，降级）
- *   TIAN_API_KEY   — 天行数据（可选，降级）
- *   JUHE_API_KEY   — 聚合数据（可选，降级）
- *   DASHSCOPE_API_KEY — 百炼（已废弃，v4.0 不再使用）
+ *   TIAN_API_KEY   — 天行数据（必填，主力数据源）
+ *   JUHE_API_KEY   — 聚合数据（可选，备用）
+ *   ZHIPU_API_KEY  — 智谱（已废弃 v5.0，保留配置以便回滚到 v3-ai-dual-engine）
+ *   DEEPSEEK_API_KEY — DeepSeek（已废弃 v5.0，保留配置以便回滚）
  */
 
 module.exports = {

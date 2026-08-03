@@ -1,4 +1,60 @@
-## [2026-08-03 09:45] 🔧 详情页翻页逻辑修正 + 翻页按钮删除 | 会话：全栈开发
+## [2026-08-03 12:54] 🆕 v5.0 天行 API 轻量列表缓存方案交付 · 转产品经理验收 | 会话：全栈开发
+
+### 一、背景
+
+微信云函数默认 3 秒超时，v4.0 智谱/DeepSeek AI 双引擎单分类搜索需 45s+，`refreshNews` 持续超时失败。owner 决策执行**方案二**：天行 API 列表缓存 + 详情页按需抓取正文清洗。
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/refreshNews/index.js` | 重写：从天行 API 拉取标题列表，3 秒内写入 `news_cache` + `news`（content 留空） |
+| `cloudfunctions/refreshNews/sources/tianxing.js` | 新建：天行 7 个分类接口调用 + 数据格式化 |
+| `cloudfunctions/refreshNews/utils/newsCleaner.js` | 新建：7 层正文清洗流水线 |
+| `cloudfunctions/getNewsDetail/index.js` | 重写：从 `sourceUrl` 抓取原文 → 清洗 → 返回并缓存 content |
+| `cloudfunctions/getNewsDetail/utils/newsCleaner.js` | 新建：清洗模块副本（云函数独立引用） |
+| `cloudfunctions/refreshNews/config.js` | 更新注释为 v5.0 架构说明 |
+| `cloudfunctions/getNewsList/config.js` | 更新注释为 v5.0 架构说明 |
+| `cloudfunctions/refreshNews/package.json` | 更新描述为 v5.0 |
+
+### 三、关键数据
+
+- 回滚标记：`git tag v3-ai-dual-engine`
+- 天行 Key：`/root/.secrets/tian_api_key` → 环境变量 `TIAN_API_KEY`
+- 聚合 Key：`/root/.secrets/juhe_api_key` → 环境变量 `JUHE_API_KEY`（当前未使用）
+
+### 四、交付文档
+
+| 文档 | 路径 | 说明 |
+|------|------|------|
+| 交接单 | `docs/04-开发实现/交接单_v5-天行方案.md` | 含部署步骤、验收标准、风险、回滚方案 |
+| 测试用例 | `docs/05-测试验收/测试用例_v5-天行方案.md` | 功能/清洗/异常/性能/兼容性/回归/回滚共 35+ 条用例 |
+
+### 五、架构变化
+
+```
+改造前：refreshNews → 智谱/DeepSeek(45s+) → 生成完整 content → news_cache + news
+改造后：refreshNews → 天行 API(2~3s) → 标题/摘要/封面/原文链接 → news_cache + news(content 空)
+        getNewsDetail → 按需抓取 sourceUrl → 清洗 → 返回并缓存 content
+```
+
+### 六、待产品经理验收
+
+- 🔴 **V5-PM-01**：按测试用例组织 P0 验收
+- 🔴 **V5-PM-02**：评估天行新闻质量与清洗效果是否可接受
+- 🟡 **V5-PM-03**：确认最终保留的分类口径
+- 🔴 **V5-FS-02**：全栈开发根据验收结论修复 Bug 或配合部署
+
+### 七、已知风险
+
+1. `news_cache` 空时首页空白（v4.2 以来「不降级不兜底」策略延续）
+2. 天行新闻质量可能不如 AI 生成
+3. 部分网站清洗可能不彻底，需见具体案例后优化
+4. 原文抓取受 2.5s 超时限制，超时时用 summary 兜底
+
+---
+
+
 
 ### 改动 1：手势映射修正（commit `9c85e52`）
 
