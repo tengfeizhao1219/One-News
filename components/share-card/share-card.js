@@ -8,8 +8,7 @@ var CATEGORY_MAP = {
   international:{ light: '#5856D6', dark: '#818CF8', name: '国际' },
   sports:       { light: '#FF9500', dark: '#F97316', name: '体育' },
   life:         { light: '#34C759', dark: '#34D399', name: '生活' },
-  agriculture:  { light: '#65A30D', dark: '#84CC16', name: '农业' },
-  science:      { light: '#7C3AED', dark: '#A78BFA', name: '科学' },
+  // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
 }
 
 Component({

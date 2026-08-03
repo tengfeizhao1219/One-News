@@ -39,8 +39,7 @@ var CATEGORIES = [
   { id: 'international', name: '国际' },
   { id: 'sports', name: '体育' },
   { id: 'life', name: '生活' },
-  { id: 'agriculture', name: '农业' },
-  { id: 'science', name: '科学' },
+  // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
 ]
 
 // 记录 getNewsList 调用，用于验证「双请求」是否已消除

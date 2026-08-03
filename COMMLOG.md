@@ -1,3 +1,45 @@
+## [2026-08-03 09:20] 🔴 产品 owner 裁定 PD-B1：农业/科学分类下架 + PJM 即刻同步代码与文档 | 会话：项目经理
+
+> **触发**：owner 明确指令「农业/科学的分类去掉」。方案选择：前端下架这 2 个 tab（不补后端）。
+
+### 一、代码变更（PJM 即刻执行）
+
+| 文件 | 改动 | 说明 |
+|------|------|------|
+| `utils/constants.js` | CATEGORIES 移除 agriculture/science | 8 分类 → 5 分类（all/tech/international/sports/life） |
+| `components/share-card/share-card.js` | CATEGORY_MAP 移除 agriculture/science 色值 | 分享卡片不再渲染已下架分类 |
+| `pages/detail/reading-engine.js` | categoryColors 移除 agriculture/science | 阅读引擎颜色映射同步（READING_CATEGORIES 自动从 CATEGORIES 派生，无需手改） |
+| `test/v4-regression-integration.js` | 断言 8→5 分类 | `['all','tech','international','sports','life']` |
+| `test/v4-regression-data-layer.js` | 断言 7→5（不含 all） | `getCategories` 返回 5 个分类 |
+| `test/v7-regression-reading-mode-runtime.js` | 总数 20→17，切换 6→4 | 移除 agriculture/science 的 mock 数据与断言 |
+| `test/v10-regression-fe-c1-bugfix.js` | 移除 agriculture/science mock 分类 | FE-C1 回归适配 |
+
+- **测试验证**：v10 53/53 ✅、v7 41/41 ✅、v4 两套因既有 `searchNews/index.js` 缺失报错（非本次改动引入）
+
+### 二、看板变更
+
+- **PD-B1** ✅ 已闭环（owner 裁定：前端下架）
+- **FE-B6** ✅ 已闭环（PJM 代执行，全栈开发无需再改 `constants.js`）
+- **BE-B1** ❌ 已作废（裁定为前端下架，无需补后端 prompt）
+- **BUG-P1-011** ✅ 已闭环（分类契约不一致通过移除前端 tab 消除）
+- **BLK-01** ✅ 已解除（不再阻塞任何下游）
+- **TL-B4（B-09 L3 重建）** 解除分类阻塞，Q2 已定论
+- TASK_BOARD v4.21 → v4.22
+
+### 三、下游通知（需各角色处理）
+
+- 🔴 **[产品经理] PD-B6（DOC-13 需求池）** 需更新：RQ-02「保留 8 分类」→「5 分类」
+- 🔴 **[产品经理] PD-B8（owner 最终决策文档同步）** 分类数描述更新
+- 🔴 **[产品经理] QA-B2** 契约一致性用例从「检测 8 vs 5」→「检测 5 ≡ 5」
+- 🟡 **[产品设计师] RQ-15-D** 侧边分类滚轮交互规范从 8→5 分类
+- 🟡 **[产品设计师] D-03 视觉设计** 色值表中移除 agriculture/science
+- 🟡 **[全栈开发] TL-B4（B-09 L3 重建）** Q2「农业/科学是否保留」已由 owner 裁定为「不保留」，可直接推进 §4 技术定稿
+
+### 四、找谁
+- 项目经理（PJM，本次执行人）｜🔔 关注人：产品经理 + 全栈开发 + 产品设计师
+
+---
+
 ## [2026-08-02 21:20] 🔀 架构变更：8角色→4角色合并 + GitHub DNS 修复方案恢复 | 会话：项目经理
 
 ### 做了什么

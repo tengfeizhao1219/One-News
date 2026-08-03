@@ -471,8 +471,7 @@ ReadingEngine.prototype.getCategoryFlashColor = function (categoryId) {
     international: '#5856D6',
     sports:        '#FF9500',
     life:          '#34C759',
-    agriculture:   '#65A30D',
-    science:       '#7C3AED',
+    // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
   }
   return colors[categoryId] || ''
 }
