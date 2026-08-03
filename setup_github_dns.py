@@ -29,9 +29,16 @@ RESOLV_BACKUP = "/etc/resolv.conf.bak.githubfix"
 DNSMASQ_CONF = "/etc/dnsmasq.d/github-fix.conf"
 PID_FILE = "/run/dnsmasq-githubfix.pid"
 
-# GitHub 真实 IP（已验证可直连并返回 HTTP 200）。
-# 如该 IP 失效，可换成同段其他 GitHub IP（20.205.243.0/24 等）。
-GITHUB_IP = "20.205.243.166"
+# GitHub 真实 IP 候选列表（按实测可达性排序，脚本启动时会自动探测选用可用项）。
+# 2026-08-04 实测：20.205.243.166 被出口 SNI 过滤（TLS 握手被掐断 -> HTTP 000）；
+# 140.82.113.3 可直连并返回 HTTP 200，故排首位。
+GITHUB_IPS = [
+    "140.82.113.3",
+    "20.205.243.166",
+    "140.82.121.3",
+    "140.82.112.4",
+]
+GITHUB_IP = GITHUB_IPS[0]  # 默认值；main() 中会探测并替换为可用 IP
 
 # 需要静态解析的 GitHub 相关域名
 GITHUB_DOMAINS = [
@@ -60,6 +67,23 @@ def run(cmd, check=True):
             print(r.stderr.strip(), file=sys.stderr)
         sys.exit(r.returncode)
     return r
+
+
+def probe_github_ips():
+    """探测候选 GitHub IP，返回第一个 TLS 握手被放行的 IP；全部失败回退默认。"""
+    import socket
+    import ssl
+    for ip in GITHUB_IPS:
+        try:
+            ctx = ssl.create_default_context()
+            with socket.create_connection((ip, 443), timeout=4) as sock:
+                with ctx.wrap_socket(sock, server_hostname="github.com"):
+                    log(f"✅ 探测 {ip} 可达（TLS 放行），选用该 IP")
+                    return ip
+        except Exception:
+            log(f"⚠️ 探测 {ip} 被拦截或不可达，尝试下一个 ...")
+    log(f"⚠️ 所有候选 IP 均不可达，回退默认 {GITHUB_IPS[0]}")
+    return GITHUB_IPS[0]
 
 
 def stop_existing():
@@ -150,6 +174,8 @@ def main():
         sys.exit(1)
 
     log("开始修复 GitHub DNS 污染 ...")
+    global GITHUB_IP
+    GITHUB_IP = probe_github_ips()
     stop_existing()
     write_config()
     start_dnsmasq()
