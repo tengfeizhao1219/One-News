@@ -1,13 +1,18 @@
-// 新闻自动刷新云函数 v5.0 — 天行 API 轻量列表缓存
+// 新闻自动刷新云函数 v5.1 — 聚合 API 轻量列表缓存
 // ============================================================
+// v5.1 改造（2026-07-31）：
+//   数据源从「天行数据」切换到「聚合数据（Juhe）」。
+//   聚合优势：单一接口 + type 参数切换分类，比天行多 endpoint 更简洁。
+//
 // v5.0 改造（2026-08-03）：
 //   背景：微信云函数默认超时 3 秒，智谱/DeepSeek AI 调用需要 45s+，无法完成。
 //   方案二：只缓存标题列表（标题+摘要+封面+原文链接），不抓正文。
 //         详情页用户点击时再单独请求 getNewsDetail 抓取正文并清洗。
 //   回滚标记：git tag v3-ai-dual-engine — 可随时切回 AI 双引擎方案。
+//   git tag v5-tianxing — 可切回天行方案。
 //
-// 数据源：天行数据 API（多分类接口）
-// 写入集合：news_cache（列表）+ news（详情占位，content 为空，由 getNewsDetail 补写）
+// 数据源：聚合数据 API（单一接口，type 参数分类）
+// 写入集合：news_cache（仅列表缓存，content 留空，由 getNewsDetail 补写）
 //
 // 触发方式：
 //   1. 定时触发器（每小时：0 * * * *）
@@ -19,11 +24,11 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const config = require('./config')
-const { fetchAllCategories } = require('./sources/tianxing')
+const { fetchAllCategories } = require('./sources/juhe')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 
-// ─── 分类列表（天行支持的分类）───
+// ─── 分类列表（聚合支持的分类）───
 const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life', 'finance', 'entertainment']
 
 // ─── 数据库操作 ─────────────────────────────────────
@@ -60,9 +65,9 @@ async function batchParallel(items, fn, batchSize = 10) {
 }
 
 /**
- * 批量写入新闻到云数据库（news_cache + news 双集合）
- * v5.0：content 留空，由 getNewsDetail 按需补写
- * 优化：分批并行写入，减少 3 秒超时风险
+ * 批量写入新闻到 news_cache（仅缓存集合，不再双写 news）
+ * v5.1：去掉 news 集合写入，只写 news_cache。news 集合由 getNewsDetail 按需写入。
+ * 性能：每批 10 条并行写入，7 分类 ~40 条 ≈ 4 批，约 1.5s（远低于 3s 超时）
  */
 async function batchInsert(newsList) {
   const now = Date.now()
@@ -70,7 +75,7 @@ async function batchInsert(newsList) {
   let inserted = 0
   let failed = 0
 
-  // 1. 批量写入 news_cache（并行，每批 10 条）
+  // 只写 news_cache（每批 10 条并行）
   await batchParallel(newsList, async (item) => {
     try {
       await db.collection('news_cache').add({
@@ -78,17 +83,19 @@ async function batchInsert(newsList) {
           id: item.id,
           title: item.title,
           summary: item.summary,
-          content: '',
+          content: '',              // 留空，由 getNewsDetail 补写
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
           sourceUrl: item.sourceUrl || '',
           publishTime: item.publishTime,
           picUrl: item.picUrl || '',
+          viewCount: 0,
           cacheExpire: expireAt,
           createdAt: now,
         },
       })
+      inserted++
     } catch (err) {
       if (err.errCode !== -1) {
         failed++
@@ -97,45 +104,6 @@ async function batchInsert(newsList) {
     }
   }, 10)
 
-  // 2. 批量 upsert news（并行，每批 5 条）
-  await batchParallel(newsList, async (item) => {
-    try {
-      const doc = {
-        id: item.id,
-        title: item.title || '',
-        summary: item.summary || '',
-        content: '',
-        category: item.category || 'recommend',
-        categoryName: item.categoryName || '',
-        source: item.source || '',
-        sourceUrl: item.sourceUrl || '',
-        picUrl: item.picUrl || '',
-        publishTime: item.publishTime || '',
-        updatedAt: now,
-      }
-
-      const exist = await db.collection('news').where({ id: item.id }).get()
-      if (exist.data && exist.data.length > 0) {
-        const existing = exist.data[0]
-        if (existing.isRetained) {
-          inserted++
-          return
-        }
-        await db.collection('news').doc(existing._id).update({ data: doc })
-      } else {
-        await db.collection('news').add({
-          data: { ...doc, viewCount: 0, isRetained: false, createdAt: now },
-        })
-      }
-      inserted++
-    } catch (err) {
-      if (err.errCode !== -1) {
-        failed++
-        console.warn(`[refreshNews] news 写入失败 [${item.id}]:`, err.message)
-      }
-    }
-  }, 5)
-
   return { inserted, failed }
 }
 
@@ -143,7 +111,7 @@ async function batchInsert(newsList) {
 
 exports.main = async (event) => {
   const startTime = Date.now()
-  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v5.0 天行API) ==========')
+  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v5.1 聚合API) ==========')
 
   // ── 手动触发冷却 ──
   const isManual = event && (event.source === 'manual' || event.trigger === 'manual')
@@ -169,22 +137,22 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 检查天行 API Key ──
-  if (!config.tian.apiKey) {
-    console.error('[refreshNews] TIAN_API_KEY 未配置！请在云函数环境变量中设置')
+  // ── 检查聚合 API Key ──
+  if (!config.juhe.apiKey) {
+    console.error('[refreshNews] JUHE_API_KEY 未配置！请在云函数环境变量中设置')
     return {
       code: -1,
-      message: '天行 API Key 未配置，请设置 TIAN_API_KEY 环境变量',
+      message: '聚合 API Key 未配置，请设置 JUHE_API_KEY 环境变量',
       errorCode: 'API_KEY_INVALID',
     }
   }
 
-  // 1. 调用天行 API 拉取所有分类列表（串行，3 秒内完成）
+  // 1. 调用聚合 API 拉取所有分类列表（串行，3 秒内完成）
   let searchResult
   try {
     searchResult = await fetchAllCategories(CATEGORIES, 6)
   } catch (err) {
-    console.error('[refreshNews] 天行 API 拉取失败:', err.message)
+    console.error('[refreshNews] 聚合 API 拉取失败:', err.message)
     return {
       code: -1,
       message: `新闻拉取失败: ${err.message}`,
@@ -192,14 +160,14 @@ exports.main = async (event) => {
     }
   }
 
-  console.log(`[refreshNews] 天行拉取完成: ${searchResult.news.length} 条`)
+  console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条`)
   console.log(`[refreshNews] 分类统计:`, JSON.stringify(searchResult.stats))
 
   if (searchResult.news.length === 0) {
-    console.warn('[refreshNews] ⚠️ 天行 API 返回 0 条新闻，保留旧缓存')
+    console.warn('[refreshNews] ⚠️ 聚合 API 返回 0 条新闻，保留旧缓存')
     return {
       code: 0,
-      message: '天行 API 未返回新闻，保留旧缓存',
+      message: '聚合 API 未返回新闻，保留旧缓存',
       data: { total: 0, inserted: 0, retained: true, stats: searchResult.stats },
     }
   }
@@ -284,24 +252,6 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 写入刷新时间戳失败:', err.message)
   }
 
-  // ── 清理过期非保留文档 ──
-  let cleanedExpired = 0
-  try {
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-    const cleanRes = await db.collection('news')
-      .where({
-        isRetained: db.command.neq(true),
-        createdAt: db.command.lt(cutoff),
-      })
-      .remove()
-    cleanedExpired = cleanRes.stats?.removed || 0
-    if (cleanedExpired > 0) {
-      console.log(`[refreshNews] 清理 ${cleanedExpired} 条过期非保留文档`)
-    }
-  } catch (err) {
-    console.warn('[refreshNews] 清理过期文档失败:', err.message)
-  }
-
   console.log(`[refreshNews] ========== 刷新完成: ${totalInserted} 条, 耗时 ${elapsed}ms ==========`)
 
   return {
@@ -314,7 +264,6 @@ exports.main = async (event) => {
       inserted: totalInserted,
       failed: totalFailed,
       cleared: totalCleared,
-      cleanedExpired,
       categories: Object.fromEntries(
         Object.entries(categories).map(([k, v]) => [k, v.length])
       ),
@@ -322,7 +271,7 @@ exports.main = async (event) => {
       validation: validationStats,
       security: securityStats,
       elapsedMs: elapsed,
-      engine: 'tianxing',
+      engine: 'juhe',
     },
   }
 }

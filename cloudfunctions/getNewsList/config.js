@@ -1,16 +1,16 @@
 /**
- * 云函数配置模块 v5.0 — 天行 API 轻量列表缓存
+ * 云函数配置模块 v5.1 — 聚合 API 轻量列表缓存
  *
- * 数据流架构（v5.0）：
- *   refreshNews: 天行 API 多分类接口 → 清洗 → 写入 news_cache（仅标题列表，不含正文）
+ * 数据流架构（v5.1）：
+ *   refreshNews: 聚合 API 单一接口 → 清洗 → 写入 news_cache（仅标题列表，不含正文）
  *   getNewsList: news_cache → 返回标题列表
  *   getNewsDetail: news 集合（content 为空时从 sourceUrl 抓取 → 清洗 → 缓存）
  *
  * 环境变量：
- *   TIAN_API_KEY   — 天行数据（必填，主力数据源）
- *   JUHE_API_KEY   — 聚合数据（可选，备用）
- *   ZHIPU_API_KEY  — 智谱（已废弃 v5.0，保留配置以便回滚到 v3-ai-dual-engine）
- *   DEEPSEEK_API_KEY — DeepSeek（已废弃 v5.0，保留配置以便回滚）
+ *   JUHE_API_KEY   — 聚合数据（必填，主力数据源 v5.1）
+ *   TIAN_API_KEY   — 天行数据（可选，备用）
+ *   ZHIPU_API_KEY  — 智谱（已废弃，保留配置以便回滚）
+ *   DEEPSEEK_API_KEY — DeepSeek（已废弃，保留配置以便回滚）
  */
 
 module.exports = {
@@ -46,11 +46,11 @@ module.exports = {
     retryDelay: [1000, 2000],
   },
 
-  // 聚合数据 API（第4层降级，可选）
+  // 聚合数据 API（v5.1 主力数据源）
   juhe: {
     baseUrl: 'https://v.juhe.cn/toutiao/index',
     apiKey: process.env.JUHE_API_KEY || '',
-    timeout: 6000,
+    timeout: 8000,
   },
 
   // 缓存配置（v4.0：每小时刷新，DB 缓存 65min 覆盖刷新间隔）
