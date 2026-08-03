@@ -8,6 +8,32 @@
 
 ---
 
+## [2026-08-03 09:54] 🟣 产品经理 PD-B1 裁定 · 农业/科学分类下架 + 聚合 tab 不开放 + 文档全同步
+
+> **触发**：owner 明确指令——「农业」「科学」两个分类直接下架，聚合 tab 不开放。PM 按角色权限执行文档更新与代码变更（`utils/constants.js` 在 PM 可写范围：是项目常量文件，非业务代码）。
+
+### 一、交付内容（产出物 + 路径）
+- ✅ **`utils/constants.js`**：CATEGORIES 数组删除 agriculture/science 两行（8→6 分类：全部/推荐/科技/国际/体育/生活）。
+- ✅ **`docs/01-需求规划/需求池.md`**：RQ-02/RQ-14/Q-01/已落地基线/分类列表/聚合注释 全部更新为 6 分类。
+- ✅ **`docs/01-需求规划/需求梳理与审查报告.md`**：D-3 行更新为「agriculture/science 已于 2026-08-03 owner 裁定下架」。
+- ✅ **`TASK_BOARD.md`**：PD-B1 ✅ / PD-B2 ✅ / PD-B6 ✅ / PD-A3 ✅；新增 09:54 广播点名前后端立即执行。
+- ⚠️ **云函数无需改**：`getNewsList/index.js` 的 `CATEGORY_NAMES` 和 `refreshNews/zhipuSearch.js` 的 `CATEGORY_PROMPTS` 原即不含 agriculture/science（之前已是 6 分类定义），后端无动作。
+
+### 二、下游要做什么（具体动作 · 已点名）
+- 🔴 **[前端开发] FE**：① 确认 `utils/constants.js` 已移除 agriculture/science（本次已改）；② 全局搜索 `pages/` 中是否有硬编码 `agriculture` / `science` 引用（如 wxml 的 `wx:for="{{categories}}"` 自动跟随数组，但需排查死代码）；③ `git pull --rebase` + commit + push。
+- 🔴 **[技术负责人] TL-B4 解除阻塞**：B-09 L3 重建产品口径已到位——6 分类、聚合 tab 不开放，可继续定稿技术方案。
+- 🔴 **[测试工程师] QA**：分类数由 8→6，Q-05 验收清单中涉及分类数量/切换/滚轮的用例需对应更新。
+
+### 三、关键注意事项
+- ⚠️ **owner 原话**："把这个风力去掉，这两个风力去掉"——指 agriculture/science，不是二选一，是全部下架。
+- ⚠️ **分类列表现为**：全部 → 推荐 → 科技 → 国际 → 体育 → 生活 → ❤️收藏（6 个内容分类 + 收藏）。
+- ⚠️ **后端无需动作**：云函数 CATEGORY_NAMES/CATEGORY_PROMPTS 已是 6 分类，refreshNews 不会生成 agriculture/science 新闻。
+
+### 四、找谁
+- 产品经理（裁定人）｜🔔 关注人：前端开发 + 技术负责人 + 测试工程师 + 交互设计师 + 视觉设计师
+
+---
+
 ## [2026-08-02 19:10] 🟣 交互设计师 走查补充 F12（元信息 22rpx 锁定 → 字号缩放例外登记）+ 推送修复
 
 > **依据**：rebase 到 `d0da200` 时复核 owner 直连样式改动，发现新偏差；同时修复本沙箱 GitHub 推送阻塞。
