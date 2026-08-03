@@ -55,11 +55,20 @@ Page({
   onShow() {
     refreshPageSize()
 
-    // 优先处理从详情页返回的定位（内部会 renderCards 到正确位置）
-    var handledByReturn = this._handleDetailReturn()
+    // B-07: 处理从详情页阅读模式返回的定位
+    // 若首页被回收，onLoad 会重新 loadNews；onShow 中需等 loadNews 完成后再定位，
+    // 否则 newsList 为空会导致定位失败。
+    this._pendingReturnState = null
+    var handledNow = this._handleDetailReturn()
+
+    // 如果没有立即处理（数据未就绪），把状态暂存起来，等 loadNews 完成后再处理
+    if (!handledNow && app.globalData._detailReturnState) {
+      this._pendingReturnState = app.globalData._detailReturnState
+      app.globalData._detailReturnState = null
+    }
 
     // 如果不是从详情页返回，正常渲染（保持当前位置）
-    if (!handledByReturn && this.data.newsList.length > 0) {
+    if (!handledNow && !this._pendingReturnState && this.data.newsList.length > 0) {
       this.renderCards(this.data.newsList)
     }
 
@@ -83,6 +92,16 @@ Page({
         metaVal !== this.data._metaScaleValue) {
       this.setData({ fontScaleTier: tier, _fontScaleValue: val, _metaScaleValue: metaVal })
     }
+  },
+
+  /**
+   * B-07: onShow 时数据未就绪，暂存状态；等 loadNews 完成后调用此方法真正定位
+   */
+  _handleDetailReturnFromPending() {
+    if (!this._pendingReturnState) return
+    app.globalData._detailReturnState = this._pendingReturnState
+    this._pendingReturnState = null
+    this._handleDetailReturn()
   },
 
   /**
@@ -214,6 +233,11 @@ Page({
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
       this._syncPanelList(list)
+
+      // B-07: 若 onShow 时暂存了详情页返回状态，数据就绪后立即定位
+      if (this._pendingReturnState) {
+        this._handleDetailReturnFromPending()
+      }
     } catch (err) {
       const msg = handleApiError(err.errorCode, err.message)
       this.setData({ pageState: 'error', errorMessage: msg })

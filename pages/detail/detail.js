@@ -265,15 +265,15 @@ Page({
     if (Math.abs(dy) < 70 || dt > 500) return
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
-    // 下滑(dy>0)→下一条（手指从上往下拉，看更新的内容）；需内容已触顶
-    // 上滑(dy<0)→上一条（手指从下往上推，看更旧的内容）；需内容已触底
-    if (dy > 0 && !this.data.isLast) {
+    // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶
+    // 上滑(dy<0)→下一条（手指从下往上推，内容从底部滑入）；需内容已触底
+    if (dy > 0 && !this.data.isFirst) {
       if (this._isAtTop) {
-        this._swipeToNext()
-      }
-    } else if (dy < 0 && !this.data.isFirst) {
-      if (this._isAtBottom) {
         this._swipeToPrev()
+      }
+    } else if (dy < 0 && !this.data.isLast) {
+      if (this._isAtBottom) {
+        this._swipeToNext()
       }
     }
   },
@@ -313,7 +313,7 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * 下滑 → 下一条：旧内容向下移出(out-down) → 新内容从上往下滑入(in-down)，一屏高度
+   * 上滑 → 下一条：旧内容向上移出(out-up) → 新内容从底部滑入(in-up)，一屏高度
    */
   _swipeToNext: function () {
     var that = this
@@ -346,7 +346,7 @@ Page({
       isFirst: that._engine.isFirst(),
       isLast: that._engine.isLast(),
       showCrossingCategory: result.isCrossing ? progress.categoryName : '',
-      animClass: 'out-down',
+      animClass: 'out-up',
     })
 
     // 在 out 动画期间预加载内容
@@ -355,8 +355,8 @@ Page({
     // out 动画 ~350ms，等它完成后再切入 in 动画
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-down（从上方 -100vh 起始），移除 class 后滑入到原位（从上往下滑入）
-        that.setData({ animClass: 'in-down', scrollTop: 0 })
+        // 新内容就绪 → 先设 in-up（从下方 +100vh 起始），移除 class 后滑入到原位（从底部往上滑入）
+        that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '' })
           that._animating = false
@@ -370,7 +370,7 @@ Page({
   },
 
   /**
-   * 上滑 → 上一条：旧内容向上移出(out-up) → 新内容从下往上滑入(in-up)，一屏高度
+   * 下滑 → 上一条：旧内容向下移出(out-down) → 新内容从顶部滑入(in-down)，一屏高度
    */
   _swipeToPrev: function () {
     var that = this
@@ -401,15 +401,15 @@ Page({
       isFirst: that._engine.isFirst(),
       isLast: that._engine.isLast(),
       showCrossingCategory: result.isCrossing ? progress.categoryName : '',
-      animClass: 'out-up',
+      animClass: 'out-down',
     })
 
     var contentPromise = that._engine.loadCurrentDetail()
 
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-up（从下方 +100vh 起始），移除 class 后滑入到原位（从下往上滑入）
-        that.setData({ animClass: 'in-up', scrollTop: 0 })
+        // 新内容就绪 → 先设 in-down（从上方 -100vh 起始），移除 class 后滑入到原位（从顶部往下滑入）
+        that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '' })
           that._animating = false
