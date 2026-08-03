@@ -168,12 +168,74 @@ function extractMeaningfulParagraphs(paragraphs, minLength, maxCount) {
 }
 
 /**
+ * 删除与标题重复、或纯元信息行（时间+来源）、或仅含来源名的段落
+ * （v5.5：解决详情页"标题重复 + 来源元信息"问题）
+ *
+ * @param {string} text - 已经过前面清洗的段落文本（多行）
+ * @param {Object} [options]
+ * @param {string} [options.title] - 新闻标题（去除与标题相同/高度相似的段落）
+ * @param {string} [options.source] - 新闻来源（去除仅含来源名的段落）
+ * @returns {string}
+ */
+function removeRedundantParagraphs(text, options = {}) {
+  if (!text) return ''
+  const title = (options.title || '').trim()
+  const source = (options.source || '').trim()
+
+  const normalize = (s) => String(s || '').replace(/\s+/g, '').toLowerCase()
+  const titleNorm = normalize(title)
+  const sourceNorm = normalize(source)
+
+  const lines = text.split('\n')
+  const cleaned = lines.filter(line => {
+    const trimmed = line.trim()
+    if (!trimmed) return true // 保留空行（后续段落规范化处理）
+
+    // 元信息行检测（满足 A AND (B OR C) 则删除）：
+    //  A. 包含日期模式（YYYY-MM-DD）
+    //  B. 包含来源/作者/编辑/责编等关键词
+    //  C. 段落较短（< 60 字）
+    const hasDate = /\d{4}[-\/]\d{1,2}[-\/]\d{1,2}/.test(trimmed)
+    const hasSourceKeyword = /(来源|author|作者|编辑|责编|发表时间|发布日期|time|date)/i.test(trimmed)
+    const isShort = trimmed.length < 60
+    if (hasDate && (hasSourceKeyword || isShort)) return false
+
+    // 1. 删与标题完全相同或高度相似（去除空白后比较）
+    if (titleNorm && titleNorm.length >= 4) {
+      const tn = normalize(trimmed)
+      if (tn === titleNorm) return false
+      // 段落仅是标题的子串或超串（极短且包含标题）
+      if (tn.length >= 4 && (tn.includes(titleNorm) || titleNorm.includes(tn))) {
+        return false
+      }
+    }
+
+    // 2. 删纯元信息行（已在上面处理）
+
+    // 3. 删仅含来源名的段落
+    if (sourceNorm && sourceNorm.length >= 2) {
+      const sn = normalize(trimmed)
+      if (sn === sourceNorm) return false
+      if (sn === normalize('来源：' + source) || sn === normalize('author：' + source)) return false
+      // 段落极短（≤ 6 字）且包含来源名，视为噪音
+      if (trimmed.length <= 6 && trimmed.includes(source)) return false
+    }
+
+    return true
+  })
+
+  return cleaned.join('\n')
+}
+
+/**
  * 主清洗函数
  *
  * @param {string} rawContent  原始正文（可能含 HTML）
  * @param {Object} [options]
  * @param {number} [options.maxLength=3000]  最大输出字符数
  * @param {boolean} [options.preserveParagraphs=true]  是否保留段落结构
+ * @param {string} [options.title]  新闻标题（用于去除标题重复段落）
+ * @param {string} [options.source]  新闻来源（用于去除来源元信息）
  * @returns {string}  清洗后的纯文本正文
  */
 function cleanNewsContent(rawContent, options = {}) {
@@ -198,6 +260,12 @@ function cleanNewsContent(rawContent, options = {}) {
 
   // 第 5 层：尾部噪音删除
   text = removeTrailingNoise(text)
+
+  // 第 5.5 层（v5.5 新增）：去除标题重复 + 元信息 + 仅含来源的段落
+  text = removeRedundantParagraphs(text, {
+    title: options.title,
+    source: options.source,
+  })
 
   // 第 6 层：段落规范化
   if (preserveParagraphs) {
@@ -291,4 +359,5 @@ module.exports = {
   stripHtmlTags,
   normalizeWhitespace,
   removeNoiseLines,
+  removeRedundantParagraphs,
 }

@@ -272,7 +272,7 @@ function parseJuheKey(id) {
  * @param {string} uniquekey
  * @returns {Promise<string|null>} 清洗后的正文纯文本
  */
-function fetchJuheContent(uniquekey) {
+function fetchJuheContent(uniquekey, options = {}) {
   const config = require('./config')
   if (!config.juhe.apiKey || !uniquekey) return Promise.resolve(null)
 
@@ -302,7 +302,11 @@ function fetchJuheContent(uniquekey) {
             resolve(null)
             return
           }
-          const cleaned = cleanNewsContent(result.result.content, { maxLength: 3000 })
+          const cleaned = cleanNewsContent(result.result.content, {
+            maxLength: 3000,
+            title: options.title,
+            source: options.source,
+          })
           const validation = validateCleanedContent(cleaned)
           if (!validation.valid) {
             console.warn(`[getNewsDetail] 聚合内容清洗后无效: ${validation.reason}`)
@@ -373,7 +377,7 @@ exports.main = async (event) => {
   const juheKey = parseJuheKey(newsId)
   if (juheKey) {
     console.log(`[getNewsDetail] 聚合内容接口查询 uniquekey=${juheKey}`)
-    const juheContent = await fetchJuheContent(juheKey)
+    const juheContent = await fetchJuheContent(juheKey, { title: doc.title, source: doc.source })
     if (juheContent) {
       finalContent = juheContent
       contentSource = 'juhe_content_api'
@@ -394,7 +398,11 @@ exports.main = async (event) => {
         const extracted = extractContentFromHtml(html)
 
         if (extracted) {
-          const cleaned = cleanNewsContent(extracted, { maxLength: 3000 })
+          const cleaned = cleanNewsContent(extracted, {
+            maxLength: 3000,
+            title: doc.title,
+            source: doc.source,
+          })
           const validation = validateCleanedContent(cleaned)
 
           if (validation.valid) {
