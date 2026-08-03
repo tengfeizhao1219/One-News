@@ -3426,3 +3426,33 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 d456b0c fix(refreshNews): config.json 声明 openapi 权限 (msgSecCheck + imgSecCheck)
 fab4f9f fix(newsCleaner): 补清洗规则 — 括号包裹形态（责任编辑：王五）+ 行内元信息清理
 ```
+
+---
+
+## [2026-08-03 19:56] 全栈开发 推送全部本地 commits 到 GitHub + 暗色模式修复 | 会话：[全栈开发(FS)]
+
+### 推送操作（按 GITHUB_PUSH_AI_MANUAL.md 指南执行）
+1. **DNS 修复**：`sudo python3 setup_github_dns.py` → dnsmasq 启动，github.com → `20.205.243.166`，curl 200 ✅
+2. **URL 格式修正**：`oauth2:ghp_...` → `https://ghp_...@github.com`（指南 §三明确：不要用 oauth2: 前缀）
+3. **推送成功**：main → `025d37a`，tag `v3-ai-dual-engine` → `ae0c5b1`
+4. **本地与远程完全同步** ✅
+
+### 推送到 GitHub 的 5 个 commit（rebase 后）
+```
+025d37a fix(dark-mode): 暗色模式正文颜色 #A8A8A8→#D4D4D4
+a39515e FS 交付 V5-ACCEPT 阻塞项 ①②③ — COMMLOG 记录
+a0bfbea fix(newsCleaner): 补清洗规则 — 括号包裹形态
+1c14327 FS 认领 V5-ACCEPT 阻塞项 3 条
+0d92c69 fix(refreshNews): config.json 声明 openapi 权限
+```
+
+### 暗色模式修复（用户实时反馈）
+- **问题**：详情页暗色模式正文 `#A8A8A8`（中灰）在 `#0D0D0D` 背景上对比度仅 3.7:1 ❌
+- **修复**：`theme.json` dark.`--text-body` + `detail.wxss` @media dark `.text-p` → `#D4D4D4`（对比度 8.7:1 ✅ WCAG AA）
+- **用户已确认**：截图对比，详情页正文正确、首页（另一个页面）不对——本次修复的正是首页也共用的 `--text-body` 变量
+
+### 变更文件
+- `theme.json` — dark --text-body #A8A8A8→#D4D4D4
+- `pages/detail/detail.wxss` — @media dark .text-p #A8A8A8→#D4D4D4
+- `TASK_BOARD.md` — V5-ACCEPT 阻塞项状态更新（✅ 已完成）+ 暗色模式修复标注
+- `COMMLOG.md` — 本记录
