@@ -25,6 +25,21 @@
 
 ---
 
+### 📚 2026-08-03 17:45 【PM 指派验收 Bug → 全栈开发（TL-B9/B10/B11）】
+
+> **🔴 请全栈开发优先处理以下 V5-ACCEPT 验收 Bug（已入任务指派表）**：
+>
+> | 编号 | 严重度 | Bug | 验收标准 |
+> |------|:---:|------|----------|
+> | **TL-B9** | 🔴 P1 | 回滚 tag `v3-ai-dual-engine` 未创建（交接单声称的回滚能力不成立，仓库 0 tag） | `git tag` 可见 + `git checkout v3-ai-dual-engine` 可恢复 |
+> | **TL-B10** | 🟡 P2 | 清洗规则缺口：「（责任编辑：王五）」括号包裹形态未清除（行首锚定正则不匹配） | 本地复验 TC-C04 括号样本通过 |
+> | **TL-B11** | 🟡 P2 | 后端残留分类 finance/entertainment（前端无 tab，QA-B2 豁免告警） | 清理后 QA-B2 无告警 / 看板记录裁定 |
+>
+> **依据**：`docs/05-测试验收/V5-ACCEPT-v5天行方案验收报告.md`（§五 验收发现汇总）；关联自动化 `test/v11-category-contract.js`（25/25 当前通过，修复后复跑确认）。
+> 完成后在看板任务表标 ✅ 并广播，PM 复验后关闭。
+
+---
+
 ### 📚 2026-08-03 17:35 【PM 认领并完成 V5-ACCEPT 验收 + 5 项文档/测试任务】
 
 > **PM 已完成本轮认领任务**（详情见对应文档）：
@@ -369,6 +384,9 @@
 | | TL-B6 | 🆕 `refreshNews/config.json` 触发器改每小时属**线上行为变更**，请补 `CHANGELOG.md` 并知会 QA | 🟡 | 无 | 🆕 |
 | | TL-B7 | 🆕 **文档修订 DOC-01~DOC-04、DOC-06~DOC-09**（8 份技术文档与 v4.2 代码脱节，其中 DOC-01 自称「唯一真源」却描述已删除架构）+ 评估 PM 提议的防复发机制 | 🔴 | 无 | 🆕 |
 | | TL-B8 | 🆕 **P0-Q3 恢复一层兜底（owner 2026-08-03 裁定）**：`news_cache` 空/拉取失败时降级展示「本地上次成功缓存」或「内置精选列表」（`meta.source='cache-fallback'`），不得空白页。产品要求见 PRD §5.6；请定技术方案（含 ADR 更新）+ 指派 BE/FE 实现 | 🔴 | 无 | 🆕 |
+| | TL-B9 | 🔴 **BUG-V5ACCEPT-001：回滚 tag `v3-ai-dual-engine` 未创建**（V5-ACCEPT 验收发现 #1）——交接单 §七 声称的回滚能力不成立（仓库实际 0 tag）。**请补打 tag 指向 v3 AI 双引擎基线**。验收：`git tag` 可见该 tag 且 `git checkout v3-ai-dual-engine` 可恢复 | 🔴 | 无 | 🆕（PM 指派 2026-08-03 17:45） |
+| | TL-B10 | 🟡 **BUG-V5ACCEPT-002：清洗规则缺口**（V5-ACCEPT 验收发现 #2）——`newsCleaner.js` 噪音规则 `/^(责任编辑\|编辑\|作者)[：:]/` 锚定行首，**括号包裹形态「（责任编辑：王五）」未清除**（新浪/网易风格常见）。请补规则 `/^[（(]?(责任编辑\|编辑\|作者)[：:]/`（`refreshNews` 与 `getNewsDetail` 两处 newsCleaner 同步）。验收：本地构造括号样本复验 TC-C04 通过 | 🟡 | 无 | 🆕（PM 指派 2026-08-03 17:45） |
+| | TL-B11 | 🟡 **BUG-V5ACCEPT-003：后端残留分类 finance/entertainment**（QA-B2 契约测试豁免告警项）——`getNewsList` CATEGORY_NAMES 与 `tianxing.js` 映射残留 v4.2 遗留分类（前端无 tab、无数据源语义）。**请随 TL-B2「B-08~B-14 清理裁定」一并处置**（删除或标注废弃）。验收：清理后 QA-B2 无告警，或看板记录明确裁定 | 🟡 | TL-B2 | 🆕（PM 指派 2026-08-03 17:45） |
 | **测试工程师** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
 | **产品经理** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
 | | QA-B2 | 🆕 **补「前后端分类契约一致性」自动化用例**：校验 `utils/constants.js` 的 CATEGORIES 与云函数 `CATEGORY_NAMES` / `CATEGORY_PROMPTS` 三处一致（本次 BUG-P1-011 同样漏检） | 🔴 | 无 | 🆕 |
