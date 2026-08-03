@@ -3,15 +3,14 @@
  * ============================================================
  * 从多个分类接口获取新闻标题列表（不抓正文），适配 3 秒云函数超时。
  *
- * 分类 → 天行接口映射：
- *   recommend → generalnews（综合新闻）
- *   tech      → it（IT 科技）
- *   sports    → ti yu（体育）
+ * 分类 → 天行接口映射（按用户 Key 可用接口配置）：
+ *   recommend     → generalnews（综合新闻）
+ *   tech          → it（IT 科技）
+ *   sports        → sicprobe（科学探索）
  *   international → world（国际）
- *   life      → health（健康/生活）
- *   finance   → caijing（财经）
- *   entertainment → yu le（娱乐）
- *   all       → 综合拉取
+ *   life          → social（社会）
+ *   finance       → internet（互联网资讯）
+ *   entertainment → woman（女性）
  *
  * 环境变量：
  *   TIAN_API_KEY — 天行数据 API Key
@@ -23,21 +22,21 @@ const config = require('../config')
 const CATEGORY_ENDPOINTS = {
   recommend: 'generalnews',
   tech: 'it',
-  sports: 'tiyu',
+  sports: 'sicprobe',
   international: 'world',
-  life: 'health',
-  finance: 'caijing',
-  entertainment: 'yule',
+  life: 'social',
+  finance: 'internet',
+  entertainment: 'woman',
 }
 
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '体育',
+  sports: '科学探索',
   international: '国际',
-  life: '生活',
-  finance: '财经',
-  entertainment: '娱乐',
+  life: '社会',
+  finance: '互联网资讯',
+  entertainment: '女性',
 }
 
 /**

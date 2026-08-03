@@ -17,8 +17,8 @@ var mockConstants = {
     { id: 'recommend', name: '推荐' },
     { id: 'tech', name: '科技' },
     { id: 'international', name: '国际' },
-    { id: 'sports', name: '体育' },
-    { id: 'life', name: '生活' },
+    { id: 'sports', name: '科学探索' },
+    { id: 'life', name: '社会' },
     // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
     { id: 'all', name: '全部' },
   ],
@@ -38,8 +38,8 @@ function makeNewsList(categoryId, count) {
       categoryName: categoryId === 'recommend' ? '推荐' :
                      categoryId === 'tech' ? '科技' :
                      categoryId === 'international' ? '国际' :
-                     categoryId === 'sports' ? '体育' :
-                     categoryId === 'life' ? '生活' : '未知',
+                     categoryId === 'sports' ? '科学探索' :
+                     categoryId === 'life' ? '社会' : '未知',
       source: '来源' + categoryId,
       sourceUrl: 'https://example.com/' + categoryId + '/' + (i + 1),
       picUrl: '',

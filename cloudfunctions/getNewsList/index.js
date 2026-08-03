@@ -7,8 +7,9 @@ const config = require('./config')
 
 // ─── 分类名称映射（本地常量，无需 adapter）───
 const CATEGORY_NAMES = {
-  recommend: '推荐', tech: '科技', sports: '体育',
-  international: '国际', life: '生活',
+  recommend: '推荐', tech: '科技', sports: '科学探索',
+  international: '国际', life: '社会',
+  finance: '互联网资讯', entertainment: '女性',
 }
 
 // ─── 缓存查询 ────────────────────────────────────────

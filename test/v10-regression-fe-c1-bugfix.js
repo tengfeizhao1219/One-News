@@ -37,8 +37,8 @@ var CATEGORIES = [
   { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
-  { id: 'sports', name: '体育' },
-  { id: 'life', name: '生活' },
+  { id: 'sports', name: '科学探索' },
+  { id: 'life', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
 ]
 
@@ -355,9 +355,9 @@ async function testCategoryHint() {
 
   // 时序覆盖：加载流程中的 setData 不能把提示挤掉
   page._showCategoryHint('sports')
-  assertEqual('提示已显示', page.data.categoryHint, '体育')
+  assertEqual('提示已显示', page.data.categoryHint, '科学探索')
   await page.loadNews()      // 加载流程走完（含 pageState loading→ready + renderCards）
-  check('加载/刷新流程走完后提示未被覆盖清空', page.data.categoryHint === '体育')
+  check('加载/刷新流程走完后提示未被覆盖清空', page.data.categoryHint === '科学探索')
   await tick(600)
   assertEqual('提示最终仍按 500ms 定时器清除', page.data.categoryHint, '')
 
@@ -366,7 +366,7 @@ async function testCategoryHint() {
   await tick(200)
   page._showCategoryHint('life')
   await tick(350)
-  assertEqual('连续切换时新提示不被上一个定时器提前清掉', page.data.categoryHint, '生活')
+  assertEqual('连续切换时新提示不被上一个定时器提前清掉', page.data.categoryHint, '社会')
   await tick(250)
   assertEqual('新提示按自己的 500ms 清除', page.data.categoryHint, '')
 }
