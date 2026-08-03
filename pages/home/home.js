@@ -54,12 +54,15 @@ Page({
 
   onShow() {
     refreshPageSize()
-    if (this.data.newsList.length > 0) {
+
+    // 优先处理从详情页返回的定位（内部会 renderCards 到正确位置）
+    var handledByReturn = this._handleDetailReturn()
+
+    // 如果不是从详情页返回，正常渲染（保持当前位置）
+    if (!handledByReturn && this.data.newsList.length > 0) {
       this.renderCards(this.data.newsList)
     }
 
-    // 处理从详情页（阅读模式）返回的定位信息
-    this._handleDetailReturn()
     // 同步字体（onShow 时可能从其他页面返回，需刷新）
     this._syncFontScale()
   },
@@ -92,7 +95,7 @@ Page({
   _handleDetailReturn() {
     const app = getApp()
     const state = app.globalData._detailReturnState
-    if (!state) return
+    if (!state) return false
 
     // 清除状态，防止重复处理
     app.globalData._detailReturnState = null
@@ -121,17 +124,18 @@ Page({
     // 场景 1: 分类没变，直接定位
     if (category === this.data.currentCategory && this.data.newsList.length > 0) {
       var idx = resolveIndex(this.data.newsList)
-      if (idx !== this.data.currentIndex) {
-        this.setData({ currentIndex: idx, panelCategory: category })
-        this.renderCards(this.data.newsList, idx)
-      }
-      return
+      this.setData({ currentIndex: idx, panelCategory: category })
+      this.renderCards(this.data.newsList, idx)
+      return true
     }
 
     // 场景 2: 分类变了，需要切换分类并加载数据
     if (category && category !== this.data.currentCategory) {
       this.loadCategory(category, resolveIndex)
+      return true
     }
+
+    return false
   },
 
   /**
