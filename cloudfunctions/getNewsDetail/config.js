@@ -1,11 +1,11 @@
 /**
- * 云函数配置模块 v5.4 — getNewsDetail 专用最小配置
+ * 云函数配置模块 v5.6 — getNewsDetail 专用配置
  *
- * 说明：详情页正文获取需要调用聚合官方内容接口（/toutiao/content），
- * 需读取 JUHE_API_KEY。此文件为 getNewsDetail 独立配置（云函数自包含）。
+ * 说明：详情页正文获取 + AI 摘要生成
  *
  * 环境变量：
- *   JUHE_API_KEY — 聚合数据（必填，正文接口）
+ *   JUHE_API_KEY        — 聚合数据（必填，正文接口）
+ *   DASHSCOPE_API_KEY   — 阿里百炼（可选，AI 摘要生成；未配置则降级为原 summary）
  */
 
 module.exports = {
@@ -15,6 +15,16 @@ module.exports = {
     contentUrl: 'https://v.juhe.cn/toutiao/content',
     apiKey: process.env.JUHE_API_KEY || '',
     timeout: 8000,
+  },
+
+  // 阿里百炼 AI 摘要（v5.6 新增）
+  dashscope: {
+    apiKey: process.env.DASHSCOPE_API_KEY || '',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'deepseek-v3',
+    timeout: 6000,
+    maxInputChars: 2000,  // 截断喂给 AI 的正文长度
+    summaryMaxChars: 150, // 期望摘要字数（100-150 字）
   },
 
   // 缓存配置

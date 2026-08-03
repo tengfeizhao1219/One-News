@@ -1,5 +1,14 @@
-// 获取新闻详情云函数 v5.4 — 聚合官方正文接口 + news_cache 兼容 + 网页抓取兜底
+// 获取新闻详情云函数 v5.6 — 聚合正文 + AI 摘要 + 内容清洗
 // ============================================================
+// v5.6 改造（2026-08-03）：
+//   抓取到正文后调用阿里百炼 DeepSeek 生成 100-150 字摘要，
+//   写回 news_cache 的 summary 字段（下次列表刷新即展示高质量摘要）。
+//   未配置 DASHSCOPE_API_KEY 或调用失败时保持原 summary，不影响主流程。
+//
+// v5.5 改造（2026-08-03）：
+//   详情页正文清洗增强：去除标题重复段、元信息行（时间+来源）、仅含来源段落。
+//   cleanNewsContent 新增 options.title / options.source。
+//
 // v5.4 改造（2026-08-03）：
 //   详情页正文获取优先级：聚合官方内容接口（/toutiao/content，稳定无反爬）
 //   → 网页抓取（带 UA + 重定向 + <p> 段落提取）→ summary 兜底。
@@ -235,6 +244,25 @@ async function cacheContent(collection, newsId, content) {
 }
 
 /**
+ * 通用缓存写入：补写任意字段到 news/news_cache 集合
+ * @param {string} collection
+ * @param {string} newsId
+ * @param {Object} fields - 要写入的字段，如 { content, summary }
+ */
+async function cacheDoc(collection, newsId, fields) {
+  try {
+    const res = await db.collection(collection).where({ id: newsId }).get()
+    if (res.data && res.data.length > 0) {
+      await db.collection(collection).doc(res.data[0]._id).update({
+        data: { ...fields, updatedAt: Date.now() },
+      })
+    }
+  } catch (err) {
+    console.warn(`[getNewsDetail] 缓存写入失败 [${newsId}] @${collection}:`, err.message)
+  }
+}
+
+/**
  * 阅读数 +1（非阻塞）
  * @param {string} collection
  * @param {string} realId  - 数据库 _id
@@ -324,6 +352,87 @@ function fetchJuheContent(uniquekey, options = {}) {
     req.on('error', () => resolve(null))
     req.on('timeout', () => { req.destroy(); resolve(null) })
     req.write(postData)
+    req.end()
+  })
+}
+
+/**
+ * 调用阿里百炼 DeepSeek 生成新闻摘要（v5.6）
+ * 未配置 DASHSCOPE_API_KEY 时返回 null，调用方保持原 summary。
+ * @param {string} content - 清洗后的正文
+ * @param {string} title   - 新闻标题
+ * @returns {Promise<string|null>} 100-150 字中文摘要
+ */
+function summarizeWithDashscope(content, title) {
+  const config = require('./config')
+  const apiKey = config.dashscope.apiKey
+  if (!apiKey) {
+    console.warn('[getNewsDetail] DASHSCOPE_API_KEY 未配置，跳过 AI 摘要')
+    return Promise.resolve(null)
+  }
+  if (!content || content.trim().length < 30) {
+    return Promise.resolve(null)
+  }
+
+  // 截断喂给 AI 的正文，控制成本与耗时
+  const input = content.slice(0, config.dashscope.maxInputChars || 2000)
+
+  const body = JSON.stringify({
+    model: config.dashscope.model || 'deepseek-v3',
+    messages: [
+      {
+        role: 'system',
+        content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文简洁摘要。要求：突出核心事件与关键信息，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
+      },
+      {
+        role: 'user',
+        content: `新闻标题：${title || ''}\n\n新闻正文：\n${input}`,
+      },
+    ],
+    max_tokens: 300,
+    temperature: 0.3,
+  })
+
+  return new Promise((resolve) => {
+    const https = require('https')
+    const req = https.request(config.dashscope.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: config.dashscope.timeout || 6000,
+    }, (res) => {
+      let data = ''
+      res.on('data', chunk => { data += chunk })
+      res.on('end', () => {
+        try {
+          const r = JSON.parse(data)
+          const summary = r.choices && r.choices[0] && r.choices[0].message
+            ? r.choices[0].message.content.trim()
+            : null
+          if (!summary) {
+            console.warn('[getNewsDetail] AI 摘要返回空:', r.error ? r.error.message : 'unknown')
+          }
+          resolve(summary)
+        } catch (e) {
+          console.warn('[getNewsDetail] AI 摘要 JSON 解析失败:', e.message)
+          resolve(null)
+        }
+      })
+    })
+
+    req.on('error', (err) => {
+      console.warn('[getNewsDetail] AI 摘要请求失败:', err.message)
+      resolve(null)
+    })
+    req.on('timeout', () => {
+      console.warn('[getNewsDetail] AI 摘要请求超时')
+      req.destroy()
+      resolve(null)
+    })
+    req.write(body)
     req.end()
   })
 }
@@ -430,22 +539,39 @@ exports.main = async (event) => {
     console.log('[getNewsDetail] 使用 summary 兜底')
   }
 
-  // ── 第 5 步：补写 content 到来源集合（下次直接命中缓存）──
-  if (finalContent && contentSource !== 'fallback') {
-    cacheContent(collection, newsId, finalContent)
+  // ── 第 5 步：AI 摘要（v5.6）──
+  // 抓取到正文后，用百炼 DeepSeek 生成 100-150 字摘要，写回 summary 字段，
+  // 下次列表刷新即展示高质量摘要；未配置 Key 或调用失败则保持原 summary。
+  let aiSummary = null
+  if (finalContent && contentSource !== 'summary_fallback') {
+    const t0 = Date.now()
+    aiSummary = await summarizeWithDashscope(finalContent, doc.title)
+    if (aiSummary) {
+      console.log(`[getNewsDetail] AI 摘要生成成功 (${aiSummary.length} 字, 耗时 ${Date.now() - t0}ms)`)
+    } else {
+      console.warn(`[getNewsDetail] AI 摘要生成失败，保留原 summary (${Date.now() - t0}ms)`)
+    }
   }
 
-  // ── 第 6 步：阅读数+1 + 返回 ──
+  // ── 第 6 步：补写 content + summary 到来源集合（下次直接命中缓存）──
+  if (finalContent && contentSource !== 'fallback') {
+    const cacheFields = { content: finalContent }
+    if (aiSummary) cacheFields.summary = aiSummary
+    await cacheDoc(collection, newsId, cacheFields)
+  }
+
+  // ── 第 7 步：阅读数+1 + 返回 ──
   bumpViewCount(collection, doc._id)
 
   const result = {
     ...doc,
     content: finalContent,
+    summary: aiSummary || doc.summary || doc.title || '',
   }
 
   return {
     code: 0,
     data: result,
-    meta: { source: collection, contentSource, engine: 'juhe' },
+    meta: { source: collection, contentSource, engine: 'juhe', aiSummary: !!aiSummary },
   }
 }
