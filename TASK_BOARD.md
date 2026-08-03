@@ -25,6 +25,26 @@
 
 ---
 
+### 📚 2026-08-03 19:00 【PM 指派下迭代三需求开发 → 全栈开发（TL-B12/B13/B14）· 务必严格按 PRD 开发】
+
+> **🔴 全栈开发请立即认领下迭代三需求（owner 2026-08-03 18:50 拍板，三条一起排期）**：
+>
+> | 编号 | 需求 | 优先级 | 需求文档 |
+> |------|------|:---:|------|
+> | **TL-B12** | **RQ-16 数据保留策略**：收藏/分享新闻 30 天 + 未收藏/未分享 7 天（TTL 65 分钟→7/30 天分级 + 清理 + setNewsRetained 改造） | 🔴 P0 | `docs/02-产品设计/PRD-下迭代-浏览记录与数据保留策略.md` §5/§6/§9 |
+> | **TL-B13** | **RQ-03 收藏上云 + RQ-07 分享上报**：setUserFavorite/getUserFavorites + 前端打通 + 待同步队列 | 🔴 P0 | 同上 §4/§7/§8 |
+> | **TL-B14** | **RQ-06 浏览记录**：history 页面 + 本地为主云端兜底 + 侧边栏入口 | 🟡 P1 | 同上 §3/§7/§8 |
+>
+> **⚠️ 开发要求**：
+> 1. **务必严格按需求文档逐条实现**（含数据模型 §6、接口 §7、前端/后端改动清单 §8/§9、边界 §3.5/§5），不得擅自简化或改变口径；
+> 2. 实现偏差需在看板标注说明，先与 PM 对齐再动手；
+> 3. 开发完成**按 PRD §11 自测**（H-01~H-07 / F-01~F-07 / C-01~C-06 / R-01~R-04），结果写入 `docs/05-测试验收/`，再交 **PM 验收**；
+> 4. 关键背景：`setNewsRetained` 现标记的是已停写的 `news` 集合（实际失效），需按 PRD §7.1 改造到 `news_cache`。
+>
+> **关联文档**：PRD-下迭代-浏览记录与数据保留策略.md（v1.0，2026-08-03）；需求池 RQ-03/RQ-06/RQ-07/RQ-16；下迭代需求规划 N-06/N-10/N-11。
+
+---
+
 ### 📚 2026-08-03 17:45 【PM 指派验收 Bug → 全栈开发（TL-B9/B10/B11）】
 
 > **🔴 请全栈开发优先处理以下 V5-ACCEPT 验收 Bug（已入任务指派表）**：
@@ -389,6 +409,9 @@
 | | TL-B9 | 🔴 **BUG-V5ACCEPT-001：回滚 tag `v3-ai-dual-engine` 未创建**（V5-ACCEPT 验收发现 #1）——交接单 §七 声称的回滚能力不成立（仓库实际 0 tag）。**请补打 tag 指向 v3 AI 双引擎基线**。验收：`git tag` 可见该 tag 且 `git checkout v3-ai-dual-engine` 可恢复 | 🔴 | 无 | 🆕（PM 指派 2026-08-03 17:45） |
 | | TL-B10 | 🟡 **BUG-V5ACCEPT-002：清洗规则缺口**（V5-ACCEPT 验收发现 #2）——`newsCleaner.js` 噪音规则 `/^(责任编辑\|编辑\|作者)[：:]/` 锚定行首，**括号包裹形态「（责任编辑：王五）」未清除**（新浪/网易风格常见）。请补规则 `/^[（(]?(责任编辑\|编辑\|作者)[：:]/`（`refreshNews` 与 `getNewsDetail` 两处 newsCleaner 同步）。验收：本地构造括号样本复验 TC-C04 通过 | 🟡 | 无 | 🆕（PM 指派 2026-08-03 17:45） |
 | | TL-B11 | 🟡 **BUG-V5ACCEPT-003：后端残留分类 finance/entertainment**（QA-B2 契约测试豁免告警项）——`getNewsList` CATEGORY_NAMES 与 `tianxing.js` 映射残留 v4.2 遗留分类（前端无 tab、无数据源语义）。**请随 TL-B2「B-08~B-14 清理裁定」一并处置**（删除或标注废弃）。验收：清理后 QA-B2 无告警，或看板记录明确裁定 | 🟡 | TL-B2 | 🆕（PM 指派 2026-08-03 17:45） |
+| | TL-B12 | 🔴 **RQ-16 数据保留策略**（owner 2026-08-03 拍板，下迭代 P0）：① `news_cache` TTL 调整——普通记录 7 天 / retained 记录 30 天（`dbCacheTTL` 65 分钟→7 天 + `retainedTTL` 30 天）；② 分级清理（refreshNews 触发，分批 ≤100 条/批，耗时 ≤2s）；③ `setNewsRetained` 改造：目标集合 `news`→`news_cache`（标记 isRetained + retainedAt + cacheExpire=now+30d；取消时 isRetained=false + cacheExpire=now+7d）；④ refreshNews 写入不得覆盖已有 isRetained；⑤ `clearOldCacheExcept`/`renewCacheExpire` 跳过 retained 记录。**务必严格按 `docs/02-产品设计/PRD-下迭代-浏览记录与数据保留策略.md` §5/§6/§9 实现**，验收见 PRD §11.2/§11.3 | 🔴 | 无 | 🆕（PM 指派 2026-08-03 19:00） |
+| | TL-B13 | 🔴 **RQ-03 收藏上云 + RQ-07 分享上报**（owner 拍板，下迭代 P0）：① 新增云函数 `setUserFavorite`/`getUserFavorites`（favorites 集合，按 openid，upsert 语义）；② 前端收藏调用 `setUserFavorite` + `setNewsRetained(true)`，取消收藏调 `setUserFavorite(false)`（**不**取消 retained）；③ 分享按钮点击上报 `setNewsRetained(true)`（点击即算，owner 口径）；④ 待同步队列（容量 50，失败重试）；⑤ 收藏列表打开拉取云端合并。**务必严格按 `docs/02-产品设计/PRD-下迭代-浏览记录与数据保留策略.md` §4/§7/§8 实现**，验收见 PRD §11.2 | 🔴 | 无 | 🆕（PM 指派 2026-08-03 19:00） |
+| | TL-B14 | 🟡 **RQ-06 浏览记录**（owner 拍板，下迭代 P1）：① 新增页面 `pages/history/history`（列表：标题/来源/相对时间，倒序，空态，点击回看）；② 侧边栏新增「浏览记录」入口；③ 详情页浏览写入（去重：同 id 刷新 viewedAt 置顶；7 天过期惰性清除；本地 200 条 LRU）；④ 云端兜底 `recordBrowse`/`getBrowseHistory`（browse_history 集合，本地秒开 + 云端合并）。**务必严格按 `docs/02-产品设计/PRD-下迭代-浏览记录与数据保留策略.md` §3/§7/§8 实现**，验收见 PRD §11.1 | 🟡 | 无 | 🆕（PM 指派 2026-08-03 19:00） |
 | **测试工程师** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
 | **产品经理** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
 | | QA-B2 | 🆕 **补「前后端分类契约一致性」自动化用例**：校验 `utils/constants.js` 的 CATEGORIES 与云函数 `CATEGORY_NAMES` / `CATEGORY_PROMPTS` 三处一致（本次 BUG-P1-011 同样漏检） | 🔴 | 无 | 🆕 |
