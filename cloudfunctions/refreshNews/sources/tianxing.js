@@ -140,7 +140,7 @@ async function fetchAllCategories(categories, perCategory = 10) {
   const results = []
   const stats = {}
 
-  // 串行请求（避免同时打太多并发导致天行限流）
+  // 串行请求，分类间加 300ms 间隔（防天行 rate limit: code=130）
   for (const category of categories) {
     try {
       const rawList = await fetchTianNewsList(category, perCategory)
@@ -150,6 +150,11 @@ async function fetchAllCategories(categories, perCategory = 10) {
     } catch (err) {
       console.error(`[tianxing] ${category} 失败:`, err.message)
       stats[category] = 0
+    }
+
+    // 分类间延迟 300ms（最后一个分类后无需等待）
+    if (category !== categories[categories.length - 1]) {
+      await new Promise(resolve => setTimeout(resolve, 300))
     }
   }
 
