@@ -97,7 +97,10 @@ async function fetchJuheNewsList(category, pageSize = 10) {
           console.log(`[juhe] ${category} 响应: error_code=${result.error_code}, reason=${result.reason}`)
 
           if (result.error_code !== 0) {
-            console.warn(`[juhe] ${category} API 返回错误: error_code=${result.error_code} reason=${result.reason}`)
+            // 10012 = 超过每日可允许请求次数（免费版配额耗尽）
+            if (result.error_code === 10012) {
+              console.warn(`[juhe] ⚠️ ${category} 聚合API免费额度已用完（每日请求次数上限），请等待次日重置或升级套餐`)
+            }
             resolve([])
             return
           }

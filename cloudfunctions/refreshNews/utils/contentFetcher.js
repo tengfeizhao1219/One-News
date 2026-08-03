@@ -1,34 +1,151 @@
 /**
- * 正文抓取 + AI 摘要模块（refreshNews v6 专用）
+ * 新闻正文抓取模块（refreshNews 专用，v5.8）
  * ============================================================
- * 60 秒超时下，refreshNews 可直接为每条新闻抓取正文并生成 AI 摘要，
- * 写入 news_cache.content + news_cache.summary，详情页直接读缓存。
+ * 背景：refreshNews 超时改为 60s 后，可以在刷新时就抓取新闻正文，
+ *       用户打开详情页直接命中 content，无需实时抓取。
  *
- * 功能：
- *   1. fetchJuheContent —— 聚合官方内容接口（/toutiao/content）
- *   2. fetchWebPage     —— 带浏览器 UA 抓网页（兜底）
- *   3. extractContentFromHtml —— 定位正文容器 + <p> 段落提取
- *   4. summarizeWithDashscope —— 阿里百炼 DeepSeek AI 摘要
- *   5. enrichNewsItem   —— 单条新闻完整补充（抓正文 + AI 摘要）
+ * 优先级：聚合官方内容接口（/toutiao/content）→ 网页抓取（带 UA）→ 空
  *
- * 环境变量：JUHE_API_KEY（正文接口）、DASHSCOPE_API_KEY（AI 摘要，可选）
+ * 依赖：newsCleaner.js（清洗）、config.js（JUHE_API_KEY）
  * ============================================================
  */
 
 const { cleanNewsContent, validateCleanedContent } = require('./newsCleaner')
 const config = require('../config')
 
-// 抓取超时（每条抓取需预留，整体 60s 内并行完成）
-const FETCH_TIMEOUT_MS = 5000
+// 抓取超时（refreshNews 有 60s 预算，单条抓取给 6s）
+const FETCH_TIMEOUT_MS = 6000
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 
+// 浏览器 UA（避免反爬）
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 /**
- * 从 juhe id 解析 uniquekey（id 格式：juhe_${category}_${uniquekey}）
- * @param {string} id
- * @returns {string|null}
+ * 从 URL 抓取网页 HTML（带 UA / Accept 头 + 跟随重定向 + 2MB 上限）
+ * @param {string} url
+ * @returns {Promise<string|null>}
+ */
+function fetchWebPage(url) {
+  if (!url) return Promise.resolve(null)
+
+  const protocol = url.startsWith('https') ? require('https') : require('http')
+
+  return new Promise((resolve) => {
+    const req = protocol.get(url, {
+      timeout: FETCH_TIMEOUT_MS,
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+      },
+    }, (res) => {
+      // 跟随一次重定向（301/302）
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume()
+        const nextUrl = new URL(res.headers.location, url).toString()
+        return resolve(fetchWebPage(nextUrl))
+      }
+
+      const contentType = res.headers['content-type'] || ''
+      if (res.statusCode !== 200 || (!contentType.includes('html') && !contentType.includes('text'))) {
+        res.resume()
+        resolve(null)
+        return
+      }
+
+      const chunks = []
+      let total = 0
+      res.on('data', chunk => {
+        total += chunk.length
+        if (total > MAX_DOWNLOAD_BYTES) {
+          req.destroy()
+          resolve(Buffer.concat(chunks).toString('utf8'))
+          return
+        }
+        chunks.push(chunk)
+      })
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    })
+
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => {
+      req.destroy()
+      resolve(null)
+    })
+
+    req.end()
+  })
+}
+
+/**
+ * 定位正文容器
+ */
+function locateBodyHtml(html) {
+  const patterns = [
+    /<article[^>]*>([\s\S]*?)<\/article>/i,
+    /<div[^>]*id=["']paragraph["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m && m[1]) return m[1]
+  }
+  return null
+}
+
+/**
+ * 提取 <p> 段落（过滤过短噪音）
+ */
+function extractParagraphs(containerHtml) {
+  if (!containerHtml) return []
+  const paras = []
+  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi
+  let m
+  while ((m = pRe.exec(containerHtml)) !== null) {
+    const text = m[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#\d+;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    if (text.length >= 15) paras.push(text)
+  }
+  return paras
+}
+
+/**
+ * 从 HTML 提取正文纯文本
+ */
+function extractContentFromHtml(html) {
+  if (!html) return null
+  const cleaned = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, ' ')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ')
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ')
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' ')
+    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
+  let paras = extractParagraphs(locateBodyHtml(cleaned))
+  if (paras.length < 2) paras = extractParagraphs(cleaned)
+  if (paras.length === 0) return null
+  return paras.join('\n')
+}
+
+/**
+ * 从 juhe id 解析 uniquekey
+ * id 格式：juhe_${category}_${uniquekey}
  */
 function parseJuheKey(id) {
   if (!id || typeof id !== 'string') return null
@@ -40,9 +157,9 @@ function parseJuheKey(id) {
 }
 
 /**
- * 调用聚合官方内容接口获取正文（POST form-urlencoded）
+ * 调用聚合官方内容接口获取正文
  * @param {string} uniquekey
- * @param {Object} [options] - { title, source } 用于清洗去重
+ * @param {Object} [options] - { title, source } 供清洗去重
  * @returns {Promise<string|null>}
  */
 function fetchJuheContent(uniquekey, options = {}) {
@@ -70,7 +187,6 @@ function fetchJuheContent(uniquekey, options = {}) {
         try {
           const result = JSON.parse(body)
           if (result.error_code !== 0 || !result.result || !result.result.content) {
-            console.warn(`[contentFetcher] 聚合内容接口异常: error_code=${result.error_code} reason=${result.reason}`)
             resolve(null)
             return
           }
@@ -81,13 +197,11 @@ function fetchJuheContent(uniquekey, options = {}) {
           })
           const validation = validateCleanedContent(cleaned)
           if (!validation.valid) {
-            console.warn(`[contentFetcher] 聚合内容清洗后无效: ${validation.reason}`)
             resolve(null)
             return
           }
           resolve(cleaned)
         } catch (e) {
-          console.warn('[contentFetcher] 聚合内容接口 JSON 解析失败:', e.message)
           resolve(null)
         }
       })
@@ -101,167 +215,66 @@ function fetchJuheContent(uniquekey, options = {}) {
 }
 
 /**
- * 从 URL 抓取网页 HTML（带浏览器 UA + 跟随重定向 + 2MB 上限）
- * @param {string} url
- * @returns {Promise<string|null>}
+ * 为单条新闻获取正文（聚合官方接口 → 网页抓取 → 空）
+ * @param {Object} item - { id, title, source, sourceUrl }
+ * @returns {Promise<string>} 清洗后的正文；失败返回 ''
  */
-function fetchWebPage(url) {
-  if (!url) return Promise.resolve(null)
-  const protocol = url.startsWith('https') ? require('https') : require('http')
+async function fetchContentForItem(item) {
+  // 1. 聚合官方内容接口
+  const juheKey = parseJuheKey(item.id)
+  if (juheKey) {
+    const juheContent = await fetchJuheContent(juheKey, { title: item.title, source: item.source })
+    if (juheContent) return juheContent
+  }
 
-  return new Promise((resolve) => {
-    const req = protocol.get(url, {
-      timeout: FETCH_TIMEOUT_MS,
-      headers: {
-        'User-Agent': BROWSER_UA,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-      },
-    }, (res) => {
-      // 跟随一次重定向
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume()
-        const { URL } = require('url')
-        const nextUrl = new URL(res.headers.location, url).toString()
-        return resolve(fetchWebPage(nextUrl))
-      }
-      const contentType = res.headers['content-type'] || ''
-      if (res.statusCode !== 200 || (!contentType.includes('html') && !contentType.includes('text'))) {
-        res.resume()
-        resolve(null)
-        return
-      }
-      const chunks = []
-      let total = 0
-      res.on('data', chunk => {
-        total += chunk.length
-        if (total > MAX_DOWNLOAD_BYTES) {
-          req.destroy()
-          resolve(Buffer.concat(chunks).toString('utf8'))
-          return
+  // 2. 网页抓取
+  if (item.sourceUrl) {
+    try {
+      const html = await fetchWebPage(item.sourceUrl)
+      if (html) {
+        const extracted = extractContentFromHtml(html)
+        if (extracted) {
+          const cleaned = cleanNewsContent(extracted, {
+            maxLength: 3000,
+            title: item.title,
+            source: item.source,
+          })
+          const validation = validateCleanedContent(cleaned)
+          if (validation.valid) return cleaned
         }
-        chunks.push(chunk)
-      })
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
-    })
-
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => { req.destroy(); resolve(null) })
-    req.end()
-  })
-}
-
-/**
- * 定位正文容器
- */
-function locateBodyHtml(html) {
-  const patterns = [
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*id=["']paragraph["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-  ]
-  for (const re of patterns) {
-    const m = html.match(re)
-    if (m && m[1]) return m[1]
+      }
+    } catch (err) {
+      // 忽略单条抓取失败
+    }
   }
-  return null
+
+  return ''
+}
+
+module.exports = {
+  enrichNewsList,
+  fetchContentForItem,
+  fetchJuheContent,
+  fetchWebPage,
+  extractContentFromHtml,
+  parseJuheKey,
+  summarizeWithDashscope,
 }
 
 /**
- * 提取 <p> 段落（过滤过短噪音段）
- */
-function extractParagraphs(containerHtml) {
-  if (!containerHtml) return []
-  const paras = []
-  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi
-  let m
-  while ((m = pRe.exec(containerHtml)) !== null) {
-    const text = m[1]
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#\d+;/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-    if (text.length >= 15) paras.push(text)
-  }
-  return paras
-}
-
-/**
- * 从 HTML 提取正文（容器 + <p> 段落，容器失败全页退化）
- */
-function extractContentFromHtml(html) {
-  if (!html) return null
-  const cleaned = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, ' ')
-    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ')
-    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ')
-    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' ')
-    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
-
-  let paras = extractParagraphs(locateBodyHtml(cleaned))
-  if (paras.length < 2) {
-    paras = extractParagraphs(cleaned)
-  }
-  if (paras.length === 0) return null
-  return paras.join('\n')
-}
-
-/**
- * 网页抓取 + 清洗正文
- * @param {string} url
- * @param {Object} [options] - { title, source }
- * @returns {Promise<string|null>}
- */
-async function fetchWebContent(url, options = {}) {
-  try {
-    const html = await fetchWebPage(url)
-    if (!html) return null
-    const extracted = extractContentFromHtml(html)
-    if (!extracted) return null
-    const cleaned = cleanNewsContent(extracted, {
-      maxLength: 3000,
-      title: options.title,
-      source: options.source,
-    })
-    const validation = validateCleanedContent(cleaned)
-    if (!validation.valid) return null
-    return cleaned
-  } catch (e) {
-    console.warn('[contentFetcher] 网页抓取异常:', e.message)
-    return null
-  }
-}
-
-/**
- * 调用阿里百炼 DeepSeek 生成 AI 摘要
- * @param {string} content
- * @param {string} title
- * @returns {Promise<string|null>}
+ * 调用阿里百炼 DeepSeek 生成新闻摘要
+ * 未配置 DASHSCOPE_API_KEY 时返回 null。
+ * @param {string} content - 清洗后的正文
+ * @param {string} title   - 新闻标题
+ * @returns {Promise<string|null>} 100-150 字中文摘要
  */
 function summarizeWithDashscope(content, title) {
   const apiKey = config.dashscope.apiKey
-  if (!apiKey) {
-    console.warn('[contentFetcher] DASHSCOPE_API_KEY 未配置，跳过 AI 摘要')
-    return Promise.resolve(null)
-  }
+  if (!apiKey) return Promise.resolve(null)
   if (!content || content.trim().length < 30) return Promise.resolve(null)
 
   const input = content.slice(0, config.dashscope.maxInputChars || 2000)
+
   const body = JSON.stringify({
     model: config.dashscope.model || 'deepseek-v3',
     messages: [
@@ -287,7 +300,7 @@ function summarizeWithDashscope(content, title) {
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
-      timeout: config.dashscope.timeout || 6000,
+      timeout: config.dashscope.timeout || 8000,
     }, (res) => {
       let data = ''
       res.on('data', chunk => { data += chunk })
@@ -297,16 +310,13 @@ function summarizeWithDashscope(content, title) {
           const summary = r.choices && r.choices[0] && r.choices[0].message
             ? r.choices[0].message.content.trim()
             : null
-          if (!summary) {
-            console.warn('[contentFetcher] AI 摘要返回空:', r.error ? r.error.message : 'unknown')
-          }
           resolve(summary)
         } catch (e) {
-          console.warn('[contentFetcher] AI 摘要 JSON 解析失败:', e.message)
           resolve(null)
         }
       })
     })
+
     req.on('error', () => resolve(null))
     req.on('timeout', () => { req.destroy(); resolve(null) })
     req.write(body)
@@ -315,72 +325,39 @@ function summarizeWithDashscope(content, title) {
 }
 
 /**
- * 单条新闻完整补充：抓正文（聚合接口 → 网页兜底）+ AI 摘要
- * @param {Object} item - 新闻列表项（含 id/title/summary/source/sourceUrl）
- * @returns {Promise<Object>} 补充后的 item（含 content、summary）
+ * 批量 enrich：抓正文 + AI 摘要（并发控制）
+ * @param {Array<Object>} newsList - 待处理新闻列表
+ * @param {number} [concurrency=8] - 并发数（控制外部 API 压力）
+ * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary
  */
-async function enrichNewsItem(item) {
-  let content = ''
-  let contentSource = ''
-
-  // 1. 优先聚合官方内容接口
-  const juheKey = parseJuheKey(item.id)
-  if (juheKey) {
-    content = await fetchJuheContent(juheKey, { title: item.title, source: item.source })
-    if (content) contentSource = 'juhe_content_api'
-  }
-
-  // 2. 聚合接口失败 → 网页抓取兜底
-  if (!content && item.sourceUrl) {
-    content = await fetchWebContent(item.sourceUrl, { title: item.title, source: item.source })
-    if (content) contentSource = 'fetched_and_cleaned'
-  }
-
-  // 3. AI 摘要（有正文才生成）
-  let summary = item.summary
-  if (content) {
-    const aiSummary = await summarizeWithDashscope(content, item.title)
-    if (aiSummary) summary = aiSummary
-  }
-
-  return { ...item, content, contentSource, summary }
-}
-
-/**
- * 批量补充正文 + AI 摘要（控制并发，避免打爆外部 API）
- * @param {Array<Object>} items
- * @param {number} [concurrency=8]
- * @returns {Promise<Array<Object>>}
- */
-async function enrichNewsList(items, concurrency = 8) {
-  const results = []
-  const queue = [...items]
+async function enrichNewsList(newsList, concurrency = 8) {
+  const result = new Array(newsList.length)
+  let cursor = 0
 
   async function worker() {
-    while (queue.length > 0) {
-      const item = queue.shift()
+    while (cursor < newsList.length) {
+      const idx = cursor++
+      const item = newsList[idx]
       try {
-        const enriched = await enrichNewsItem(item)
-        results.push(enriched)
-      } catch (e) {
-        console.warn(`[contentFetcher] enrich 失败 [${item.id}]:`, e.message)
-        results.push(item) // 保底：保留未 enrich 的 item
+        // 1. 抓正文
+        const content = await fetchContentForItem(item)
+        const enriched = { ...item, content }
+
+        // 2. 抓到正文后生成 AI 摘要（替换标题兜底）
+        if (content && content.length > 30) {
+          const aiSummary = await summarizeWithDashscope(content, item.title)
+          if (aiSummary && aiSummary.length >= 30) {
+            enriched.summary = aiSummary
+          }
+        }
+        result[idx] = enriched
+      } catch (err) {
+        result[idx] = item // 失败保留原样
       }
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker())
+  const workers = Array.from({ length: Math.min(concurrency, newsList.length) }, () => worker())
   await Promise.all(workers)
-  return results
-}
-
-module.exports = {
-  parseJuheKey,
-  fetchJuheContent,
-  fetchWebPage,
-  extractContentFromHtml,
-  fetchWebContent,
-  summarizeWithDashscope,
-  enrichNewsItem,
-  enrichNewsList,
+  return result
 }
