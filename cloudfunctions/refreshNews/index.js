@@ -1,26 +1,27 @@
-// 新闻自动刷新云函数 v6.0 — 聚合 API + 直接抓正文 + AI 摘要
+// 新闻自动刷新云函数 v5.9 — 聚合+天行双数据源 + 直接抓正文 + AI 摘要
 // ============================================================
+// v5.9 改造（2026-08-03）：
+//   1. 双数据源降级：聚合优先，失败/空 → 天行兜底
+//   2. 双数据源均失败 → 保留旧缓存并续期 cacheExpire
+//      （解决：外部 API 配额/故障时历史数据 TTL 过期 → 列表空白）
+//   3. getNewsList 增加 stale 兜底（未过期无数据 → 查历史数据）
+//
 // v6.0 改造（2026-08-03）：
 //   owner 将 refreshNews 超时从 3s 调至 60s，因此可在此函数内直接抓取正文：
 //   拉取列表 → 校验 → 安全审核 → enrich（并行抓正文 + AI 摘要）→ 写 news_cache。
 //   详情页 getNewsDetail 命中 content 直接返回，不再每次按需抓取。
 //
 // v5.7 改造（2026-08-03）：
-//   写入前批量查询已有记录，若已有高质量 summary（AI 摘要/description）则复用，
-//   不覆盖。解决：getNewsDetail 生成 AI 摘要后，refreshNews 刷新会用标题兜底覆盖。
+//   写入前批量查询已有记录，若已有高质量 summary（AI 摘要/description）则复用。
 //
 // v5.1 改造（2026-07-31）：
 //   数据源从「天行数据」切换到「聚合数据（Juhe）」。
-//   聚合优势：单一接口 + type 参数切换分类，比天行多 endpoint 更简洁。
 //
 // v5.0 改造（2026-08-03）：
 //   背景：微信云函数默认超时 3 秒，智谱/DeepSeek AI 调用需要 45s+，无法完成。
-//   方案二：只缓存标题列表（标题+摘要+封面+原文链接），不抓正文。
-//         详情页用户点击时再单独请求 getNewsDetail 抓取正文并清洗。
-//   回滚标记：git tag v3-ai-dual-engine — 可随时切回 AI 双引擎方案。
-//   git tag v5-tianxing — 可切回天行方案。
+//   回滚标记：git tag v3-ai-dual-engine / v5-tianxing / v5-juhe
 //
-// 数据源：聚合数据 API（单一接口，type 参数分类）
+// 数据源：聚合（主）+ 天行（备）
 // 写入集合：news_cache（列表 + content + AI 摘要）
 //
 // 触发方式：
@@ -33,7 +34,6 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const config = require('./config')
-const { fetchAllCategories } = require('./sources/juhe')
 const { enrichNewsList } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
@@ -57,6 +57,33 @@ async function clearOldCacheExcept(category, keepIds) {
     return res.stats?.removed || 0
   } catch (err) {
     console.warn(`[refreshNews] 清除 ${category} 旧缓存失败:`, err.message)
+    return 0
+  }
+}
+
+/**
+ * 续期所有 news_cache 记录的 cacheExpire（v5.9）
+ * 当双数据源都拉不到新数据时调用，避免历史数据 TTL 过期后列表空白。
+ * 云数据库 update 支持多文档匹配批量更新（一次调用更新全部匹配文档）。
+ * @returns {Promise<number>} 更新的文档数
+ */
+async function renewCacheExpire() {
+  try {
+    const now = Date.now()
+    const expireAt = now + config.cache.dbCacheTTL
+    // 只续期已过期或即将过期的记录（避免每次刷新都全量续期）
+    const res = await db.collection('news_cache')
+      .where({
+        cacheExpire: db.command.lt(expireAt),
+      })
+      .update({
+        data: { cacheExpire: expireAt, updatedAt: now },
+      })
+    const renewed = res.stats?.updated || 0
+    console.log(`[refreshNews] 续期 ${renewed} 条历史缓存，新 cacheExpire=${expireAt}`)
+    return renewed
+  } catch (err) {
+    console.warn('[refreshNews] 续期历史缓存失败:', err.message)
     return 0
   }
 }
@@ -185,28 +212,56 @@ exports.main = async (event) => {
     }
   }
 
-  // 1. 调用聚合 API 拉取所有分类列表（v5.1：并行拉取，3 秒内完成）
-  let searchResult
+  // 1. 双数据源拉取（v5.9：聚合优先 → 天行兜底）
+  const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
+  const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
+
+  let searchResult = null
+  let engine = 'juhe'
+
+  // 1a. 聚合优先
   try {
-    searchResult = await fetchAllCategories(CATEGORIES, 5)
+    searchResult = await fetchAllJuhe(CATEGORIES, 5)
+    console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
   } catch (err) {
-    console.error('[refreshNews] 聚合 API 拉取失败:', err.message)
-    return {
-      code: -1,
-      message: `新闻拉取失败: ${err.message}`,
-      errorCode: 'API_NETWORK',
+    console.error('[refreshNews] 聚合 API 拉取异常:', err.message)
+    searchResult = null
+  }
+
+  // 1b. 聚合失败/空 → 天行兜底
+  if (!searchResult || searchResult.news.length === 0) {
+    console.warn('[refreshNews] ⚠️ 聚合未返回数据，尝试天行兜底')
+    try {
+      const tianResult = await fetchAllTian(CATEGORIES, 5)
+      if (tianResult && tianResult.news.length > 0) {
+        searchResult = tianResult
+        engine = 'tianxing'
+        console.log(`[refreshNews] 天行兜底成功: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
+      } else {
+        console.warn('[refreshNews] ⚠️ 天行也未返回数据')
+        searchResult = { news: [], stats: {} }
+      }
+    } catch (err) {
+      console.error('[refreshNews] 天行兜底失败:', err.message)
+      searchResult = { news: [], stats: {} }
     }
   }
 
-  console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条`)
-  console.log(`[refreshNews] 分类统计:`, JSON.stringify(searchResult.stats))
-
+  // 1c. 双数据源都失败 → 保留旧缓存 + 续期（v5.9：避免历史数据 TTL 过期后列表空白）
   if (searchResult.news.length === 0) {
-    console.warn('[refreshNews] ⚠️ 聚合 API 返回 0 条新闻，保留旧缓存')
+    console.warn('[refreshNews] ⚠️ 聚合+天行均无数据，保留旧缓存并续期 cacheExpire')
+    const renewed = await renewCacheExpire()
     return {
       code: 0,
-      message: '聚合 API 未返回新闻，保留旧缓存',
-      data: { total: 0, inserted: 0, retained: true, stats: searchResult.stats },
+      message: '聚合+天行均未返回新闻，保留旧缓存',
+      data: {
+        total: 0,
+        inserted: 0,
+        retained: true,
+        renewed,
+        stats: searchResult.stats,
+        engine,
+      },
     }
   }
 
@@ -319,7 +374,7 @@ exports.main = async (event) => {
       enrichedCount,
       aiSummaryCount,
       elapsedMs: elapsed,
-      engine: 'juhe',
+      engine,
     },
   }
 }
