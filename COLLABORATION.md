@@ -333,21 +333,28 @@ RELAY.md 已转为「既定任务跟踪表」（计划内任务线性交接全�
 
 ## 八、GitHub 推送修复
 
-沙箱默认 DNS 会把 `github.com` 解析到内部代理 `198.18.0.x`，导致 git/curl 访问 GitHub 时 TLS 握手失败。推送前请先修复 DNS：
+> ⚠️ **任何角色遇到 `gnutls_handshake() failed` / `TLS connection was non-properly terminated` 第一类错误，先做这一节，不要傻等重试**——根因是 DNS 污染，不是网络抖动，等也没用。
+
+**根因**：沙箱默认 DNS 把 `github.com` 劫持到内网假 IP `198.18.0.x`，TLS 握手被网关中断。
+
+**第一解法（每个新会话推送前都跑一次，环境会重置）**：
 
 ```bash
-# 1. 安装 dnsmasq-base（如未安装）
+# 1. 安装 dnsmasq（如未安装）
 apt-get update && apt-get install -y dnsmasq-base
 
-# 2. 运行一键修复脚本
+# 2. 运行一键修复脚本（项目根目录 setup_github_dns.py 已就绪，幂等可重跑）
 sudo python3 setup_github_dns.py
 
-# 3. 验证
-getent hosts github.com        # 应返回 20.205.243.166
+# 3. 验证（两条都应正常）
+getent hosts github.com        # 应返回 20.205.243.166（不再是 198.18.0.x）
 curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 ```
 
-完整说明见 `GITHUB_PUSH_AI_MANUAL.md`。
+修复成功后，用 token 注入方式 `git pull --rebase && git push origin main` 即可。
+
+- **完整操作手册（含 token 获取、冲突处理、故障排查）**：`docs/00-规划/Git推送操作手册-各角色通用.md`（其「🔧 故障排查 · 问题 1」为本问题的标准解法）
+- **完整根因与脚本原理**：`GITHUB_PUSH_AI_MANUAL.md`
 
 ---
 
