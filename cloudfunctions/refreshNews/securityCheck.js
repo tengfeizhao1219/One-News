@@ -118,7 +118,7 @@ class SecurityCheck {
   }
 
   /**
-   * 批量文本检测
+   * 批量文本检测（v5.1：改为分批并行，避免 42 条串行调用超 3s 限制）
    *
    * @param {Array<{id: string, title: string, summary?: string}>} items
    * @returns {Promise<{passed: Array, blocked: Array, stats: object}>}
@@ -126,16 +126,23 @@ class SecurityCheck {
   async checkBatch(items) {
     const passed = []
     const blocked = []
+    const BATCH_SIZE = 10
 
-    for (const item of items) {
-      const text = [item.title, item.summary].filter(Boolean).join(' ')
-      const result = await this.checkText(text)
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      const batch = items.slice(i, i + BATCH_SIZE)
+      const results = await Promise.all(batch.map(async (item) => {
+        const text = [item.title, item.summary].filter(Boolean).join(' ')
+        const result = await this.checkText(text)
+        return { item, result }
+      }))
 
-      if (result.pass) {
-        passed.push(item)
-      } else {
-        console.warn(`[SecurityCheck] 拦截: [${item.id}] "${item.title?.slice(0, 40)}" — risk=${result.risk}`)
-        blocked.push({ ...item, _risk: result.risk })
+      for (const { item, result } of results) {
+        if (result.pass) {
+          passed.push(item)
+        } else {
+          console.warn(`[SecurityCheck] 拦截: [${item.id}] "${item.title?.slice(0, 40)}" — risk=${result.risk}`)
+          blocked.push({ ...item, _risk: result.risk })
+        }
       }
     }
 

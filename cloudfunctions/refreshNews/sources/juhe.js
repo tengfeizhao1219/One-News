@@ -147,10 +147,14 @@ async function fetchJuheNewsList(category, pageSize = 10) {
 function formatJuheNewsItem(rawItem, category) {
   const { cleanSummary } = require('../utils/newsCleaner')
 
+  // 注意：聚合 API 头条接口不返回 description 字段，摘要用标题兜底
+  // （详情页会按需抓正文，列表页摘要仅作展示）
+  const summarySource = rawItem.description || rawItem.title || ''
+
   return {
     id: `juhe_${category}_${rawItem.uniquekey || rawItem.id || Date.now()}`,
     title: rawItem.title || '',
-    summary: cleanSummary(rawItem.description || '', 150),
+    summary: cleanSummary(summarySource, 150),
     category: category,
     categoryName: CATEGORY_NAMES[category] || category,
     source: rawItem.author_name || rawItem.src || '聚合数据',
@@ -167,25 +171,27 @@ function formatJuheNewsItem(rawItem, category) {
  * @returns {Promise<{ news: Array, stats: Object }>}
  */
 async function fetchAllCategories(categories, perCategory = 10) {
-  const results = []
   const stats = {}
 
-  // 串行请求，分类间加 300ms 间隔（防聚合 rate limit）
-  for (const category of categories) {
-    try {
-      const rawList = await fetchJuheNewsList(category, perCategory)
-      const formatted = rawList.map(item => formatJuheNewsItem(item, category))
-      results.push(...formatted)
-      stats[category] = formatted.length
-    } catch (err) {
-      console.error(`[juhe] ${category} 失败:`, err.message)
-      stats[category] = 0
-    }
+  // 并行请求所有分类（微信云函数 3s 超时限制：串行 7 分类约 3.7s 必超时，
+  // 并行只需 ~0.5s。聚合免费版限流 100 次/分钟，7 并发远未达上限）
+  const settled = await Promise.all(
+    categories.map(async (category) => {
+      try {
+        const rawList = await fetchJuheNewsList(category, perCategory)
+        const formatted = rawList.map(item => formatJuheNewsItem(item, category))
+        return { category, news: formatted }
+      } catch (err) {
+        console.error(`[juhe] ${category} 失败:`, err.message)
+        return { category, news: [] }
+      }
+    })
+  )
 
-    // 分类间延迟 300ms（最后一个分类后无需等待）
-    if (category !== categories[categories.length - 1]) {
-      await new Promise(resolve => setTimeout(resolve, 300))
-    }
+  const results = []
+  for (const { category, news } of settled) {
+    results.push(...news)
+    stats[category] = news.length
   }
 
   return { news: results, stats }

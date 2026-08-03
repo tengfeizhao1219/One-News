@@ -147,10 +147,10 @@ exports.main = async (event) => {
     }
   }
 
-  // 1. 调用聚合 API 拉取所有分类列表（串行，3 秒内完成）
+  // 1. 调用聚合 API 拉取所有分类列表（v5.1：并行拉取，3 秒内完成）
   let searchResult
   try {
-    searchResult = await fetchAllCategories(CATEGORIES, 6)
+    searchResult = await fetchAllCategories(CATEGORIES, 5)
   } catch (err) {
     console.error('[refreshNews] 聚合 API 拉取失败:', err.message)
     return {
@@ -206,31 +206,30 @@ exports.main = async (event) => {
     }
   }
 
-  // 5. 按分类分组写入
+  // 5. 按分类分组写入（v5.1：一次合并写入 + 并行清理，省去 7 次串行循环）
   const categories = {}
+  const allItems = []
   secPassed.forEach(item => {
     const cat = item.category || 'unknown'
     if (!categories[cat]) categories[cat] = []
     categories[cat].push(item)
+    allItems.push(item)
   })
 
-  let totalInserted = 0
-  let totalFailed = 0
-  let totalCleared = 0
+  // 5a. 一次批量写入全部新闻（内部按 10 条一批并行）
+  const { inserted: totalInserted, failed: totalFailed } = await batchInsert(allItems)
 
-  for (const [category, items] of Object.entries(categories)) {
-    const { inserted, failed } = await batchInsert(items)
-    totalInserted += inserted
-    totalFailed += failed
-
-    if (inserted > 0) {
+  // 5b. 并行清理各分类旧缓存（保留新 ids）
+  const clearResults = await Promise.all(
+    Object.entries(categories).map(async ([category, items]) => {
+      if (items.length === 0) return 0
       const newIds = items.map(it => it.id)
       const cleared = await clearOldCacheExcept(category, newIds)
-      totalCleared += cleared
-    }
-
-    console.log(`[refreshNews] ${category}: 写入 ${inserted} (失败 ${failed}) → 清理旧数据 ${totalCleared}`)
-  }
+      console.log(`[refreshNews] ${category}: 清理旧数据 ${cleared} 条`)
+      return cleared
+    })
+  )
+  const totalCleared = clearResults.reduce((sum, n) => sum + n, 0)
 
   const elapsed = Date.now() - startTime
 
