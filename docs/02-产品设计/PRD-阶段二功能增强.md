@@ -117,7 +117,9 @@
 - **IF** 待入库新闻命中微信内容安全 API（msgSecCheck 文本 / imgSecCheck 图片）拒识
 - **THEN THE SYSTEM SHALL** 拦截该条、记录日志并告警，**不**写入 `news_cache`。
 - **WHERE** 新闻含图片 **THE SYSTEM SHALL** 对图片一并做 `imgSecCheck`。
-- **WHILE** 内容安全 API 不可用（超时/限频） **THE SYSTEM SHALL** 采用"保守策略"：该批内容暂缓入库并告警，待 API 恢复后重试，而非绕过校验直接入库。
+- **WHILE** 内容安全 API 不可用（超时/限频） **THE SYSTEM SHALL** 采用"降级放行"策略：连续 3 次调用失败后放行该批内容入库，并记录告警日志；恢复后自动回到正常校验。
+
+> **⚠️ 口径变更（owner 裁定 2026-08-03）**：原验收标准为「API 不可用→保守暂缓入库」，**owner 裁定改为「接受降级放行」**——宁可误放，不阻断新闻流（`securityCheck.js` 已按此实现：`DEGRADED` 降级态，`FAIL_THRESHOLD=3`）。合规风险已记录并接受：API 不可用期间存在违规内容漏检窗口，告警日志兜底追踪。Q-05 验收 2.4/2.5 按此口径 ✅。
 
 **设计要点**
 1. **落点**：在 `refreshNews` 的 `validateAndClean` 之后、`batchInsert` 之前，串行调用内容安全 API（与现有 validator 互补：validator 管"质量/来源"，内容安全 API 管"违规"）。
@@ -190,6 +192,8 @@
 - **WHEN** 恢复网络 **THEN THE SYSTEM SHALL** 静默补充新内容，不打断阅读。
 - 概要：依赖 `wx.setStorageSync` 缓存 `getNewsList` 结果与详情；与 RQ-01/RQ-03 共用本地存储层，建议统一封装 `localCache`。
 
+> **⚠️ 兜底要求（owner 裁定 2026-08-03，升级为 P0）**：**任何情况下不得向用户展示空白新闻页**。v4.2 曾移除全部降级兜底（`news_cache` 空→`meta.source='empty'` 直接空列表），**owner 裁定恢复至少一层兜底**：`news_cache` 为空或拉取失败时，系统须降级展示「本地上次成功缓存」或「内置精选列表」等至少一层可读内容，并标注 `meta.source='cache-fallback'`。技术方案由 TL 定稿（对应 ADR 更新），产品验收口径：**首页与详情页不得出现无内容空白态**（Q-05 验收 1.12/1.13 按恢复后口径执行）。
+
 ### 5.7 RQ-06 阅读历史（P2，概要）
 
 - **WHEN** 用户打开一条新闻 **THEN THE SYSTEM SHALL** 记录已读（id + 时间）至本地。
@@ -218,7 +222,7 @@
 | 编号 | 验收项 |
 |------|--------|
 | AC-RQ01 | **WHEN** 滑到本分类末条上滑 **THEN** 展示下一分类首条；**IF** 末条则提示"已是最后一条"；跨分类不阻断子元素 tap |
-| AC-RQ10 | **IF** 命中内容安全 API **THEN** 该条不入库且有日志；API 不可用时保守暂缓入库并告警 |
+| AC-RQ10 | **IF** 命中内容安全 API **THEN** 该条不入库且有日志；API 连续 3 次不可用 **THEN** 降级放行并告警（owner 裁定 2026-08-03 接受放行） |
 | AC-RQ04 | **WHILE** 设大字号 **THEN** 全局生效并记忆；首入跟随系统；切换无闪烁 |
 | AC-RQ03 | **WHEN** 点收藏 **THEN** 本地持久化且态变更；弱网可读；再点取消 |
 | AC-RQ07 | **WHEN** 点分享 **THEN** 调起转发卡片（标题+摘要+封面），path 可回看详情 |
