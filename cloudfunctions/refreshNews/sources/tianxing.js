@@ -74,7 +74,16 @@ async function fetchTianNewsList(category, num = 10) {
             resolve([])
             return
           }
-          const newsList = (result.result && result.result.list) || []
+          // 天行分类接口返回的新闻数组字段统一为 newslist（部分旧接口为 list，做兼容）
+          const newsList = (result.result && (result.result.newslist || result.result.list)) || []
+          if (newsList.length === 0) {
+            console.log(`[tianxing] ${category} 响应结构:`, JSON.stringify({
+              code: result.code,
+              msg: result.msg,
+              resultKeys: result.result ? Object.keys(result.result) : null,
+              sample: result.result ? JSON.stringify(result.result).slice(0, 200) : null,
+            }))
+          }
           console.log(`[tianxing] ${category} 获取 ${newsList.length} 条`)
           resolve(newsList)
         } catch (e) {
