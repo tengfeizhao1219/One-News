@@ -1,3 +1,38 @@
+## [2026-08-03 16:30] 🔧 v5.5+v5.6 详情页清洗增强 + AI 摘要接入 | 会话：全栈开发
+
+### 一、背景
+
+用户反馈两个问题：
+1. 详情页正文出现**标题重复**和**时间/来源元信息行**（如"2026-08-03 15:39 来源：鲁网"）
+2. 列表摘要太少——聚合 API 无 `description` 字段，summary 用标题兜底仅 22 字，达不到"快速了解新闻"目的
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `getNewsDetail/utils/newsCleaner.js` | v5.5：`cleanNewsContent` 新增 `options.title/source`；新增第 5.5 层 `removeRedundantParagraphs`（删标题重复段 + 元信息行 + 仅含来源段） |
+| `refreshNews/utils/newsCleaner.js` | 同步（两云函数一致） |
+| `getNewsDetail/index.js` | v5.6：新增 `summarizeWithDashscope`（阿里百炼 OpenAI 兼容接口）；主流程抓取正文后 → AI 摘要 → `cacheDoc` 写回 content + summary |
+| `getNewsDetail/config.js` | v5.6：新增 dashscope 配置（`DASHSCOPE_API_KEY` / `deepseek-v3` / 6s 超时 / 2000 字截断） |
+
+### 三、关键验证
+
+- **AI 摘要**（真实调用百炼）："巧手承宋锦 匠心筑华章" → 154 字高质量摘要 ✅
+- **内容清洗**：截图内容测试 → 标题重复段删除、元信息行删除、真正文 218 字保留 ✅
+- 未配置 `DASHSCOPE_API_KEY` 时 AI 摘要自动跳过，不影响详情主流程 ✅
+
+### 四、提交
+
+- `git commit 30b4891`（v5.5）+ `git commit 98ba02c`（v5.6）
+
+### 五、待办（PM）
+
+- [ ] 部署 `getNewsDetail`
+- [ ] **给 `getNewsDetail` 加环境变量 `DASHSCOPE_API_KEY = sk-5b6cb233fcf04fe597ec263b5c8`**（用于 AI 摘要）
+- [ ] 验证：详情正文无标题重复/元信息；点开几条新闻后刷新列表，摘要变长（AI 生成）
+
+---
+
 ## [2026-08-03 15:45] 🔧 v5.3 详情页无内容修复 — getNewsDetail 兼容 news_cache | 会话：全栈开发
 
 ### 一、背景
