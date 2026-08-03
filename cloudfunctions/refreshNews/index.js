@@ -306,12 +306,13 @@ exports.main = async (event) => {
   const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
   const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
   console.log(`[refreshNews] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
-  secPassed = enriched
+  // 注意：secPassed 是 const 解构变量，不能重新赋值；富化结果用新变量 finalList
+  const finalList = enriched
 
   // 5. 按分类分组写入（v5.1：一次合并写入 + 并行清理，省去 7 次串行循环）
   const categories = {}
   const allItems = []
-  secPassed.forEach(item => {
+  finalList.forEach(item => {
     const cat = item.category || 'unknown'
     if (!categories[cat]) categories[cat] = []
     categories[cat].push(item)
@@ -360,7 +361,7 @@ exports.main = async (event) => {
     message: `刷新完成，共 ${totalInserted} 条新闻`,
     data: {
       total: valid.length,
-      securityPassed: secPassed.length,
+      securityPassed: finalList.length,
       securityBlocked: secBlocked.length,
       inserted: totalInserted,
       failed: totalFailed,
