@@ -1,5 +1,7 @@
 # Mock 回归测试报告 — 新闻自动更新 v3
 
+> 🗂️ **已归档（2026-08-03）**：owner 裁定删除 mock 数据（`data/news.json`、`cloud-import-data.json` 已物理删除），全链路使用真实数据；本报告记录历史 Mock 模式测试结果，仅存档参考，不再作为现行验收依据。
+>
 > **测试日期**：2026-07-28
 > **测试版本**：v3.0（百炼 DeepSeek 联网搜索）
 > **Mock 模式**：TEST_MODE=true, USE_MOCK=true
