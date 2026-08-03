@@ -1,5 +1,10 @@
-// 获取新闻详情云函数 v5.3 — 兼容 news_cache 集合（v5 只写 news_cache）
+// 获取新闻详情云函数 v5.4 — 聚合官方正文接口 + news_cache 兼容 + 网页抓取兜底
 // ============================================================
+// v5.4 改造（2026-08-03）：
+//   详情页正文获取优先级：聚合官方内容接口（/toutiao/content，稳定无反爬）
+//   → 网页抓取（带 UA + 重定向 + <p> 段落提取）→ summary 兜底。
+//   解决：v5.3 网页裸抓被反爬拦截 → 详情页只显示标题兜底。
+//
 // v5.3 改造（2026-08-03）：
 //   v5.1 后 refreshNews 为适配 3 秒超时，只写 news_cache，不再双写 news 集合。
 //   详情页点击时必须支持从 news_cache 读取（否则报"新闻不存在"）。
@@ -23,9 +28,15 @@ const { cleanNewsContent, validateCleanedContent } = require('./utils/newsCleane
 
 // 抓取原文超时时间（需 < 3 秒云函数限制）
 const FETCH_TIMEOUT_MS = 2500
+// 单次抓取最大字节数（防止异常大页面拖垮云函数）
+const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
+
+// 浏览器 UA（模拟真实浏览器，避免新闻站反爬拦截无 UA 的数据中心请求）
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 /**
- * 从 URL 抓取网页 HTML
+ * 从 URL 抓取网页 HTML（v5.4：加 UA / Accept 头 + 跟随重定向 + 2MB 上限）
  * @param {string} url
  * @returns {Promise<string|null>}
  */
@@ -35,7 +46,22 @@ function fetchWebPage(url) {
   const protocol = url.startsWith('https') ? require('https') : require('http')
 
   return new Promise((resolve) => {
-    const req = protocol.get(url, { timeout: FETCH_TIMEOUT_MS }, (res) => {
+    const req = protocol.get(url, {
+      timeout: FETCH_TIMEOUT_MS,
+      headers: {
+        'User-Agent': BROWSER_UA,
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+        'Cache-Control': 'no-cache',
+      },
+    }, (res) => {
+      // 跟随一次重定向（301/302）
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        res.resume()
+        const nextUrl = new URL(res.headers.location, url).toString()
+        return resolve(fetchWebPage(nextUrl))
+      }
+
       // 只处理 200 且 HTML 类型
       const contentType = res.headers['content-type'] || ''
       if (res.statusCode !== 200 || (!contentType.includes('html') && !contentType.includes('text'))) {
@@ -44,16 +70,19 @@ function fetchWebPage(url) {
         return
       }
 
-      let body = ''
+      const chunks = []
+      let total = 0
       res.on('data', chunk => {
-        body += chunk
+        total += chunk.length
         // 防止过大网页撑爆内存
-        if (body.length > 500 * 1024) {
+        if (total > MAX_DOWNLOAD_BYTES) {
           req.destroy()
-          resolve(body)
+          resolve(Buffer.concat(chunks).toString('utf8'))
+          return
         }
+        chunks.push(chunk)
       })
-      res.on('end', () => resolve(body))
+      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
     })
 
     req.on('error', () => resolve(null))
@@ -67,42 +96,84 @@ function fetchWebPage(url) {
 }
 
 /**
- * 从 HTML 中提取正文内容
- * 使用轻量正则 + 启发式方法（不依赖 jsdom/readability 以控制体积）
- *
- * 策略：
- *   1. 移除 script / style / iframe / nav / footer
- *   2. 找到最长文本块所在的容器
- *   3. 提取该容器内的所有文本段落
+ * 从 HTML 中定位正文容器（优先语义标签，其次常见 class/id）
+ * @param {string} html
+ * @returns {string|null} 容器 HTML
+ */
+function locateBodyHtml(html) {
+  const patterns = [
+    /<article[^>]*>([\s\S]*?)<\/article>/i,
+    /<div[^>]*id=["']paragraph["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["'][^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+  ]
+  for (const re of patterns) {
+    const m = html.match(re)
+    if (m && m[1]) return m[1]
+  }
+  return null
+}
+
+/**
+ * 从一段 HTML 中提取 <p> 文本段落（过滤过短噪音段落）
+ * @param {string|null} containerHtml
+ * @returns {string[]}
+ */
+function extractParagraphs(containerHtml) {
+  if (!containerHtml) return []
+  const paras = []
+  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi
+  let m
+  while ((m = pRe.exec(containerHtml)) !== null) {
+    const text = m[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#\d+;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    // 过滤过短段落（导航/图片说明）
+    if (text.length >= 15) paras.push(text)
+  }
+  return paras
+}
+
+/**
+ * 从 HTML 中提取正文纯文本（v5.4：容器 + <p> 段落提取，兼容全页退化）
+ * @param {string} html
+ * @returns {string|null}
  */
 function extractContentFromHtml(html) {
   if (!html) return null
 
-  // 1. 移除不需要的标签块
-  let text = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
-    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '')
-    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '')
-    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '')
-    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '')
-    .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+  // 1. 移除噪音标签块
+  const cleaned = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, ' ')
+    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ')
+    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ')
+    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' ')
+    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
 
-  // 2. 尝试提取 <article> 或常见文章容器
-  const articleMatch = text.match(/<article[^>]*>([\s\S]*?)<\/article>/i)
-    || text.match(/<div[^>]*class="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-    || text.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-    || text.match(/<div[^>]*class="[^"]*post[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-    || text.match(/<div[^>]*id="[^"]*article[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-    || text.match(/<div[^>]*id="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i)
-
-  if (articleMatch) {
-    text = articleMatch[1]
+  // 2. 优先定位正文容器提取 <p>；容器提取不到 → 退化为全页 <p> 提取
+  let paras = extractParagraphs(locateBodyHtml(cleaned))
+  if (paras.length < 2) {
+    paras = extractParagraphs(cleaned)
   }
 
-  return text
+  // 3. 合并成正文
+  if (paras.length === 0) return null
+  return paras.join('\n')
 }
 
 /**
@@ -176,6 +247,83 @@ function bumpViewCount(collection, realId) {
   } catch (_) {}
 }
 
+// 聚合内容接口地址（v5.4：官方正文接口，比抓第三方网页稳定）
+const JUHE_CONTENT_URL = 'https://v.juhe.cn/toutiao/content'
+
+/**
+ * 从 juhe id 解析 uniquekey
+ * id 格式：juhe_${category}_${uniquekey}，例如 juhe_recommend_83d955608f4b0608abbfc1c1b785942a
+ * @param {string} id
+ * @returns {string|null}
+ */
+function parseJuheKey(id) {
+  if (!id || typeof id !== 'string') return null
+  const prefix = 'juhe_'
+  if (!id.startsWith(prefix)) return null
+  // 找到 category 后的第一个下划线
+  const first = id.indexOf('_', prefix.length)
+  if (first === -1) return null
+  const key = id.slice(first + 1)
+  return key || null
+}
+
+/**
+ * 调用聚合官方内容接口获取正文（POST form-urlencoded）
+ * @param {string} uniquekey
+ * @returns {Promise<string|null>} 清洗后的正文纯文本
+ */
+function fetchJuheContent(uniquekey) {
+  const config = require('./config')
+  if (!config.juhe.apiKey || !uniquekey) return Promise.resolve(null)
+
+  return new Promise((resolve) => {
+    const https = require('https')
+    const querystring = require('querystring')
+    const postData = querystring.stringify({
+      key: config.juhe.apiKey,
+      uniquekey,
+    })
+
+    const req = https.request(JUHE_CONTENT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Length': Buffer.byteLength(postData),
+      },
+      timeout: FETCH_TIMEOUT_MS,
+    }, (res) => {
+      let body = ''
+      res.on('data', chunk => { body += chunk })
+      res.on('end', () => {
+        try {
+          const result = JSON.parse(body)
+          if (result.error_code !== 0 || !result.result || !result.result.content) {
+            console.warn(`[getNewsDetail] 聚合内容接口异常: error_code=${result.error_code} reason=${result.reason}`)
+            resolve(null)
+            return
+          }
+          const cleaned = cleanNewsContent(result.result.content, { maxLength: 3000 })
+          const validation = validateCleanedContent(cleaned)
+          if (!validation.valid) {
+            console.warn(`[getNewsDetail] 聚合内容清洗后无效: ${validation.reason}`)
+            resolve(null)
+            return
+          }
+          resolve(cleaned)
+        } catch (e) {
+          console.warn('[getNewsDetail] 聚合内容接口 JSON 解析失败:', e.message)
+          resolve(null)
+        }
+      })
+    })
+
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.write(postData)
+    req.end()
+  })
+}
+
 // ─── 主函数 ─────────────────────────────────────────
 
 exports.main = async (event) => {
@@ -217,11 +365,26 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 第 3 步：content 为空，从 sourceUrl 抓取 ──
+  // ── 第 3 步：content 为空，获取正文（v5.4 优先级：聚合官方接口 → 网页抓取 → summary）──
   let finalContent = ''
   let contentSource = 'fallback'
 
-  if (doc.sourceUrl) {
+  // 3a. 优先：聚合官方内容接口（id 为 juhe_xxx 时解析 uniquekey）
+  const juheKey = parseJuheKey(newsId)
+  if (juheKey) {
+    console.log(`[getNewsDetail] 聚合内容接口查询 uniquekey=${juheKey}`)
+    const juheContent = await fetchJuheContent(juheKey)
+    if (juheContent) {
+      finalContent = juheContent
+      contentSource = 'juhe_content_api'
+      console.log(`[getNewsDetail] 聚合内容接口成功: ${finalContent.length} 字符`)
+    } else {
+      console.warn('[getNewsDetail] 聚合内容接口失败，尝试网页抓取')
+    }
+  }
+
+  // 3b. 次选：网页抓取 sourceUrl
+  if (!finalContent && doc.sourceUrl) {
     console.log(`[getNewsDetail] 从原文抓取: ${doc.sourceUrl}`)
     try {
       const html = await fetchWebPage(doc.sourceUrl)
