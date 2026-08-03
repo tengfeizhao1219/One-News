@@ -262,18 +262,31 @@ Page({
     if (this._animating || !this._engine) return
     var dy = e.changedTouches[0].clientY - this._touchStartY
     var dt = Date.now() - this._touchStartT
-    if (Math.abs(dy) < 70 || dt > 500) return
+
+    // DEBUG: 真机排查日志（上线后可移除）
+    console.log('[detail:touch] dy=' + dy + ' dt=' + dt + ' top=' + this._isAtTop + ' bottom=' + this._isAtBottom)
+
+    if (Math.abs(dy) < 70 || dt > 500) {
+      console.log('[detail:touch] 未达阈值，忽略')
+      return
+    }
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
     // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶
     // 上滑(dy<0)→下一条（手指从下往上推，内容从底部滑入）；需内容已触底
     if (dy > 0 && !this.data.isFirst) {
       if (this._isAtTop) {
+        console.log('[detail:touch] 触发 _swipeToPrev（上一条）')
         this._swipeToPrev()
+      } else {
+        console.log('[detail:touch] 下滑但未到顶，不触发')
       }
     } else if (dy < 0 && !this.data.isLast) {
       if (this._isAtBottom) {
+        console.log('[detail:touch] 触发 _swipeToNext（下一条）')
         this._swipeToNext()
+      } else {
+        console.log('[detail:touch] 上滑但未到底，不触发')
       }
     }
   },

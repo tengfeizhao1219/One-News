@@ -3,9 +3,7 @@
 <view
   class="page"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};"
-  bindtouchstart="onTouchStart"
-  bindtouchend="onTouchEnd">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
@@ -35,6 +33,7 @@
   </view>
 
   <!-- 内容 -->
+  <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
     wx:if="{{pageState === 'ready'}}"
     class="content"
@@ -46,7 +45,9 @@
     lower-threshold="50"
     bindscroll="onContentScroll"
     bindscrolltoupper="onScrollToUpper"
-    bindscrolltolower="onScrollToLower">
+    bindscrolltolower="onScrollToLower"
+    bindtouchstart="onTouchStart"
+    bindtouchend="onTouchEnd">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
