@@ -1,3 +1,34 @@
+## [2026-08-03 15:45] 🔧 v5.3 详情页无内容修复 — getNewsDetail 兼容 news_cache | 会话：全栈开发
+
+### 一、背景
+
+v5.2 部署后列表各分类有数据（refreshNews 超时已解决，34 条 1246ms 写入成功），但点进详情页报"新闻不存在或已过期"。
+
+### 二、根因
+
+v5.1 为适配 3 秒超时，`refreshNews` 只写 `news_cache`，不再双写 `news` 集合。但 `getNewsDetail` 第 1 步**只查 `news` 集合**（该集合为空）→ 前端传入的 `juhe_xxx` id 查不到 → 返回 `NO_DATA`。
+
+### 三、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/getNewsDetail/index.js` | 新增 `findNewsDoc`：查询顺序 `news`（历史遗留）→ `news_cache`（v5 当前）→ `_id` 直查；`cacheContent`/`bumpViewCount` 按来源集合写入；meta.engine 统一 `juhe` |
+
+### 四、本地验证
+
+- `mini.eastday.com` 原文抓取正常：HTML 3787 字符 → 清洗后 132 字正文 → `validateCleanedContent` valid ✅
+
+### 五、提交
+
+- `git commit f64c9e0`（main）
+
+### 六、待办
+
+- [ ] 产品经理部署 `getNewsDetail`（微信开发者工具右键 → 上传并部署：云端安装依赖）
+- [ ] 小程序点击任意新闻 → 详情页应显示抓取清洗后的正文；首次慢（抓取），二次快（缓存）
+
+---
+
 ## [2026-08-03 15:30] 🔧 v5.2 聚合 API 修复：摘要缺失 + 串行拉取超时 | 会话：全栈开发
 
 ### 一、背景
