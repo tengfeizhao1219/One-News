@@ -20,7 +20,7 @@ const config = require('./config')
 // ─── 数据库操作 ─────────────────────────────────────
 
 /**
- * 清除指定分类的旧缓存
+ * 清除指定分类的旧缓存（旧策略，保留供兼容）
  */
 async function clearOldCache(category) {
   try {
@@ -30,6 +30,24 @@ async function clearOldCache(category) {
     return res.stats?.removed || 0
   } catch (err) {
     console.warn(`[refreshNews] 清除 ${category} 旧缓存失败:`, err.message)
+    return 0
+  }
+}
+
+/**
+ * 清除指定分类的旧缓存，但保留指定的 id 列表（新策略：避免空窗期）
+ */
+async function clearOldCacheExcept(category, keepIds) {
+  try {
+    const res = await db.collection('news_cache')
+      .where({
+        category,
+        id: db.command.nin(keepIds),
+      })
+      .remove()
+    return res.stats?.removed || 0
+  } catch (err) {
+    console.warn(`[refreshNews] 清除 ${category} 旧缓存(保留${keepIds.length}条)失败:`, err.message)
     return 0
   }
 }
@@ -177,12 +195,29 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 拦截详情:', JSON.stringify(secBlocked.map(b => ({ id: b.id, title: b.title?.slice(0, 40) }))))
   }
 
-  // 4. 如果有效新闻太少，记录警告但继续
+  // 4. 如果有效新闻太少，先不要清空旧缓存，避免空窗期
   if (secPassed.length < 5) {
-    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${secPassed.length} 条（安全审核后），可能影响用户体验`)
+    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${secPassed.length} 条（安全审核后），保留旧缓存不刷新`)
+    return {
+      code: 0,
+      message: `有效新闻不足(${secPassed.length}条)，保留旧缓存`,
+      data: {
+        total: valid.length,
+        securityPassed: secPassed.length,
+        securityBlocked: secBlocked.length,
+        inserted: 0,
+        failed: 0,
+        cleared: 0,
+        retained: true,
+        searchStats: searchResult.stats,
+        validation: validationStats,
+        security: securityStats,
+        quota: searchResult.quota || { zhipuCalls: 0, deepseekCalls: 0, deepseekCap: config.rateLimit.deepseekDailyCap },
+      },
+    }
   }
 
-  // 5. 按分类分组写入
+  // 5. 按分类分组写入（新策略：先写入新数据，成功后再清空旧缓存，避免空窗期）
   const categories = {}
   secPassed.forEach(item => {
     const cat = item.category || 'unknown'
@@ -195,14 +230,19 @@ exports.main = async (event) => {
   let totalCleared = 0
 
   for (const [category, items] of Object.entries(categories)) {
-    const cleared = await clearOldCache(category)
-    totalCleared += cleared
-
+    // 5.1 先写入新数据到临时位置（news_cache 直接用新数据覆盖，但先不清空，写失败还有旧数据）
     const { inserted, failed } = await batchInsert(items)
     totalInserted += inserted
     totalFailed += failed
 
-    console.log(`[refreshNews] ${category}: 清除 ${cleared} → 写入 ${inserted} (失败 ${failed})`)
+    // 5.2 新数据写入成功后，再清理该分类下除本次写入 id 外的过期旧数据
+    if (inserted > 0) {
+      const newIds = items.map(it => it.id)
+      const cleared = await clearOldCacheExcept(category, newIds)
+      totalCleared += cleared
+    }
+
+    console.log(`[refreshNews] ${category}: 写入 ${inserted} (失败 ${failed}) → 清理旧数据 ${totalCleared}`)
   }
 
   const elapsed = Date.now() - startTime
