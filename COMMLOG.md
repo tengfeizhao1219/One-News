@@ -28,7 +28,7 @@
 ### 五、待办（PM）
 
 - [ ] 部署 `getNewsDetail`
-- [ ] **给 `getNewsDetail` 加环境变量 `DASHSCOPE_API_KEY = sk-5b6cb233fcf04fe597ec263b5c8`**（用于 AI 摘要）
+- [ ] **给 `getNewsDetail` 加环境变量 `DASHSCOPE_API_KEY = sk-5b6cb233fcf04fe597ec263b5c871c2a`**（用于 AI 摘要；注意：完整 key 共 40 位，此前文档误截断为 36 位导致 Incorrect API key）
 - [ ] 验证：详情正文无标题重复/元信息；点开几条新闻后刷新列表，摘要变长（AI 生成）
 
 ---
