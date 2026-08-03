@@ -1,3 +1,104 @@
+## [2026-08-03 16:30] 🔧 v5.5+v5.6 详情页清洗增强 + AI 摘要接入 | 会话：全栈开发
+
+### 一、背景
+
+用户反馈两个问题：
+1. 详情页正文出现**标题重复**和**时间/来源元信息行**（如"2026-08-03 15:39 来源：鲁网"）
+2. 列表摘要太少——聚合 API 无 `description` 字段，summary 用标题兜底仅 22 字，达不到"快速了解新闻"目的
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `getNewsDetail/utils/newsCleaner.js` | v5.5：`cleanNewsContent` 新增 `options.title/source`；新增第 5.5 层 `removeRedundantParagraphs`（删标题重复段 + 元信息行 + 仅含来源段） |
+| `refreshNews/utils/newsCleaner.js` | 同步（两云函数一致） |
+| `getNewsDetail/index.js` | v5.6：新增 `summarizeWithDashscope`（阿里百炼 OpenAI 兼容接口）；主流程抓取正文后 → AI 摘要 → `cacheDoc` 写回 content + summary |
+| `getNewsDetail/config.js` | v5.6：新增 dashscope 配置（`DASHSCOPE_API_KEY` / `deepseek-v3` / 6s 超时 / 2000 字截断） |
+
+### 三、关键验证
+
+- **AI 摘要**（真实调用百炼）："巧手承宋锦 匠心筑华章" → 154 字高质量摘要 ✅
+- **内容清洗**：截图内容测试 → 标题重复段删除、元信息行删除、真正文 218 字保留 ✅
+- 未配置 `DASHSCOPE_API_KEY` 时 AI 摘要自动跳过，不影响详情主流程 ✅
+
+### 四、提交
+
+- `git commit 30b4891`（v5.5）+ `git commit 98ba02c`（v5.6）
+
+### 五、待办（PM）
+
+- [ ] 部署 `getNewsDetail`
+- [ ] **给 `getNewsDetail` 加环境变量 `DASHSCOPE_API_KEY = sk-5b6cb233fcf04fe597ec263b5c871c2a`**（用于 AI 摘要；注意：完整 key 共 40 位，此前文档误截断为 36 位导致 Incorrect API key）
+- [ ] 验证：详情正文无标题重复/元信息；点开几条新闻后刷新列表，摘要变长（AI 生成）
+
+---
+
+## [2026-08-03 15:45] 🔧 v5.3 详情页无内容修复 — getNewsDetail 兼容 news_cache | 会话：全栈开发
+
+### 一、背景
+
+v5.2 部署后列表各分类有数据（refreshNews 超时已解决，34 条 1246ms 写入成功），但点进详情页报"新闻不存在或已过期"。
+
+### 二、根因
+
+v5.1 为适配 3 秒超时，`refreshNews` 只写 `news_cache`，不再双写 `news` 集合。但 `getNewsDetail` 第 1 步**只查 `news` 集合**（该集合为空）→ 前端传入的 `juhe_xxx` id 查不到 → 返回 `NO_DATA`。
+
+### 三、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/getNewsDetail/index.js` | 新增 `findNewsDoc`：查询顺序 `news`（历史遗留）→ `news_cache`（v5 当前）→ `_id` 直查；`cacheContent`/`bumpViewCount` 按来源集合写入；meta.engine 统一 `juhe` |
+
+### 四、本地验证
+
+- `mini.eastday.com` 原文抓取正常：HTML 3787 字符 → 清洗后 132 字正文 → `validateCleanedContent` valid ✅
+
+### 五、提交
+
+- `git commit f64c9e0`（main）
+
+### 六、待办
+
+- [ ] 产品经理部署 `getNewsDetail`（微信开发者工具右键 → 上传并部署：云端安装依赖）
+- [ ] 小程序点击任意新闻 → 详情页应显示抓取清洗后的正文；首次慢（抓取），二次快（缓存）
+
+---
+
+## [2026-08-03 15:30] 🔧 v5.2 聚合 API 修复：摘要缺失 + 串行拉取超时 | 会话：全栈开发
+
+### 一、背景
+
+v5.1 切换聚合 API 后部署，云函数日志显示两处致命问题：
+1. **42 条全部被拒**（validator 报"缺少摘要"）：聚合头条接口不返回 `description` 字段，`formatJuheNewsItem` 里 `rawItem.description || ''` 恒为空
+2. **3 秒超时**：7 个分类**串行**拉取 + 每次 300ms 间隔，从日志时间线看拉取耗时 **3.67 秒**（07:19:06.679 → 07:19:10.348），还没开始写库就被杀死
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/refreshNews/sources/juhe.js` | 摘要兜底（`description || title`）；`fetchAllCategories` 串行 → `Promise.all` 并行 |
+| `cloudfunctions/refreshNews/securityCheck.js` | `checkBatch` 分批并行（每批 10），避免 42 条串行 msgSecCheck 超时 |
+| `cloudfunctions/refreshNews/index.js` | 合并一次性写入 + `Promise.all` 并行清理旧缓存；perCategory 6→5 |
+
+### 三、关键数据
+
+- 并行拉取：**465ms**（对比串行 3.67s，提速 ~8 倍）
+- 本地验证：35 条拉取 444ms，校验 **34 通过 / 1 去重 / 0 拒绝**，全部分类有数据
+- 预计总耗时：拉取 0.45s + 校验 0.01s + 安全审核 ~0.5s + 写入 ~1.2s + 清理 ~0.3s ≈ **2.5s**（限 3s 内 ✅）
+
+### 四、提交
+
+- `git commit 1862ece`（main）
+- tag `v5-juhe` 已强制更新（35d2917 → 1862ece）
+- 回滚：`git tag v5-tianxing`（天行方案）/ `v3-ai-dual-engine`（AI 双引擎）
+
+### 五、待办
+
+- [ ] 产品经理重新部署 `refreshNews`（微信开发者工具右键 → 上传并部署：云端安装依赖）
+- [ ] 触发验证：不再超时、news_cache 有数据、分类齐全
+
+---
+
 ## [2026-08-03 12:54] 🆕 v5.0 天行 API 轻量列表缓存方案交付 · 转产品经理验收 | 会话：全栈开发
 
 ### 一、背景

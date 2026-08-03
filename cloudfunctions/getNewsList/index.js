@@ -20,10 +20,43 @@ const CATEGORY_NAMES = {
 async function getFromDbCache(category, pageNum, pageSize) {
   try {
     const now = Date.now()
-    const where = category && category !== 'all'
+
+    // 1. 优先查未过期数据（cacheExpire > now）
+    const freshWhere = category && category !== 'all'
       ? { category, cacheExpire: db.command.gt(now) }
       : { cacheExpire: db.command.gt(now) }
 
+    let where = freshWhere
+    let stale = false
+
+    const res = await queryCache(where, pageNum, pageSize)
+
+    // 2. 未过期无数据 → 放宽条件查历史数据（stale 兜底），保证列表不空
+    //    v5.9：refreshNews 因外部 API 配额/故障拉不到新数据时，历史缓存仍可展示，
+    //    否则 cacheExpire 过期后 getNewsList 返回空列表，用户看到"无新闻"。
+    if (!res || res.list.length === 0) {
+      const staleWhere = category && category !== 'all'
+        ? { category }
+        : {}
+      const staleRes = await queryCache(staleWhere, pageNum, pageSize)
+      if (staleRes && staleRes.list.length > 0) {
+        return { ...staleRes, stale: true }
+      }
+    }
+
+    if (res) return { ...res, stale }
+    return null
+  } catch (err) {
+    console.warn('[getNewsList] DB 缓存读取失败:', err.message)
+    return null
+  }
+}
+
+/**
+ * 执行 news_cache 查询并格式化
+ */
+async function queryCache(where, pageNum, pageSize) {
+  try {
     const res = await db.collection('news_cache')
       .where(where)
       .orderBy('publishTime', 'desc')
@@ -49,7 +82,7 @@ async function getFromDbCache(category, pageNum, pageSize) {
     }
     return null
   } catch (err) {
-    console.warn('[getNewsList] DB 缓存读取失败:', err.message)
+    console.warn('[getNewsList] news_cache 查询失败:', err.message)
     return null
   }
 }
@@ -68,8 +101,16 @@ exports.main = async (event) => {
   // ── L1：云数据库 news_cache（智谱/DeepSeek refreshNews 每小时生成）──
   const dbCached = await getFromDbCache(category, pageNum, pageSize)
   if (dbCached && dbCached.list.length > 0) {
-    console.log(`[getNewsList] L1 news_cache 命中，返回 ${dbCached.list.length} 条`)
-    return { code: 0, data: dbCached, meta: { source: 'news_cache', engine: 'zhipu/deepseek' } }
+    console.log(`[getNewsList] L1 news_cache 命中，返回 ${dbCached.list.length} 条${dbCached.stale ? '（历史兜底）' : ''}`)
+    return {
+      code: 0,
+      data: dbCached,
+      meta: {
+        source: 'news_cache',
+        engine: 'zhipu/deepseek',
+        stale: !!dbCached.stale,
+      },
+    }
   }
 
   // news_cache 为空 → 不降级，诚实返回空

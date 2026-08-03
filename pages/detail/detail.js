@@ -169,23 +169,14 @@ Page({
         })
       },
       onDetailReady: function (news, paragraphs) {
-        that.setData({
-          news: news,
-          paragraphs: paragraphs,
-          scrollTop: 0,
-          loading: false,
-        pageState: 'ready',
-        }, function () {
-          // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
-          that._measureScroll()
-        })
-        // UX-BUG02: 内容加载后重置滚动状态
-        that._isAtTop = true
-        that._isAtBottom = false
-        that._bottomScrollTop = null
-        if (news && news.id) {
-          that._checkFavorite(news.id)
+        // UX-BUG11-FIX (v5.8): 翻页动画期间（out 阶段）先暂存新内容，
+        // 等 in 阶段再渲染，避免新内容带着 out-up/out-down 提前飞走，
+        // 造成"先上飞再回来"的方向混乱。
+        if (that._switching) {
+          that._pendingDetail = { news: news, paragraphs: paragraphs }
+          return
         }
+        that._renderDetail(news, paragraphs)
       },
       onError: function (msg) {
         wx.hideLoading()
@@ -217,6 +208,42 @@ Page({
       // 降级：尝试直接加载单条
       that._loadFallback(newsId)
     })
+  },
+
+  // ============ 详情渲染（v5.8 重构：支持翻页动画暂存） ============
+
+  /**
+   * 渲染新闻详情（供 onDetailReady / 翻页 in 阶段调用）
+   */
+  _renderDetail: function (news, paragraphs) {
+    var that = this
+    that.setData({
+      news: news,
+      paragraphs: paragraphs,
+      scrollTop: 0,
+      loading: false,
+      pageState: 'ready',
+    }, function () {
+      // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
+      that._measureScroll()
+    })
+    // UX-BUG02: 内容加载后重置滚动状态
+    that._isAtTop = true
+    that._isAtBottom = false
+    that._bottomScrollTop = null
+    if (news && news.id) {
+      that._checkFavorite(news.id)
+    }
+  },
+
+  /**
+   * 应用翻页期间暂存的详情（in 阶段切换内容时调用）
+   */
+  _applyPendingDetail: function () {
+    if (this._pendingDetail) {
+      this._renderDetail(this._pendingDetail.news, this._pendingDetail.paragraphs)
+      this._pendingDetail = null
+    }
   },
 
   /**
@@ -332,10 +359,14 @@ Page({
     var that = this
     if (that._animating || !that._engine) return
     that._animating = true
+    // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
+    that._switching = true
+    that._pendingDetail = null
 
     var result = that._engine.goNext()
     if (!result.canGo) {
       that._animating = false
+      that._switching = false
       return
     }
 
@@ -362,12 +393,15 @@ Page({
       animClass: 'out-up',
     })
 
-    // 在 out 动画期间预加载内容
+    // 在 out 动画期间预加载内容（onDetailReady 会暂存，不立即渲染）
     var contentPromise = that._engine.loadCurrentDetail()
 
     // out 动画 ~350ms，等它完成后再切入 in 动画
     setTimeout(function () {
       contentPromise.then(function () {
+        that._switching = false
+        // 先切换为新内容（此刻 animClass 仍是 out-up，但内容已换、旧内容已移出）
+        that._applyPendingDetail()
         // 新内容就绪 → 先设 in-up（从下方 +100vh 起始），移除 class 后滑入到原位（从底部往上滑入）
         that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
@@ -375,6 +409,8 @@ Page({
           that._animating = false
         }, 30)
       }).catch(function () {
+        that._switching = false
+        that._pendingDetail = null
         that.setData({ animClass: '' })
         that._animating = false
         that._showNetworkToast()
@@ -389,10 +425,14 @@ Page({
     var that = this
     if (that._animating || !that._engine) return
     that._animating = true
+    // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
+    that._switching = true
+    that._pendingDetail = null
 
     var result = that._engine.goPrev()
     if (!result.canGo) {
       that._animating = false
+      that._switching = false
       return
     }
 
@@ -421,6 +461,9 @@ Page({
 
     setTimeout(function () {
       contentPromise.then(function () {
+        that._switching = false
+        // 先切换为新内容（此刻 animClass 仍是 out-down，但内容已换、旧内容已移出）
+        that._applyPendingDetail()
         // 新内容就绪 → 先设 in-down（从上方 -100vh 起始），移除 class 后滑入到原位（从顶部往下滑入）
         that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
@@ -428,6 +471,8 @@ Page({
           that._animating = false
         }, 30)
       }).catch(function () {
+        that._switching = false
+        that._pendingDetail = null
         that.setData({ animClass: '' })
         that._animating = false
         that._showNetworkToast()
