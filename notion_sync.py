@@ -17,6 +17,7 @@ notion_sync.py —— 将 merge_docs.py 产出的章节 Markdown 同步到 Notio
   python3 notion_sync.py --parent <page_id>   # 指定父页面（如不希望建在 workspace 根）
 """
 import os, re, json, time, sys, requests
+from urllib.parse import quote
 
 REPO = os.path.dirname(os.path.abspath(__file__))
 BUILD = os.path.join(REPO, ".notion_build")
@@ -113,7 +114,16 @@ def parse_inline(text):
         elif m.group(5) is not None:
             rich += _text_obj(m.group(5), italic=True)
         elif m.group(6) is not None:
-            rich += _text_obj(m.group(6), link=m.group(7))
+            url = (m.group(7) or '').strip()
+            # 仅保留合法绝对 URL；相对路径（./ ../）、含空格/控制符等 → 丢弃链接但保留文本，
+            # 避免 Notion 400 "Invalid URL for link" 导致整批失败。
+            if re.match(r'^(https?://|mailto:|tel:)', url) and not re.search(r'[\s\x00-\x1f<>"\']', url):
+                if re.search(r'[\u4e00-\u9fff]', url):
+                    # 非 ASCII 字符 percent 编码（保留已有 %xx）
+                    url = re.sub(r'[^\x00-\x7f]', lambda c: quote(c.group(0)), url)
+                rich += _text_obj(m.group(6), link=url)
+            else:
+                rich += _text_obj(m.group(6))
         last = m.end()
     if last < len(text):
         rich += _text_obj(text[last:])
