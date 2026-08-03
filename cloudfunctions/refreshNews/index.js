@@ -47,8 +47,22 @@ async function clearOldCacheExcept(category, keepIds) {
 }
 
 /**
+ * 分批并行执行 Promise（控制并发，避免触发数据库限流）
+ * @param {Array<T>} items
+ * @param {function(T): Promise<void>} fn
+ * @param {number} batchSize
+ */
+async function batchParallel(items, fn, batchSize = 10) {
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    await Promise.all(batch.map(fn))
+  }
+}
+
+/**
  * 批量写入新闻到云数据库（news_cache + news 双集合）
  * v5.0：content 留空，由 getNewsDetail 按需补写
+ * 优化：分批并行写入，减少 3 秒超时风险
  */
 async function batchInsert(newsList) {
   const now = Date.now()
@@ -56,15 +70,15 @@ async function batchInsert(newsList) {
   let inserted = 0
   let failed = 0
 
-  for (const item of newsList) {
+  // 1. 批量写入 news_cache（并行，每批 10 条）
+  await batchParallel(newsList, async (item) => {
     try {
-      // 1. 写入 news_cache（列表数据源 — 不含正文）
       await db.collection('news_cache').add({
         data: {
           id: item.id,
           title: item.title,
           summary: item.summary,
-          content: '',  // v5.0：列表不存正文，由详情页按需抓取
+          content: '',
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
@@ -75,14 +89,22 @@ async function batchInsert(newsList) {
           createdAt: now,
         },
       })
+    } catch (err) {
+      if (err.errCode !== -1) {
+        failed++
+        console.warn(`[refreshNews] news_cache 写入失败 [${item.id}]:`, err.message)
+      }
+    }
+  }, 10)
 
-      // 2. 同步写入 news（详情占位 — content 为空，getNewsDetail 会补写）
-      const exist = await db.collection('news').where({ id: item.id }).get()
+  // 2. 批量 upsert news（并行，每批 5 条）
+  await batchParallel(newsList, async (item) => {
+    try {
       const doc = {
         id: item.id,
         title: item.title || '',
         summary: item.summary || '',
-        content: '',  // v5.0：占位，getNewsDetail 抓取后补写
+        content: '',
         category: item.category || 'recommend',
         categoryName: item.categoryName || '',
         source: item.source || '',
@@ -91,11 +113,13 @@ async function batchInsert(newsList) {
         publishTime: item.publishTime || '',
         updatedAt: now,
       }
+
+      const exist = await db.collection('news').where({ id: item.id }).get()
       if (exist.data && exist.data.length > 0) {
         const existing = exist.data[0]
         if (existing.isRetained) {
           inserted++
-          continue
+          return
         }
         await db.collection('news').doc(existing._id).update({ data: doc })
       } else {
@@ -103,14 +127,14 @@ async function batchInsert(newsList) {
           data: { ...doc, viewCount: 0, isRetained: false, createdAt: now },
         })
       }
-
       inserted++
     } catch (err) {
-      if (err.errCode === -1) continue // 重复 ID 跳过
-      failed++
-      console.warn(`[refreshNews] 写入失败 [${item.id}]:`, err.message)
+      if (err.errCode !== -1) {
+        failed++
+        console.warn(`[refreshNews] news 写入失败 [${item.id}]:`, err.message)
+      }
     }
-  }
+  }, 5)
 
   return { inserted, failed }
 }
@@ -158,7 +182,7 @@ exports.main = async (event) => {
   // 1. 调用天行 API 拉取所有分类列表（串行，3 秒内完成）
   let searchResult
   try {
-    searchResult = await fetchAllCategories(CATEGORIES, 10)
+    searchResult = await fetchAllCategories(CATEGORIES, 6)
   } catch (err) {
     console.error('[refreshNews] 天行 API 拉取失败:', err.message)
     return {
