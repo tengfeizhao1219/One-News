@@ -8,38 +8,7 @@ page {
   overflow: hidden;
 }
 
-/* ============ 暗色模式强制覆盖（真机兼容）============ */
-@media (prefers-color-scheme: dark) {
-  page {
-    background-color: #000000 !important;
-    color: #FFFFFF !important;
-  }
-  .page {
-    background-color: #000000 !important;
-  }
-  .card {
-    background-color: #0D0D0D !important;
-  }
-  .card-title {
-    color: #FFFFFF !important;
-  }
-  .summary-p {
-    color: #A8A8A8 !important;
-  }
-  .card-meta {
-    color: #999999 !important;
-  }
-  .swipe-hint {
-    color: #999999 !important;
-  }
-  .category-tag {
-    background-color: #1C1C1E !important;
-    color: #999999 !important;
-  }
-  .fixed-top-bar .top-bar-refresh {
-    background-color: #1C1C1E !important;
-  }
-}
+/* 暗色模式统一由 theme.json 的 CSS 变量驱动，此处不再硬编码覆盖 */
 
 /* 状态栏占位 */
 .status-bar {
@@ -49,10 +18,27 @@ page {
 /* 全局组件样式 */
 .category-tag {
   display: inline-block;
-  padding: 4rpx 18rpx;
-  border-radius: 18rpx;
-  font-size: 22rpx;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 18rpx;
   font-weight: 500;
   background-color: var(--tag-bg);
   color: var(--tag-text);
+}
+
+/* UX-FIX-F9: 全局减弱动效偏好适配（D-02 §2.2）
+   所有动画、过渡 ≤100ms；保持 opacity/display 切换瞬达，
+   避免 vestibular disorder 用户在快速翻页/滚轮 snap 时产生眩晕。
+   小程序环境不支持 prefers-reduced-motion 媒体查询？实际上 iOS/Android 均可传递系统设置，
+   微信基础库 2.8.0+ 已支持；若旧设备不支持，本媒体查询只是静默失效，无负面影响。
+   ⚠️ 修复记录（2026-08-02 20:56, PM 代前端）：原写法用通配选择器 `* {}`，
+   微信 WXSS 不支持通配符（IDE 报 unexpected token '*'，app.wxss(1:809)），
+   已改为 WXSS 支持的元素选择器列表（element, element），效果等价全局。 */
+@media (prefers-reduced-motion: reduce) {
+  page, view, scroll-view, swiper, swiper-item, text, image, button, navigator, icon, cover-view, movable-area, movable-view {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

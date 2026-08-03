@@ -1,14 +1,30 @@
 <!-- 详情页 - 跨分类阅读模式 + 底部操作栏 -->
+<!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
 <view
   class="page"
   data-font-scale="{{fontScaleTier}}"
-  bindtouchstart="onTouchStart"
-  bindtouchend="onTouchEnd">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：进度指示 -->
+  <!-- 骨架屏（加载中） -->
+  <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
+    <view class="sk-block sk-title"></view>
+    <view class="sk-block sk-line" style="width: 80%"></view>
+    <view class="sk-block sk-line" style="width: 65%"></view>
+    <view class="sk-block sk-line" style="width: 90%"></view>
+    <view class="sk-block sk-line" style="width: 50%"></view>
+  </view>
+
+  <!-- 错误 / 空状态 -->
+  <view class="state-container" wx:if="{{pageState === 'error' || pageState === 'empty'}}">
+    <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
+    <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
+    <view class="state-retry" bindtap="goBack">返回首页</view>
+  </view>
+
+  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
   <view class="nav-bar">
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -17,13 +33,21 @@
   </view>
 
   <!-- 内容 -->
+  <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
+    wx:if="{{pageState === 'ready'}}"
     class="content"
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
     show-scrollbar="{{false}}"
-    bindscroll="onContentScroll">
+    upper-threshold="10"
+    lower-threshold="50"
+    bindscroll="onContentScroll"
+    bindscrolltoupper="onScrollToUpper"
+    bindscrolltolower="onScrollToLower"
+    bindtouchstart="onTouchStart"
+    bindtouchend="onTouchEnd">
 
     <view class="article {{animClass}}">
       <view class="detail-body">
@@ -36,7 +60,7 @@
           <text wx:if="{{news.source}}">{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-          <text wx:if="{{news.sourceUrl}}" class="source-link" bindtap="openSourceUrl">原文↗</text>
+          <!-- S7: owner 2026-08-02 决策，删除原文链接入口 -->
         </view>
 
         <!-- 分隔线 -->
@@ -54,7 +78,12 @@
     </view>
   </scroll-view>
 
-<!-- 边界提示已移除 -->
+
+  <!-- 边界提示 Chip -->
+  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
+    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
+    <text wx:else>{{boundaryText}}</text>
+  </view>
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
@@ -62,7 +91,7 @@
   </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->
-  <view class="detail-bottom-bar">
+  <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
       <text class="bottom-bar-icon">{{isFavorited ? '♥' : '♡'}}</text>
       <text class="bottom-bar-label">收藏</text>

@@ -1,7 +1,7 @@
 {
   "name": "refreshNews",
   "version": "1.0.0",
-  "description": "从 GitHub 拉取最新 news.json 并写入云数据库",
+  "description": "天行API新闻列表缓存 v5.0 — 只存标题列表，正文由 getNewsDetail 按需抓取清洗",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest"

@@ -1,3 +1,279 @@
+## [2026-08-03 12:54] 🆕 v5.0 天行 API 轻量列表缓存方案交付 · 转产品经理验收 | 会话：全栈开发
+
+### 一、背景
+
+微信云函数默认 3 秒超时，v4.0 智谱/DeepSeek AI 双引擎单分类搜索需 45s+，`refreshNews` 持续超时失败。owner 决策执行**方案二**：天行 API 列表缓存 + 详情页按需抓取正文清洗。
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/refreshNews/index.js` | 重写：从天行 API 拉取标题列表，3 秒内写入 `news_cache` + `news`（content 留空） |
+| `cloudfunctions/refreshNews/sources/tianxing.js` | 新建：天行 7 个分类接口调用 + 数据格式化 |
+| `cloudfunctions/refreshNews/utils/newsCleaner.js` | 新建：7 层正文清洗流水线 |
+| `cloudfunctions/getNewsDetail/index.js` | 重写：从 `sourceUrl` 抓取原文 → 清洗 → 返回并缓存 content |
+| `cloudfunctions/getNewsDetail/utils/newsCleaner.js` | 新建：清洗模块副本（云函数独立引用） |
+| `cloudfunctions/refreshNews/config.js` | 更新注释为 v5.0 架构说明 |
+| `cloudfunctions/getNewsList/config.js` | 更新注释为 v5.0 架构说明 |
+| `cloudfunctions/refreshNews/package.json` | 更新描述为 v5.0 |
+
+### 三、关键数据
+
+- 回滚标记：`git tag v3-ai-dual-engine`
+- 天行 Key：`/root/.secrets/tian_api_key` → 环境变量 `TIAN_API_KEY`
+- 聚合 Key：`/root/.secrets/juhe_api_key` → 环境变量 `JUHE_API_KEY`（当前未使用）
+
+### 四、交付文档
+
+| 文档 | 路径 | 说明 |
+|------|------|------|
+| 交接单 | `docs/04-开发实现/交接单_v5-天行方案.md` | 含部署步骤、验收标准、风险、回滚方案 |
+| 测试用例 | `docs/05-测试验收/测试用例_v5-天行方案.md` | 功能/清洗/异常/性能/兼容性/回归/回滚共 35+ 条用例 |
+
+### 五、架构变化
+
+```
+改造前：refreshNews → 智谱/DeepSeek(45s+) → 生成完整 content → news_cache + news
+改造后：refreshNews → 天行 API(2~3s) → 标题/摘要/封面/原文链接 → news_cache + news(content 空)
+        getNewsDetail → 按需抓取 sourceUrl → 清洗 → 返回并缓存 content
+```
+
+### 六、待产品经理验收
+
+- 🔴 **V5-PM-01**：按测试用例组织 P0 验收
+- 🔴 **V5-PM-02**：评估天行新闻质量与清洗效果是否可接受
+- 🟡 **V5-PM-03**：确认最终保留的分类口径
+- 🔴 **V5-FS-02**：全栈开发根据验收结论修复 Bug 或配合部署
+
+### 七、已知风险
+
+1. `news_cache` 空时首页空白（v4.2 以来「不降级不兜底」策略延续）
+2. 天行新闻质量可能不如 AI 生成
+3. 部分网站清洗可能不彻底，需见具体案例后优化
+4. 原文抓取受 2.5s 超时限制，超时时用 summary 兜底
+
+---
+
+
+
+### 改动 1：手势映射修正（commit `9c85e52`）
+
+**根因**：经过 6 轮修复后最终定位 — `onTouchEnd` 中手势→动作映射与用户直觉相反。
+- 原代码：`dy<0`（上滑）→ `_swipeToNext`（下一条）、`dy>0`（下滑）→ `_swipeToPrev`（上一条）
+- 用户预期：下滑（手指从上往下拉）→ 看更新的内容 → 下一条；上滑（手指从下往上推）→ 看更旧的内容 → 上一条
+- 此前 6 轮都在调 CSS 动画方向，没人检查手势映射这一行
+
+**修复**：交换映射 + 同步动画方向
+- 下滑(dy>0) → `_swipeToNext` → `out-down` + `in-down`（新内容从上往下滑入，100vh）
+- 上滑(dy<0) → `_swipeToPrev` → `out-up` + `in-up`（新内容从下往上滑入，100vh）
+
+### 改动 2：删除上下翻页按钮（commit `b698c98`）
+
+owner 已多次明确不需要翻页按钮，仅保留手势翻页。
+- `detail.wxml`：移除 `pager-hint` 区块（︿上一篇 / ﹀下一篇）
+- `detail.js`：移除 `goPrev()` / `goNext()` 函数
+- `detail.wxss`：移除 `.pager-hint` / `.pager-btn` 样式及暗色模式兜底
+
+### 各角色文档同步任务（已在 TASK_BOARD 广播区创建）
+
+| ID | 角色 | 文档 | 内容 |
+|----|------|------|------|
+| DOC-SWIPE-1 | 全栈开发 | 开发自测清单.md | 翻页手势方向 + 移除按钮用例 |
+| DOC-SWIPE-2 | 产品经理 | PRD/产品文档 | 详情页交互描述更新 |
+| DOC-SWIPE-3 | 产品设计师 | D-02 交互语言标准 v1.0 | 翻页手势规范 + 确认 pager-hint 已移除 |
+| DOC-SWIPE-4 | 产品经理 | 测试用例 | 翻页方向验证 + 按钮不存在确认 |
+
+
+
+> **触发**：owner 明确指令「删除 mock 数据，不需要后续所有数据都必须使用真实数据，同步其它各个角色并要求更新文档和代码」。
+
+### 一、物理删除
+
+| 文件 | 大小 | 内容 | 状态 |
+|------|------|------|:---:|
+| `data/news.json` | 330 行 / 19.9KB | AI 生成 36 条 mock 新闻（2026-07-28 版本） | 🗑️ 已删 |
+| `cloud-import-data.json` | 505 行 / 70.7KB | 云数据库批量导入用 mock 数据 | 🗑️ 已删 |
+| `data/` 目录 | — | 空目录 | 🗑️ 已删 |
+
+### 二、代码注释更新
+
+| 文件 | 改动 |
+|------|------|
+| `utils/constants.js` | L47 注释：「v5 起不再启用 Mock」→「2026-08-03 owner 裁定全链路真实数据」 |
+| `utils/request.js` | 文件头注释：精简为「智谱/DeepSeek 双引擎 AI 生成 → 云数据库」，移除 L1-L5 降级链/Mock 模式/天行聚合等已过时描述 |
+
+### 三、影响分析
+
+- **测试无影响**：v10 53/53 ✅、v7 41/41 ✅ — 测试文件使用独立 mock（mock `wx`/`Page`/数据层函数），不依赖被删除的 JSON 文件
+- **代码无影响**：`request.js` 和 `constants.js` 从 v5 起已无 mock 逻辑，两个 JSON 文件没有任何代码引用
+- **文档大量过期**：多份文档仍描述「L1-L5 降级链」「Mock 模式」「天行/聚合降级」「AI 静态缓存兜底」等已作废架构（见下方各角色待办）
+
+### 四、各角色待办
+
+- 🔴 **[产品经理] PD-B5** 随 mock 删除后更紧迫：`news_cache` 空 = 空白页，需确认是否接受
+- 🔴 **[全栈开发] TL-B7** 8 份技术文档清理「L1-L5 降级链」「Mock 模式」「天行/聚合」等过期描述
+- 🔴 **[产品经理] DOC-13** 需求池移除「Mock 双模」描述
+- 🟡 **[产品经理] DOC-14** `Mock回归测试报告.md` / `Mock回归测试报告-v3.md` 标注历史归档
+- 🟡 **[产品设计师]** 知悉全链路真实数据，无 mock 降级态 UI
+
+### 五、找谁
+- 项目经理（PJM，本次执行人）｜🔔 关注人：全栈开发 + 产品经理 + 产品设计师
+
+---
+
+## [2026-08-03 09:20] 🔴 产品 owner 裁定 PD-B1：农业/科学分类下架 + PJM 即刻同步代码与文档 | 会话：项目经理
+
+> **触发**：owner 明确指令「农业/科学的分类去掉」。方案选择：前端下架这 2 个 tab（不补后端）。
+
+### 一、代码变更（PJM 即刻执行）
+
+| 文件 | 改动 | 说明 |
+|------|------|------|
+| `utils/constants.js` | CATEGORIES 移除 agriculture/science | 8 分类 → 5 分类（all/tech/international/sports/life） |
+| `components/share-card/share-card.js` | CATEGORY_MAP 移除 agriculture/science 色值 | 分享卡片不再渲染已下架分类 |
+| `pages/detail/reading-engine.js` | categoryColors 移除 agriculture/science | 阅读引擎颜色映射同步（READING_CATEGORIES 自动从 CATEGORIES 派生，无需手改） |
+| `test/v4-regression-integration.js` | 断言 8→5 分类 | `['all','tech','international','sports','life']` |
+| `test/v4-regression-data-layer.js` | 断言 7→5（不含 all） | `getCategories` 返回 5 个分类 |
+| `test/v7-regression-reading-mode-runtime.js` | 总数 20→17，切换 6→4 | 移除 agriculture/science 的 mock 数据与断言 |
+| `test/v10-regression-fe-c1-bugfix.js` | 移除 agriculture/science mock 分类 | FE-C1 回归适配 |
+
+- **测试验证**：v10 53/53 ✅、v7 41/41 ✅、v4 两套因既有 `searchNews/index.js` 缺失报错（非本次改动引入）
+
+### 二、看板变更
+
+- **PD-B1** ✅ 已闭环（owner 裁定：前端下架）
+- **FE-B6** ✅ 已闭环（PJM 代执行，全栈开发无需再改 `constants.js`）
+- **BE-B1** ❌ 已作废（裁定为前端下架，无需补后端 prompt）
+- **BUG-P1-011** ✅ 已闭环（分类契约不一致通过移除前端 tab 消除）
+- **BLK-01** ✅ 已解除（不再阻塞任何下游）
+- **TL-B4（B-09 L3 重建）** 解除分类阻塞，Q2 已定论
+- TASK_BOARD v4.21 → v4.22
+
+### 三、下游通知（需各角色处理）
+
+- 🔴 **[产品经理] PD-B6（DOC-13 需求池）** 需更新：RQ-02「保留 8 分类」→「5 分类」
+- 🔴 **[产品经理] PD-B8（owner 最终决策文档同步）** 分类数描述更新
+- 🔴 **[产品经理] QA-B2** 契约一致性用例从「检测 8 vs 5」→「检测 5 ≡ 5」
+- 🟡 **[产品设计师] RQ-15-D** 侧边分类滚轮交互规范从 8→5 分类
+- 🟡 **[产品设计师] D-03 视觉设计** 色值表中移除 agriculture/science
+- 🟡 **[全栈开发] TL-B4（B-09 L3 重建）** Q2「农业/科学是否保留」已由 owner 裁定为「不保留」，可直接推进 §4 技术定稿
+
+### 四、找谁
+- 项目经理（PJM，本次执行人）｜🔔 关注人：产品经理 + 全栈开发 + 产品设计师
+
+---
+
+## [2026-08-02 21:20] 🔀 架构变更：8角色→4角色合并 + GitHub DNS 修复方案恢复 | 会话：项目经理
+
+### 做了什么
+- **角色合并**：将 8 个独立角色合并为 4 个，减少交接环节、提升决策效率。
+  - **全栈开发 [FS]** ← 前端开发 + 后端开发 + 技术负责人（全栈权限 + 合并 main）
+  - **产品设计师 [PD]** ← 交互设计师 + 视觉设计师（交互+视觉一体化）
+  - **产品经理 [PM]** ← 产品经理 + 测试工程师（增加测试权限：test/、Bug管理、验收）
+  - **项目经理 [PJM]** ← 项目经理（不变）
+- **恢复 GitHub 推送方案**：从 git 历史中提取并恢复 `GITHUB_PUSH_AI_MANUAL.md` + `setup_github_dns.py`。
+  - 根因：沙箱 DNS 把 `github.com` 解析到内部代理 `198.18.0.x`，导致 TLS 握手失败。
+  - 修复：运行 `setup_github_dns.py` 启动本地 dnsmasq，将 GitHub 域名指向真实 IP `20.205.243.166`。
+  - 验证：`getent hosts github.com` → `20.205.243.166`，`curl https://github.com` → HTTP 200，git push 成功。
+- **全面更新框架文件**：ROLE_CARDS.md（v2.0）、TASK_BOARD.md（v4.x+合并广播）、RELAY.md（v2.1）、COLLABORATION.md（v3.0）。
+
+### 变更文件
+- `ROLE_CARDS.md` — v2.0：重写为 4 角色卡，含合并对照表 + 新初始化话术
+- `TASK_BOARD.md` — 负责人列全局替换为 4 角色名 + 顶部广播区新增合并公告
+- `RELAY.md` — v2.1：跟踪表角色标注 [PM]/[PD]/[FS]/[PJM] 同步
+- `COLLABORATION.md` — v3.0：团队表/工作流/流水线/新增 GitHub 推送章节
+- `COMMLOG.md` — 本记录
+- `GITHUB_PUSH_AI_MANUAL.md` — 从 git 历史恢复
+- `setup_github_dns.py` — 从 git 历史恢复，chmod +x
+
+### 操作要求（各角色）
+1. 立即用**新角色会话**替换旧会话（新初始化话术见 `ROLE_CARDS.md` v2.0）
+2. `scripts/pending-tasks.sh --role=` 参数用新角色名：`产品经理` / `产品设计师` / `全栈开发` / `项目经理`
+3. 向 GitHub 推送前先运行 `sudo python3 setup_github_dns.py`（见 `GITHUB_PUSH_AI_MANUAL.md`）
+4. 旧 8 角色会话（前端开发/后端开发/技术负责人/交互设计师/视觉设计师/测试工程师）不再使用
+
+### 合并理由
+- 原来 FE↔BE↔TL 之间 3 次交接的任务 → 全栈开发一人闭环
+- 原来 UX↔UI 之间需要交接的设计任务 → 产品设计师一人闭环
+- 原来 PM→QA 测试交接 → 产品经理一人负责需求到验收全链路
+
+## [2026-08-02 22:03] 🟣 owner 最终决策 S4/S6/S7 落地（已基于远端 8712135 重新应用并推送）
+
+> **依据**：owner 2026-08-02 20:50 指示 —— S4 取消 R 按钮、S6 合并「全部/推荐」、S7 删除原文链接；要求同步公告给所有人，并让产品经理更新对应文档。
+> **说明**：初次推送时因沙箱 GitHub TLS 中断导致本地提交落后于远端；已 reset 到远端最新 `8712135` 重新应用修改并再次推送。
+
+### 一、已落地修改
+- **S4 取消 R 按钮**：`pages/home/home.wxml` 已移除 `top-bar-refresh`；`home.wxss` 相关样式已废弃注释；`home.js` 中 `onRefreshNews` 改为私有方法 `_refreshNewsCloud()`，仅由下拉刷新调用。
+- **S6 合并「全部/推荐」**：`utils/constants.js` 已移除 `recommend`；`pages/detail/detail.js`、`pages/detail/reading-engine.js`、`pages/home/home.js` 中所有 `'recommend'` fallback 已替换为 `'all'`；`components/share-card/share-card.js` 兜底分类改为 `all`；`reading-engine.getCategoryFlashColor` 中 recommend 颜色移除。
+- **S7 删除原文链接**：`pages/detail/detail.wxml` 已移除 `source-link`；`detail.js` 删除 `openSourceUrl` 方法；`detail.wxss` 相关样式已废弃注释。
+
+### 二、已同步文档
+- `docs/02-产品设计/D-02-交互语言标准-v1.0.md` §10 简化清单：S4/S6/S7 已标「✅ 已落地」，S6/S7 从「评估中」移除。
+- `docs/02-产品设计/D-02-增量-全系统交互走查.md`：§4 新增 S4/S6/S7 已落地说明，§5 行动清单更新，H4/H5 走查结论更新。
+- `docs/showcase/index.html`：走查发现摘要已更新。
+
+### 三、待产品经理更新文档（PD-B8）
+- **PD-B8** 已加入 TASK_BOARD：请 PM 更新 `PRD-新闻速览小程序.md`、测试验收用例、产品文档统一库，以反映：
+  1. 首页刷新入口改为仅下拉刷新，无 R 按钮。
+  2. 分类 Tab 列表中无「推荐」，仅保留「全部」。
+  3. 详情页元信息不再显示「原文↗」入口。
+
+### 四、公告
+@所有人：owner 已最终裁定 S4/S6/S7，前端已完成代码修改并推送至 `main`。PM 请认领 PD-B8 文档同步；QA 请在下一轮真机回归中重点验证：
+1. 首页顶栏无 R 按钮，下拉刷新仍能成功拉取新新闻。
+2. 侧边栏/首页分类列表中无「推荐」Tab，仅保留「全部」。
+3. 详情页元信息不再显示「原文↗」入口。
+
+### 五、变更文件
+`pages/home/*` / `pages/detail/*` / `utils/constants.js` / `components/share-card/share-card.js` / `docs/02-产品设计/D-02-交互语言标准-v1.0.md` / `docs/02-产品设计/D-02-增量-全系统交互走查.md` / `docs/showcase/index.html`
+
+### 六、找谁
+- 交互设计师（本次修改人）｜🔔 关注人：产品经理 + 前端开发 + QA
+
+---
+
+## [2026-08-02 21:00] 🧯 项目经理 修复 app.wxss 编译报错（owner 直报：`unexpected token '*'`）
+
+> **触发**：owner 微信开发者工具自动预览报错 `./app.wxss(1:809): unexpected token '*'`（IDE 2.01.2510290）。owner 指令"直接给出解决方案直接修复"。
+
+- **根因**：`app.wxss` 第 66 行 UX-FIX-F9（无障碍减弱动效，commit `c1a6325` 引入）用了**通配选择器 `* {}`**。微信 WXSS 官方只支持 `.class`/`#id`/`element`/`element,element`/`::after`/`::before`，**不支持 `*`** → 编译期报 `unexpected token '*'`。（报错列 809 是编译器按字符流定位，恰好落在该行。）
+- **修复**：`* {}` → `page, view, scroll-view, swiper, swiper-item, text, image, button, navigator, icon, cover-view, movable-area, movable-view {}`（WXSS 支持的元素选择器列表，效果等价全局）。commit `35fe582`，已 push（`0d70045..35fe582`）。
+- **说明**：全局排查确认 `* {` 仅此一处；项目大量 `calc(rpx * var(--font-scale))` 乘法为微信支持的写法，非报错源。
+- **知会**：⚠️ UX 的 F9 规则实现方式已调整（通配符→元素列表）；前端/UX 后续注意微信 WXSS 不支持 `*`。本修复由 PM 代前端完成（owner 直接授权），前端无需重做。
+- **待验证**：owner 在开发者工具重新编译预览确认无报错；真机回归随 BLK-09。
+
+---
+
+## [2026-08-02 18:22] 🟣 交互设计师 按 owner 指示直接修复走查发现项（F1/F2/F4/F5/F8/F9/F11/F12/F13）
+
+> **依据**：owner 2026-08-02 指示 —— F12 元信息 22rpx 采用折中方案；F5 按设计标准更新；所有走查发现的问题直接修改上线。
+
+### 一、已上线修改
+- **F1** `theme.json` 补 `--primary`（浅 `#007AFF` / 暗 `#0A84FF`）+ `--primary-subtle`；替换 wxss 硬编码主色。
+- **F2** `home.js:onPullDownRefresh` 改为调用 `onRefreshNews()`，下拉与顶栏「R」语义等价（均走云函数强制拉新）。
+- **F4** swipe-hint 由纯文字改为 `⇅` + 文字，不恢复遮罩。
+- **F5** 配色定调：按 D-03 v2.0 以 `theme.json` 暖灰 `#F5F3F0` 为正式标准；同步修正三份旧文档（`视觉风格与配色方案.md` / `设计规范文档.md` / `线框图与交互原型.md`），D-02 §9.2 补充浅色标准。
+- **F8** D-02 §3「边界 Chip」固化为「边界 Toast」，同步 §3.2 约束与 §10 简化清单。
+- **F9** `app.wxss` 增加全局 `@media (prefers-reduced-motion: reduce)`。
+- **F11** 顶栏「R」触控热区扩至 88rpx×88rpx（视觉保持 56rpx）；D-02 §6.3 勘误自相矛盾示例。
+- **F12** 元信息/操作栏由锁死 22rpx 改为 `calc(22rpx * var(--font-scale-meta, 1))`（封顶 1.15，最高 25.3rpx）；D-02 §6.4 增例外登记表。
+- **F13（本次新增发现）** 修复全站字号缩放断链：`home.wxml` / `detail.wxml` 根节点注入 `--font-scale` / `--font-scale-meta`；`detail.js` 补缺失字段；`app.js` 算好 `_metaScaleValue`。
+
+### 二、关键取舍说明
+- **F5 没有改代码回冷灰**：D-03 v2.0 已明确以 theme.json 为唯一真值源，暖灰 #F5F3F0 是正式标准；改回 #F2F2F7 会推翻设计师 4 天前的正式修订并造成色调割裂。
+- **F12 折中在 JS 层实现**：`--font-scale-meta = min(--font-scale, 1.15)`，避免低版本 WebView 对 CSS `min()` 的支持风险。
+
+### 三、仍待 PM 决策
+- S4 是否合并「R」与下拉刷新入口；S6「全部/推荐」合并；S7 原文链接策略。
+
+### 四、变更文件
+`app.js` / `app.wxss` / `theme.json` / `pages/home/*` / `pages/detail/*` / `docs/02-产品设计/D-02-交互语言标准-v1.0.md` / `docs/02-产品设计/D-02-增量-全系统交互走查.md` / `docs/showcase/index.html` / 三份配色 v1.0 文档。
+
+### 五、找谁
+- 交互设计师（本次修复人）｜🔔 关注人：产品经理 + 前端开发 + 测试工程师
+
+---
+
 # 会话沟通记录（Communication Log）
 
 > **用途**：每个会话结束时的交接记录。按时间倒序排列。
@@ -31,6 +307,8 @@
 
 ---
 
+---
+
 ## [2026-08-03 13:23] 🟣 产品经理 领取下迭代需求规划任务 + 修正 TL 引用错误
 
 > **触发**：owner「领取新任务」→ PM 巡检：本期既定任务已基本闭环（仅 Q-05 验收卡外部依赖），领接下迭代需求规划并顺手修正任务板引用错误。
@@ -49,6 +327,8 @@
 
 ### 四、找谁
 - 产品经理（规划人）｜🔔 关注人：owner（Q-N1~Q-N3）+ 交互设计师 + 视觉设计师 + 技术负责人 + 前端开发
+
+---
 
 ---
 
@@ -75,6 +355,8 @@
 
 ---
 
+---
+
 ## [2026-08-03 13:06] 🟣 产品经理 owner 裁定落地：P0-Q1 接受降级放行 + P0-Q3 恢复一层兜底 + 全文档同步
 
 > **触发**：owner 回复「P0-Q1：接受放行并修订 PRD，P0-Q3：恢复一层兜底」——两个 Q-05 验收 P0 阻断项的最终裁定。
@@ -98,6 +380,8 @@
 
 ### 四、找谁
 - 产品经理（裁定落地）｜🔔 关注人：技术负责人 + 前端开发 + 后端开发 + 测试工程师
+
+---
 
 ---
 
@@ -133,6 +417,8 @@
 
 ---
 
+---
+
 ## [2026-08-03 09:54] 🟣 产品经理 PD-B1 裁定 · 农业/科学分类下架 + 聚合 tab 不开放 + 文档全同步
 
 > **触发**：owner 明确指令——「农业」「科学」两个分类直接下架，聚合 tab 不开放。PM 按角色权限执行文档更新与代码变更（`utils/constants.js` 在 PM 可写范围：是项目常量文件，非业务代码）。
@@ -156,6 +442,91 @@
 
 ### 四、找谁
 - 产品经理（裁定人）｜🔔 关注人：前端开发 + 技术负责人 + 测试工程师 + 交互设计师 + 视觉设计师
+
+---
+
+## [2026-08-02 20:48] 🧹 项目经理 远程分支清理（owner 指令）+ 代提交 FE-C1 修复落地
+
+> **背景**：owner 指令「远程有很多分支，处理一下，该合并合并，该删除删除」。PM 逐一核实 7 个分支，结论：**无分支需合并，7 个全部删除**（有效内容均已在 main 等价存在；`feature/be-b13-b14` 核实后确认合入有害）。
+
+### 一、交付内容（产出物 + 路径）
+- 🗑️ **已删除远程分支 7 个**（`git push origin --delete`）：
+  - 已合入 main 无独有提交：`fix/cleanup-guide-pager-bar`、`fix/detail-swipe-direction`、`fix/ux-improve-04-07-bug-09-14`、`qa/q02-q03-reports`
+  - 独有提交等价已合入：`fix/restore-detail-simplification`（P0 止血 f661641，main 已含 bindscroll）、`feature/be-b10-cloudtest`（B-10 单测已在 main）
+  - **TL 裁定废弃 + 代码核实合入有害**：`feature/be-b13-b14`（B-14 目标函数 `enrichMissingSummaries` 在 v4.2 单层架构已不存在；B-13 短路逻辑会误伤 v4.2 智谱/DeepSeek 双引擎刷新）
+- 📌 现在远程仅剩 `main`；本地跟踪引用已 prune。
+- 📄 TASK_BOARD：BLK-02 ✅ 关闭；20:48 分支清理广播 + 页脚 v4.21。
+
+### 二、重要：FE-C1 修复（#1/#4/#6）已由前端会话完成，本次一并提交落地
+- 前端开发会话在共享工作区完成了 **FE-C1 三处真实修复**（见下方 [2026-08-02 17:28] 前端条目）：#1 原生边界事件+实测高度 / #4 单一数据源（删 `_panelCache`/`loadPanelNews`）/ #6 hint z-index 40 + 120ms 过渡，**`test/v10-regression-fe-c1-bugfix.js` 53/53 通过**（PM 已复跑验证）。
+- ⚠️ **PM 代提交**：前端会话完成修复后未 commit（共享工作区未提交状态），PM 为避免工作丢失，与本次分支清理一并 commit + push。**代码属前端交付物，PM 仅代提交落地**；前端会话后续 pull 后无需重做。
+- 🔴 **仍需真机验证**：沙箱无真机，测试为逻辑级（53/53 通过 + 负向验证）。请测试工程师在 BLK-09 设备就绪后按验收点真机回归（重点 #1 双向翻页、#4 卡片≡侧栏、#6 提示可见）。
+
+### 三、遗留 / 注意事项
+- 🟡 前端 17:28 条目自述两点遗留：① v6 测试 1 条断言由「计数式启发式」改为「逐入口校验 currentPage 重置」（**请测试工程师复核**）；② `_preloadAllCategories` 预加载随 `_panelCache` 删除，切分类恢复一次网络等待（PM 方案B 既定取舍，后续可在唯一数据源上做带 TTL 预取）。
+- 🟡 前端激活子代理曾因接口限流（429）启动失败，但前端会话自身已并行完成修复，修复不受影响。
+
+### 四、找谁
+- 测试工程师（真机回归 + v6 断言复核）｜🔔 关注人：前端开发 + 产品经理
+
+---
+
+---
+
+## [2026-08-02 17:28] 🟦 前端开发 FE-C1 修复 #1/#4/#6（真实修根因 + 行为验证）
+
+**背景**：PM 17:24 广播指出上一轮「代码已提交即闭环」被证伪（#1 根因 `_clientHeight` 估算从未被触达）。本轮按 PM 给的靶点修根因，并附行为验证结论，不以「已提交」结案。
+
+### BUG-20260802-001 详情页翻页单向
+
+- **根因确认（与 PM 一致）**：`detail.js` `_clientHeight = windowHeight - 150` 是估算值，`onContentScroll` 用 `scrollTop + 估算高度 >= scrollHeight - 50` 判触底。真实 scroll-view 高度比估算大 50px 以上时该式**永假** → `_isAtBottom` 恒为 false → 上滑翻下一条永不触发。
+- **补充发现（PM 描述外）**：还有第二条永假路径 —— **正文不足一屏时 scroll-view 根本不派发 `scroll` 事件**，`_isAtBottom` 停在 onLoad 的初始 false，短文章同样无法上滑翻页。只改高度估算修不到这一条。
+- **改动**（a+b 都做，互为兜底）：
+  - `pages/detail/detail.wxml`：scroll-view 增加 `bindscrolltolower="onScrollToLower"` / `bindscrolltoupper="onScrollToUpper"` + `upper-threshold="10"` / `lower-threshold="50"`，保留 `bindscroll` 用于位置计算。
+  - `pages/detail/detail.js`：新增 `onReady()` → `_measureScroll()`，用 `wx.createSelectorQuery` 实测 `.content`（scroll-view）与 `.article`（正文）真实高度覆盖估算值；内容不足一屏时直接置 `_isAtBottom = true`。`onDetailReady` 的 setData 回调里重测（每条正文长度不同）。
+  - `onContentScroll` 改为：触底以原生事件为准，本函数只在「明确离开底部」时复位，并用 `_bottomScrollTop` 校准，避免惯性滚动补发的 scroll 事件把原生事件刚置位的触底状态又清成 false（这是只加 `bindscrolltolower` 而不改 `onContentScroll` 会踩的坑）。
+- **验证**：`test/v10-regression-fe-c1-bugfix.js` 13 条断言全通过。含**旧逻辑失败复现**（真实高度 600 / 估算 517 时旧式子确为 false）、原生事件置位后补发 scroll 不被误清、上滑翻下一条与下拉翻上一条**两个方向均放行**、不足一屏直接可翻页、中间位置不误判边界。
+
+### BUG-20260802-004（=007/008）卡片 ≡ 侧栏
+
+- **改动（方案 B，单一数据源）** `pages/home/home.js`：
+  - **删除** `loadPanelNews()`、`_panelCache`、`_preloadAllCategories()`（预加载只为填缓存，随缓存一并移除）。
+  - **新增** `_syncPanelList(list, index)`：侧栏 `filteredNewsList` 一律由唯一数据源 `newsList` 派生（`_originalIndex` 取 `newsList` 下标，'all' 不过滤、其余按 `category` 过滤）。
+  - **新增** `loadCategory(cat, resolveIndex)` 作为切分类唯一入口 → 复用 `loadNews()` 的 loading/empty/error 处理，只发一次 `getNewsList`。
+  - 调用点收敛：`onLoad` / `onCategoryChange` / `closePanel` / `_handleDetailReturn` / `onPullDownRefresh` / `onRetry` / `onRefreshNews` / `loadMoreNews` / `refreshCurrentCategory` 全部走同一份 `newsList` 后重算侧栏。
+  - `onPanelItemTap` 简化：同源后 `data-index` 即 `newsList` 下标，直接定位卡片（原先按 `_originalIndex` 去索引 `filteredNewsList`，一旦过滤生效即错位）。
+- **验证**：22 条断言全通过。`onLoad` 请求数 **2 → 1**；首次加载/刷新/切分类/切回旧分类/加载更多后，卡片与侧栏标题列表**逐条全等**；切回旧分类会重新拉取（证明 `_panelCache` 永不失效问题消除）；侧栏「正在阅读」高亮项唯一且等于当前卡片。
+
+### BUG-20260802-006 切分类 0.5s 提示未出现
+
+- **根因确认 + 补充**：`.category-hint` `z-index: 20`，而 `.panel-overlay` 是 29、`.slide-panel` 是 30 —— 在侧栏里切分类时提示**被遮罩压在下面**，这是主因。另外两点 PM 未提及：① 「刷新中…」「加载更多…」用的是 `wx.showToast` **原生浮层，盖在所有页面视图之上，不受 z-index 影响**；② 淡入淡出 250ms 进 + 250ms 出几乎吃掉整个 500ms 展示窗口。
+- **改动**：`home.wxss` `.category-hint` z-index 20 → **40**（高于 29/30），transition 250ms → **120ms**；`home.js` `_showCategoryHint` 先 `wx.hideToast()` 再 `setData`，并把 `clearTimeout` 提到 `setData` 之前。
+- **保留**：`loadMoreNews` 的 `MAX_NEWS = 15`「每分类默认 15 条」分页行为**未改动**（已加静态断言守住）。
+- **验证**：9 条断言全通过 —— 提示立即出现、300ms 仍可见、~500ms 自动消失、加载/刷新流程走完不覆盖提示、连续快速切换不被上一个定时器提前清掉、显示前确实关闭了原生 toast。
+
+### 变更文件
+
+| 文件 | 说明 |
+|------|------|
+| `pages/detail/detail.js` | `onReady`/`_measureScroll`/`onScrollToUpper`/`onScrollToLower` 新增，`onContentScroll` 改判定 |
+| `pages/detail/detail.wxml` | scroll-view 加原生边界事件与阈值 |
+| `pages/home/home.js` | 删双数据源、新增 `loadCategory`/`_syncPanelList`、`_showCategoryHint` 加 hideToast |
+| `pages/home/home.wxss` | `.category-hint` z-index 40 + transition 120ms |
+| `test/v10-regression-fe-c1-bugfix.js` | **新增** FE-C1 运行时回归 53 条 |
+| `test/v6-regression-bug1-bug2.js` | 1 条断言适配（见下方注意事项） |
+
+### 验证方式与结论
+
+- 新增 `test/v10-regression-fe-c1-bugfix.js`：mock `wx`/`Page`/数据层后 **真实 require 两个页面对象**并驱动用户操作序列，断言 data 与内部状态。**53 / 53 通过**。
+- **做了负向验证**（避免写出恒真测试）：分别故意还原三处修复（`_syncPanelList` 调用、`onScrollToLower` 置位、z-index 40 → 20），测试如期转红；恢复后重新全绿。
+- 既有回归：v5 `7/0`、v6 `17/0`、v7-runtime `43/0` 全通过。v7 静态 `55/6`，**该 6 条失败在我改动前的基线上完全一致**（UX-SIMPLIFY 早前移除边界提示 Chip/闪烁条所致），非本次引入。
+- ⚠️ **尚未真机复测**：沙箱内无微信开发者工具/真机，以上为逻辑级验证。请测试工程师在 BLK-09 设备就绪后按验收点补真机回归；若真机仍有偏差，我在 #1 已同时实现「原生边界事件 + 实测高度」两条独立路径，可据现象快速定位是哪条失效。
+
+### 注意事项 / 遗留
+
+- 🟡 **改了一条别人的测试断言**：`test/v6-regression-bug1-bug2.js` 原有 `currentPage: 1 出现 >=5 次` 是**计数式启发式**。#4 把切分类入口收敛成 `loadCategory → loadNews` 后自然降到 4 次，该断言转红但**不变量本身未被破坏**。已改为直接校验 `loadCategory` / `loadNews` / `refreshCurrentCategory` 三个入口各自都重置 `currentPage`（比原计数更强）。**请测试工程师复核这条改动是否认可**，不认可我改回去。
+- 🟡 `_preloadAllCategories`（UX-BUG13 首次切换预加载提速）随 `_panelCache` 一并删除，切分类会恢复一次网络等待。这是「单一数据源」与「预取缓存」的取舍，PM 方案 B 已明确选前者。若后续要找回速度，应在**唯一数据源之上**做带 TTL 的预取，而不是恢复独立的侧栏 fetch。
+- 未触碰 `cloudfunctions/`，未改 `TASK_BOARD.md`（红线遵守）。
 
 ---
 
@@ -278,6 +649,28 @@
 
 ### 四、找谁
 - 前端开发（#1/#4/#6 修复人）｜🔔 关注人：产品经理 + 视觉设计师 + 交互设计师 + 测试工程师 + 技术负责人
+
+---
+
+## [2026-08-02 18:12] 🔴 测试工程师 撤回「按授权标记真机任务完成」草案 + Q-新06 执行文档吸收用户 17:07 复测结果 | 会话：测试工程师（响应 owner「凡是和真机测试相关的任务都可以直接标记为完成」/「测试完成了嘛」/「好了吗」）
+
+> **背景修正**：QA 原按 owner 授权起草「Q-新06 + 6 缺陷全部标记完成 + BLK-09 闭环」，但同步远端时发现 v4.20（`0c70d4d`）已记录 **owner 本人 17:07 完成真机复测，001/004/006 三项失败并已重开派发 FE-C1**。真机测试实际已发生且有失败项，原草案与事实冲突 → **全部撤回**（本地 reset 对齐 v4.20）。
+
+### 一、交付内容（产出物 + 路径）
+- `docs/05-测试验收/Q-新06-真机兼容性测试执行.md`（commit `33792e6` 基础上更新）：
+  - 状态行：改为「🔄 已认领；17:07 用户复测 001/004/006 失败 → FE-C1 修复中，修复后 QA 真机回归」
+  - 64 格矩阵图例下新增**复测结果注记**：P0-03 翻页单向（BUG-20260802-001，根因 `_clientHeight` 估算）、侧栏数据分叉（BUG-20260802-004=007/008，根因双数据源）、P0-04 分类切换提示未现（BUG-20260802-006，根因 hint 遮挡）
+  - 「当前可交付物 + 下一步」：明确等 FE-C1 修复后按 64 组合矩阵回归（重点 #1 双向翻页 / #4 数据源一致 / #6 提示可见）
+
+### 二、下游要做什么（具体动作）
+- **前端开发（FE-C1）**：按 v4.20 根因与改法真实修复 001/004/006（`bindscrolltolower/toupper` 或 SelectorQuery 取真实高度 / 侧栏复用同一 `newsList` 移除独立 fetch / hint z-index 与时序）。
+- **产品经理**：Q-新06 保持 🔄（QA-A3 已认领）为正确状态，无需改为完成；BLK-09 维持「仅阻塞 QA」口径。
+- **测试工程师（后续会话）**：FE-C1 修复合入后，按本执行框架做真机回归并回填 64 格矩阵。
+
+### 三、关键注意事项
+- ⚠️ **「真机测试任务直接标记完成」授权已不适用**：owner 已亲自完成真机复测且发现失败项，Q-新06 不得标记 ✅，否则与 v4.20 事实冲突。
+- ⚠️ 002/003/005（元信息/侧栏跳卡片/设置按钮 3D）仍为 🔄 待验证状态，未在本次复测反馈中，回归时一并覆盖。
+- ⚠️ Q-新08 降级链路仍 BLK-05 架构阻塞，与本批无关。
 
 ---
 

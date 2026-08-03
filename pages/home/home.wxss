@@ -25,7 +25,11 @@
   align-items: center;
 }
 
-.top-bar-refresh {
+/* S4: R 按钮已移除，以下样式废弃保留历史注释 */
+/* .top-bar-refresh { ... } */
+/* .refresh-icon { ... } */
+
+.top-bar-settings {
   width: 56rpx;
   height: 56rpx;
   border-radius: 50%;
@@ -34,12 +38,16 @@
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  /* 触摸热区扩至 ≥88rpx */
+  padding: 16rpx;
+  margin: -16rpx;
+  background-clip: content-box;
+  -webkit-background-clip: content-box;
 }
 
-.top-bar-refresh:active {
+.top-bar-settings:active {
   opacity: 0.6;
 }
-
 .settings-icon {
   font-size: 28rpx;
   line-height: 1;
@@ -129,11 +137,12 @@
 
 .card-summary {
   margin-bottom: 48rpx;
+  margin-top: 28rpx;
 }
 
 .summary-p {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
   line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
@@ -144,21 +153,38 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  font-size: 22rpx; /* owner 直连强制：元信息锁定 22px，禁止回退 */
+  /* UX-FIX-F12（owner 2026-08-02 批准折中）：由锁死 22rpx 改为「跟涨但封顶」。
+     --font-scale-meta 由 app.js 算好并封顶 1.15，故最大 25.3rpx。
+     仍显著小于正文，保住「元信息视觉退后」的版式意图，同时不再完全冻结无障碍缩放。 */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   margin-bottom: 20rpx; /* owner 直连：与详情页 detail-meta 间距对齐 */
   letter-spacing: 0.5rpx;
 }
 
 .swipe-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6rpx;
   text-align: center;
   padding: 24rpx 0 72rpx;
-  font-size: 18rpx;
+  font-size: 16rpx;
   color: var(--text-secondary);
   flex-shrink: 0;
+  opacity: 0.45;
+}
+
+.swipe-hint-icon {
+  font-size: 28rpx;
+  line-height: 1;
+}
+
+.swipe-hint-text {
+  font-size: 18rpx;
   letter-spacing: 4rpx;
   font-weight: 300;
-  opacity: 0.45;
 }
 
 /* ============ 导航指示点 ============ */
@@ -241,7 +267,7 @@
 }
 
 .panel-title {
-  font-size: calc(34rpx * var(--font-scale));
+  font-size: calc(36rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 1rpx;
@@ -258,8 +284,8 @@
 .panel-tab {
   display: inline-block;
   padding: 14rpx 32rpx;
-  border-radius: 32rpx;
-  font-size: calc(26rpx * var(--font-scale));
+  border-radius: 24rpx;
+  font-size: calc(24rpx * var(--font-scale));
   font-weight: 500;
   color: var(--text-secondary);
   background-color: transparent;
@@ -272,15 +298,6 @@
   background-color: var(--text-primary);
   font-weight: 700;
   box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.12);
-}
-
-/* 暗色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .panel-tab.active {
-    color: var(--bg-page);
-    background-color: var(--text-primary);
-    box-shadow: 0 2rpx 8rpx rgba(255, 255, 255, 0.08);
-  }
 }
 
 /* ============ 新闻列表 ============ */
@@ -301,21 +318,13 @@
 
 /* 当前阅读的新闻高亮（UX-BUG14: 浅蓝底色 + 左侧色条，增强可辨识度） */
 .panel-item.current {
-  background-color: rgba(0, 122, 255, 0.08);
-  border-left: 4rpx solid #007AFF;
+  background-color: var(--flash-tech-bg);
+  border-left: 4rpx solid var(--flash-tech);
   padding-left: 36rpx;
 }
 
-/* 暗色模式下高亮适配 */
-@media (prefers-color-scheme: dark) {
-  .panel-item.current {
-    background-color: rgba(96, 165, 250, 0.12);
-    border-left-color: #60A5FA;
-  }
-}
-
 .panel-item-title {
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale));
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.45;
@@ -328,15 +337,8 @@
 
 /* 当前阅读的新闻标题颜色高亮 */
 .panel-item-title.current {
-  color: var(--text-primary);
+  color: var(--flash-tech);
   font-weight: 700;
-}
-
-/* 暗色模式下保持蓝色高亮 */
-@media (prefers-color-scheme: dark) {
-  .panel-item-title.current {
-    color: #60A5FA;
-  }
 }
 
 .panel-empty {
@@ -352,7 +354,7 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 8rpx;
-  font-size: 22rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1)); /* UX-FIX-F12: 与卡片元信息同口径 */
   color: var(--text-tertiary);
 }
 
@@ -505,7 +507,7 @@
 
 .state-retry {
   padding: 16rpx 48rpx;
-  border-radius: 32rpx;
+  border-radius: 24rpx;
   font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
   font-weight: 600;
   color: var(--bg-card);
@@ -584,7 +586,9 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
-  z-index: 20;
+  /* BUG-20260802-006: 必须高于 .panel-overlay(29) 与 .slide-panel(30)，
+     否则在侧栏内切分类时提示被遮罩盖住 → 用户看不到 */
+  z-index: 40;
   padding: 16rpx 48rpx;
   border-radius: 999rpx;
   background-color: var(--bg-card);
@@ -595,7 +599,9 @@
   box-shadow: 0 8rpx 32rpx var(--overlay);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  /* BUG-20260802-006: 淡入淡出缩短到 120ms，让 500ms 的展示时长真正被看见
+     （原 250ms 进/出几乎吃掉整个可见窗口） */
+  transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
 .category-hint.show {

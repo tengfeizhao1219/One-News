@@ -34,7 +34,7 @@ for (var i = 0; i < CATEGORIES.length; i++) {
  * @param {Object} [options.cache]        缓存实例（B-06 localCache 注入点，可选）
  */
 function ReadingEngine(options) {
-  this._entryCategory = options.entryCategory || 'recommend'
+  this._entryCategory = options.entryCategory || 'all'
   this._entryIndex = options.entryIndex || 0
   this._entryNewsId = options.entryNewsId || ''
   this._onProgress = options.onProgress || function () {}
@@ -465,16 +465,15 @@ ReadingEngine.prototype.isLast = function () {
  * 获取分类闪烁条颜色（跨分类动画用）
  */
 ReadingEngine.prototype.getCategoryFlashColor = function (categoryId) {
+  // S6: recommend 已合并到 all；分类闪烁颜色仅用于非 all 分类，all 返回空让 CSS fallback 到 --primary
   var colors = {
-    recommend:     '#FF3B30',
     tech:          '#007AFF',
     international: '#5856D6',
     sports:        '#FF9500',
     life:          '#34C759',
-    agriculture:   '#65A30D',
-    science:       '#7C3AED',
+    // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
   }
-  return colors[categoryId] || '#007AFF'
+  return colors[categoryId] || ''
 }
 
 /**

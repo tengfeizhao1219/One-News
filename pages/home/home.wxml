@@ -1,14 +1,16 @@
 <!-- 首页 - 卡片流主视图 -->
 <wxs module="touch" src="./touch.wxs"></wxs>
 
-<view class="page" data-font-scale="{{fontScaleTier}}">
+<!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
+<view
+  class="page"
+  data-font-scale="{{fontScaleTier}}"
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
-  <!-- 固定顶部栏：刷新（左侧）+ 设置（右侧） -->
+  <!-- 固定顶部栏（S4 owner 2026-08-02 决策：取消 R 按钮，刷新入口统一为下拉刷新） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">
     <view class="top-bar-inner">
-      <view class="top-bar-refresh" bindtap="onRefreshNews">
-        <text class="refresh-icon">{{isRefreshing ? '...' : 'R'}}</text>
-      </view>
+      <!-- R 按钮已移除，下拉刷新即强制拉新入口 -->
     </view>
   </view>
 
@@ -55,7 +57,6 @@
         <view class="card-body">
           <!-- 标题 -->
           <view class="card-title">{{item.title}}</view>
-
           <!-- 元信息（owner 直连：移至标题下方，与详情页布局一致） -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
@@ -63,7 +64,6 @@
             <text wx:if="{{item.source && item.time}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
-
           <!-- 摘要 -->
           <view class="card-summary">
             <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
@@ -73,7 +73,11 @@
         </view>
 
         <!-- 底部提示 -->
-        <view class="swipe-hint">^ 上滑阅读下一条</view>
+        <!-- UX-FIX-F4: S2 图标化，提升可发现性（不恢复遮罩式引导） -->
+        <view class="swipe-hint">
+          <text class="swipe-hint-icon">⇅</text>
+          <text class="swipe-hint-text">上滑阅读下一条</text>
+        </view>
       </view>
     </block>
   </view>

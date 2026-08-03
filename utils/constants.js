@@ -1,12 +1,12 @@
 // 常量定义
+// S6: owner 2026-08-02 决策，「全部」与「推荐」合并为一个分类，保留 all ID 与「全部」名称
 const CATEGORIES = [
   { id: 'all', name: '全部' },
-  { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
   { id: 'sports', name: '体育' },
-  { id: 'life', name: '生活' }
-]
+  { id: 'life', name: '生活' },
+  // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）]
 
 const CATEGORY_MAP = {}
 CATEGORIES.forEach(c => { CATEGORY_MAP[c.id] = c.name })
@@ -43,7 +43,7 @@ const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
 
 // 请求配置
 const PAGE_SIZE = 15  // UX-BUG05: 从 10 提升至 15（精选场景上限）
-// v5 起：小程序只读取云端真实新闻，不再启用 Mock 模式。
+// 2026-08-03 owner 裁定：全链路真实数据，所有 mock 数据已清除（data/news.json、cloud-import-data.json 已删）
 
 module.exports = {
   CATEGORIES,

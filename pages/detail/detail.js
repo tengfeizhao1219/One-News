@@ -22,6 +22,8 @@ Page({
     news: {},
     paragraphs: [],
     scrollTop: 0,
+    pageState: 'loading',    // 'loading' | 'ready' | 'error' | 'empty'
+    errorMessage: '',
     // 翻页状态
     currentIndex: 0,
     total: 0,
@@ -33,7 +35,7 @@ Page({
     animClass: '',
     // 跨分类视觉
     showCrossingCategory: '',  // 进度指示中的分类名
-    flashColor: '#007AFF',     // 跨分类进度分类名着色
+    flashColor: '',            // 跨分类进度分类名着色；空串触发 CSS fallback 到 var(--primary)
     // 网络兜底
     networkToastVisible: false,
     // 收藏
@@ -41,6 +43,10 @@ Page({
     heartAnim: false,
     // 字体档位（UX-FIX04 截断保护用）
     fontScaleTier: 0,
+    // UX-FIX-F13: CSS --font-scale 数值（此前详情页完全缺失，导致正文缩放失效）
+    _fontScaleValue: 1,
+    // UX-FIX-F12: 元信息/操作栏缩放（封顶 1.15）
+    _metaScaleValue: 1,
   },
 
   // 引擎实例
@@ -55,24 +61,37 @@ Page({
   onLoad: function (options) {
     var id = options.id
     var index = parseInt(options.index, 10) || 0
-    var category = options.category || 'recommend'
+    var category = options.category || 'all'
 
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
     var tier = (app && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
+    // UX-FIX-F13/F12: 同步缩放变量，供根节点 style 注入（此前详情页从未注入 → 正文不缩放）
+    var scaleVal = (app && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1
+    var metaVal = (app && typeof app.globalData._metaScaleValue === 'number')
+      ? app.globalData._metaScaleValue
+      : (scaleVal > 1.15 ? 1.15 : scaleVal)
 
     // UX-BUG02: 初始化滚动状态 + 获取可视区高度
     this._isAtTop = true
     this._isAtBottom = false
+    this._bottomScrollTop = null
     try {
       var sysInfo = wx.getSystemInfoSync()
-      // scroll-view 可用高度 ≈ 屏幕高度 - 顶部栏(~50px) - 底部操作栏(~100px)
+      // BUG-20260802-001: 该值仅作 onReady 实测前的临时兜底，
+      // 真实高度由 _measureScroll() 实测覆盖（估算偏小会导致触底永不成立→单向翻页）
       this._clientHeight = sysInfo.windowHeight - 150
     } catch (e) {
       this._clientHeight = 500
     }
 
-    this.setData({ category: category, currentIndex: index, fontScaleTier: tier })
+    this.setData({
+      category: category,
+      currentIndex: index,
+      fontScaleTier: tier,
+      _fontScaleValue: scaleVal,
+      _metaScaleValue: metaVal
+    })
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
     this._pregenPlaceholder(category)
@@ -81,9 +100,37 @@ Page({
     this._initEngine(id, index, category)
   },
 
+  onReady: function () {
+    this._measureScroll()
+  },
+
   // BUG-004: 页面销毁标记，防止回调中 setData
   onUnload: function () {
     this._destroyed = true
+  },
+
+  /**
+   * BUG-20260802-001: 实测 scroll-view 真实高度与内容高度
+   * 根因：原 _clientHeight = windowHeight - 150 是估算值，真实高度比它大 50px 以上时
+   *      `scrollTop + _clientHeight >= scrollHeight - 50` 永不成立 → 触底判定永假 → 只能下拉翻上一条
+   */
+  _measureScroll: function () {
+    var that = this
+    try {
+      wx.createSelectorQuery().in(this)
+        .select('.content').boundingClientRect()
+        .select('.article').boundingClientRect()
+        .exec(function (res) {
+          if (that._destroyed || !res || !res[0]) return
+          var viewH = res[0].height
+          var contentH = res[1] ? res[1].height : 0
+          if (viewH > 0) that._clientHeight = viewH
+          // 内容不足一屏时根本不会触发 scroll 事件，需直接视为已触底，否则上滑翻页永不可用
+          if (viewH > 0 && contentH > 0 && contentH <= viewH + 5) {
+            that._isAtBottom = true
+          }
+        })
+    } catch (e) {}
   },
 
   /**
@@ -91,7 +138,7 @@ Page({
    */
   _initEngine: function (newsId, entryIndex, entryCategory) {
     var that = this
-    wx.showLoading({ title: '加载中...', mask: true })
+    // 加载态由页面内骨架屏呈现（pageState=loading），不再使用原生 loading
 
     // UX-BUG09: 检测首页透传数据 — 有则走快速通道，零网络请求
     var app = getApp()
@@ -127,10 +174,15 @@ Page({
           paragraphs: paragraphs,
           scrollTop: 0,
           loading: false,
+        pageState: 'ready',
+        }, function () {
+          // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
+          that._measureScroll()
         })
         // UX-BUG02: 内容加载后重置滚动状态
         that._isAtTop = true
         that._isAtBottom = false
+        that._bottomScrollTop = null
         if (news && news.id) {
           that._checkFavorite(news.id)
         }
@@ -173,25 +225,28 @@ Page({
   _loadFallback: function (newsId) {
     var that = this
     if (!newsId) {
+      that.setData({ pageState: 'error', errorMessage: '新闻加载失败' })
       wx.showToast({ title: '新闻加载失败', icon: 'none' })
       return
     }
     getNewsDetail(newsId).then(function (news) {
       var text = news.content || news.summary || ''
       var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-      that.setData({
-        news: news,
-        paragraphs: paragraphs,
-        total: 1,
-        currentIndex: 0,
-        isFirst: true,
-        isLast: true,
-        positionText: '1 / 1',
-        scrollTop: 0,
-        loading: false,
-      })
-      if (news && news.id) that._checkFavorite(news.id)
+        that.setData({
+          news: news,
+          paragraphs: paragraphs,
+          total: 1,
+          currentIndex: 0,
+          isFirst: true,
+          isLast: true,
+          positionText: '1 / 1',
+          scrollTop: 0,
+          loading: false,
+          pageState: 'ready',
+        })
+        if (news && news.id) that._checkFavorite(news.id)
     }).catch(function () {
+      that.setData({ pageState: 'error', errorMessage: '新闻详情暂不可用，请返回重试' })
       wx.showToast({ title: '新闻详情暂不可用，请返回重试', icon: 'none' })
     })
   },
@@ -207,22 +262,32 @@ Page({
     if (this._animating || !this._engine) return
     var dy = e.changedTouches[0].clientY - this._touchStartY
     var dt = Date.now() - this._touchStartT
-    if (Math.abs(dy) < 70 || dt > 500) return
+
+    // DEBUG: 真机排查日志（上线后可移除）
+    console.log('[detail:touch] dy=' + dy + ' dt=' + dt + ' top=' + this._isAtTop + ' bottom=' + this._isAtBottom)
+
+    if (Math.abs(dy) < 70 || dt > 500) {
+      console.log('[detail:touch] 未达阈值，忽略')
+      return
+    }
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
-    // 上滑(dy<0)→下一条：需内容已触底；下滑(dy>0)→上一条：需内容已触顶
-    if (dy < 0 && !this.data.isLast) {
-      if (this._isAtBottom) {
-        this._swipeToNext()
-      }
-    } else if (dy > 0 && !this.data.isFirst) {
+    // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶
+    // 上滑(dy<0)→下一条（手指从下往上推，内容从底部滑入）；需内容已触底
+    if (dy > 0 && !this.data.isFirst) {
       if (this._isAtTop) {
+        console.log('[detail:touch] 触发 _swipeToPrev（上一条）')
         this._swipeToPrev()
+      } else {
+        console.log('[detail:touch] 下滑但未到顶，不触发')
       }
-    } else if (dy < 0 && this.data.isLast) {
-      // 边界已移除
-    } else if (dy > 0 && this.data.isFirst) {
-      // 边界已移除
+    } else if (dy < 0 && !this.data.isLast) {
+      if (this._isAtBottom) {
+        console.log('[detail:touch] 触发 _swipeToNext（下一条）')
+        this._swipeToNext()
+      } else {
+        console.log('[detail:touch] 上滑但未到底，不触发')
+      }
     }
   },
 
@@ -233,15 +298,35 @@ Page({
     var scrollTop = e.detail.scrollTop
     var scrollHeight = e.detail.scrollHeight
     var clientHeight = this._clientHeight || 500
+    this._lastScrollTop = scrollTop
     // 触顶阈值 10px，触底阈值 50px（微信 scroll-view 可能无法精确到 0）
     this._isAtTop = scrollTop <= 10
-    this._isAtBottom = scrollTop + clientHeight >= scrollHeight - 50
+    // BUG-20260802-001: 触底以原生 scrolltolower 为准，此处只负责「明确离开底部」时复位，
+    // 避免高度实测失败时用估算值把原生事件已置位的触底状态又误清成 false
+    if (scrollTop + clientHeight >= scrollHeight - 50) {
+      this._isAtBottom = true
+    } else if (this._bottomScrollTop == null || scrollTop < this._bottomScrollTop - 50) {
+      this._isAtBottom = false
+    }
+  },
+
+  /**
+   * BUG-20260802-001: scroll-view 原生边界事件 —— 触发即代表已到边界，判定以此为准
+   */
+  onScrollToUpper: function () {
+    this._isAtTop = true
+  },
+
+  onScrollToLower: function () {
+    this._isAtBottom = true
+    // 记录真实底部位置，供 onContentScroll 复位时校准
+    this._bottomScrollTop = this._lastScrollTop || 0
   },
 
   // ============ 跨分类翻页 ============
 
   /**
-   * UX-BUG11: 上滑 → 下一条（对标首页卡片：out-up 移出 → 更新内容 → in-up 从下方滑入）
+   * 上滑 → 下一条：旧内容向上移出(out-up) → 新内容从底部滑入(in-up)，一屏高度
    */
   _swipeToNext: function () {
     var that = this
@@ -283,10 +368,10 @@ Page({
     // out 动画 ~350ms，等它完成后再切入 in 动画
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-up（从下方 +100% 起始），然后立即清除触发 transition 滑入
+        // 新内容就绪 → 先设 in-up（从下方 +100vh 起始），移除 class 后滑入到原位（从底部往上滑入）
         that.setData({ animClass: 'in-up', scrollTop: 0 })
         setTimeout(function () {
-          that.setData({ animClass: '' }) // showCrossingCategory 由 500ms 定时器独立清除（BUG-20260802-006）
+          that.setData({ animClass: '' })
           that._animating = false
         }, 30)
       }).catch(function () {
@@ -298,7 +383,7 @@ Page({
   },
 
   /**
-   * UX-BUG11: 下滑 → 上一条（对标首页卡片：out-down 移出 → 更新内容 → in-down 从上方滑入）
+   * 下滑 → 上一条：旧内容向下移出(out-down) → 新内容从顶部滑入(in-down)，一屏高度
    */
   _swipeToPrev: function () {
     var that = this
@@ -336,10 +421,10 @@ Page({
 
     setTimeout(function () {
       contentPromise.then(function () {
-        // 新内容就绪 → 先设 in-down（从上方 -100% 起始），然后立即清除触发 transition 滑入
+        // 新内容就绪 → 先设 in-down（从上方 -100vh 起始），移除 class 后滑入到原位（从顶部往下滑入）
         that.setData({ animClass: 'in-down', scrollTop: 0 })
         setTimeout(function () {
-          that.setData({ animClass: '' }) // showCrossingCategory 由 500ms 定时器独立清除（BUG-20260802-006）
+          that.setData({ animClass: '' })
           that._animating = false
         }, 30)
       }).catch(function () {
@@ -357,7 +442,8 @@ Page({
    */
   _showFlash: function (categoryId) {
     // UX-SIMPLIFY05: 移除闪烁条，仅保留 flashColor 用于进度指示分类名着色
-    var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : '#007AFF'
+    // UX-FIX-F1: 分类色仍由 reading-engine 提供（分类色≠主色），无结果时留空让 CSS fallback 到 --primary
+    var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : ''
     this.setData({ flashColor: color })
   },
 
@@ -390,34 +476,6 @@ Page({
     wx.navigateBack()
   },
 
-  /**
-   * FE-B3 / UX-SIMPLIFY07: 原文链接交互 — ActionSheet（复制链接 / 分享给朋友）
-   */
-  openSourceUrl: function () {
-    var news = this.data.news || {}
-    var url = news.sourceUrl
-    if (!url) {
-      wx.showToast({ title: '暂无原文链接', icon: 'none' })
-      return
-    }
-    wx.showActionSheet({
-      itemList: ['复制链接', '分享给朋友'],
-      success: function (res) {
-        if (res.tapIndex === 0) {
-          wx.setClipboardData({
-            data: url,
-            success: function () {
-              wx.showToast({ title: '链接已复制', icon: 'success' })
-            },
-          })
-        } else if (res.tapIndex === 1) {
-          // 微信不支持以代码拉起分享面板，引导用户点击底部「分享」按钮
-          wx.showToast({ title: '点底部「分享」即可发给朋友', icon: 'none' })
-        }
-      },
-    })
-  },
-
   // ============ 分享（B-05 + UX-FIX02 占位图预缓存） ============
 
   /**
@@ -427,7 +485,7 @@ Page({
    */
   _pregenPlaceholder: function (category) {
     var that = this
-    var cat = category || this.data.category || 'recommend'
+    var cat = category || this.data.category || 'all'
     var isDark = this._isSystemDark()
 
     // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）

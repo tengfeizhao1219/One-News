@@ -43,16 +43,9 @@
   opacity: 1;
 }
 
-/* 暗色模式面板背景 */
-@media (prefers-color-scheme: dark) {
-  .setting-panel {
-    background-color: rgba(13, 13, 13, 0.92);
-  }
-}
-
 /* 标题 */
 .panel-title {
-  font-size: 34rpx;
+  font-size: 36rpx;
   font-weight: 700;
   color: var(--text-primary);
   padding: 40rpx 48rpx 32rpx;
@@ -80,13 +73,6 @@
 
 .tier-row.selected {
   background-color: var(--tag-bg);
-}
-
-/* 暗色模式选中行 */
-@media (prefers-color-scheme: dark) {
-  .tier-row.selected {
-    background-color: rgba(255, 255, 255, 0.08);
-  }
 }
 
 /* 单选框（圆形） */
@@ -146,7 +132,7 @@
 }
 
 .footer-text {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: var(--text-secondary);
   letter-spacing: 1rpx;
 }

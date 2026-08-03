@@ -183,8 +183,8 @@ mod('constants.js');
 
 // 1.1 CATEGORIES array completeness
 var catIds = constants.CATEGORIES.map(function(c) { return c.id; });
-deepEq(catIds, ['all', 'recommend', 'tech', 'international', 'sports', 'life', 'agriculture', 'science'],
-  'CATEGORIES contains all 8 category IDs');
+deepEq(catIds, ['all', 'tech', 'international', 'sports', 'life'],
+  'CATEGORIES contains 5 category IDs (agriculture/science 已下架)');
 
 // 1.2 CATEGORIES array length
 eq(constants.CATEGORIES.length, 8, 'CATEGORIES array length is 8');

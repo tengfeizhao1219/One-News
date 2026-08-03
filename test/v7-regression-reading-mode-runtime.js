@@ -19,8 +19,7 @@ var mockConstants = {
     { id: 'international', name: '国际' },
     { id: 'sports', name: '体育' },
     { id: 'life', name: '生活' },
-    { id: 'agriculture', name: '农业' },
-    { id: 'science', name: '科学' },
+    // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
     { id: 'all', name: '全部' },
   ],
   PAGE_SIZE: 10,
@@ -40,8 +39,7 @@ function makeNewsList(categoryId, count) {
                      categoryId === 'tech' ? '科技' :
                      categoryId === 'international' ? '国际' :
                      categoryId === 'sports' ? '体育' :
-                     categoryId === 'life' ? '生活' :
-                     categoryId === 'agriculture' ? '农业' : '科学',
+                     categoryId === 'life' ? '生活' : '未知',
       source: '来源' + categoryId,
       sourceUrl: 'https://example.com/' + categoryId + '/' + (i + 1),
       picUrl: '',
@@ -57,9 +55,7 @@ var mockGetNewsList = function (params) {
               (catId === 'tech') ? 3 :
               (catId === 'international') ? 4 :
               (catId === 'sports') ? 2 :
-              (catId === 'life') ? 3 :
-              (catId === 'agriculture') ? 1 :
-              2 // science
+              (catId === 'life') ? 3 : 2
   return Promise.resolve({ list: makeNewsList(catId, count) })
 }
 
@@ -157,8 +153,8 @@ function runTests() {
     var total = engine._total
     console.log('  [INFO] mergedList 总条数: ' + total)
     check('mergedList 包含多条新闻', total > 0)
-    // 5+3+4+2+3+1+2 = 20
-    assertEqual('mergedList 总数为 20（5+3+4+2+3+1+2）', total, 20)
+    // 5+3+4+2+3 = 17（agriculture/science 已下架）
+    assertEqual('mergedList 总数为 17（5+3+4+2+3）', total, 17)
 
     // 入口定位
     var cur = engine.getCurrent()
@@ -283,8 +279,8 @@ function runTests() {
             currentCat = newCat
           }
         }
-        // 7 个 READING_CATEGORIES，所以跨分类次数应为 6
-        assertEqual('跨分类切换次数 = 6（7 个分类，6 次切换）', crossingCount, 6)
+        // 5 个 READING_CATEGORIES，所以跨分类次数应为 4
+        assertEqual('跨分类切换次数 = 4（5 个分类，4 次切换）', crossingCount, 4)
 
         // --- 预取窗口 ---
         console.log('\n【运行时】预取窗口')

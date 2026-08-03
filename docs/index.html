@@ -145,6 +145,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
 <div class="tab-bar">
   <button class="active" onclick="switchTab('overview',this)">📊 总览</button>
   <button onclick="switchTab('detail',this)">📋 明细</button>
+  <button onclick="switchTab('design',this)">🎨 设计语言</button>
 </div>
 
 <main>
@@ -203,6 +204,14 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       <h2><span class="tick"></span>交付物索引</h2>
       <table class="tbl" id="deliverables-tbl"></table>
     </div>
+  </div>
+
+  <!-- ═══════════ TAB 3: 设计语言 ═══════════ -->
+  <div class="tab-content" id="tab-design">
+    <iframe src="design-language.html" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:12px;"
+            title="一页 One-News 设计语言系统 v2.0"
+            onload="this.style.opacity='1'" style="opacity:0;transition:opacity .3s;">
+    </iframe>
   </div>
 
 </main>

@@ -1,0 +1,9 @@
+{
+  "name": "setNewsRetained",
+  "version": "1.0.0",
+  "description": "B-16 标记/取消新闻保留状态（收藏/分享引用保护）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
