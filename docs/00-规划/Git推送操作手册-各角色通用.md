@@ -2,13 +2,44 @@
 
 > **适用对象**：项目所有 AI 角色（测试/视觉/交互/TL/后端/前端/产品/PM）
 > **维护者**：项目经理
-> **版本**：2026-08-01
+> **版本**：2026-08-03
 > **目的**：解决"会话里没有 git 仓库无法推送"的问题，统一各角色的 clone/pull/push 操作
+
+> 🔓 **【2026-08-03 权限开放】文档复核与 commit 全员可操作**：PRD、需求池、设计文档等**产品文档的「复核 + commit + push」权限向所有角色开放**，不再限于产品经理。详见 §0 权限规则。
+> - **决策权不变**：功能"做什么/做成什么样"仍由产品经理拍板（见 `任务交接流转机制.md` §七）。
+> - **操作权开放**：任何角色均可基于已确认的需求，对文档做复核、修改、commit 并 push 到 `main`；改动需遵循"先 pull、再改、push 前再 pull"。
+> - **避免冲突**：多人同时改同一文档时，先 pull 合并再 push；无法自行合并的冲突登记到 TASK_BOARD 阻塞项，由项目经理协调。
 
 > 🔑 **关于 TOKEN**：本文档中的 `YOUR_GITHUB_TOKEN` 是占位符。实际 token 从以下任一方式获取：
 > 1. 从共享保险库 `tdrive` 路径 `vault/github_pat` 读取（如已挂载）
 > 2. 直接向项目经理（PM）索取当前有效的 GitHub Personal Access Token
 > 3. ⚠️ **不要**把明文 token 写进任何被 git 跟踪的文件（GitHub Push Protection 会拦截）
+
+---
+
+## §0 文档复核与 commit 权限规则（2026-08-03 起生效）
+
+> **核心原则**：文档是协作产物，任何人都可以复核、修改、提交、推送；但「决定做什么功能」的决策权仍归产品经理。
+
+| 维度 | 谁有权 | 说明 |
+|------|--------|------|
+| **文档复核（review）** | ✅ 所有角色 | 任何角色均可对 PRD / 需求池 / 设计文档提复核意见或直接修订 |
+| **文档 commit + push** | ✅ 所有角色 | 改完文档可直接 `git commit + push origin main`，无需经 PM 中转 |
+| **功能决策（做什么）** | 🎯 产品经理 | 需求范围、验收标准由 PM 定，见 `任务交接流转机制.md` §七 |
+| **技术决策（怎么做）** | 🔧 全栈开发 | 实现方案由全栈开发定 |
+
+**操作流程（文档类改动，全员通用）**
+```bash
+cd /root/one-news
+git pull origin main              # 先拉最新，避免冲突
+# 编辑文档（PRD / 需求池 / 设计稿…）
+git add <你改的文档>
+git commit -m "角色名: 文档修订简述"
+git pull --rebase origin main     # push 前再拉，合并他人改动
+git push origin main              # 直接推 main，无需分支
+```
+
+**冲突处理**：若 `git pull --rebase` 出现冲突，手动解决后 `git add` → `git rebase --continue` → `git push`；实在解决不了 → 登记 TASK_BOARD 阻塞项，项目经理协调。
 
 ---
 
@@ -87,7 +118,7 @@ git config --unset "url.https://${TOKEN}:${TOKEN}@github.com/.insteadOf"
 
 **常见修改路径**：
 
-| 角色 | 你通常要改的文件 |
+| 角色 | 你通常要改的文件（仅供参考，非限制） |
 |------|-----------------|
 | 测试工程师 | `docs/05-测试验收/*.md` |
 | 视觉设计师 | `docs/02-产品设计/*.md` + `theme.json` |
@@ -98,7 +129,10 @@ git config --unset "url.https://${TOKEN}:${TOKEN}@github.com/.insteadOf"
 | 产品经理 | `docs/01-需求规划/*.md` |
 | 项目经理 | `TASK_BOARD.md` `COMMLOG.md` `docs/06-上线复盘/` |
 
-> ⚠️ **职责红线**：每个角色只改自己职责范围内的文件。例如测试工程师不要改 `cloudfunctions/`，后端开发不要改 `TASK_BOARD.md`。
+> ⚠️ **职责红线（2026-08-03 调整）**：上表是「通常改什么」的**参考**，不是排他权限。
+> - **代码类文件**（`cloudfunctions/` `pages/` `components/` 等）仍建议由对应开发角色改动，避免误改引入 bug。
+> - **文档类文件**（PRD / 需求池 / 设计文档 / 技术方案 / 测试报告）**所有角色均可复核 + 修改 + commit + push**（见 §0 权限规则），不再限于原「归属角色」。
+> - **公共跟踪文件**（`TASK_BOARD.md` `RELAY.md` `COMMLAB.md`）改动前先 `git pull`，push 前再 `git pull --rebase`，避免覆盖他人更新。
 
 ---
 
@@ -190,6 +224,6 @@ git push origin main               # 再推
 
 1. **token 只在终端命令里用**，不要写进代码文件、不要 commit 到仓库
 2. **不要 `git add -A` 乱加文件**，只加你自己改的
-3. **不要改别人的职责文件**（详见第三步表格）
-4. **push 前先 pull**，避免冲突
+3. **文档可全员复核/commit**（见 §0 权限规则），但代码类文件（`cloudfunctions/` `pages/` `components/`）仍建议由对应开发角色改动
+4. **push 前先 pull**（建议 `git pull --rebase`），避免冲突；公共跟踪文件改动尤其注意
 5. **改完 TASK_BOARD 要更新自己的任务状态**（📋→✅）
