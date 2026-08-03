@@ -36,6 +36,8 @@ Page({
     fontScaleTier: 0,       // 当前字体档位 0-3
     _fontScaleValue: 1,     // CSS --font-scale 数值（由 app 注入）
     _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
+    // TL-B16: 更多功能菜单
+    showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
   },
 
   // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
@@ -766,11 +768,40 @@ Page({
   // ============ 字体面板 ============
 
   /**
-   * 打开字体设置面板
+   * TL-B16: 切换「更多功能」dock 菜单（⚙ 浮动按钮 / 遮罩 皆可触发）
    */
-  onOpenSettings() {
-    this._syncFontScale()
-    this.setData({ showFontPanel: true })
+  toggleMoreMenu() {
+    this.setData({ showMoreMenu: !this.data.showMoreMenu })
+  },
+
+  /**
+   * TL-B16: 更多功能菜单项点击分发
+   *   history   → 浏览记录页
+   *   favorites → 我的收藏页
+   *   settings  → 字体设置面板
+   *   ext       → 扩展位（占位，敬请期待）
+   */
+  onMoreMenuTap(e) {
+    var target = e.currentTarget.dataset.target
+    // 先收起菜单，避免浮层遮挡即将打开的新页面 / 字体面板
+    this.setData({ showMoreMenu: false })
+
+    if (target === 'history') {
+      wx.navigateTo({
+        url: '/pages/history/history',
+        fail: function (err) { console.error('[home] navigate history fail:', err) }
+      })
+    } else if (target === 'favorites') {
+      wx.navigateTo({
+        url: '/pages/favorites/favorites',
+        fail: function (err) { console.error('[home] navigate favorites fail:', err) }
+      })
+    } else if (target === 'settings') {
+      this._syncFontScale()
+      this.setData({ showFontPanel: true })
+    } else if (target === 'ext') {
+      wx.showToast({ title: '敬请期待', icon: 'none' })
+    }
   },
 
   /**

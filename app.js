@@ -29,6 +29,11 @@ App({
       })
     }
 
+    // TL-B13/B14：应用启动后重试离线期间堆积的收藏/浏览上报（非阻塞）
+    try {
+      require('./utils/cloud').flushQueue()
+    } catch (e) { /* ignore */ }
+
     // 获取系统信息
     const sysInfo = wx.getSystemInfoSync()
     this.globalData.statusBarHeight = sysInfo.statusBarHeight

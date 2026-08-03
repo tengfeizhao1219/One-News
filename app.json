@@ -1,7 +1,9 @@
 {
   "pages": [
     "pages/home/home",
-    "pages/detail/detail"
+    "pages/detail/detail",
+    "pages/history/history",
+    "pages/favorites/favorites"
   ],
   "window": {
     "navigationStyle": "custom",

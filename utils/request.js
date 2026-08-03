@@ -89,7 +89,8 @@ function formatNewsItem(item, includeContent = false) {
     sourceUrl: item.sourceUrl || item._url || '',
     picUrl: item.picUrl || '',
     time: formatRelativeTime(item.publishTime || item.time),
-    publishTime: item.publishTime || item.time
+    publishTime: item.publishTime || item.time,
+    isRetained: item.isRetained === true
   }
 }
 

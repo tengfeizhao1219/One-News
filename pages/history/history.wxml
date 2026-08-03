@@ -1,0 +1,42 @@
+<!-- 浏览记录页 — TL-B14 / RQ-06 -->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
+  <view class="nav-bar">
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+      <text class="nav-home-icon">🏠</text>
+    </view>
+    <view class="nav-title">浏览记录</view>
+  </view>
+
+  <!-- 加载态 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="skeleton-item" wx:for="{{3}}" wx:key="*this"></view>
+  </view>
+
+  <!-- 空态 -->
+  <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
+    <view class="empty-icon">🕘</view>
+    <view class="empty-text">暂无浏览记录</view>
+    <view class="empty-hint" bindtap="goHome">去首页看看</view>
+  </view>
+
+  <!-- 列表 -->
+  <scroll-view class="list-scroll" scroll-y wx:if="{{!loading && !isEmpty}}">
+    <view
+      class="history-item"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      data-cat="{{item.category}}"
+      bindtap="onItemTap">
+      <view class="history-title">{{item.title}}</view>
+      <view class="history-meta">
+        <text class="history-source">{{item.source || item.categoryName}}</text>
+        <text class="history-time">{{item._time}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

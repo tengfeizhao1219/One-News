@@ -96,9 +96,30 @@
   <!-- BUG-20260802-006: 分类切换 0.5s 提示 -->
   <view class="category-hint {{categoryHint ? 'show' : ''}}">{{categoryHint}}</view>
 
-  <!-- BUG-20260802-005: 设置按钮移至卡片右下角 3D 浮动层 -->
-  <view class="floating-settings {{showPanel || showFontPanel ? 'hidden' : ''}}" bindtap="onOpenSettings">
-    <text class="settings-icon">⚙</text>
+  <!-- BUG-20260802-005 / TL-B16：⚙ 浮动按钮升级为「更多功能」dock 菜单主入口 -->
+  <view class="floating-more {{showPanel ? 'hidden' : ''}}" bindtap="toggleMoreMenu">
+    <text class="more-icon">⚙</text>
+  </view>
+
+  <!-- 更多功能菜单（dock 栈向上弹出，毛玻璃背景，点击空白或再次点击⚙收起） -->
+  <view class="more-mask {{showMoreMenu ? 'show' : ''}}" bindtap="toggleMoreMenu"></view>
+  <view class="more-menu {{showMoreMenu ? 'show' : ''}}">
+    <view class="more-item" data-target="history" bindtap="onMoreMenuTap">
+      <text class="more-item-icon">🕐</text>
+      <text class="more-item-label">浏览记录</text>
+    </view>
+    <view class="more-item" data-target="favorites" bindtap="onMoreMenuTap">
+      <text class="more-item-icon">♥</text>
+      <text class="more-item-label">我的收藏</text>
+    </view>
+    <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
+      <text class="more-item-icon">⚙</text>
+      <text class="more-item-label">设置</text>
+    </view>
+    <view class="more-item more-item--ext" data-target="ext" bindtap="onMoreMenuTap">
+      <text class="more-item-icon">＋</text>
+      <text class="more-item-label">扩展位</text>
+    </view>
   </view>
 
   <!-- 侧边栏遮罩（点击关闭） -->

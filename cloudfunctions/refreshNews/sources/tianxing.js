@@ -9,8 +9,6 @@
  *   sports        → sicprobe（科学探索）
  *   international → world（国际）
  *   life          → social（社会）
- *   finance       → internet（互联网资讯）
- *   entertainment → woman（女性）
  *
  * 环境变量：
  *   TIAN_API_KEY — 天行数据 API Key
@@ -25,8 +23,6 @@ const CATEGORY_ENDPOINTS = {
   sports: 'sicprobe',
   international: 'world',
   life: 'social',
-  finance: 'internet',
-  entertainment: 'woman',
 }
 
 const CATEGORY_NAMES = {
@@ -35,8 +31,6 @@ const CATEGORY_NAMES = {
   sports: '科学探索',
   international: '国际',
   life: '社会',
-  finance: '互联网资讯',
-  entertainment: '女性',
 }
 
 /**

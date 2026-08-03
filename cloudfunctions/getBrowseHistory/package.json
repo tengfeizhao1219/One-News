@@ -1,0 +1,9 @@
+{
+  "name": "getBrowseHistory",
+  "version": "1.0.0",
+  "description": "RQ-06 浏览记录：云端历史查询",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

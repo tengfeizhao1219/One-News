@@ -1,0 +1,9 @@
+{
+  "name": "setUserFavorite",
+  "version": "1.0.0",
+  "description": "RQ-03 收藏上云：用户收藏写入（upsert）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

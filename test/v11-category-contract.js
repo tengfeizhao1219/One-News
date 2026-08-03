@@ -108,9 +108,10 @@ contentIds.forEach(function (id) {
 })
 
 // D. 后端不得产出前端未定义的内容分类（防新增 tab 无人知）
-//    已知历史残留（v4.2 遗留、前端已无对应 tab）：finance / entertainment ——
-//    待全栈开发按 TL-B2「B-08~B-14 清理裁定」一并处置，此处显式豁免并告警。
-var KNOWN_BACKEND_ONLY = ['finance', 'entertainment']
+//    v4.2 遗留的 finance / entertainment 已由 TL-B11（2026-08-03）彻底清理：
+//    已从 refreshNews CATEGORIES、getNewsList CATEGORY_NAMES、tianxing/juhe 映射移除，
+//    与 frontend utils/constants.js 对齐。保留 recommend（头条，喂给 all 视图，前端无独立 tab 但属合法产出）。
+var KNOWN_BACKEND_ONLY = [] // TL-B11 后已无历史残留分类
 namesKeys.forEach(function (key) {
   if (key === 'recommend' || key === 'all') return // 聚合/合并项豁免
   if (KNOWN_BACKEND_ONLY.indexOf(key) !== -1) {

@@ -1,0 +1,9 @@
+{
+  "name": "recordBrowse",
+  "version": "1.0.0",
+  "description": "RQ-06 浏览记录：云端兜底写入",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

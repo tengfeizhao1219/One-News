@@ -39,12 +39,15 @@ const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 
 // ─── 分类列表（聚合支持的分类）───
-const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life', 'finance', 'entertainment']
+// v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
+// 与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
+const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life']
 
 // ─── 数据库操作 ─────────────────────────────────────
 
 /**
  * 清除指定分类的旧缓存，但保留指定的 id 列表
+ * v7（TL-B12）：不得删除 isRetained === true 的保留记录（无论是否在 keepIds）
  */
 async function clearOldCacheExcept(category, keepIds) {
   try {
@@ -52,6 +55,7 @@ async function clearOldCacheExcept(category, keepIds) {
       .where({
         category,
         id: db.command.nin(keepIds),
+        isRetained: db.command.neq(true), // 保留 retained 记录（RQ-16）
       })
       .remove()
     return res.stats?.removed || 0
@@ -62,8 +66,60 @@ async function clearOldCacheExcept(category, keepIds) {
 }
 
 /**
+ * 分级清理（v7 / TL-B12 / RQ-16 §5.2 E7）
+ * 按 cacheExpire 过期清理：普通记录 7 天 / retained 记录 30 天。
+ * 分批 ≤ 100 条/批，单轮 ≤ 2s，避免云函数超时。
+ * @returns {Promise<{removedNormal:number, removedRetained:number, durationMs:number}>}
+ */
+async function gradedCleanup() {
+  const now = Date.now()
+  const BATCH = 100
+  const MAX_MS = 2000
+  let removedNormal = 0
+  let removedRetained = 0
+  const startTime = Date.now()
+
+  try {
+    // 1. 普通记录（isRetained !== true 且 cacheExpire < now）
+    while (Date.now() - startTime < MAX_MS) {
+      const res = await db.collection('news_cache')
+        .where({
+          isRetained: db.command.neq(true),
+          cacheExpire: db.command.lt(now),
+        })
+        .limit(BATCH)
+        .remove()
+      const n = res.stats?.removed || 0
+      removedNormal += n
+      if (n < BATCH) break
+    }
+
+    // 2. retained 记录（isRetained === true 且 cacheExpire < now，即 retainedAt + 30d 已到期）
+    while (Date.now() - startTime < MAX_MS) {
+      const res = await db.collection('news_cache')
+        .where({
+          isRetained: true,
+          cacheExpire: db.command.lt(now),
+        })
+        .limit(BATCH)
+        .remove()
+      const n = res.stats?.removed || 0
+      removedRetained += n
+      if (n < BATCH) break
+    }
+  } catch (err) {
+    console.warn('[refreshNews] 分级清理异常:', err.message)
+  }
+
+  const durationMs = Date.now() - startTime
+  console.log(`[refreshNews] 分级清理完成：普通 ${removedNormal} 条 / retained ${removedRetained} 条，耗时 ${durationMs}ms`)
+  return { removedNormal, removedRetained, durationMs }
+}
+
+/**
  * 续期所有 news_cache 记录的 cacheExpire（v5.9）
  * 当双数据源都拉不到新数据时调用，避免历史数据 TTL 过期后列表空白。
+ * v7（TL-B12）：仅续期普通记录（isRetained !== true）；retained 记录保持自身 30 天到期。
  * 云数据库 update 支持多文档匹配批量更新（一次调用更新全部匹配文档）。
  * @returns {Promise<number>} 更新的文档数
  */
@@ -71,10 +127,11 @@ async function renewCacheExpire() {
   try {
     const now = Date.now()
     const expireAt = now + config.cache.dbCacheTTL
-    // 只续期已过期或即将过期的记录（避免每次刷新都全量续期）
+    // 只续期已过期或即将过期的普通记录（避免每次刷新都全量续期）；retained 记录保持自身到期
     const res = await db.collection('news_cache')
       .where({
         cacheExpire: db.command.lt(expireAt),
+        isRetained: db.command.neq(true),
       })
       .update({
         data: { cacheExpire: expireAt, updatedAt: now },
@@ -143,23 +200,44 @@ async function batchInsert(newsList) {
         }
       }
 
-      await db.collection('news_cache').add({
-        data: {
-          id: item.id,
-          title: item.title,
-          summary,
-          content: item.content || '',   // v6：refreshNews 已直接抓正文
-          category: item.category,
-          categoryName: item.categoryName,
-          source: item.source,
-          sourceUrl: item.sourceUrl || '',
-          publishTime: item.publishTime,
-          picUrl: item.picUrl || '',
-          viewCount: 0,
-          cacheExpire: expireAt,
-          createdAt: now,
-        },
-      })
+      // v7（TL-B12 / RQ-16 D2）：保留策略
+      //   - 若已有记录被标记为 retained，刷新写入时不得覆盖 isRetained/retainedAt，
+      //     cacheExpire 改为 retainedAt + 30d（而非普通 7d）。
+      //   - 普通记录：cacheExpire = now + 7d（重置 TTL）。
+      let isRetained = false
+      let retainedAt = null
+      let cacheExpire = expireAt
+      if (existed && existed.isRetained === true) {
+        isRetained = true
+        retainedAt = existed.retainedAt || now
+        cacheExpire = retainedAt + config.cache.retainedTTL
+      }
+
+      const docData = {
+        id: item.id,
+        title: item.title,
+        summary,
+        content: item.content || '',   // v6：refreshNews 已直接抓正文
+        category: item.category,
+        categoryName: item.categoryName,
+        source: item.source,
+        sourceUrl: item.sourceUrl || '',
+        publishTime: item.publishTime,
+        picUrl: item.picUrl || '',
+        viewCount: 0,
+        isRetained,
+        retainedAt,
+        cacheExpire,
+        createdAt: now,
+      }
+
+      // v7（TL-B12）：已有记录则 update（保留 _id，避免重复插入相同 id 文档导致数据分叉），
+      // 新记录则 add。
+      if (existed && existed._id) {
+        await db.collection('news_cache').doc(existed._id).update({ data: docData })
+      } else {
+        await db.collection('news_cache').add({ data: docData })
+      }
       inserted++
     } catch (err) {
       if (err.errCode !== -1) {
@@ -334,6 +412,9 @@ exports.main = async (event) => {
   )
   const totalCleared = clearResults.reduce((sum, n) => sum + n, 0)
 
+  // 5c. 分级清理（v7 / TL-B12 / RQ-16）：过期普通记录（7d）/ retained 记录（30d）
+  const cleanup = await gradedCleanup()
+
   const elapsed = Date.now() - startTime
 
   // ── 写入刷新时间戳 ──
@@ -366,6 +447,11 @@ exports.main = async (event) => {
       inserted: totalInserted,
       failed: totalFailed,
       cleared: totalCleared,
+      cleanup: {
+        removedNormal: cleanup.removedNormal,
+        removedRetained: cleanup.removedRetained,
+        durationMs: cleanup.durationMs,
+      },
       categories: Object.fromEntries(
         Object.entries(categories).map(([k, v]) => [k, v.length])
       ),

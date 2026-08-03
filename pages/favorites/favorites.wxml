@@ -1,0 +1,42 @@
+<!-- 收藏列表页 — TL-B13 / RQ-03 -->
+<view class="page">
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
+  <view class="nav-bar">
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+      <text class="nav-home-icon">🏠</text>
+    </view>
+    <view class="nav-title">我的收藏</view>
+  </view>
+
+  <!-- 加载态 -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="skeleton-item" wx:for="{{3}}" wx:key="*this"></view>
+  </view>
+
+  <!-- 空态 -->
+  <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
+    <view class="empty-icon">♡</view>
+    <view class="empty-text">还没有收藏任何新闻</view>
+    <view class="empty-hint" bindtap="goHome">去首页看看</view>
+  </view>
+
+  <!-- 列表 -->
+  <scroll-view class="list-scroll" scroll-y wx:if="{{!loading && !isEmpty}}">
+    <view
+      class="fav-item"
+      wx:for="{{list}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      data-cat="{{item.category}}"
+      bindtap="onItemTap">
+      <view class="fav-title">{{item.title}}</view>
+      <view class="fav-meta">
+        <text class="fav-source">{{item.source || item.categoryName}}</text>
+        <text class="fav-time">{{item._time}}</text>
+      </view>
+    </view>
+  </scroll-view>
+</view>

@@ -6,10 +6,11 @@ const db = cloud.database()
 const config = require('./config')
 
 // ─── 分类名称映射（本地常量，无需 adapter）───
+// v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
+// 与 frontend utils/constants.js CATEGORIES 对齐。
 const CATEGORY_NAMES = {
   recommend: '推荐', tech: '科技', sports: '科学探索',
   international: '国际', life: '社会',
-  finance: '互联网资讯', entertainment: '女性',
 }
 
 // ─── 缓存查询 ────────────────────────────────────────
@@ -75,6 +76,7 @@ async function queryCache(where, pageNum, pageSize) {
           title: item.title, summary: item.summary,
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
+          isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态
         })),
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,

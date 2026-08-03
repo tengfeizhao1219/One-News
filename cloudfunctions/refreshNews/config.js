@@ -68,11 +68,14 @@ module.exports = {
     summaryMaxChars: 150,
   },
 
-  // 缓存配置（v4.0：每小时刷新，DB 缓存 65min 覆盖刷新间隔）
+  // 缓存配置（v7 / TL-B12：数据保留分级策略）
+  //   - 普通记录：7 天（RQ-16，原 65 分钟）
+  //   - retained 记录（收藏/分享）：30 天
   cache: {
     memoryTTL: 2 * 60 * 1000,        // 内存缓存 2 分钟
     searchTTL: 5 * 60 * 1000,        // 搜索缓存 5 分钟
-    dbCacheTTL: 65 * 60 * 1000,      // 云数据库缓存 65 分钟（适配每小时刷新）
+    dbCacheTTL: 7 * 24 * 60 * 60 * 1000,        // 普通记录 7 天（RQ-16）
+    retainedTTL: 30 * 24 * 60 * 60 * 1000,      // retained 记录 30 天（RQ-16）
     maxCachePages: 3,
   },
 

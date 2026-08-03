@@ -11,8 +11,6 @@
  *   sports        → tiyu（体育）
  *   international → guoji（国际）
  *   life          → shehui（社会）
- *   finance       → caijing（财经）
- *   entertainment → yule（娱乐）
  *
  * 请求方式：POST，application/x-www-form-urlencoded
  *
@@ -24,14 +22,13 @@
 const config = require('../config')
 
 // 分类 → 聚合 type 映射（与 test/v4-regression-data-layer.js 一致）
+// v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab），与 constants.js 对齐。
 const APP_TO_JUHE_TYPE = {
   recommend: 'top',
   tech: 'keji',
   sports: 'tiyu',
   international: 'guoji',
   life: 'shehui',
-  finance: 'caijing',
-  entertainment: 'yule',
 }
 
 const CATEGORY_NAMES = {
@@ -40,8 +37,6 @@ const CATEGORY_NAMES = {
   sports: '体育',
   international: '国际',
   life: '社会',
-  finance: '财经',
-  entertainment: '娱乐',
 }
 
 /**

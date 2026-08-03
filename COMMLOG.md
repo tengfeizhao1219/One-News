@@ -3565,3 +3565,40 @@ a0bfbea fix(newsCleaner): 补清洗规则 — 括号包裹形态
 ### 变更文件
 - `TASK_BOARD.md` — TL-B9~B16 状态更新（B9/B10 ✅，B11~B16 🔄 FS 认领）
 - `COMMLOG.md` — 本记录
+
+---
+
+## [2026-08-03 21:20] 全栈开发 交付 TL-B11~B16（下迭代 P0/P1 实现完成） | 会话：[全栈开发(FS)]
+
+### 交付背景
+- 用户指令「继续执行后续待开始的所有任务，无需中间确认」→ 本会话一次性完成 TL-B11~B16 全部实现
+- 指令来源：conversation_history_summary 续跑 + 「无需中间确认」直连授权
+
+### 交付明细
+
+| 任务 | 优先级 | 实现要点 | 验收/闸门 |
+|------|--------|----------|-----------|
+| TL-B11 后端残留分类 | 🟡 P2 | 清理 tianxing/juhe/getNewsList 中 finance/entertainment 残留映射；`test/v11-category-contract.js` 25/25 通过 | QA-B2 契约无告警，随 TL-B2 一并裁定归档 |
+| TL-B12 数据保留策略 | 🔴 P0 | `news_cache` 分级 TTL（普通7天/retained30天）+ `gradedCleanup()` 分批≤100/≤2s + `setNewsRetained`→`news_cache` 改造（isRetained/retainedAt/cacheExpire）+ getNewsList/getNewsDetail 透传 `isRetained` + clearOldCacheExcept/renewCacheExpire 跳过 retained | 严格按 PRD §5/§6/§9；无 UI 闸门 |
+| TL-B13 收藏上云+分享上报 | 🔴 P0 | 新增 `setUserFavorite`/`getUserFavorites` 云函数（favorites 集合 upsert + 软删 isActive）；前端收藏双写 `setUserFavorite`+`setNewsRetained(true)`；分享按钮点击上报 `setNewsRetained(true)`；`utils/cloud.js` 待同步队列（容量50，失败重试，Storage 持久化，app.onLaunch flushQueue） | 页面展示已交付；**UI-B5 设计闸门待产品设计师评审** |
+| TL-B14 浏览记录 | 🟡 P1 | 新增 `pages/history/history` + `recordBrowse`/`getBrowseHistory` 云函数（browse_history 集合）；详情页浏览写入（去重/LRU200/7天惰性清除）；本地秒开 + 云端合并 | 页面已交付；**UI-B4 设计闸门待评审** |
+| TL-B15 全局返回主页 | 🔴 P0 | 详情页/浏览记录页/收藏列表页 🏠 主页图标（`wx.reLaunch` + 防抖300ms + `navigateBack` 降级）+ 暗色适配 | 跳转逻辑已交付；**UI-B6 图标样式闸门待评审** |
+| TL-B16 浮动按钮升级 | 🔴 P0 | ⚙ 浮动按钮→dock 栈菜单（`toggleMoreMenu`/`onMoreMenuTap`，毛玻璃遮罩，4 项入口：浏览记录/我的收藏/设置/扩展位）；保留 3D 动效与 `hidden` 逻辑 | 菜单逻辑已交付；**UI-B6 菜单视觉闸门待评审** |
+
+### 关键实现说明
+- **TL-B12**：`setNewsRetained` 目标集合由 `news` 改为 `news_cache`，写入时保留已有 `isRetained`/`retainedAt`，retained 记录 cacheExpire=now+30d，普通记录 now+7d；`gradedCleanup()` 对 normal/retained 分批清理且含耗时统计（`cleanup: {removedNormal, removedRetained, durationMs}`）。
+- **TL-B13/TL-B14 云函数**：4 个新云函数均含 `package.json`（wx-server-sdk），`recordBrowse`/`getBrowseHistory` 设 `expireAt=now+7d` 实现 7 天 TTL。
+- **TL-B15/TL-B16 交互**：`reLaunch` 失败降级 `navigateBack`；dock 菜单与侧边栏互斥（遮罩阻断手势），点击 ⚙/空白收起。
+
+### 变更文件（按任务）
+- **TL-B11**：`cloudfunctions/getNewsList/index.js`、`cloudfunctions/refreshNews/sources/tianxing.js`、`cloudfunctions/refreshNews/sources/juhe.js`、`test/v11-category-contract.js`
+- **TL-B12**：`cloudfunctions/refreshNews/config.js`、`cloudfunctions/refreshNews/index.js`、`cloudfunctions/setNewsRetained/index.js`、`cloudfunctions/getNewsList/index.js`
+- **TL-B13**：`cloudfunctions/setUserFavorite/`、`cloudfunctions/getUserFavorites/`、`pages/detail/detail.js`、`utils/cloud.js`、`utils/request.js`、`app.js`
+- **TL-B14**：`cloudfunctions/recordBrowse/`、`cloudfunctions/getBrowseHistory/`、`pages/history/history.{js,wxml,wxss,json}`、`pages/detail/detail.{js,wxml,wxss}`、`utils/util.js`、`app.json`
+- **TL-B15**：`pages/detail/detail.wxml/wxss`（🏠 图标）、`pages/history/history.*`、`pages/favorites/favorites.*`（主页图标）
+- **TL-B16**：`pages/home/home.{js,wxml,wxss}`（⚙→dock 菜单）、`app.json`（pages 注册 history/favorites）
+- **追踪**：`TASK_BOARD.md`（TL-B11~B16 状态 → ✅ FS 实现完成）、`COMMLOG.md`（本记录）
+
+### ⚠️ 待办（非 FS 阻塞）
+- **Git 推送阻塞**：本地 commit 已领先 origin 1 个（claim commit `5cbcd89`）+ 本次未提交工作树；GitHub token 过期 + 所有 GitHub IP 不可达，push 待网络/凭证恢复后执行。
+- **UI 闸门**：UI-B4/B5/B6 设计评审待产品设计师；FS 已按「逻辑/页面可先行」裁定提前交付实现，评审通过即解除闸门标注。

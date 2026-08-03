@@ -24,8 +24,12 @@
     <view class="state-retry" bindtap="goBack">返回首页</view>
   </view>
 
-  <!-- 顶部栏：返回（左）+ 进度指示（右） -->
+  <!-- 顶部栏：返回主页（左 · TL-B15）+ 进度指示（右） -->
   <view class="nav-bar">
+    <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+      <text class="nav-home-icon">🏠</text>
+    </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
       <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
