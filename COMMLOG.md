@@ -1,3 +1,38 @@
+## [2026-08-03 15:30] 🔧 v5.2 聚合 API 修复：摘要缺失 + 串行拉取超时 | 会话：全栈开发
+
+### 一、背景
+
+v5.1 切换聚合 API 后部署，云函数日志显示两处致命问题：
+1. **42 条全部被拒**（validator 报"缺少摘要"）：聚合头条接口不返回 `description` 字段，`formatJuheNewsItem` 里 `rawItem.description || ''` 恒为空
+2. **3 秒超时**：7 个分类**串行**拉取 + 每次 300ms 间隔，从日志时间线看拉取耗时 **3.67 秒**（07:19:06.679 → 07:19:10.348），还没开始写库就被杀死
+
+### 二、代码改动
+
+| 文件 | 改动 |
+|------|------|
+| `cloudfunctions/refreshNews/sources/juhe.js` | 摘要兜底（`description || title`）；`fetchAllCategories` 串行 → `Promise.all` 并行 |
+| `cloudfunctions/refreshNews/securityCheck.js` | `checkBatch` 分批并行（每批 10），避免 42 条串行 msgSecCheck 超时 |
+| `cloudfunctions/refreshNews/index.js` | 合并一次性写入 + `Promise.all` 并行清理旧缓存；perCategory 6→5 |
+
+### 三、关键数据
+
+- 并行拉取：**465ms**（对比串行 3.67s，提速 ~8 倍）
+- 本地验证：35 条拉取 444ms，校验 **34 通过 / 1 去重 / 0 拒绝**，全部分类有数据
+- 预计总耗时：拉取 0.45s + 校验 0.01s + 安全审核 ~0.5s + 写入 ~1.2s + 清理 ~0.3s ≈ **2.5s**（限 3s 内 ✅）
+
+### 四、提交
+
+- `git commit 1862ece`（main）
+- tag `v5-juhe` 已强制更新（35d2917 → 1862ece）
+- 回滚：`git tag v5-tianxing`（天行方案）/ `v3-ai-dual-engine`（AI 双引擎）
+
+### 五、待办
+
+- [ ] 产品经理重新部署 `refreshNews`（微信开发者工具右键 → 上传并部署：云端安装依赖）
+- [ ] 触发验证：不再超时、news_cache 有数据、分类齐全
+
+---
+
 ## [2026-08-03 12:54] 🆕 v5.0 天行 API 轻量列表缓存方案交付 · 转产品经理验收 | 会话：全栈开发
 
 ### 一、背景
