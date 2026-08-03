@@ -1,5 +1,9 @@
-// 新闻自动刷新云函数 v5.1 — 聚合 API 轻量列表缓存
+// 新闻自动刷新云函数 v5.7 — 聚合 API 轻量列表缓存（保留 AI 摘要）
 // ============================================================
+// v5.7 改造（2026-08-03）：
+//   写入前批量查询已有记录，若已有高质量 summary（AI 摘要/description）则复用，
+//   不覆盖。解决：getNewsDetail 生成 AI 摘要后，refreshNews 刷新会用标题兜底覆盖。
+//
 // v5.1 改造（2026-07-31）：
 //   数据源从「天行数据」切换到「聚合数据（Juhe）」。
 //   聚合优势：单一接口 + type 参数切换分类，比天行多 endpoint 更简洁。
@@ -66,8 +70,10 @@ async function batchParallel(items, fn, batchSize = 10) {
 
 /**
  * 批量写入新闻到 news_cache（仅缓存集合，不再双写 news）
+ * v5.7：写入前批量查询已有记录，若已存在高质量 summary（AI 摘要）则复用，不覆盖。
+ *       解决：getNewsDetail 生成 AI 摘要后，refreshNews 刷新会用标题兜底覆盖。
  * v5.1：去掉 news 集合写入，只写 news_cache。news 集合由 getNewsDetail 按需写入。
- * 性能：每批 10 条并行写入，7 分类 ~40 条 ≈ 4 批，约 1.5s（远低于 3s 超时）
+ * 性能：一次批量查询（35 ids）+ 每批 10 条并行写入，约 1.7s（远低于 3s 超时）
  */
 async function batchInsert(newsList) {
   const now = Date.now()
@@ -75,14 +81,40 @@ async function batchInsert(newsList) {
   let inserted = 0
   let failed = 0
 
+  // 0. 批量查询已有记录（一次 DB 查询，用于复用 AI 摘要 / content）
+  const existMap = {}
+  try {
+    const ids = newsList.map(it => it.id)
+    // 分块查询（db.command.in 单次上限约 20-30 个）
+    for (let i = 0; i < ids.length; i += 20) {
+      const chunk = ids.slice(i, i + 20)
+      const res = await db.collection('news_cache').where({ id: db.command.in(chunk) }).get()
+      res.data.forEach(doc => { existMap[doc.id] = doc })
+    }
+  } catch (err) {
+    console.warn('[refreshNews] 查询已有记录失败，将不使用复用:', err.message)
+  }
+
   // 只写 news_cache（每批 10 条并行）
   await batchParallel(newsList, async (item) => {
     try {
+      const existed = existMap[item.id]
+      // 复用高质量 summary 的条件：已有 summary 与标题不同（说明是 AI 摘要或 description），
+      // 且长度明显大于标题兜底（标题兜底 = 标题全文）
+      let summary = item.summary
+      if (existed && existed.summary) {
+        const oldSum = existed.summary
+        const isTitleFallback = oldSum === existed.title
+        if (!isTitleFallback && oldSum.length >= 30) {
+          summary = oldSum // 保留已有高质量摘要（AI 生成或 description）
+        }
+      }
+
       await db.collection('news_cache').add({
         data: {
           id: item.id,
           title: item.title,
-          summary: item.summary,
+          summary,
           content: '',              // 留空，由 getNewsDetail 补写
           category: item.category,
           categoryName: item.categoryName,
