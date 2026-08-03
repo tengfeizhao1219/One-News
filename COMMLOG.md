@@ -3393,3 +3393,36 @@ zhipuSearch/DeepSeek → item.content(300-500字)
 - `COMMLOG.md`（本记录）
 
 > 注：本次仅认领登记，未改业务代码。GitHub 推送因沙箱网络限制暂挂起，恢复后统一 push。
+
+---
+
+## [2026-08-03] 全栈开发 交付 V5-ACCEPT 阻塞项 ①②③ | 会话：[全栈开发(FS)]
+
+### ① 补打 v3-ai-dual-engine 回滚 tag ✅
+- 已有 tag（会话中期已创建），指向 `5ce0c90`（v3 AI 双引擎基线）。
+- 更新 tag 注释：明确回滚场景（v5.0 天行方案/双数据源降级稳定性退化）、关键特征（智谱/DeepSeek 双引擎、3秒超时、不依赖外部 API）。
+- 网络恢复后需 `git push origin v3-ai-dual-engine` 推送 tag 到远端。
+
+### ② newsCleaner.js 补清洗规则 ✅（commit `fab4f9f`）
+- **新增函数** `removeInlineBracketedMeta()`：处理 "正文内容（责任编辑：王五）" 类行内括号包裹元信息。
+- **3 条正则**：成对括号 `（责任人：XXX）`、行尾悬挂括号 `（责任人：XXX`、行尾纯冒号 `责任人：XXX`。
+- **接入清洗流水线**：第 5.2 层（位于 removeTrailingNoise 之后、removeRedundantParagraphs 之前）。
+- **行级规则增强**：`removeNoiseLines` 中将原 `/^(责任编辑|编辑|作者)[：:]/i` 改为括号包裹兼容形态 `/[（(]?(责任编辑|编辑|作者|责编|审核|校对|监制)[：:][^）)]*[）)]?/i`。
+- **同步 getNewsDetail**：`cloudfunctions/getNewsDetail/utils/newsCleaner.js` 已同步。
+- **复验结果**：真实正文场景（多段落+文末括号元信息）完美通过；正常含"责任编辑"的正文不会被误删。
+
+### ③ 部署指南（需用户在微信开发者工具操作）⏸
+见下方部署清单。沙箱环境 GitHub 网络不通，所有本地提交（`26b43e1` 认领 + `fab4f9f` 清洗修复）待网络恢复后统一 push。
+
+### 变更文件
+- `cloudfunctions/refreshNews/utils/newsCleaner.js` — 新增 removeInlineBracketedMeta + 行级规则增强
+- `cloudfunctions/getNewsDetail/utils/newsCleaner.js` — 同步
+- `TASK_BOARD.md` — V5-ACCEPT 阻塞项认领标注
+- `COMMLOG.md` — 认领记录 + 本记录
+
+### 本地待推送 commits
+```
+26b43e1 FS 认领 V5-ACCEPT 阻塞项 3 条 — 看板标注 + COMMLOG 记录
+d456b0c fix(refreshNews): config.json 声明 openapi 权限 (msgSecCheck + imgSecCheck)
+fab4f9f fix(newsCleaner): 补清洗规则 — 括号包裹形态（责任编辑：王五）+ 行内元信息清理
+```
