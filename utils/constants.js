@@ -4,9 +4,10 @@ const CATEGORIES = [
   { id: 'all', name: '全部' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
-  { id: 'sports', name: '体育' },
-  { id: 'life', name: '生活' },
-  // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）]
+  { id: 'sports', name: '科学探索' },
+  { id: 'life', name: '社会' },
+  // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
+]
 
 const CATEGORY_MAP = {}
 CATEGORIES.forEach(c => { CATEGORY_MAP[c.id] = c.name })

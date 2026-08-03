@@ -73,9 +73,21 @@ function validateNewsItem(item) {
     return { valid: false, reason: `摘要过长 (${summary.length}字)` }
   }
 
-  // 3. 来源白名单
-  if (!VALID_SOURCES.has(item.source)) {
-    return { valid: false, reason: `来源不在白名单: ${item.source}` }
+  // 3. 来源白名单（v5.0 改造：天行/聚合等第三方 API 返回真实来源，不再严格限制白名单）
+  //    仅做基本检查：来源不能为空、不能是占位符、不能是广告推广
+  const source = item.source.trim()
+  if (!source || source.length < 2) {
+    return { valid: false, reason: '来源为空或太短' }
+  }
+  // 排除明显的占位符/推广来源
+  const invalidSourcePatterns = [
+    /^来源$/, /^未知$/, /^Unknown$/i, /^未命名$/,
+    /广告/, /推广/, /Sponsored/i,
+  ]
+  for (const pattern of invalidSourcePatterns) {
+    if (pattern.test(source)) {
+      return { valid: false, reason: `来源无效: ${source}` }
+    }
   }
 
   // 4. 内容质量 — 过滤明显的垃圾内容

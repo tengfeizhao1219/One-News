@@ -3,15 +3,14 @@
  * ============================================================
  * 从多个分类接口获取新闻标题列表（不抓正文），适配 3 秒云函数超时。
  *
- * 分类 → 天行接口映射：
- *   recommend → generalnews（综合新闻）
- *   tech      → it（IT 科技）
- *   sports    → ti yu（体育）
+ * 分类 → 天行接口映射（按用户 Key 可用接口配置）：
+ *   recommend     → generalnews（综合新闻）
+ *   tech          → it（IT 科技）
+ *   sports        → sicprobe（科学探索）
  *   international → world（国际）
- *   life      → health（健康/生活）
- *   finance   → caijing（财经）
- *   entertainment → yu le（娱乐）
- *   all       → 综合拉取
+ *   life          → social（社会）
+ *   finance       → internet（互联网资讯）
+ *   entertainment → woman（女性）
  *
  * 环境变量：
  *   TIAN_API_KEY — 天行数据 API Key
@@ -23,21 +22,21 @@ const config = require('../config')
 const CATEGORY_ENDPOINTS = {
   recommend: 'generalnews',
   tech: 'it',
-  sports: 'tiyu',
+  sports: 'sicprobe',
   international: 'world',
-  life: 'health',
-  finance: 'caijing',
-  entertainment: 'yule',
+  life: 'social',
+  finance: 'internet',
+  entertainment: 'woman',
 }
 
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '体育',
+  sports: '科学探索',
   international: '国际',
-  life: '生活',
-  finance: '财经',
-  entertainment: '娱乐',
+  life: '社会',
+  finance: '互联网资讯',
+  entertainment: '女性',
 }
 
 /**
@@ -75,7 +74,16 @@ async function fetchTianNewsList(category, num = 10) {
             resolve([])
             return
           }
-          const newsList = (result.result && result.result.list) || []
+          // 天行分类接口返回的新闻数组字段统一为 newslist（部分旧接口为 list，做兼容）
+          const newsList = (result.result && (result.result.newslist || result.result.list)) || []
+          if (newsList.length === 0) {
+            console.log(`[tianxing] ${category} 响应结构:`, JSON.stringify({
+              code: result.code,
+              msg: result.msg,
+              resultKeys: result.result ? Object.keys(result.result) : null,
+              sample: result.result ? JSON.stringify(result.result).slice(0, 200) : null,
+            }))
+          }
           console.log(`[tianxing] ${category} 获取 ${newsList.length} 条`)
           resolve(newsList)
         } catch (e) {
@@ -132,7 +140,7 @@ async function fetchAllCategories(categories, perCategory = 10) {
   const results = []
   const stats = {}
 
-  // 串行请求（避免同时打太多并发导致天行限流）
+  // 串行请求，分类间加 300ms 间隔（防天行 rate limit: code=130）
   for (const category of categories) {
     try {
       const rawList = await fetchTianNewsList(category, perCategory)
@@ -142,6 +150,11 @@ async function fetchAllCategories(categories, perCategory = 10) {
     } catch (err) {
       console.error(`[tianxing] ${category} 失败:`, err.message)
       stats[category] = 0
+    }
+
+    // 分类间延迟 300ms（最后一个分类后无需等待）
+    if (category !== categories[categories.length - 1]) {
+      await new Promise(resolve => setTimeout(resolve, 300))
     }
   }
 
