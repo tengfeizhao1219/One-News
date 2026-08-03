@@ -1,8 +1,13 @@
-// 获取新闻详情云函数 v5.0 — 按需抓取正文 + 多层清洗
+// 获取新闻详情云函数 v5.3 — 兼容 news_cache 集合（v5 只写 news_cache）
 // ============================================================
-// v5.0 改造（2026-08-03）：
+// v5.3 改造（2026-08-03）：
+//   v5.1 后 refreshNews 为适配 3 秒超时，只写 news_cache，不再双写 news 集合。
+//   详情页点击时必须支持从 news_cache 读取（否则报"新闻不存在"）。
+//   查询顺序：news 集合（历史 AI 版本遗留）→ news_cache 集合（v5 当前数据源）。
+//
+// v5.0 原逻辑：
 //   refreshNews 只缓存标题列表（不含正文），详情页用户点击时调用本函数：
-//     1. 先从 news 集合查缓存（如果有 content 则直接返回）
+//     1. 先从集合查缓存（如果有 content 则直接返回）
 //     2. 如果没有 content，从 sourceUrl 抓取原文 → 清洗 → 返回并缓存
 //     3. 如果没有 sourceUrl，返回 title + summary
 //
@@ -101,19 +106,74 @@ function extractContentFromHtml(html) {
 }
 
 /**
- * 补写 news 集合中的 content 字段（缓存正文，下次不再抓取）
+ * 按 newsId 查找新闻文档（v5.3：news 集合 → news_cache 集合兜底）
+ * @param {string} newsId  - 前端传入的 id（juhe_xxx）或数据库 _id
+ * @returns {Promise<{doc: Object, collection: string}|null>}
  */
-async function cacheContent(newsId, content) {
+async function findNewsDoc(newsId) {
+  // 1. news 集合（历史 AI 版本遗留数据）
   try {
     const res = await db.collection('news').where({ id: newsId }).get()
     if (res.data && res.data.length > 0) {
-      await db.collection('news').doc(res.data[0]._id).update({
+      return { doc: res.data[0], collection: 'news' }
+    }
+  } catch (e) {
+    console.warn('[getNewsDetail] news 集合按 id 查询失败:', e && e.message)
+  }
+
+  // 2. news_cache 集合按 id（v5 当前数据源）
+  try {
+    const res = await db.collection('news_cache').where({ id: newsId }).get()
+    if (res.data && res.data.length > 0) {
+      return { doc: res.data[0], collection: 'news_cache' }
+    }
+  } catch (e) {
+    console.warn('[getNewsDetail] news_cache 按 id 查询失败:', e && e.message)
+  }
+
+  // 3. news_cache 集合按 _id（前端可能直接传数据库 _id）
+  try {
+    const res = await db.collection('news_cache').doc(newsId).get()
+    if (res.data && res.data._id) {
+      return { doc: res.data, collection: 'news_cache' }
+    }
+  } catch (e) {
+    // 忽略：可能不是合法 _id
+  }
+
+  return null
+}
+
+/**
+ * 补写来源集合中的 content 字段（缓存正文，下次不再抓取）
+ * @param {string} collection - 'news' 或 'news_cache'
+ * @param {string} newsId
+ * @param {string} content
+ */
+async function cacheContent(collection, newsId, content) {
+  try {
+    const res = await db.collection(collection).where({ id: newsId }).get()
+    if (res.data && res.data.length > 0) {
+      await db.collection(collection).doc(res.data[0]._id).update({
         data: { content, updatedAt: Date.now() },
       })
     }
   } catch (err) {
-    console.warn(`[getNewsDetail] 缓存 content 失败 [${newsId}]:`, err.message)
+    console.warn(`[getNewsDetail] 缓存 content 失败 [${newsId}] @${collection}:`, err.message)
   }
+}
+
+/**
+ * 阅读数 +1（非阻塞）
+ * @param {string} collection
+ * @param {string} realId  - 数据库 _id
+ */
+function bumpViewCount(collection, realId) {
+  try {
+    db.collection(collection).doc(realId).update({
+      data: { viewCount: _.inc(1) },
+    }).catch(() => {})
+  } catch (_) {}
 }
 
 // ─── 主函数 ─────────────────────────────────────────
@@ -125,35 +185,35 @@ exports.main = async (event) => {
     return { code: -1, message: '缺少 newsId 参数' }
   }
 
-  console.log(`[getNewsDetail] v5.0 查询 newsId=${newsId}`)
+  console.log(`[getNewsDetail] v5.3 查询 newsId=${newsId}`)
 
-  // ── 第 1 步：查 news 集合 ──
-  let doc
+  // ── 第 1 步：查集合（news → news_cache）──
+  let found
   try {
-    const res = await db.collection('news').where({ id: newsId }).get()
-    if (!res.data || res.data.length === 0) {
-      return { code: -1, message: '新闻不存在或已过期', errorCode: 'NO_DATA' }
-    }
-    doc = res.data[0]
+    found = await findNewsDoc(newsId)
   } catch (e) {
-    console.warn('[getNewsDetail] news 集合查询失败:', e && e.message)
+    console.warn('[getNewsDetail] 查询失败:', e && e.message)
+  }
+
+  if (!found) {
+    console.warn(`[getNewsDetail] 新闻不存在: ${newsId}`)
     return { code: -1, message: '新闻不存在或已过期', errorCode: 'NO_DATA' }
   }
+
+  const { doc, collection } = found
+  console.log(`[getNewsDetail] 命中集合: ${collection}, id=${doc._id}`)
 
   // ── 第 2 步：如果已有 content（已抓取过），直接返回 ──
   if (doc.content && doc.content.trim().length > 30) {
     console.log(`[getNewsDetail] 命中缓存 content (${doc.content.length} 字符)`)
 
     // 阅读数+1（非阻塞）
-    const realId = doc._id
-    db.collection('news').doc(realId).update({
-      data: { viewCount: _.inc(1) },
-    }).catch(() => {})
+    bumpViewCount(collection, doc._id)
 
     return {
       code: 0,
       data: doc,
-      meta: { source: 'news_cache', engine: 'tianxing' },
+      meta: { source: collection, contentSource: 'cached', engine: 'juhe' },
     }
   }
 
@@ -199,16 +259,13 @@ exports.main = async (event) => {
     console.log('[getNewsDetail] 使用 summary 兜底')
   }
 
-  // ── 第 5 步：补写 content 到 news 集合（下次直接命中缓存）──
+  // ── 第 5 步：补写 content 到来源集合（下次直接命中缓存）──
   if (finalContent && contentSource !== 'fallback') {
-    cacheContent(newsId, finalContent)
+    cacheContent(collection, newsId, finalContent)
   }
 
   // ── 第 6 步：阅读数+1 + 返回 ──
-  const realId = doc._id
-  db.collection('news').doc(realId).update({
-    data: { viewCount: _.inc(1) },
-  }).catch(() => {})
+  bumpViewCount(collection, doc._id)
 
   const result = {
     ...doc,
@@ -218,6 +275,6 @@ exports.main = async (event) => {
   return {
     code: 0,
     data: result,
-    meta: { source: 'news', contentSource, engine: 'tianxing' },
+    meta: { source: collection, contentSource, engine: 'juhe' },
   }
 }
