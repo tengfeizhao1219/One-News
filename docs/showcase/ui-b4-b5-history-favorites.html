@@ -47,13 +47,11 @@
   .list-scroll { flex:1; overflow-y:auto; padding:8px 16px 40px; -webkit-overflow-scrolling:touch; }
   .list-item { display:flex; gap:12px; padding:14px 8px; border-bottom:1px solid var(--divider); align-items:flex-start; cursor:pointer; position:relative; border-radius:8px; }
   .list-item:active { background:color-mix(in srgb,var(--text-primary) 8%,transparent); }
-  .list-thumb { width:52px; height:52px; border-radius:10px; background:var(--tag-bg); flex-shrink:0; }
   .list-main { flex:1; min-width:0; }
   .list-main h4 { font-size:15px; color:var(--text-primary); line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
   .list-main .sub { font-size:11px; color:var(--text-secondary); }
   .badge { position:absolute; right:8px; bottom:10px; background:var(--sync-bg); color:var(--sync-text); font-size:11px; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:3px; }
-  .skeleton { padding:14px 8px; border-bottom:1px solid var(--divider); display:flex; gap:12px; }
-  .sk-thumb { width:52px; height:52px; border-radius:10px; background:var(--tag-bg); animation:pulse 1.2s infinite; }
+  .skeleton { padding:14px 8px; border-bottom:1px solid var(--divider); }
   .sk-lines { flex:1; }
   .sk-line { height:12px; border-radius:6px; background:var(--tag-bg); margin-bottom:8px; animation:pulse 1.2s infinite; }
   .sk-line.s1 { width:80%; } .sk-line.s2 { width:50%; height:10px; }
@@ -135,14 +133,14 @@
       <div class="navbar"><div class="home-btn" data-home="1"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3z"/></svg></div><div class="nav-center">浏览记录</div></div>
       <div class="sync-bar" id="histSync"></div>
       <div class="list-scroll" id="histList">
-        <div class="list-item" data-detail="ok"><div class="list-thumb"></div><div class="list-main"><h4>国产大模型推理成本一年下降 90%</h4><div class="sub">科技 · 今天 09:12</div></div></div>
-        <div class="list-item" data-detail="ok"><div class="list-thumb"></div><div class="list-main"><h4>央行重启逆回购，市场流动性预期改善</h4><div class="sub">财经 · 昨天 21:30</div></div></div>
-        <div class="list-item" data-detail="invalid"><div class="list-thumb"></div><div class="list-main"><h4>台风路径调整，沿海发布黄色预警</h4><div class="sub">社会 · 3 天前</div></div></div>
+        <div class="list-item" data-detail="ok"><div class="list-main"><h4>国产大模型推理成本一年下降 90%</h4><div class="sub">科技 · 今天 09:12</div></div></div>
+        <div class="list-item" data-detail="ok"><div class="list-main"><h4>央行重启逆回购，市场流动性预期改善</h4><div class="sub">财经 · 昨天 21:30</div></div></div>
+        <div class="list-item" data-detail="invalid"><div class="list-main"><h4>台风路径调整，沿海发布黄色预警</h4><div class="sub">社会 · 3 天前</div></div></div>
       </div>
       <div class="list-scroll" id="histLoading" style="display:none">
-        <div class="skeleton"><div class="sk-thumb"></div><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
-        <div class="skeleton"><div class="sk-thumb"></div><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
-        <div class="skeleton"><div class="sk-thumb"></div><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
+        <div class="skeleton"><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
+        <div class="skeleton"><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
+        <div class="skeleton"><div class="sk-lines"><div class="sk-line s1"></div><div class="sk-line s2"></div></div></div>
       </div>
       <div class="empty" id="histEmpty"><svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.94 10H21.9A7 7 0 1 1 13 5v3l4-4-4-4v3z"/></svg><p>暂无浏览记录</p><button class="guide">去首页看看</button></div>
     </div>
@@ -153,8 +151,8 @@
       <div class="sync-bar" id="favSync"></div>
       <div class="fail-bar" id="favFail">⚠️ 收藏同步失败，点击重试</div>
       <div class="list-scroll" id="favList">
-        <div class="list-item"><div class="list-thumb"></div><div class="list-main"><h4>端侧大模型部署的隐私合规边界</h4><div class="sub">科技 · 已收藏</div></div><span class="badge">☁️ 待同步</span></div>
-        <div class="list-item"><div class="list-thumb"></div><div class="list-main"><h4>一文读懂逆回购工具</h4><div class="sub">财经 · 已收藏</div></div></div>
+        <div class="list-item"><div class="list-main"><h4>端侧大模型部署的隐私合规边界</h4><div class="sub">科技 · 已收藏</div></div><span class="badge">☁️ 待同步</span></div>
+        <div class="list-item"><div class="list-main"><h4>一文读懂逆回购工具</h4><div class="sub">财经 · 已收藏</div></div></div>
       </div>
       <div class="empty" id="favEmpty"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.1 1.6 4.5 5 4.5c2 0 3.3 1.1 4 2.2.7-1.1 2-2.2 4-2.2 3.4 0 4.7 3.6 3 7.2C19.5 16.4 12 21 12 21z"/></svg><p>暂无收藏</p></div>
     </div>
@@ -183,7 +181,7 @@
     <table>
       <tr><th>项</th><th>规格</th></tr>
       <tr><td>UI-01 框架</td><td>导航栏「浏览记录」+ 列表/空态/加载态三态齐备（入口经 ⚙ dock 菜单，非侧边栏）</td></tr>
-      <tr><td>UI-02 列表项</td><td>标题 2 行截断（28rpx）+ 次行「来源 · 相对时间」（22rpx）</td></tr>
+      <tr><td>UI-02 列表项</td><td>标题 2 行截断（28rpx）+ 次行「来源 · 相对时间」（22rpx），无缩略图</td></tr>
       <tr><td>UI-03 相对时间</td><td>今天→<code>HH:mm</code>；昨天→<code>昨天</code>；2~7天→<code>N 天前</code>；&gt;7天不展示</td></tr>
       <tr><td>UI-04 空态</td><td>🕘 64rpx + 「暂无浏览记录」+ 引导按钮「去首页看看」</td></tr>
       <tr><td>UI-05 加载</td><td>骨架屏 3~5 条（亮/暗各一套）</td></tr>
