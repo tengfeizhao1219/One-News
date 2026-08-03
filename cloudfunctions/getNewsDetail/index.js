@@ -446,7 +446,7 @@ exports.main = async (event) => {
     return { code: -1, message: '缺少 newsId 参数' }
   }
 
-  console.log(`[getNewsDetail] v5.3 查询 newsId=${newsId}`)
+  console.log(`[getNewsDetail] v5.6 查询 newsId=${newsId}`)
 
   // ── 第 1 步：查集合（news → news_cache）──
   let found
