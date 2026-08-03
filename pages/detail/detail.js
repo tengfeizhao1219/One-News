@@ -422,16 +422,6 @@ Page({
     }, 350)
   },
 
-  // ============ 按钮翻页 ============
-
-  goPrev: function () {
-    this._swipeToPrev()
-  },
-
-  goNext: function () {
-    this._swipeToNext()
-  },
-
   // ============ 跨分类视觉 ============
 
   /**

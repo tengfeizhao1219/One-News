@@ -70,36 +70,6 @@
 /* 下滑翻上一条：新内容从上方滑入（-100vh→0） */
 .article.in-down  { transform: translateY(-100vh); opacity: 0; }
 
-/* 上下翻页按钮 */
-.pager-hint {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 220rpx;
-  display: flex;
-  justify-content: space-between;
-  padding: 0 48rpx;
-  pointer-events: none;
-  z-index: 18;
-}
-.pager-btn {
-  pointer-events: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 40rpx;
-  line-height: 1.1;
-  color: var(--text-secondary);
-  background-color: var(--tag-bg, rgba(0,0,0,0.04));
-  padding: 14rpx 22rpx;
-  border-radius: 20rpx;
-}
-.pager-btn text {
-  font-size: calc(22rpx * var(--font-scale));
-  margin-top: 4rpx;
-  letter-spacing: 1rpx;
-}
-
 /* ============ 边界提示 Chip ============ */
 
 .boundary-chip {
@@ -405,8 +375,6 @@
   .detail-meta text,
   .source-link,
   .nav-position,
-  .pager-btn,
-  .pager-btn text,
   .bottom-bar-btn,
   .bottom-bar-label,
   .bottom-bar-icon,
