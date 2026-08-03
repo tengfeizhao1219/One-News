@@ -1,10 +1,10 @@
-// 请求层封装 — 云函数模式（v5 起：纯真实数据，不再使用 Mock）
+// 请求层封装 — 云函数模式（全链路真实数据，无 Mock 兜底）
 //
 // 数据流架构：
 //   前端 → 云函数 getNewsList / getNewsDetail / refreshNews
-//          └─ 天行实时 API（第一优先级）→ 内存缓存 → 云数据库 → 聚合降级 → AI 静态缓存兜底
+//          └─ 智谱/DeepSeek 双引擎 AI 生成 → 云数据库
 //
-// 说明：Mock 模式（AI 新闻缓存 + 模拟器）已于 v5 清理，小程序只读取云端真实新闻。
+// 2026-08-03 owner 裁定：全链路真实数据，所有 mock 数据文件已物理删除。
 
 const { PAGE_SIZE, CATEGORY_MAP } = require('./constants')
 const { formatRelativeTime } = require('./util')
