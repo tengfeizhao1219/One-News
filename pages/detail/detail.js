@@ -61,7 +61,7 @@ Page({
   onLoad: function (options) {
     var id = options.id
     var index = parseInt(options.index, 10) || 0
-    var category = options.category || 'recommend'
+    var category = options.category || 'all'
 
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
@@ -466,34 +466,6 @@ Page({
     wx.navigateBack()
   },
 
-  /**
-   * FE-B3 / UX-SIMPLIFY07: 原文链接交互 — ActionSheet（复制链接 / 分享给朋友）
-   */
-  openSourceUrl: function () {
-    var news = this.data.news || {}
-    var url = news.sourceUrl
-    if (!url) {
-      wx.showToast({ title: '暂无原文链接', icon: 'none' })
-      return
-    }
-    wx.showActionSheet({
-      itemList: ['复制链接', '分享给朋友'],
-      success: function (res) {
-        if (res.tapIndex === 0) {
-          wx.setClipboardData({
-            data: url,
-            success: function () {
-              wx.showToast({ title: '链接已复制', icon: 'success' })
-            },
-          })
-        } else if (res.tapIndex === 1) {
-          // 微信不支持以代码拉起分享面板，引导用户点击底部「分享」按钮
-          wx.showToast({ title: '点底部「分享」即可发给朋友', icon: 'none' })
-        }
-      },
-    })
-  },
-
   // ============ 分享（B-05 + UX-FIX02 占位图预缓存） ============
 
   /**
@@ -503,7 +475,7 @@ Page({
    */
   _pregenPlaceholder: function (category) {
     var that = this
-    var cat = category || this.data.category || 'recommend'
+    var cat = category || this.data.category || 'all'
     var isDark = this._isSystemDark()
 
     // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）

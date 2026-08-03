@@ -1,7 +1,7 @@
 // 常量定义
+// S6: owner 2026-08-02 决策，「全部」与「推荐」合并为一个分类，保留 all ID 与「全部」名称
 const CATEGORIES = [
   { id: 'all', name: '全部' },
-  { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
   { id: 'sports', name: '体育' },

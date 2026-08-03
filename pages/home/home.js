@@ -216,10 +216,9 @@ Page({
     }
   },
 
-  // 下拉刷新（UX-FIX-F2：与顶栏「R」语义对齐，都走强制云刷新；
-  // FE-C1 后 onRefreshNews 已统一数据源（loadCategory/loadNews → _syncPanelList），无需再清侧栏缓存）
+  // 下拉刷新（S4 owner 2026-08-02 决策：取消 R 按钮，刷新入口统一为下拉刷新）
   onPullDownRefresh() {
-    this.onRefreshNews().finally(() => {
+    this._refreshNewsCloud().finally(() => {
       wx.stopPullDownRefresh()
     })
   },
@@ -229,8 +228,10 @@ Page({
     this.loadNews()
   },
 
-  // 手动刷新新闻
-  async onRefreshNews() {
+  /**
+   * 云函数强制拉新（S4 取消 R 按钮后改为私有方法，仅由下拉刷新调用）
+   */
+  async _refreshNewsCloud() {
     if (this.data.isRefreshing) return
 
     this.setData({ isRefreshing: true })
@@ -254,7 +255,7 @@ Page({
         })
       }
     } catch (err) {
-      console.error('手动刷新失败:', err)
+      console.error('下拉刷新失败:', err)
       wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
     }
 
@@ -713,7 +714,7 @@ Page({
       if (!favItem) return
       // 设置详情页上下文（收藏列表作为阅读上下文）
       app.globalData.detailContext = { category: favItem.category, list: this.data.favList }
-      var url = '/pages/detail/detail?id=' + favItem.id + '&index=' + idx + '&category=' + (favItem.category || 'recommend')
+      var url = '/pages/detail/detail?id=' + favItem.id + '&index=' + idx + '&category=' + (favItem.category || 'all')
       wx.navigateTo({
         url: url,
         fail: function (err) { console.error('[home] navigateTo fav fail:', err) }

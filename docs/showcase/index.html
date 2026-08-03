@@ -475,8 +475,18 @@
         </div></div>
         <div class="finding P0"><div class="badge">P0</div><div>
           <h4>「R」刷新语义 ≠ 下拉刷新 — 已修复</h4>
-          <p><code>onPullDownRefresh</code> 已改为调用 <code>onRefreshNews()</code>，下拉与顶栏「R」语义等价，均走云函数强制拉新。</p>
-          <div class="owner">已上线 · PM（S4 是否合并入口仍待定）/ 前端开发</div>
+          <p><code>onPullDownRefresh</code> 已走云函数强制拉新；owner 最终决策 S4 取消 R 按钮，刷新入口统一为下拉刷新。</p>
+          <div class="owner">已上线 · owner 决策 / 前端开发</div>
+        </div></div>
+        <div class="finding P2"><div class="badge">P2</div><div>
+          <h4>S6 全部/推荐合并 — 已落地</h4>
+          <p>constants.js 移除 recommend，保留 all；所有 fallback 已替换。</p>
+          <div class="owner">已上线 · owner 决策 / 前端开发</div>
+        </div></div>
+        <div class="finding P2"><div class="badge">P2</div><div>
+          <h4>S7 删除原文链接 — 已落地</h4>
+          <p>详情页「原文↗」入口、openSourceUrl 方法及相关样式已删除。</p>
+          <div class="owner">已上线 · owner 决策 / 前端开发</div>
         </div></div>
         <div class="finding P0"><div class="badge">P0</div><div>
           <h4>顶栏按钮触控热区不足 — 已修复</h4>

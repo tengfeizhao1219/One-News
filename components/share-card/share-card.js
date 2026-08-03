@@ -1,8 +1,9 @@
 // 分享卡片组件 — Canvas 生成 8 分类主题色占位图 400×300
 // 提供 generateImage(category, isDark) → Promise<string> 供 detail.js onShareAppMessage 使用
 
+// S6: 「全部」与「推荐」合并为 all，分享卡片中保留 all 作为兜底分类
 var CATEGORY_MAP = {
-  recommend:    { light: '#FF3B30', dark: '#FF453A', name: '推荐' },
+  all:          { light: '#FF3B30', dark: '#FF453A', name: '全部' },
   tech:         { light: '#007AFF', dark: '#60A5FA', name: '科技' },
   international:{ light: '#5856D6', dark: '#818CF8', name: '国际' },
   sports:       { light: '#FF9500', dark: '#F97316', name: '体育' },
@@ -68,7 +69,7 @@ Component({
       var ctx = this._ctx
       var w = this.data.canvasWidth
       var h = this.data.canvasHeight
-      var info = CATEGORY_MAP[category] || CATEGORY_MAP.recommend
+      var info = CATEGORY_MAP[category] || CATEGORY_MAP.all
       var bg = isDark ? info.dark : info.light
 
       try {
@@ -101,7 +102,7 @@ Component({
      * 获取分类色（供外部引用）
      */
     getCategoryColor: function (category, isDark) {
-      var info = CATEGORY_MAP[category] || CATEGORY_MAP.recommend
+      var info = CATEGORY_MAP[category] || CATEGORY_MAP.all
       return isDark ? info.dark : info.light
     },
   },

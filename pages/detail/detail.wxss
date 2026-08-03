@@ -181,19 +181,8 @@
   flex-wrap: wrap;
 }
 
-/* FE-B3 / UX-SIMPLIFY07: 原文链接低噪点入口 */
-.source-link {
-  color: var(--color-link, var(--primary));
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  padding: 2rpx 12rpx;
-  border: 1rpx solid var(--divider);
-  border-radius: 20rpx;
-  margin-left: 4rpx;
-}
-
-.source-link:active {
-  opacity: 0.6;
-}
+/* S7: owner 2026-08-02 决策，原文链接入口已删除；以下样式保留历史记录 */
+/* .source-link { ... } */
 
 .detail-source-link text {
   display: inline-flex;
@@ -326,8 +315,7 @@
   overflow: hidden;
 }
 
-[data-font-scale="3"] .detail-meta,
-[data-font-scale="3"] .source-link {
+[data-font-scale="3"] .detail-meta {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
