@@ -111,18 +111,54 @@
   }
   .nav-center .progress { font-size: 13px; color: var(--text-body); }
 
-  /* ============ 首页 ============ */
-  .home-scroll { flex: 1; overflow-y: auto; padding: 16px 16px 120px; -webkit-overflow-scrolling: touch; }
-  .card {
-    background: var(--bg-card); border-radius: 18px; padding: 20px;
-    box-shadow: 0 8px 32px var(--overlay); margin-bottom: 16px;
-    border: 1px solid var(--divider);
+  /* ============ 首页：全屏单卡片流（回归原始设计，owner 2026-08-04 确认） ============
+     1:1 镜像 pages/home/home.wxss 卡片规格：一次只展示一条新闻，标题+元信息+摘要直出 */
+  .card-stage { position: absolute; inset: 0; z-index: 1; overflow: hidden; }
+  .fs-card {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg-card); display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none;
+    transition: transform .35s cubic-bezier(.25,.1,.25,1), opacity .35s ease;
   }
-  .card .cat { display: inline-block; font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--tag-bg); color: var(--tag-text); margin-bottom: 12px; }
-  .card h2 { font-family: var(--serif); font-size: 21px; line-height: 1.35; color: var(--text-primary); margin-bottom: 8px; }
-  .card .meta { font-size: 11px; color: var(--text-secondary); margin-bottom: 12px; }   /* 22rpx 锁定值 */
-  .card .summary { font-size: 14px; color: var(--text-body); line-height: 1.7;
-    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .fs-card.active { opacity: 1; pointer-events: auto; z-index: 2; }
+  .fs-card.above { opacity: 0; z-index: 1; }
+  .fs-card.below { opacity: 0; z-index: 1; }
+  .fs-body {
+    flex: 1; padding: 60px 32px 24px;   /* 120rpx 64rpx 48rpx */
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .fs-title {
+    font-size: 26px; font-weight: 700; color: var(--text-primary);  /* 52rpx Bold */
+    line-height: 1.35; margin-bottom: 14px; letter-spacing: -0.5px; /* 28rpx */
+    word-break: break-word; overflow-wrap: anywhere;
+    overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  }
+  .fs-meta {
+    display: flex; align-items: center; gap: 8px; font-size: 11px;  /* 22rpx */
+    color: var(--text-secondary); margin-bottom: 10px; letter-spacing: .5px;
+  }
+  .fs-cat { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 999px;
+    background: var(--tag-bg); color: var(--tag-text); }
+  .fs-summary { margin-bottom: 24px; margin-top: 14px; }            /* 48rpx 28rpx */
+  .fs-summary-p {
+    font-family: var(--serif); font-size: 16px; color: var(--text-body);  /* 32rpx 衬线 */
+    line-height: 1.85; margin-bottom: 12px; letter-spacing: .5px;          /* 24rpx 段距 */
+  }
+  .swipe-hint {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; text-align: center; padding: 12px 0 36px; flex-shrink: 0;
+    font-size: 8px; color: var(--text-secondary); opacity: .45;
+  }
+  .swipe-hint-icon { font-size: 14px; line-height: 1; }
+  .swipe-hint-text { font-size: 9px; letter-spacing: 2px; font-weight: 300; }
+  .nav-dots {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px; z-index: 25; padding: 10px 0;
+  }
+  .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary);
+    opacity: .4; cursor: pointer; transition: all .2s var(--ease); }
+  .nav-dot.active { opacity: 1; background: var(--text-primary); transform: scale(1.35); }
 
   /* 右下角 ⚙ 浮动按钮 */
   .fab {
@@ -233,19 +269,47 @@
 
     <!-- 首页 -->
     <div class="screen active" id="screen-home">
-      <div class="home-scroll">
-        <div class="card">
-          <span class="cat">科技</span>
-          <h2>国产大模型推理成本一年下降 90%，端侧部署成新战场</h2>
-          <div class="meta">新华社 · 2 小时前 · 阅读 3.2万</div>
-          <div class="summary">随着算力优化与蒸馏技术成熟，主流大模型推理单价较去年同期大幅下探，多家厂商将战场推向手机与车机等端侧场景……</div>
+      <!-- 全屏单卡片流：一次一条新闻，标题 + 摘要正文直出（不截断、无需进入详情才看摘要） -->
+      <div class="card-stage" id="cardStage">
+        <div class="fs-card active">
+          <div class="fs-body">
+            <div class="fs-title">国产大模型推理成本一年下降 90%，端侧部署成新战场</div>
+            <div class="fs-meta"><span class="fs-cat">科技</span><span>新华社</span><span>·</span><span>2 小时前</span></div>
+            <div class="fs-summary">
+              <p class="fs-summary-p">随着算力优化与蒸馏技术成熟，主流大模型推理单价较去年同期大幅下探。多家厂商将战场推向手机与车机等端侧场景，力求在更低功耗下维持可用体验。</p>
+              <p class="fs-summary-p">行业分析认为，成本曲线的陡峭下降正在重塑应用层创业逻辑——过去需要订阅才能支撑的 AI 功能，如今有望以近乎免费的方式嵌入日常工具。</p>
+            </div>
+          </div>
+          <div class="swipe-hint"><span class="swipe-hint-icon">⇅</span><span class="swipe-hint-text">上滑阅读下一条</span></div>
         </div>
-        <div class="card">
-          <span class="cat">财经</span>
-          <h2>央行重启逆回购，市场流动性预期改善</h2>
-          <div class="meta">财经日报 · 3 小时前 · 阅读 1.8万</div>
-          <div class="summary">本周公开市场操作净投放规模扩大，机构解读为呵护季末资金面，债市收益率应声下行……</div>
+        <div class="fs-card">
+          <div class="fs-body">
+            <div class="fs-title">央行重启逆回购，市场流动性预期改善</div>
+            <div class="fs-meta"><span class="fs-cat">财经</span><span>财经日报</span><span>·</span><span>3 小时前</span></div>
+            <div class="fs-summary">
+              <p class="fs-summary-p">本周公开市场操作净投放规模扩大，机构解读为呵护季末资金面的明确信号。逆回购利率保持稳定，短端利率小幅回落。</p>
+              <p class="fs-summary-p">债市方面，十年期国债收益率应声下行，市场对后续货币政策保持谨慎乐观，短期内预计维持「以稳为主」的基调。</p>
+            </div>
+          </div>
+          <div class="swipe-hint"><span class="swipe-hint-icon">⇅</span><span class="swipe-hint-text">上滑阅读下一条</span></div>
         </div>
+        <div class="fs-card">
+          <div class="fs-body">
+            <div class="fs-title">台风路径调整，沿海多地发布黄色预警</div>
+            <div class="fs-meta"><span class="fs-cat">社会</span><span>气象台</span><span>·</span><span>4 小时前</span></div>
+            <div class="fs-summary">
+              <p class="fs-summary-p">受副热带高压位置变化影响，台风路径较此前预报明显偏东。沿海多个城市已发布台风黄色预警，海事部门启动应急响应。</p>
+              <p class="fs-summary-p">气象部门提醒，未来 24 小时沿海风力将逐步增强，海上作业船只需及时回港避风，市民应减少不必要的户外活动。</p>
+            </div>
+          </div>
+          <div class="swipe-hint"><span class="swipe-hint-icon">⇅</span><span class="swipe-hint-text">上滑阅读下一条</span></div>
+        </div>
+      </div>
+      <!-- 导航指示点（可点击切换，模拟卡片流位置） -->
+      <div class="nav-dots" id="navDots">
+        <div class="nav-dot active" data-index="0"></div>
+        <div class="nav-dot" data-index="1"></div>
+        <div class="nav-dot" data-index="2"></div>
       </div>
       <!-- ⚙ 浮动按钮 -->
       <div class="fab" id="fab" title="更多功能">
@@ -415,6 +479,32 @@
   document.querySelectorAll('[data-home]').forEach(b=>{
     b.addEventListener('click',()=>{ showToast('wx.reLaunch → 首页（清除导航栈）'); setTimeout(()=>goPage('home'),500); });
   });
+
+  // ===== 首页全屏单卡片流：上滑/下滑切下一条，指示点点击切换，点击卡片进详情 =====
+  const fsCards = Array.from(document.querySelectorAll('.fs-card'));
+  const navDots = Array.from(document.querySelectorAll('.nav-dot'));
+  let cur = 0;
+  function showCard(i){
+    if(i<0 || i>=fsCards.length || i===cur) return;
+    fsCards[cur].classList.remove('active');
+    fsCards[cur].classList.add(i>cur ? 'above' : 'below');
+    cur = i;
+    fsCards[cur].classList.add('active');
+    fsCards[cur].classList.remove('above','below');
+    navDots.forEach((d,idx)=>d.classList.toggle('active', idx===cur));
+  }
+  const stage = document.getElementById('cardStage');
+  let touchY = 0, touchMoved = false;
+  stage.addEventListener('touchstart', e=>{ touchY = e.touches[0].clientY; touchMoved = false; }, {passive:true});
+  stage.addEventListener('touchmove', e=>{ if(Math.abs(e.touches[0].clientY - touchY) > 12) touchMoved = true; }, {passive:true});
+  stage.addEventListener('touchend', e=>{
+    const dy = e.changedTouches[0].clientY - touchY;
+    if(!touchMoved){ goPage('detail'); showToast('点击阅读全文（详情页）'); return; }
+    if(dy < -40) showCard(cur+1);       // 上滑 → 下一条
+    else if(dy > 40) showCard(cur-1);   // 下滑 → 上一条
+  });
+  stage.addEventListener('wheel', e=>{ if(e.deltaY>12) showCard(cur+1); else if(e.deltaY<-12) showCard(cur-1); }, {passive:true});
+  navDots.forEach(d=>d.addEventListener('click',()=>showCard(parseInt(d.dataset.index,10))));
 
   goPage('home');
 </script>
