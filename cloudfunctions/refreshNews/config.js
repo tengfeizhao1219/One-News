@@ -53,8 +53,19 @@ module.exports = {
   // 聚合数据 API（v5.1 主力数据源）
   juhe: {
     baseUrl: 'https://v.juhe.cn/toutiao/index',
+    contentUrl: 'https://v.juhe.cn/toutiao/content',
     apiKey: process.env.JUHE_API_KEY || '',
     timeout: 8000,
+  },
+
+  // 阿里百炼 AI 摘要（v6 新增：refreshNews 直接抓正文时同步生成摘要）
+  dashscope: {
+    apiKey: process.env.DASHSCOPE_API_KEY || '',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'deepseek-v3',
+    timeout: 6000,
+    maxInputChars: 2000,
+    summaryMaxChars: 150,
   },
 
   // 缓存配置（v4.0：每小时刷新，DB 缓存 65min 覆盖刷新间隔）

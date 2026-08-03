@@ -169,23 +169,14 @@ Page({
         })
       },
       onDetailReady: function (news, paragraphs) {
-        that.setData({
-          news: news,
-          paragraphs: paragraphs,
-          scrollTop: 0,
-          loading: false,
-        pageState: 'ready',
-        }, function () {
-          // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
-          that._measureScroll()
-        })
-        // UX-BUG02: 内容加载后重置滚动状态
-        that._isAtTop = true
-        that._isAtBottom = false
-        that._bottomScrollTop = null
-        if (news && news.id) {
-          that._checkFavorite(news.id)
+        // UX-BUG11-FIX (v5.8): 翻页动画期间（out 阶段）先暂存新内容，
+        // 等 in 阶段再渲染，避免新内容带着 out-up/out-down 提前飞走，
+        // 造成"先上飞再回来"的方向混乱。
+        if (that._switching) {
+          that._pendingDetail = { news: news, paragraphs: paragraphs }
+          return
         }
+        that._renderDetail(news, paragraphs)
       },
       onError: function (msg) {
         wx.hideLoading()

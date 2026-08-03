@@ -1,5 +1,10 @@
-// 新闻自动刷新云函数 v5.7 — 聚合 API 轻量列表缓存（保留 AI 摘要）
+// 新闻自动刷新云函数 v6.0 — 聚合 API + 直接抓正文 + AI 摘要
 // ============================================================
+// v6.0 改造（2026-08-03）：
+//   owner 将 refreshNews 超时从 3s 调至 60s，因此可在此函数内直接抓取正文：
+//   拉取列表 → 校验 → 安全审核 → enrich（并行抓正文 + AI 摘要）→ 写 news_cache。
+//   详情页 getNewsDetail 命中 content 直接返回，不再每次按需抓取。
+//
 // v5.7 改造（2026-08-03）：
 //   写入前批量查询已有记录，若已有高质量 summary（AI 摘要/description）则复用，
 //   不覆盖。解决：getNewsDetail 生成 AI 摘要后，refreshNews 刷新会用标题兜底覆盖。
@@ -16,7 +21,7 @@
 //   git tag v5-tianxing — 可切回天行方案。
 //
 // 数据源：聚合数据 API（单一接口，type 参数分类）
-// 写入集合：news_cache（仅列表缓存，content 留空，由 getNewsDetail 补写）
+// 写入集合：news_cache（列表 + content + AI 摘要）
 //
 // 触发方式：
 //   1. 定时触发器（每小时：0 * * * *）
@@ -29,6 +34,7 @@ const db = cloud.database()
 
 const config = require('./config')
 const { fetchAllCategories } = require('./sources/juhe')
+const { enrichNewsList } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 
@@ -115,7 +121,7 @@ async function batchInsert(newsList) {
           id: item.id,
           title: item.title,
           summary,
-          content: '',              // 留空，由 getNewsDetail 补写
+          content: item.content || '',   // v6：refreshNews 已直接抓正文
           category: item.category,
           categoryName: item.categoryName,
           source: item.source,
@@ -238,6 +244,15 @@ exports.main = async (event) => {
     }
   }
 
+  // 4.5 正文抓取 + AI 摘要（v6：60s 超时下直接抓正文写库，详情页免按需抓取）
+  //     并发 8 控制外部 API 压力；单条失败保留原 summary，不影响写入
+  const enrichStart = Date.now()
+  const enriched = await enrichNewsList(secPassed, 8)
+  const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
+  const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
+  console.log(`[refreshNews] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
+  secPassed = enriched
+
   // 5. 按分类分组写入（v5.1：一次合并写入 + 并行清理，省去 7 次串行循环）
   const categories = {}
   const allItems = []
@@ -301,6 +316,8 @@ exports.main = async (event) => {
       searchStats: searchResult.stats,
       validation: validationStats,
       security: securityStats,
+      enrichedCount,
+      aiSummaryCount,
       elapsedMs: elapsed,
       engine: 'juhe',
     },
