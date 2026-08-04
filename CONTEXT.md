@@ -78,7 +78,7 @@ theme.json                       — 主题变量（浅色/暗色）
 3. **`scroll-view` 在 flex 容器中** — 用 `flex: 1` + `min-height: 0`，不用 `height: 100%`
 4. **`getApp()` 不能放模块顶层** — 必须在方法内部调用并做 null 检查
 5. **云函数已平铺自包含** — 无 `common/` 目录，`require('./X')` 非 `require('../common/X')`
-6. **commit message 要简短** — 中文长消息会导致推送 400 错误
+6. **不要自行 git 操作** — 各角色禁止 `git add/commit/push/merge/rebase`，只能 `git pull`。产出后写 `.git-staging/<role>.ready`，由 GM 统一提交。GM commit message 要简短，中文长消息会导致推送 400 错误。
 
 ---
 
@@ -88,7 +88,7 @@ theme.json                       — 主题变量（浅色/暗色）
 |------|------|
 | `docs/00-规划/项目初始化指南-新成员必读.md` | 🆕 **新角色接入第一读**（含 AI 协作规则、Token 用法、资料地图） |
 | `CONTEXT.md`（本文件） | 项目速览 |
-| `ROLE_CARDS.md` | 8 个角色的身份卡（权责清单） |
+| `ROLE_CARDS.md` | 5 个角色的身份卡（权责清单 + GM git 禁令） |
 | `TASK_BOARD.md` | 🔥 任务看板（广播区 + 全部任务） |
 | `COMMLOG.md` | 会话沟通记录（按时间倒序） |
 | `COLLABORATION.md` | 多会话协作协议 |
