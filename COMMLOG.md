@@ -1,3 +1,74 @@
+## [2026-08-04 16:15] 📦 项目经理 广播：后续版本推送具体方案（文件必须放 `/root/one-news/` 内对应子目录，GM 才读得到）
+
+> **触发**：owner 要求向全员广播后续版本推送的具体方案，重点明确「更新后的文件/版本应放在哪个路径，GM 才能读取并推送」。广播后直接提交 git。
+
+### 一、核心规则（全员）
+- 所有改动文件必须落在仓库工作区 `/root/one-news/` 内对应子目录（前端 pages/components/utils、云函数 cloudfunctions/<名>/、文档 docs/<阶段>/、标记 .git-staging/<role>.ready）。
+- GM 提交时执行 `git add -A`（整工作区），**仓库目录之外的文件（/workspace、/tmp、其他沙箱）一律不会被推送**。
+- 完整步骤：改文件 → 写 `.git-staging/<role>.ready` → COMMLOG 标「📤 待 GM 提交」→ owner 对 GM 说「提交」→ GM 修复 DNS → pull --rebase → add -A → commit → push → 清标记。
+- 密钥/ token 绝不写进任何文件（只在云函数环境变量）。详见 `docs/00-规划/全栈开发初始化话术.md`。
+
+### 二、本次动作
+- 广播写入 `TASK_BOARD.md` 广播区（置顶，16:15 条目）。
+- owner 指示广播后直接提交 git → 本轮由项目经理按 owner 直接授权执行 GM「提交」流程（含 DNS 修复），将广播及全部待提交变更一并推送。
+
+### 三、找谁
+- 项目经理（PJM，记录）｜🔔 关注人：Git 管理专家 + 全栈开发 + 产品经理 + 产品设计师
+
+---
+
+## [2026-08-04 14:31] 📋 项目经理 产出：增强版全栈开发 [FS] 初始化话术（含 GitHub 地址 + 密钥存放地址）
+
+> **触发**：owner 要求给出全栈开发角色初始化话术，并包含项目主要信息（GitHub 地址、各类密钥存放地址等）。
+
+### 一、交付物
+- 文件：`docs/00-规划/全栈开发初始化话术.md`（可直接复制给 FS 会话）
+- 在 `ROLE_CARDS.md` §③ 基础上，补充：① 项目核心信息速览；② GitHub 地址与 PAT 存放（共享保险库，不进仓库）；③ 第三方 API Key 存放（微信云开发/CloudBase 云函数「环境变量」面板，代码中仅 `process.env.*` 读取）；④ 沙箱令牌说明（非项目密钥）；⑤ 当前可接任务。
+
+### 二、密钥存放地址清单（核心）
+| 类别 | 存放位置 | 说明 |
+|------|---------|------|
+| 第三方 API Key（JUHE/TIAN/ZHIPU/DEEPSEEK/DASHSCOPE） | 微信云开发/CloudBase 云函数「环境变量」面板 | 运行时注入，绝不入库；代码 `process.env.*` 读取 |
+| GitHub PAT | 共享保险库（PM 索要 / tdrive `vault/github_pat` / PM 本地 `/root/.secrets/github_pat`） | 仅 push 需要；当前 remote 已固化 PAT，GM 直接 push |
+| 沙箱/代理令牌（auth.proxy 等） | CodeBuddy 沙箱环境变量 | 平台注入，非项目密钥，勿写入代码 |
+
+### 三、找谁
+- 项目经理（PJM，记录）｜🔔 关注人：全栈开发 + Git 管理专家
+
+---
+
+## [2026-08-04 13:33] 🔧 项目经理 排查：其他角色报 `getaddrinfo ENOTFOUND auth.proxy` 502 错误
+
+> **触发**：owner 反馈其他角色遇到「502 网络连接失败：无法解析服务器地址（getaddrinfo ENOTFOUND auth.proxy）」。
+
+### 一、根因
+- `auth.proxy` 是 **CodeBuddy 代理框架内部的鉴权/网关服务**（非项目代码、非 GitHub），由环境变量引用：
+  - `ACC_PRODUCT_CONFIG_V2/V3` 的 endpoint = `http://auth.proxy/codebuddy`
+  - `X_IDE_AUTH_PROXY = auth.proxy`
+- 它**不走公网 DNS**，而是靠各会话容器 `/etc/hosts` 里的静态条目 `172.24.0.1 auth.proxy` 解析。
+- 其他角色会话报 `ENOTFOUND`，说明**其会话容器里没有这条 /etc/hosts 映射，或其网络命名空间里 172.24.0.1 的 auth.proxy 容器不可用**（很可能是该会话被云环境重置/重启后未正确注入）。
+- 我方会话（PJM）当前 `/etc/hosts` 含该条目且 `auth.proxy:80` 可达 → 印证这是**会话级、瞬时性的基础设施问题**，不是项目 bug。
+
+### 二、与「GitHub DNS 污染」不是一回事（别混）
+| 维度 | auth.proxy 502 | GitHub DNS 污染 |
+|------|---------------|----------------|
+| 主机 | `auth.proxy`（内部网关） | `github.com`（公网） |
+| 解析来源 | /etc/hosts 静态条目 172.24.0.1 | 公网 DNS（被污染到 198.18.0.x） |
+| 我方会话现状 | ✅ 可达 | ❌ 当前被污染到 198.18.0.16 |
+| 修复手段 | 平台注入 hosts / 重启会话 | `setup_github_dns.py` 或 `git -c curloptResolve` |
+| 影响范围 | 代理框架自身鉴权调用 | 仅 git 推送/拉取 |
+
+> ⚠️ 跑 GitHub DNS 修复脚本**治不了** auth.proxy 的 ENOTFOUND；反之亦然。
+
+### 三、各角色处理动作（立即执行）
+1. **不要改 One-News 代码** —— 这不是项目缺陷。
+2. **核心工作不受影响**：写文件 + 写 `.git-staging/<role>.ready` 标记**不依赖** auth.proxy，继续产出。
+3. 该 502 只是代理框架**自身的鉴权/外链调用失败**，不阻断本地文件编辑。
+4. **重试**该操作；若持续失败 → **重启该角色会话**（网络环境常在新会话正确注入）；仍不行 → 升级平台/基础设施支持。
+5. **GM 注意**：我方会话 `github.com` 现已被污染到 198.18.0.16（resolv.conf 被云环境重置、无 githubfix 备份），下次「提交」前需先重做 GitHub DNS 修复（`curloptResolve` 或 `setup_github_dns.py`）。
+
+---
+
 ## [2026-08-04 11:54] ✅ 产品设计师 UI-B7 设计确认通过 + TASK_BOARD/COMMLOG 更新 + 下游 TL-B17 解锁 | 会话：[产品设计师(PD)]
 
 ### UI-B7 列表页重新设计 v4.2 · owner 最终确认
