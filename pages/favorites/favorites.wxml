@@ -6,7 +6,7 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <text class="nav-home-icon">🏠</text>
+      <view class="nav-home-icon" style="-webkit-mask-image: url('/assets/icons/home.svg'); mask-image: url('/assets/icons/home.svg');"></view>
     </view>
     <view class="nav-title">我的收藏</view>
   </view>

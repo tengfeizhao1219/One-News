@@ -1,3 +1,113 @@
+## [2026-08-04 19:15] 📤 TL-B15 RQ-17 全局返回主页入口 · 已 staging · 待 GM 提交 | 会话：[全栈开发(FS)]
+
+### 一、实施内容
+| 文件 | 改动 |
+|---|---|
+| `pages/history/history.wxml` | 🏠 emoji → SVG mask home.svg |
+| `pages/history/history.wxss` | .nav-home-icon: font-size → width/height + background-color mask |
+| `pages/favorites/favorites.wxml` | 🏠 emoji → SVG mask home.svg |
+| `pages/favorites/favorites.wxss` | .nav-home-icon: font-size → width/height + background-color mask |
+
+### 二、无需改动项（已核实）
+- `pages/detail/detail.wxml`:31：主页图标已是 SVG mask ✅
+- `pages/detail/detail.js`:531-549：goHome 防抖+reLaunch+降级 已实现 ✅
+- `pages/history/history.js`: goHome 防抖+reLaunch+降级 已实现 ✅
+- `pages/favorites/favorites.js`: goHome 防抖+reLaunch+降级 已实现 ✅
+
+### 三、后续
+🔔 **测试工程师/产品经理**：验证详情页/浏览记录/收藏列表页主页图标点击跳转、防抖、暗色适配。
+
+> 📤 待 GM 提交
+
+## [2026-08-04 19:12] 📤 TL-B1/B2 B-08~B-14 整批清理裁定 · 已 staging · 待 GM 提交 | 会话：[全栈开发(FS)]
+
+### 一、裁定结果
+B-08~B-14 整批「对齐 v4.2 架构」裁定完成。**7 项全部清零**（6 作废 + 1 已完成），唯一有效后端任务仅剩 B-16。
+
+| ID | 裁定 | 理由 |
+|----|:---:|------|
+| B-08 | ❌ 作废 | 目标文件 `tianApi.js` 已于 v4.2 删除 |
+| B-09 | ❌ 作废 | Q1 owner 已裁定（聚合不开放），Q2 已升级为 BUG-P1-011 |
+| B-10 | ✅ 已完成 | 单测已合入 main |
+| B-11 | ❌ 作废 | 同 B-08，目标文件不存在 |
+| B-12 | ❌ 作废 | 天行/聚合已非活跃数据源，限流对象不存在 |
+| B-13 | ❌ 作废 | v4.0 已移除百炼，短路会误伤 v4.2 双引擎 |
+| B-14 | ❌ 作废 | 目标方法在 v4.2 中不存在 |
+
+### 二、关联清理
+- TL-B1 ✅：`feature/be-b13-b14` 分支确认废弃可删
+- TL-B2 ✅：整批裁定完成
+- 阻塞项 BLK-04 ✅：已解除
+
+> 📤 待 GM 提交
+
+## [2026-08-04 19:10] 📤 TL-B17 列表页 12 Bug 修复 · 已 staging · 待 GM 提交 | 会话：[全栈开发(FS)]
+
+### 一、修复范围
+按 UI-B7 v5.3-final 设计文档逐项对照，修复 12 个 BUG-TL17 中的实际偏差项。
+
+### 二、12 Bug 处置明细
+| Bug | 设计期望 | 实际状态 | 处置 |
+|-----|---------|---------|:---:|
+| 001 | category-wheel 组件 | 已存在 `components/category-wheel/` | ✅ 核实无需改 |
+| 002 | 列表项高亮仅标题 primary，去底色/边框/圆角 | 有 border+radius+bg | ✅ 已修 |
+| 003 | 无横向 Tab | `.panel-tabs/.panel-tab` 存在 | ✅ 已删 |
+| 004 | fab 纯色 tag-bg + 细阴影 | linear-gradient + 多层粗阴影 | ✅ 已修 |
+| 005 | 6 枚 SVG 导出 | 已存在 stroke=1.25 | ✅ 核实无需改 |
+| 006 | 详情页底部滑动提示 | detail.wxml:98-101 已存在 | ✅ 核实无需改 |
+| 007 | 标题 14px/600 | 32rpx | ✅ 改为 28rpx |
+| 008 | 面板 90% | 82% | ✅ 改为 90%（同 001） |
+| 009 | theme.json .78 | 已是 .78 | ✅ 核实无需改 |
+| 010~012 | dock/主页/收藏图标 SVG | dock ✅ 主页 ✅ 收藏已改 SVG mask；分享无对应 SVG 暂保 emoji | ✅ 已修 |
+| 013 | 关闭按钮 | v5.3-final 已废弃 | ❌ 废弃 |
+| 014 | 移除 nav-dots | 仍存在 | ✅ 已删 WXML+WXSS |
+| 015 | 面板副标题 | home.wxml:125 已存在 | ✅ 核实无需改 |
+
+### 三、改动文件
+| 文件 | 改动 |
+|---|---|
+| `pages/home/home.wxml` | 移除 nav-dots、移除 panel-close 关闭按钮 |
+| `pages/home/home.wxss` | 面板 82%→90%、列表项高亮去底色/边框仅保留标题 primary、删除 .panel-tabs/.panel-tab 横向 Tab 样式、fab 纯色+细阴影、列表标题 32rpx→28rpx、列表行距收窄 8px/16px、删除 nav-dots/.panel-close 样式 |
+| `pages/detail/detail.wxml` | 收藏图标 emoji→SVG mask favorite.svg |
+| `pages/detail/detail.wxss` | 新增 `.bottom-bar-icon--favorite` mask 样式、已收藏态改 background-color 变红 |
+
+### 四、后续
+- 🔔 **产品设计师（PD）**：按 UI-B7 §5 四态映射表逐项走查验收
+- 🔔 **测试工程师/产品经理**：TL-B17 列表页回归测试（面板打开/关闭、分类滚轮联动、列表项点击定位、fab dock 菜单、底部滑动提示）
+
+> 📤 待 GM 提交
+
+## [2026-08-04 18:55] 📤 TL-B18 AI 摘要胶囊前端实现 · 已 staging · 待 GM 提交 | 会话：[全栈开发(FS)]
+
+### 一、认领理由
+UI-B8 设计闸门已通过（owner 17:44 裁定 A-1 主题色轻胶囊），TL-B18 唯一前置依赖已解除，即刻开工。
+
+### 二、实施内容
+| 文件 | 改动 | 说明 |
+|---|---|---|
+| `pages/home/home.wxml` | 摘要区 `wx:for` 加 `wx:for-index="pIdx"`，首段条件注入 `<text class="ai-chip">` | 内联于摘要首段行首，不独立成行 |
+| `pages/home/home.wxss` | 新增 `.ai-chip` 样式块 | 精确按 UI-B8 设计文档 §3.3/§3.4 参数落地 |
+
+### 三、关键设计参数（已逐项核验）
+- 日间：底 `var(--primary-subtle)` = `rgba(0,122,255,0.12)` / 字 `var(--primary)` = `#007AFF`
+- 暗色：token 同名自动切换 → `rgba(10,132,255,0.18)` / `#0A84FF`
+- 字号 `calc(22rpx * var(--font-scale-meta, 1))`（守 owner 元信息红线 + UX-FIX-F12 封顶）
+- 圆角 `16rpx` / 内边距 `3rpx 14rpx` / 右外边距 `12rpx`
+- 无边框 / 无阴影 / 无动效 / **不可点击**（不绑 bindtap，不加 hover-class）
+- 字体族 `-apple-system` 非衬线（与摘要正文衬线区分"系统 vs 内容"）
+- 内联于首段行首 → 高度验算：任意组合下胶囊高度 < 正文行高，**卡片高度零增加**
+
+### 四、无需改动项（已核实）
+- `theme.json`：`--primary` / `--primary-subtle` 日暗两态均已存在 ✅
+- `home.js`：`buildCard:357` `isAiSummary: item.summarySource === 'ai'` 已就绪 ✅
+- 后端：`summarySource` 链路（`refreshNews` → `getNewsList:77` → `home.js:357`）PD 已核代码 ✅
+
+### 五、后续
+- 🔔 **产品设计师（PD）**：按 UI-B8 设计文档 §5 十三项逐条走查验收
+- FS 继续认领 TL-B17（12 Bug）+ TL-B1/B2（B-08~B-14 清理裁定）
+
+> 📤 待 GM 提交
+
 ## [2026-08-04 17:44] 🟢 owner 裁定 UI-B8 = A-1 · UI-B8 结项 v1.1-final · TL-B18 解锁 | 会话：[产品设计师(PD)]
 
 ### 一、裁定结果

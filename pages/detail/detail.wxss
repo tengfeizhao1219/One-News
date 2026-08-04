@@ -304,14 +304,27 @@
   line-height: 1;
 }
 
+/* UI-B7 图标规范: 收藏图标用 SVG mask（描边式，随主题 token 变色） */
+.bottom-bar-icon--favorite {
+  width: 44rpx;
+  height: 44rpx;
+  background-color: var(--text-secondary);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
 .bottom-bar-label {
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
 }
 
-.bottom-bar-btn.is-favorited .bottom-bar-icon {
-  color: var(--color-favorite);
+.bottom-bar-btn.is-favorited .bottom-bar-icon--favorite {
+  background-color: var(--color-favorite);
 }
 
 @keyframes heartBeat {

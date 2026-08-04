@@ -34,9 +34,15 @@
 }
 .nav-home--hover { opacity: 0.6; }
 .nav-home-icon {
-  font-size: 44rpx;
-  line-height: 56rpx;
-  color: var(--text-primary);
+  width: 44rpx;
+  height: 44rpx;
+  background-color: var(--text-secondary);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
 }
 .nav-title {
   font-size: 34rpx;

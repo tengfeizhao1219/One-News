@@ -66,8 +66,10 @@
           </view>
         <!-- 摘要 -->
         <view class="card-summary">
-          <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
-            <view class="summary-p">{{item}}</view>
+          <block wx:for="{{item.summaryParagraphs}}" wx:key="*this" wx:for-index="pIdx">
+            <view class="summary-p">
+              <text wx:if="{{pIdx === 0 && item.isAiSummary}}" class="ai-chip">AI 摘要</text>{{item}}
+            </view>
           </block>
         </view>
       </view>
@@ -79,17 +81,6 @@
   <view class="fixed-swipe-hint" wx:if="{{pageState === 'ready' && !showPanel}}">
     <text class="fixed-swipe-hint-icon">⇅</text>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
-  </view>
-
-  <!-- 导航指示点（UX-IMPROVE06: 支持点击跳转） -->
-  <view class="nav-dots" wx:if="{{pageState === 'ready' && newsList.length > 0}}">
-    <view 
-      wx:for="{{newsList}}" 
-      wx:key="id" 
-      class="nav-dot {{index === currentIndex ? 'active' : ''}}"
-      data-index="{{index}}"
-      bindtap="onNavDotTap">
-    </view>
   </view>
 
   <!-- BUG-20260802-006: 分类切换 0.5s 提示 -->
@@ -132,9 +123,6 @@
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>
-      <view class="panel-close" bindtap="closePanel">
-        <view class="panel-close-icon" style="-webkit-mask-image: url('/assets/icons/close.svg'); mask-image: url('/assets/icons/close.svg');"></view>
-      </view>
     </view>
 
     <view class="panel-body">

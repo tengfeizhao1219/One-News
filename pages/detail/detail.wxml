@@ -103,7 +103,7 @@
   <!-- 底部操作栏（收藏左 + 分享右） -->
   <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
-      <text class="bottom-bar-icon">{{isFavorited ? '♥' : '♡'}}</text>
+      <view class="bottom-bar-icon bottom-bar-icon--favorite" style="-webkit-mask-image: url('/assets/icons/favorite.svg'); mask-image: url('/assets/icons/favorite.svg');"></view>
       <text class="bottom-bar-label">收藏</text>
     </view>
     <button class="bottom-bar-btn share-btn-reset" open-type="share">
