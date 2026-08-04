@@ -404,10 +404,13 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ### 7.1 核心规则
 
-1. **GM 是唯一有权执行 git 写操作的角色**。所有 git add/commit/push/merge/rebase 由 GM 统一执行。
-2. **其他 4 角色只能 `git pull`**，禁止任何 git 写操作。
-3. **各角色产出文件后**，不再自行 git 提交，改为写入 `.git-staging/<role>.ready` 标记文件。
-4. **GM 检查 staging 标记**后统一提交。触发方式：用户对 GM 说「提交」/ GM 主动检测。
+1. **GM 是唯一有权执行任何 git 操作的角色**。所有 git pull/add/commit/push/merge/rebase 由 GM 统一执行。
+2. **其他 4 角色零 git 操作**（不 pull、不 commit、不 push）。各角色直接读写工作区文件，GM pull 后各角色自动看到最新文件。
+3. **各角色产出文件后**，写入 `.git-staging/<role>.ready` 标记文件。
+4. **GM 两条指令**：
+   - 「**同步**」→ GM 修复 DNS → `git pull --rebase` → 各角色看到最新代码
+   - 「**提交**」→ GM 检查 staging → `git pull --rebase` → `git add -A` → `git commit` → `git push` → 清除标记
+5. **DNS 修复次数**：旧方案 5 次（4 角色各 pull 1 次 + GM push 1 次）→ 新方案 2 次（GM 同步 1 次 + GM 提交 1 次）
 
 ### 7.2 Staging 标记格式
 
@@ -430,20 +433,28 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 ### 7.3 GM 工作流程
 
 ```
-[各角色] 产出文件 → 写 .git-staging/<role>.ready → COMMLOG 标记「📤 待 GM 提交」
-                                                          ↓
-[GM]     检查 staging → git pull --rebase → git add -A → git commit → git push
-         清除 staging 标记 → COMMLOG 记录「📤→✅ GM 已提交：commit <hash>」
+[用户] 「同步」→ [GM] 修复 DNS → git pull --rebase → 「已同步: commit <hash>」
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+    [PM] 读文件      [FS] 读文件      [PD] 读文件
+    改文件           改文件           改文件
+    写 staging        写 staging        写 staging
+         │               │               │
+         └───────────────┼───────────────┘
+                         ▼
+[用户] 「提交」→ [GM] 修复 DNS → git pull --rebase → 读 staging
+         → git add -A → git commit → git push → 清除 staging → 「已提交: commit <hash>」
 ```
 
 ### 7.4 GM 权限边界
 
 | 可以 | 不可以 |
 |------|--------|
-| git add/commit/push/merge/rebase | 修改业务代码 |
+| git pull/add/commit/push/merge/rebase（唯一 git 操作者） | 修改业务代码 |
 | 检查 staging 标记、清除标记 | 修改文档内容（只能改 COMMLOG） |
 | 解决 DNS 污染、分支管理、tag 管理 | 在 TASK_BOARD 认领业务任务 |
-| 写 COMMLOG 记录提交 | 自行合并业务逻辑冲突 |
+| 写 COMMLOG 记录同步/提交 | 自行合并业务逻辑冲突 |
 
 ### 7.5 冲突处理
 
@@ -456,4 +467,4 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ---
 
-> **本协议版本**：v4.0 | **生效日期**：2026-08-04（引入 GM 角色，5 角色架构，统一 git 管理）
+> **本协议版本**：v4.1 | **生效日期**：2026-08-04（GM 全权代理模式：各角色零 git 操作，GM 统一 pull + commit + push）

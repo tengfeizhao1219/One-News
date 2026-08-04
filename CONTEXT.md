@@ -78,7 +78,7 @@ theme.json                       — 主题变量（浅色/暗色）
 3. **`scroll-view` 在 flex 容器中** — 用 `flex: 1` + `min-height: 0`，不用 `height: 100%`
 4. **`getApp()` 不能放模块顶层** — 必须在方法内部调用并做 null 检查
 5. **云函数已平铺自包含** — 无 `common/` 目录，`require('./X')` 非 `require('../common/X')`
-6. **不要自行 git 操作** — 各角色禁止 `git add/commit/push/merge/rebase`，只能 `git pull`。产出后写 `.git-staging/<role>.ready`，由 GM 统一提交。GM commit message 要简短，中文长消息会导致推送 400 错误。
+6. **零 git 操作** — 各角色不执行任何 git 命令（不 pull、不 commit、不 push）。GM 统一代理：对 GM 说「同步」拉取最新，说「提交」推送变更。产出后写 `.git-staging/<role>.ready`。
 
 ---
 
