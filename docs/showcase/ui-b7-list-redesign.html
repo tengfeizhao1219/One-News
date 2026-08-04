@@ -3,23 +3,24 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UI-B7 · 列表页重新设计（滚轮移入列表页 · 空间协调 v2）</title>
+<title>UI-B7 · 列表页重新设计 v3（手势滑入 + 极简列表 + 圆角高亮 + 底部固定提示）</title>
 <style>
   :root {
     --bg-page: #F5F3F0; --bg-card: #FAF9F7; --text-primary: #1C1C1E; --text-body: #5E5E60;
     --text-secondary: #A0A0A0; --divider: #E8E6E1; --tag-bg: #EEECE8; --tag-text: #7A7A7A;
     --overlay: rgba(0,0,0,.25); --panel-bg: rgba(250,249,247,.92); --chip: rgba(28,28,30,.85); --chip-text: #fff;
-    --home-icon: #333; --nav-title: #1C1C1E; --primary: #007AFF;
+    --home-icon: #333; --primary: #007AFF; --highlight-bg: rgba(0,122,255,.07);
     --wheel-text-idle: rgba(0,0,0,.12); --wheel-selected-idle: rgba(0,0,0,.5);
     --wheel-text-active: rgba(0,0,0,.45); --wheel-selected-active: #007AFF;
     --wheel-bg-active: rgba(255,255,255,.7); --wheel-indicator: rgba(0,0,0,.15); --wheel-divider: rgba(0,0,0,.2);
     --sans: "PingFang SC","Noto Sans SC",system-ui,sans-serif;
     --serif: "Songti SC","Noto Serif SC",ui-serif,Georgia,serif; --ease: cubic-bezier(.22,1,.36,1);
+    --radius: 10px;
   }
   [data-theme="dark"] {
     --bg-page:#000; --bg-card:#0D0D0D; --text-primary:#fff; --text-body:#A8A8A8; --text-secondary:#999;
     --divider:#1C1C1E; --tag-bg:#1C1C1E; --tag-text:#999; --panel-bg:rgba(13,13,13,.92);
-    --home-icon:#E0E0E0; --nav-title:#fff; --primary:#0A84FF;
+    --home-icon:#E0E0E0; --primary:#0A84FF; --highlight-bg: rgba(10,132,255,.1);
     --wheel-text-idle: rgba(255,255,255,.12); --wheel-selected-idle: rgba(255,255,255,.5);
     --wheel-text-active: rgba(255,255,255,.45); --wheel-selected-active:#0A84FF;
     --wheel-bg-active: rgba(30,30,30,.85); --wheel-indicator: rgba(255,255,255,.15); --wheel-divider: rgba(255,255,255,.2);
@@ -36,29 +37,28 @@
   .screen { position:absolute; inset:0; display:none; flex-direction:column; }
   .screen.active { display:flex; }
 
-  /* ===== 顶部：分类名 + 细进度条（替代 nav-dots，仅首页）===== */
+  /* ===== 顶部：分类名 + 细进度条 ===== */
   .top-bar { position:absolute; top:44px; left:0; right:0; height:48px; display:flex; align-items:center; justify-content:center; gap:12px; z-index:30; padding:0 56px; pointer-events:none; }
   .top-cat { font-size:13px; font-weight:500; color:var(--primary); opacity:.8; letter-spacing:1px; transition:opacity .2s ease; }
   .progress-track { width:64px; height:3px; border-radius:2px; background:var(--divider); overflow:hidden; }
   .progress-fill { height:100%; background:var(--primary); border-radius:2px; transition:width .3s var(--ease); }
 
-  /* 首页左上角「列表」入口（框内可见，修复不可见问题） */
-  .list-entry { position:absolute; top:52px; left:16px; z-index:35; display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:999px; background:var(--tag-bg); color:var(--text-primary); font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-  .list-entry:active { transform:scale(.95); }
-  .list-entry svg { width:15px; height:15px; } .list-entry svg path { fill:var(--text-primary); }
-
   /* ===== 卡片流（全屏单卡，摘要直出）===== */
   .card-stage { position:absolute; inset:0; z-index:1; overflow:hidden; }
   .fs-card { position:absolute; top:0; left:0; width:100%; height:100%; background:var(--bg-card); display:flex; flex-direction:column; opacity:0; pointer-events:none; transition:transform .35s cubic-bezier(.25,.1,.25,1),opacity .35s ease; cursor:pointer; }
   .fs-card.active { opacity:1; pointer-events:auto; z-index:2; }
-  .fs-body { flex:1; padding:104px 32px 24px; display:flex; flex-direction:column; justify-content:center; }
-  .fs-title { font-size:26px; font-weight:700; color:var(--text-primary); line-height:1.35; margin-bottom:14px; letter-spacing:-0.5px; word-break:break-word; overflow-wrap:anywhere; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
+  .fs-body { flex:1; padding:104px 32px 90px; display:flex; flex-direction:column; justify-content:center; }
+  .fs-title { font-size:26px; font-weight:700; color:var(--text-primary); line-height:1.35; margin-bottom:14px; letter-spacing:-0.5px; word-break:break-word; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; }
   .fs-meta { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-secondary); margin-bottom:10px; letter-spacing:.5px; }
   .fs-cat { display:inline-block; font-size:11px; padding:2px 9px; border-radius:999px; background:var(--tag-bg); color:var(--tag-text); }
-  .fs-summary { margin-bottom:24px; margin-top:14px; }
+  .fs-summary { margin-top:14px; }
   .fs-summary-p { font-family:var(--serif); font-size:16px; color:var(--text-body); line-height:1.85; margin-bottom:12px; letter-spacing:.5px; }
-  .swipe-hint { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; padding:12px 0 36px; font-size:8px; color:var(--text-secondary); opacity:.45; }
-  .swipe-hint-icon { font-size:14px; line-height:1; } .swipe-hint-text { font-size:9px; letter-spacing:2px; font-weight:300; }
+
+  /* ===== 底部固定滑动提示（首页 & 详情页）===== */
+  .swipe-bar { position:absolute; left:0; right:0; bottom:0; height:62px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; z-index:10; pointer-events:none; background:linear-gradient(transparent, var(--bg-card) 40%); }
+  .swipe-bar-icon { font-size:14px; line-height:1; color:var(--text-secondary); opacity:.45; }
+  .swipe-bar-text { font-size:9px; letter-spacing:2px; font-weight:300; color:var(--text-secondary); opacity:.45; }
+  .swipe-bar-light { background:linear-gradient(transparent, var(--bg-page) 40%); }
 
   /* ===== ⚙ dock 菜单（方案 F）===== */
   .fab { position:absolute; right:20px; bottom:30px; width:48px; height:48px; border-radius:50%; background:var(--text-primary); color:var(--bg-page); display:flex; align-items:center; justify-content:center; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; transition:transform .25s var(--ease); }
@@ -73,7 +73,7 @@
   .dock-ico { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--tag-bg); flex-shrink:0; } .dock-ico svg { width:18px; height:18px; } .dock-ico svg path { fill:var(--text-body); }
   .dock-label { font-size:14px; color:var(--text-primary); font-weight:500; }
 
-  /* ===== 侧边新闻列表页（重设计：滚轮移入 + 无 Tab、无缩略图、按分类联动）===== */
+  /* ===== 侧边新闻列表页（左滑手势进入 + 左侧滚轮 + 极简标题列表 + 圆角高亮）===== */
   .panel-overlay { position:absolute; inset:0; background:var(--overlay); z-index:70; opacity:0; pointer-events:none; transition:opacity .3s ease; }
   .panel-overlay.show { opacity:1; pointer-events:auto; }
   .slide-panel { position:absolute; top:0; right:0; width:90%; height:100%; background:var(--bg-card); z-index:71; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; box-shadow:-8px 0 48px var(--overlay); }
@@ -84,7 +84,6 @@
   .panel-title { font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:1px; }
   .panel-sub { font-size:11px; color:var(--text-secondary); margin-top:4px; }
   .panel-body { flex:1; display:flex; min-height:0; }
-  /* 列表页内的分类滚轮（左侧竖排） */
   .panel-wheel-wrap { position:relative; width:60px; flex-shrink:0; overflow:hidden; border-right:1px solid var(--divider); }
   .panel-wheel { position:absolute; left:0; right:0; top:0; transition:transform .25s cubic-bezier(.25,.1,.25,1); display:flex; flex-direction:column; align-items:center; opacity:.35; padding:90px 0; }
   .panel-wheel.active { opacity:.92; }
@@ -95,16 +94,15 @@
   .wheel-divider { width:22px; height:1px; background:var(--wheel-divider); margin:2px 0; }
   .wheel-glass { position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:34px; background:var(--wheel-bg-active); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); opacity:0; transition:opacity .3s ease; pointer-events:none; border-top:1px solid var(--wheel-indicator); border-bottom:1px solid var(--wheel-indicator); }
   .panel-wheel-wrap.active .wheel-glass { opacity:1; }
-  /* 列表项：无缩略图，标题 2 行 + 来源·时间 */
+  /* 极简列表项：仅标题 + 圆角高亮 */
   .panel-list { flex:1; overflow-y:auto; padding:8px 0 40px; }
-  .list-item { padding:16px 20px; border-bottom:1px solid var(--divider); cursor:pointer; transition:background-color .2s; }
+  .list-item { margin:0 12px 2px; padding:13px 16px; cursor:pointer; transition:all .2s; border-radius:var(--radius); }
   .list-item:active { background:var(--tag-bg); }
-  .list-item.current { background:rgba(0,122,255,.08); border-left:3px solid var(--primary); padding-left:17px; }
-  .list-item h4 { font-size:15px; color:var(--text-primary); line-height:1.4; margin-bottom:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:600; }
-  .list-item .sub { font-size:11px; color:var(--text-secondary); }
+  .list-item.current { background:var(--highlight-bg); border:1px solid var(--primary); border-radius:var(--radius); }
+  .list-item h4 { font-size:15px; color:var(--text-primary); line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-weight:600; }
 
-  /* ===== 详情屏（占位演示）===== */
-  .detail-scroll { flex:1; overflow-y:auto; padding:100px 18px 60px; }
+  /* ===== 详情屏 ===== */
+  .detail-scroll { flex:1; overflow-y:auto; padding:100px 18px 90px; }
   .detail-scroll h1 { font-family:var(--serif); font-size:22px; line-height:1.4; color:var(--text-primary); margin-bottom:10px; }
   .detail-scroll .meta { font-size:11px; color:var(--text-secondary); margin-bottom:18px; }
   .detail-scroll p { font-size:15px; color:var(--text-body); line-height:1.9; }
@@ -122,7 +120,7 @@
 </style>
 </head>
 <body>
-  <div class="title-tag">UI-B7 · 列表页重新设计 v2（滚轮移入列表页 · 空间协调）· 1:1 可交互原型</div>
+  <div class="title-tag">UI-B7 · 列表页重新设计 v3（手势滑入 + 极简列表 + 圆角高亮 + 底部固定提示）</div>
   <div class="toolbar">
     <button class="pill active" data-page="home">🏠 首页</button>
     <button class="pill" data-page="detail">📄 详情</button>
@@ -133,28 +131,23 @@
   <div class="phone">
     <div class="statusbar"><span>9:41</span><span class="right">📶 🔋</span></div>
 
-    <!-- 首页（无滚轮，仅卡片流 + 顶栏 + ⚙ 菜单） -->
+    <!-- 首页（无按钮、无滚轮，左滑进列表） -->
     <div class="screen active" id="screen-home">
-      <!-- 顶部：分类名 + 细进度条（替代 nav-dots） -->
       <div class="top-bar"><span class="top-cat" id="topCat">科技</span><div class="progress-track"><div class="progress-fill" id="progFill" style="width:33%"></div></div></div>
-
-      <!-- 框内「列表」入口（修复不可见） -->
-      <div class="list-entry" id="listEntry"><svg viewBox="0 0 24 24"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>列表</div>
-
-      <!-- 全屏单卡片流 -->
       <div class="card-stage" id="cardStage"></div>
+      <!-- 底部固定滑动提示 -->
+      <div class="swipe-bar"><span class="swipe-bar-icon">⇅</span><span class="swipe-bar-text">上滑阅读下一条</span></div>
 
-      <!-- ⚙ dock（方案 F） -->
-      <div class="fab" id="fab"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></div>
+      <div class="fab" id="fab"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></div>
       <div class="menu-mask" id="menuMask"></div>
       <div class="dock" id="dock">
         <div class="dock-item" data-go="history"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.94 10H21.9A7 7 0 1 1 13 5v3l4-4-4-4v3zM12 8v5l4 2 .75-1.23L13.5 12V8z"/></svg></span><span class="dock-label">浏览记录</span></div>
         <div class="dock-item" data-go="favorites"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.1 1.6 4.5 5 4.5c2 0 3.3 1.1 4 2.2.7-1.1 2-2.2 4-2.2 3.4 0 4.7 3.6 3 7.2C19.5 16.4 12 21 12 21z"/></svg></span><span class="dock-label">我的收藏</span></div>
-        <div class="dock-item" id="dockSetting"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6.22l-2.39.96a7.3 7.3 0 0 0-1.62.94l-.36-2.54a.5.5 0 0 0-.5.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0 1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></span><span class="dock-label">设置</span></div>
+        <div class="dock-item" id="dockSetting"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0 1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></span><span class="dock-label">设置</span></div>
         <div class="dock-item" id="dockExt"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M13 11V7h-2v4H7v2h4v4h2v-4h4v-2z"/></svg></span><span class="dock-label">扩展位</span></div>
       </div>
 
-      <!-- 侧边新闻列表页（滚轮移入 + 重设计） -->
+      <!-- 侧边列表页（左滑进入） -->
       <div class="panel-overlay" id="panelOverlay"></div>
       <div class="slide-panel" id="slidePanel">
         <div class="panel-close" id="panelClose">×</div>
@@ -163,47 +156,42 @@
           <div class="panel-sub" id="panelSub">科技 · 3 条</div>
         </div>
         <div class="panel-body">
-          <!-- 列表页内的分类滚轮（左侧竖排） -->
           <div class="panel-wheel-wrap" id="panelWheelWrap">
             <div class="wheel-glass"></div>
             <div class="panel-wheel" id="wheel"></div>
           </div>
-          <!-- 新闻列表（无缩略图、当前项高亮） -->
           <div class="panel-list" id="panelList"></div>
         </div>
       </div>
     </div>
 
-    <!-- 详情（占位） -->
+    <!-- 详情 -->
     <div class="screen" id="screen-detail">
       <div class="home-btn" data-home="1"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3z"/></svg></div>
       <div class="detail-scroll">
         <h1 id="detailTitle">标题</h1>
         <div class="meta" id="detailMeta">来源 · 时间</div>
-        <p>这里是新闻详情正文占位（点击列表项或卡片进入详情的完整阅读视图）。当前列表页重设计聚焦「分类切换 + 空间协调」，详情页不在本次范围内。</p>
+        <p>这里是新闻详情正文占位（点击列表项或卡片进入详情的完整阅读视图）。</p>
       </div>
+      <div class="swipe-bar swipe-bar-light"><span class="swipe-bar-icon">⇅</span><span class="swipe-bar-text">上滑阅读下一条</span></div>
     </div>
 
     <div class="toast" id="toast"></div>
   </div>
 
   <div class="spec">
-    <h3>📐 UI-B7 列表页重新设计 v2（owner 2026-08-04 反馈修订）</h3>
+    <h3>📐 UI-B7 v3 修订（owner 2026-08-04 反馈）</h3>
     <table>
-      <tr><th>项</th><th>规格 / 变更（v2）</th></tr>
-      <tr><td>首页滚轮</td><td><b>已移除</b>：首页仅保留卡片流 + 顶部分类名 + 细进度条 + ⚙ dock 菜单（owner：首页暂不需要滚轮展示）</td></tr>
-      <tr><td>分类切换入口</td><td>滚轮<b>移入「侧边新闻列表页」</b>（列表页左侧竖排），首页切分类需先开列表页</td></tr>
-      <tr><td>列表页可见性</td><td>修复：面板从右滑入（90% 宽）+ 框内「☰ 列表」入口 + 关闭 × 按钮，确保点击有反应</td></tr>
-      <tr><td>导航点</td><td>移除独立 nav-dots；条数进度改顶部细进度条</td></tr>
-      <tr><td>⚙ 角色</td><td>方案 F dock 菜单（浏览记录/收藏/设置/扩展）</td></tr>
-      <tr><td>列表项</td><td>去除缩略图（与浏览记录/收藏一致）；按当前分类过滤；当前阅读项高亮（左色条+淡蓝底）</td></tr>
-      <tr><td>联动</td><td>列表页滚轮切分类 → 列表实时过滤 + 顶部分类名（回首页同步）；点列表项定位卡片并关闭</td></tr>
+      <tr><th>#</th><th>反馈</th><th>改动</th></tr>
+      <tr><td>1</td><td>列表页入口：滑动进入，不要按钮</td><td>首页去掉 ☰ 按钮；<b>左滑手势直接滑出列表页</b>（touchstart→touchmove→touchend 跟手位移动画），右滑或点 × 关闭</td></tr>
+      <tr><td>2</td><td>列表极简：只要标题</td><td>列表项<b>仅显示新闻标题</b>（15px weight 600，2 行截断），去掉来源、时间等元信息</td></tr>
+      <tr><td>3</td><td>高亮圆角化</td><td>当前阅读项高亮改为 <code>border-radius: var(--radius)</code>（10px）圆角边框 + 淡色底，不用直角 border-left；全局排查：卡片/面板/列表项/按钮/dock-item 统一圆角</td></tr>
+      <tr><td>4</td><td>滑动提示固定底部</td><td>首页卡片流和详情页底部各一条固定 <code>position:absolute; bottom:0</code> 的「⇅ 上滑阅读下一条」提示条，不随内容滚动</td></tr>
     </table>
-    <p class="ok" style="margin-top:14px">✅ 演示：① 点「☰ 列表」或「📋 列表页」打开右侧列表页（含左侧滚轮）；② 滚轮点击/上下滑切换分类，列表与高亮实时更新；③ 点列表项定位回首页卡片；④ 卡片上滑切下一条（顶部进度条变化）；⑤ ⚙ dock 菜单；⑥ 暗色。</p>
+    <p class="ok" style="margin-top:14px">✅ 演示：① 首页卡片流区域<b>左滑</b>打开列表页（跟手位移）；② 列表页左侧滚轮切分类；③ 列表项仅标题，当前项圆角高亮；④ 点列表项定位回首页；⑤ 卡片上滑切下条；⑥ 首页/详情底部固定提示条；⑦ ⚙ dock；⑧ 暗色。</p>
   </div>
 
 <script>
-  // ===== 数据：6 分类 + 收藏 =====
   const CATS = ['推荐','科技','国际','体育','生活','三农','❤️收藏'];
   const NEWS = {
     '推荐': [
@@ -238,72 +226,56 @@
     ],
   };
 
-  let curCat = 1;   // 默认科技
-  let curIdx = 0;   // 分类内第几条
-
+  let curCat = 1, curIdx = 0;
   const screens = { home: document.getElementById('screen-home'), detail: document.getElementById('screen-detail') };
   const pills = document.querySelectorAll('.toolbar [data-page]');
   const toast = document.getElementById('toast'); let tt;
   function showToast(m){ toast.textContent=m; toast.classList.add('show'); clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),1400); }
   function goPage(n){ Object.values(screens).forEach(s=>s.classList.remove('active')); screens[n].classList.add('active'); pills.forEach(p=>p.classList.toggle('active',p.dataset.page===n)); closeMenu(); closePanel(); }
 
-  // ===== 渲染卡片流（单卡全屏）=====
   function renderCard(){
-    const list = NEWS[CATS[curCat]];
-    const it = list[curIdx];
-    const stage = document.getElementById('cardStage');
-    stage.innerHTML = `<div class="fs-card active"><div class="fs-body">
+    const list = NEWS[CATS[curCat]], it = list[curIdx];
+    document.getElementById('cardStage').innerHTML = `<div class="fs-card active"><div class="fs-body">
       <div class="fs-title">${it.t}</div>
       <div class="fs-meta"><span class="fs-cat">${CATS[curCat]}</span><span>${it.s}</span><span>·</span><span>${it.time}</span></div>
       <div class="fs-summary">${it.sum.map(p=>`<p class="fs-summary-p">${p}</p>`).join('')}</div>
-      <div class="swipe-hint"><span class="swipe-hint-icon">⇅</span><span class="swipe-hint-text">上滑阅读下一条</span></div>
     </div></div>`;
     document.getElementById('topCat').textContent = CATS[curCat];
     document.getElementById('progFill').style.width = ((curIdx+1)/list.length*100)+'%';
   }
 
-  // ===== 渲染侧边栏列表（无 Tab、无缩略图、按分类、当前项高亮）=====
+  // 极简列表：仅标题，无来源/时间
   function renderList(){
     const list = NEWS[CATS[curCat]];
     document.getElementById('panelSub').textContent = `${CATS[curCat]} · ${list.length} 条`;
     document.getElementById('panelList').innerHTML = list.map((it,i)=>
       `<div class="list-item ${i===curIdx?'current':''}" data-idx="${i}">
-        <h4>${it.t}</h4><div class="sub">${it.s} · ${it.time}</div>
+        <h4>${it.t}</h4>
       </div>`).join('');
     document.querySelectorAll('#panelList .list-item').forEach(el=>{
       el.addEventListener('click',()=>{ curIdx=+el.dataset.idx; renderCard(); closePanel(); showToast('定位 → '+CATS[curCat]+' 第'+(curIdx+1)+'条'); });
     });
   }
 
-  // ===== 列表页内的分类滚轮 =====
-  const wheel = document.getElementById('wheel');
-  const wheelWrap = document.getElementById('panelWheelWrap');
+  // 列表页内滚轮
+  const wheel = document.getElementById('wheel'), wheelWrap = document.getElementById('panelWheelWrap');
   function renderWheel(){
     wheel.innerHTML = CATS.map((c,i)=>{
       const div = i===CATS.length-2 ? `<div class="wheel-divider"></div>` : '';
       return `${div}<div class="wheel-item ${i===curCat?'sel':''}" data-cat="${i}">${c}</div>`;
     }).join('');
-    const h = wheel.scrollHeight / CATS.length;
-    const mid = wheelWrap.clientHeight/2 - 17;
+    const h = wheel.scrollHeight / CATS.length, mid = wheelWrap.clientHeight/2 - 17;
     wheel.style.transform = `translateY(${mid - curCat*h}px)`;
-    document.querySelectorAll('#wheel .wheel-item').forEach(el=>{
-      el.addEventListener('click',()=>{ setCat(+el.dataset.cat); });
-    });
+    document.querySelectorAll('#wheel .wheel-item').forEach(el=>{ el.addEventListener('click',()=>{ setCat(+el.dataset.cat); }); });
   }
-  function setCat(i){
-    if(i===curCat) return;
-    curCat = i; curIdx = 0;
-    renderWheel(); renderCard(); renderList();
-    showToast('切换分类 → '+CATS[curCat]);
-  }
-  // 触摸激活态 + 滑动实时切（模拟 RQ-15）
-  let touchY=0, touchCat=1;
-  wheelWrap.addEventListener('touchstart',e=>{ wheelWrap.classList.add('active'); wheel.classList.add('active'); touchY=e.touches[0].clientY; touchCat=curCat; },{passive:true});
-  wheelWrap.addEventListener('touchmove',e=>{ const dy=e.touches[0].clientY-touchY; const h=wheel.scrollHeight/CATS.length; const i=Math.max(0,Math.min(CATS.length-1, touchCat - Math.round(dy/h))); if(i!==curCat){ curCat=i; curIdx=0; renderWheel(); renderCard(); renderList(); } },{passive:true});
+  function setCat(i){ if(i===curCat) return; curCat=i; curIdx=0; renderWheel(); renderCard(); renderList(); showToast('切换分类 → '+CATS[curCat]); }
+  let wheelTouchY=0, wheelTouchCat=1;
+  wheelWrap.addEventListener('touchstart',e=>{ wheelWrap.classList.add('active'); wheel.classList.add('active'); wheelTouchY=e.touches[0].clientY; wheelTouchCat=curCat; },{passive:true});
+  wheelWrap.addEventListener('touchmove',e=>{ const dy=e.touches[0].clientY-wheelTouchY, h=wheel.scrollHeight/CATS.length, i=Math.max(0,Math.min(CATS.length-1, wheelTouchCat - Math.round(dy/h))); if(i!==curCat){ curCat=i; curIdx=0; renderWheel(); renderCard(); renderList(); } },{passive:true});
   wheelWrap.addEventListener('touchend',()=>{ setTimeout(()=>{ wheelWrap.classList.remove('active'); wheel.classList.remove('active'); },300); });
   wheelWrap.addEventListener('wheel',e=>{ setCat(Math.max(0,Math.min(CATS.length-1, curCat + (e.deltaY>0?1:-1)))); },{passive:true});
 
-  // ===== 卡片流上滑切下一条 =====
+  // 卡片流上滑切下一条
   const stage = document.getElementById('cardStage');
   let sy=0, sm=false;
   stage.addEventListener('touchstart',e=>{ sy=e.touches[0].clientY; sm=false; },{passive:true});
@@ -316,16 +288,41 @@
     else if(dy>40 && curIdx>0){ curIdx--; renderCard(); }
   });
 
-  // ===== 侧边栏列表页（修复：框内入口 + × 关闭）=====
+  // ===== 左滑手势进入列表页（无按钮依赖）=====
   const overlay=document.getElementById('panelOverlay'), panel=document.getElementById('slidePanel');
+  let panelStartX=0, panelTrack=false;
   function openPanel(){ overlay.classList.add('show'); panel.classList.add('show'); renderWheel(); renderList(); }
   function closePanel(){ overlay.classList.remove('show'); panel.classList.remove('show'); }
   document.getElementById('panelToggle').addEventListener('click',openPanel);
-  document.getElementById('listEntry').addEventListener('click',openPanel);
   document.getElementById('panelClose').addEventListener('click',closePanel);
   overlay.addEventListener('click',closePanel);
 
-  // ===== dock 菜单 =====
+  const phone = document.querySelector('.phone');
+  phone.addEventListener('touchstart', e => {
+    if (!screens.home.classList.contains('active')) return;
+    if (wheelWrap.contains(e.target) || fab.contains(e.target) || mask.contains(e.target)) return;
+    panelStartX = e.touches[0].clientX; panelTrack = true;
+    panel.style.transition = 'none';
+  }, {passive: true});
+  phone.addEventListener('touchmove', e => {
+    if (!panelTrack) return;
+    const dx = e.touches[0].clientX - panelStartX;
+    if (dx > 0) { panelTrack = false; panel.style.transition = ''; panel.style.transform = 'translateX(100%)'; return; }
+    const pct = Math.max(0, Math.min(100, Math.abs(dx) / 300 * 100));
+    panel.style.transform = `translateX(${100 - pct}%)`;
+    overlay.style.opacity = pct / 100 * 0.25;
+    overlay.style.pointerEvents = 'none';
+  }, {passive: true});
+  phone.addEventListener('touchend', e => {
+    if (!panelTrack) return;
+    panelTrack = false;
+    panel.style.transition = 'transform .3s cubic-bezier(.4,0,.2,1)';
+    overlay.style.transition = 'opacity .3s ease';
+    const dx = e.changedTouches[0].clientX - panelStartX;
+    if (dx < -60) { openPanel(); } else { closePanel(); }
+  });
+
+  // dock 菜单
   const fab=document.getElementById('fab'), dock=document.getElementById('dock'), mask=document.getElementById('menuMask');
   function openMenu(){ dock.classList.add('open'); mask.classList.add('open'); }
   function closeMenu(){ dock.classList.remove('open'); mask.classList.remove('open'); }
@@ -333,10 +330,8 @@
   mask.addEventListener('click',closeMenu);
   document.querySelectorAll('.dock-item').forEach(it=>it.addEventListener('click',()=>{ const t=it.dataset.go; if(t){ showToast('跳转 → '+it.querySelector('.dock-label').textContent+'（占位）'); closeMenu(); } else { showToast('「'+it.querySelector('.dock-label').textContent+'」占位'); closeMenu(); } }));
 
-  // ===== 返回主页 + 暗色 =====
   document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>{ showToast('wx.reLaunch → 首页'); setTimeout(()=>goPage('home'),500); }));
-  document.getElementById('themeToggle').addEventListener('click',function(){ const h=document.documentElement; const d=h.getAttribute('data-theme')==='dark'; h.setAttribute('data-theme',d?'light':'dark'); this.textContent=d?'🌙 暗色':'☀️ 浅色'; this.classList.toggle('active',!d); });
-
+  document.getElementById('themeToggle').addEventListener('click',function(){ const h=document.documentElement, d=h.getAttribute('data-theme')==='dark'; h.setAttribute('data-theme',d?'light':'dark'); this.textContent=d?'🌙 暗色':'☀️ 浅色'; this.classList.toggle('active',!d); });
   pills.forEach(p=>p.addEventListener('click',()=>goPage(p.dataset.page)));
   renderWheel(); renderCard(); renderList(); goPage('home');
 </script>
