@@ -77,10 +77,10 @@
 ---
 ### 📤 2026-08-04 19:15 【全栈开发 FS 批量交付 · TL-B18 + TL-B17 + TL-B1/B2 + TL-B15 · 已推送 ✅】
 
-> **FS 本轮完成**：TL-B18（AI 摘要胶囊 ✅）、TL-B17（12 Bug 修复 ✅）、TL-B1/B2（B-08~B-14 整批清理裁定 ✅）、TL-B15（RQ-17 返回主页 ✅）。
+> **FS 本轮完成**：TL-B18（AI 摘要胶囊 ✅）、TL-B17（12 Bug 修复 ✅，**PD 验收通过 12/13，1🔴 新提单 BUG-TL17-016**）、TL-B1/B2（B-08~B-14 整批清理裁定 ✅）、TL-B15（RQ-17 返回主页 ✅）。
 >
 > **🔔 待测试验收**：
-> - **产品设计师（PD）**：TL-B18 按 UI-B8 §5 十三项走查验收；TL-B17 按 UI-B7 §5 四态映射表走查验收
+> - **产品设计师（PD）**：TL-B18 按 UI-B8 §5 十三项走查验收 ✅ 30/30；TL-B17 按 UI-B7 §5 四态映射表走查验收 ✅ 12/13，🔴 **BUG-TL17-016 已提单**（分类栏底色与 AI 胶囊混淆）
 > - **测试工程师 / 产品经理**：TL-B17 列表页回归（面板开闭/滚轮联动/列表点击/fab dock/底部提示）；TL-B15 主页图标三页面验证（detail/history/favorites）
 > - **后端**：TL-B18 需重新部署 `refreshNews`/`getNewsDetail`/`getNewsList` 三个云函数后验证 summarySource 链路
 
@@ -893,6 +893,7 @@
 | | BUG-TL17-013 | ~~面板缺少关闭按钮~~ | — | TL-B17 | ❌ 已废弃 |
 | | BUG-TL17-014 | **nav-dots 未移除** | ✅ P1 | TL-B17 | FS 已移除 WXML+WXSS（2026-08-04） |
 | | BUG-TL17-015 | **面板头部缺少副标题** | ✅ P2 | TL-B17 | 已存在（home.wxml:125）（2026-08-04 核实） |
+| | **BUG-TL17-016** | 🔴 **🆕 侧边面板分类栏选中项底色与 AI 胶囊混淆**（PD 走查 v1.3 #37）：`theme.json` 缺少 `--highlight-bg` token；category-wheel 组件当前使用 `var(--primary-subtle)` 作为 `.wheel-label.active` 底色——该值与 AI 摘要胶囊 `rgba(0,122,255,0.12)` **完全一致**，导致用户无法区分「分类选中态」和「AI 标识」两个不同语义。**修复**：① `theme.json` light 增 `"--highlight-bg": "rgba(0, 122, 255, 0.06)"` / dark 增 `"--highlight-bg": "rgba(10, 132, 255, 0.10)"`（比胶囊底色更浅，视觉层级：胶囊 > 分类选中）；② `components/category-wheel/category-wheel.wxss` 将 `.wheel-label.active` 的 `background-color: var(--primary-subtle, ...)` 改为 `background-color: var(--highlight-bg, ...)`。**改动量 3 行**。**引用**：`D-02-交互走查-UI-UX全局验收-v1.3.md` §七 | 🔴 P0 | 无 | 📋 **待全栈开发认领**（PD 2026-08-04 19:45 提单） |
 | | **TL-B18** | 🔴 AI 摘要首页展示链路 + 胶囊前端实现 | ✅ | UI-B8 ✅ | ✅ FS 已实现（2026-08-04）。待 PD 走查验收 + 测试工程师验证 |
 | **测试工程师** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
 | **产品经理** | QA-B1 | **P0 复测 + 归因**：复测详情页翻页；**说明 592 条自动化为何未拦住**，并补 **WXML 事件绑定一致性**回归用例（`bindscroll`/`bindtap` 与 JS handler 双向存在性校验） | 🔴 | FE-B1 | 继承 |
