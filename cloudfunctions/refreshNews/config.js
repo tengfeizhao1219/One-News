@@ -86,6 +86,14 @@ module.exports = {
     maxPageSize: 50,
   },
 
+  // 内容安全审核（B-02 / P0-Q1 降级放行）
+  // ⚠️ 个人主体小程序无法调用微信 msgSecCheck（-501001 invalid access_token 属预期，非配置错误）。
+  //    设 SECURITY_CHECK_ENABLED=false 可跳过安全检测，避免每次刷新空打失败请求 + 日志噪音。
+  //    企业主体认证后可改回 true（或删除环境变量）恢复审核。
+  security: {
+    enabled: process.env.SECURITY_CHECK_ENABLED !== 'false',
+  },
+
   // B-12 限流/退避策略配置
   rateLimit: {
     minCallGapMs: 1500,               // 分类间最小调用间隔（防智谱 RPM）

@@ -352,7 +352,10 @@ exports.main = async (event) => {
   }
 
   // 3. 内容安全审核
-  const security = new SecurityCheck()
+  const security = new SecurityCheck({ enabled: config.security.enabled })
+  if (config.security.enabled === false) {
+    console.warn('[refreshNews] ⚠️ 内容安全检测已禁用（SECURITY_CHECK_ENABLED=false，个人主体/手动关闭），全部新闻直接放行')
+  }
   const secResult = await security.checkBatch(valid)
   const { passed: secPassed, blocked: secBlocked, stats: securityStats } = secResult
 

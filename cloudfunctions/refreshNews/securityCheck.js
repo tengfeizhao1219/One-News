@@ -33,7 +33,8 @@ class SecurityCheck {
     this._failCount = 0
     this._totalChecked = 0
     this._totalBlocked = 0
-    this._state = STATE.NORMAL
+    // 个人主体小程序 msgSecCheck 不可用：options.enabled === false → 直接 DISABLED，跳过所有调用
+    this._state = options.enabled === false ? STATE.DISABLED : STATE.NORMAL
     this._failThreshold = options.failThreshold || FAIL_THRESHOLD
   }
 
@@ -65,8 +66,12 @@ class SecurityCheck {
    *   - risk 标签：'risky'(违规) / 'degraded'(降级放行) / null
    */
   async checkText(content) {
+    // 禁用（个人主体/手动关闭）：直接放行
+    if (this._state === STATE.DISABLED) {
+      return { pass: true, risk: 'disabled' }
+    }
     // 降级模式：直接放行
-    if (this._state === STATE.DEGRADED || this._state === STATE.DISABLED) {
+    if (this._state === STATE.DEGRADED) {
       return { pass: true, risk: 'degraded' }
     }
 
@@ -160,7 +165,12 @@ class SecurityCheck {
    * @returns {Promise<{pass: boolean, risk: string|null}>}
    */
   async checkImage(mediaUrl) {
-    if (this._state === STATE.DEGRADED || this._state === STATE.DISABLED) {
+    // 禁用（个人主体/手动关闭）：直接放行
+    if (this._state === STATE.DISABLED) {
+      return { pass: true, risk: 'disabled' }
+    }
+    // 降级模式：直接放行
+    if (this._state === STATE.DEGRADED) {
       return { pass: true, risk: 'degraded' }
     }
 
