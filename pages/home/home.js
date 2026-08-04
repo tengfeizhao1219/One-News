@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, SWIPE_ANIMATION_MS, BOUNCE_ANIMATION_MS, STATUS_BAR_HEIGHT, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, STATUS_BAR_HEIGHT, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
@@ -41,12 +41,11 @@ Page({
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
   },
 
-  // 触摸状态（JS 层仅记录，渲染由 WXS 处理）
+  // 触摸状态（v5.9: 与详情页完全对齐——JS 线程处理、70px/500ms flick-only）
   _touchStartY: 0,
   _touchStartX: 0,
   _isAnimating: false,
   _lastSwipeTime: 0,
-  _lastTouchData: null,
 
   onLoad() {
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
@@ -347,8 +346,7 @@ Page({
         id: '', title: '', summary: '', summaryParagraphs: [],
         category: '', categoryName: '', source: '', time: '',
         state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-        translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
-        opacity: position === 0 ? 1 : 0, transitionClass: ''
+        animClass: ''
       }
     }
 
@@ -357,240 +355,158 @@ Page({
     var displaySummary = item.summary || ''
 
     if (summarySource === 'title') {
-      // 第三档：没有可用摘要，直接用标题作为显示文本（但不标记为 AI）
       displaySummary = item.title || ''
     }
-    // 'ai' / 'desc'：直接使用 item.summary（后端已生成好）
 
     return {
       ...item,
       summary: displaySummary,
-      // 最多取前 3 段，避免摘要过长把卡片撑高、导致标题被居中布局裁切
       summaryParagraphs: displaySummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3),
-      // v6.2：AI 摘要标记（仅 summarySource === 'ai' 时显示胶囊）
       isAiSummary: summarySource === 'ai',
-      // 透传来源信息，WXML 按需使用
       summarySource: summarySource,
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-      translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
-      opacity: position === 0 ? 1 : 0,
-      transitionClass: ''
+      animClass: ''
     }
   },
 
-  // ============ WXS 回调（从 WXS 触摸处理中回调） ============
+  // ============ 翻页手势（v5.9: 与详情页完全对齐——JS 触摸 + 70px/500ms flick-only） ============
 
-  /**
-   * WXS touchStart 回调 —— 仅记录状态，不做 setData
-   */
-  onWxsTouchStart(data) {
-    try {
-      if (this._isAnimating) return
-      this._touchStartY = data.startY
-      this._touchStartX = data.startX
-    } catch (e) {
-      console.error('onWxsTouchStart error', e)
+  onTouchStart(e) {
+    this._touchStartY = e.touches[0].clientY
+    this._touchStartX = e.touches[0].clientX
+    this._touchStartT = Date.now()
+  },
+
+  onTouchEnd(e) {
+    if (this._isAnimating) return
+
+    var dy = e.changedTouches[0].clientY - this._touchStartY
+    var dt = Date.now() - this._touchStartT
+
+    // 与详情页 onTouchEnd 完全一致的判定：
+    //   - 阈值 70px（不是原卡片页的 50px）
+    //   - 时间窗 500ms（慢拖不翻）
+    //   - 无跟手拖拽、无回弹：不达标直接忽略
+    if (Math.abs(dy) < 70 || dt > 500) return
+
+    // 左滑呼出面板
+    var dx = e.changedTouches[0].clientX - (this._touchStartX || 0)
+    if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      this.setData({ showPanel: true })
+      return
+    }
+
+    var atLast = this.data.currentIndex >= this.data.newsList.length - 1
+    var atFirst = this.data.currentIndex <= 0
+
+    if (dy < 0 && atLast) {
+      // 已到末尾上滑 → 加载更多
+      this.loadMoreNews()
+    } else if (dy > 0 && atFirst) {
+      // 已到开头下滑 → 刷新
+      this.refreshCurrentCategory()
+    } else {
+      this._isAnimating = true
+      if (dy < 0) this._animateSwipeNext()
+      else this._animateSwipePrev()
     }
   },
+  // ============ 动画切换逻辑（v5.9: 与详情页 out-in 两阶段完全一致） ============
 
   /**
-   * WXS touchMove 回调 —— 仅记录偏移，不做 setData
-   */
-  onWxsTouchMove(data) {
-    try {
-      this._lastTouchData = data
-    } catch (e) {}
-  },
-
-  /**
-   * WXS touchEnd 回调 —— 执行切换 / 回弹 / 边界加载更多或刷新
-   * 异常隔离：任何内部异常都不能楔住手势层（WXS 已先重置自身状态）
-   */
-  onWxsTouchEnd(data) {
-    try {
-      if (this._isAnimating) return
-
-      const { dy, dx } = data
-
-      // 左滑呼出面板
-      if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-        this.setData({ showPanel: true })
-        this._resetCardPositions()
-        return
-      }
-
-      // 垂直滑动：先判断是否触达边界，做加载更多 / 刷新
-      if (Math.abs(dy) > SWIPE_THRESHOLD && Math.abs(dy) > Math.abs(dx)) {
-        const atLast = this.data.currentIndex >= this.data.newsList.length - 1
-        const atFirst = this.data.currentIndex <= 0
-
-        if (dy < 0 && atLast) {
-          // 已到列表末尾仍上滑 -> 加载更多（获取新的其他新闻）
-          this.loadMoreNews()
-        } else if (dy > 0 && atFirst) {
-          // 已到列表开头仍下滑 -> 刷新当前分类
-          this.refreshCurrentCategory()
-        } else {
-          this._isAnimating = true
-          if (dy < 0) this._animateSwipeNext()
-          else this._animateSwipePrev()
-        }
-      } else {
-        // 未达阈值，回弹到原位
-        this._animateBounceBack()
-      }
-    } catch (e) {
-      console.error('onWxsTouchEnd error', e)
-      this._isAnimating = false
-    }
-  },
-  // ============ 动画切换逻辑 ============
-
-  /**
-   * 上滑切换到下一条
-   * 策略：先给当前 cards 加上 with-transition 并设置目标位置
-   * 动画完成后，再重建 cards 并移除 transition
+   * 上滑 → 下一条：out-up 350ms → 重建 cards → in-up
    */
   _animateSwipeNext() {
-    const { currentIndex, newsList, cards } = this.data
+    var that = this
+    var currentIndex = this.data.currentIndex
+    var newsList = this.data.newsList
 
     if (currentIndex >= newsList.length - 1) {
-      // 已是最后一张，回弹
-      this._animateBounceBack()
+      this._isAnimating = false
       return
     }
 
-    // 步骤1：给当前 cards 加上 transition，设置目标位置（当前卡移到上方，下一张卡移到中间）
-    const animated = cards.map(card => {
-      const next = { ...card, transitionClass: 'with-transition' }
+    // 阶段 1: out-up —— 当前卡片向上移出
+    var cards = this.data.cards.map(function (card) {
+      var next = { ...card }
       if (card.state === 'active') {
-        next.translateY = -PAGE_HEIGHT
-        next.opacity = 0
+        next.animClass = 'out-up'
       } else if (card.state === 'below') {
-        next.translateY = 0
-        next.opacity = 1
-        next.state = 'active'
+        next.animClass = 'out-up'
       }
       return next
     })
-
-    this.setData({ cards: animated })
+    this.setData({ cards: cards })
     this._lastSwipeTime = Date.now()
 
-    // 步骤2：动画完成后重建 cards（移除 transition，准备新的目标卡）
-    // BUG-20260801-009 修复：使用 this.data.newsList 最新值而非闭包快照
-    const newIndex = currentIndex + 1
-    setTimeout(() => {
-      try {
-        this.renderCards(this.data.newsList, newIndex)
-      } catch (e) {
-        console.error('renderCards failed', e)
-      } finally {
-        this._isAnimating = false
-      }
-    }, SWIPE_ANIMATION_MS + 50)
+    // 350ms 后重建 cards（新索引），新卡片从下方滑入
+    var newIndex = currentIndex + 1
+    setTimeout(function () {
+      // 先重建到新位置
+      that.renderCards(that.data.newsList, newIndex)
+
+      // 标记新激活卡 in-up，然后立刻移除 animClass 触发 transition 滑入
+      setTimeout(function () {
+        var updated = that.data.cards.map(function (card) {
+          if (card.state === 'active') return { ...card, animClass: 'in-up' }
+          return card
+        })
+        that.setData({ cards: updated })
+        setTimeout(function () {
+          var cleared = that.data.cards.map(function (card) {
+            return { ...card, animClass: '' }
+          })
+          that.setData({ cards: cleared })
+          that._isAnimating = false
+        }, 30)
+      }, 30)
+    }, 350)
   },
 
   /**
-   * 下滑切换到上一条
+   * 下滑 → 上一条：out-down 350ms → 重建 cards → in-down
    */
   _animateSwipePrev() {
-    const { currentIndex, newsList, cards } = this.data
+    var that = this
+    var currentIndex = this.data.currentIndex
 
     if (currentIndex <= 0) {
-      this._animateBounceBack()
+      this._isAnimating = false
       return
     }
 
-    // 当前卡移到下方，上一张卡移到中间
-    const animated = cards.map(card => {
-      const next = { ...card, transitionClass: 'with-transition' }
+    // 阶段 1: out-down —— 当前卡片向下移出
+    var cards = this.data.cards.map(function (card) {
+      var next = { ...card }
       if (card.state === 'active') {
-        next.translateY = PAGE_HEIGHT
-        next.opacity = 0
+        next.animClass = 'out-down'
       } else if (card.state === 'above') {
-        next.translateY = 0
-        next.opacity = 1
-        next.state = 'active'
+        next.animClass = 'out-down'
       }
       return next
     })
-
-    this.setData({ cards: animated })
+    this.setData({ cards: cards })
     this._lastSwipeTime = Date.now()
 
-    const newIndex = currentIndex - 1
-    // BUG-20260801-009 修复：使用 this.data.newsList 最新值而非闭包快照
-    setTimeout(() => {
-      try {
-        this.renderCards(this.data.newsList, newIndex)
-      } catch (e) {
-        console.error('renderCards failed', e)
-      } finally {
-        this._isAnimating = false
-      }
-    }, SWIPE_ANIMATION_MS + 50)
-  },
+    var newIndex = currentIndex - 1
+    setTimeout(function () {
+      that.renderCards(that.data.newsList, newIndex)
 
-  /**
-   * 回弹动画：卡片回到原位
-   */
-  _animateBounceBack() {
-    const cards = this.data.cards.map(card => {
-      const next = { ...card, transitionClass: 'with-transition' }
-      if (card.state === 'active') {
-        next.translateY = 0
-        next.opacity = 1
-      } else if (card.state === 'above') {
-        next.translateY = -PAGE_HEIGHT
-        next.opacity = 0
-      } else if (card.state === 'below') {
-        next.translateY = PAGE_HEIGHT
-        next.opacity = 0
-      }
-      return next
-    })
-
-    this.setData({ cards })
-
-    setTimeout(() => {
-      try {
-        this._removeTransition()
-      } catch (e) {
-        console.error('removeTransition failed', e)
-      } finally {
-        this._isAnimating = false
-      }
-    }, BOUNCE_ANIMATION_MS + 50)
-  },
-
-  /**
-   * 重置卡片位置（用于非滑动场景如打开面板）
-   */
-  _resetCardPositions() {
-    const cards = this.data.cards.map(card => {
-      const next = { ...card, transitionClass: '' }
-      if (card.state === 'active') {
-        next.translateY = 0
-        next.opacity = 1
-      } else if (card.state === 'above') {
-        next.translateY = -PAGE_HEIGHT
-        next.opacity = 0
-      } else if (card.state === 'below') {
-        next.translateY = PAGE_HEIGHT
-        next.opacity = 0
-      }
-      return next
-    })
-    this.setData({ cards })
-  },
-
-  /**
-   * 移除所有卡片的 transition class
-   */
-  _removeTransition() {
-    const cards = this.data.cards.map(card => ({ ...card, transitionClass: '' }))
-    this.setData({ cards })
+      setTimeout(function () {
+        var updated = that.data.cards.map(function (card) {
+          if (card.state === 'active') return { ...card, animClass: 'in-down' }
+          return card
+        })
+        that.setData({ cards: updated })
+        setTimeout(function () {
+          var cleared = that.data.cards.map(function (card) {
+            return { ...card, animClass: '' }
+          })
+          that.setData({ cards: cleared })
+          that._isAnimating = false
+        }, 30)
+      }, 30)
+    }, 350)
   },
 
   // ============ 边界加载更多 / 刷新 ============
@@ -675,11 +591,9 @@ Page({
       this._animateSwipePrev()
     }
 
-    // 由于 _animateSwipeNext/Prev 只移动一步，需要链式跳转
-    // 改用直接渲染到目标位置
+    // 直接渲染到目标位置（不再链式调用动画，renderCards 自带 animClass=''）
     var that = this
     this.renderCards(this.data.newsList, idx)
-    // 给 WXS 层一个短延迟让它感知到渲染变化
     setTimeout(function () {
       that._isAnimating = false
     }, 50)

@@ -82,14 +82,20 @@
   flex-direction: column;
   opacity: 0;
   pointer-events: none;
+  /* v5.9: 所有卡片默认启用 transition，与详情页 .article 一致 */
+  transition: transform 0.35s ease, opacity 0.35s ease;
+  will-change: transform, opacity;
 }
 
-/* 自动切换/回弹时启用 transition（翻书动画） */
-/* transition 同时作用于 transform 和 opacity，确保流畅过渡 */
-.card.with-transition {
-  transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1.0),
-              opacity 0.35s ease;
-}
+/* v5.9: 翻页动画与详情页 .article 完全一致——整屏滑出/滑入 + 350ms ease */
+/* 上滑翻下一条：当前卡向上移出 */
+.card.out-up   { transform: translateY(-100vh); opacity: 0; }
+/* 下滑翻上一条：当前卡向下移出 */
+.card.out-down { transform: translateY(100vh);  opacity: 0; }
+/* 上滑翻下一条：新卡从下方滑入 */
+.card.in-up    { transform: translateY(100vh);  opacity: 0; }
+/* 下滑翻上一条：新卡从上方滑入 */
+.card.in-down  { transform: translateY(-100vh); opacity: 0; }
 
 .card.active {
   opacity: 1;

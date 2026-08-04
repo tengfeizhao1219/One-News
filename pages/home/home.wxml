@@ -1,6 +1,4 @@
 <!-- 首页 - 卡片流主视图 -->
-<wxs module="touch" src="./touch.wxs"></wxs>
-
 <!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
 <view
   class="page"
@@ -44,13 +42,11 @@
 
   <!-- ========== 正常卡片流 ========== -->
   <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}"
-    bindtouchstart="{{touch.handleTouchStart}}" 
-    bindtouchmove="{{touch.handleTouchMove}}" 
-    bindtouchend="{{touch.handleTouchEnd}}">
+    bindtouchstart="onTouchStart" 
+    bindtouchend="onTouchEnd">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
-        class="card {{item.state}} {{touch.isDragging() ? '' : item.transitionClass}}"
-        style="transform: translateY({{touch.getTranslateY(item.state, item.translateY)}}px); opacity: {{touch.getOpacity(item.state, item.opacity)}};"
+        class="card {{item.state}} {{item.animClass}}"
         data-id="{{item.id}}"
         bindtap="onCardTap">
 

@@ -36,11 +36,11 @@ function refreshPageSize() {
   } catch (e) {}
 }
 
-// 手势阈值
-const SWIPE_THRESHOLD = 50       // 上下滑动切换阈值
+// 手势阈值（v5.9: 与详情页完全对齐——阈值70px、动画350ms ease）
+const SWIPE_THRESHOLD = 70       // 上下滑动切换阈值（与详情页 onTouchEnd 一致）
 const PANEL_SWIPE_THRESHOLD = 60 // 左滑呼出面板阈值
-const SWIPE_ANIMATION_MS = 300   // 翻页动画时长
-const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长
+const SWIPE_ANIMATION_MS = 350   // 翻页动画时长（与详情页 setTimeout 350ms 一致）
+const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长（v5.9 已废弃：卡片页不再使用回弹逻辑）
 
 // 请求配置
 const PAGE_SIZE = 15  // UX-BUG05: 从 10 提升至 15（精选场景上限）
