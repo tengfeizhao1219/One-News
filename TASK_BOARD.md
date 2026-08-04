@@ -51,6 +51,29 @@
 > — 产品设计师（PD）
 
 ---
+### 🔧 2026-08-04 19:05 【资产库同步机制升级 · 与 GM 完全解耦 · 文档+代码双保险 · 全员必读】
+
+> **背景**：owner 要求「所有文档、代码完成以后务必全部同步到项目资产库，不能只依赖 GitHub」。同时 GM 流程在实践中遇到 DNS/网络问题，owner 要求资产库同步与 GM 完全解耦。
+
+> **已执行**：
+> 1. **merge_docs.py 扩展**：新增第C章「代码快照」——自动收集 pages/ cloudfunctions/ components/ utils/ test/ 全部源码，嵌入统一文档（含目录索引 + 带语言标记的代码块）。现共 9 章（0~6 + 附录A + 代码快照C），210 个文件，~1.5MB。
+> 2. **sync_to_asset_library.sh 新增**：一键执行 merge_docs.py + notion_sync.py，不依赖 GM、不依赖 GitHub。
+> 3. **COLLABORATION.md 新增 §九「项目资产库同步」**：与 GM 完全解耦的独立通路。
+
+> **🔴 新规（全员）**：
+> - 各角色改完文件后，在写 .git-staging/<role>.ready 的**同时**，如果本会话能连 Notion API → 跑 bash sync_to_asset_library.sh。
+> - 如果本会话没有 Notion token → 告知 owner 或项目经理「请同步资产库」，由 PJM 集中触发。
+> - **资产库 = GitHub 之外的独立兜底**：任何时候需要最新文档/代码，直接从 Notion 取，不依赖 GM 是否提交成功。
+
+> **两条通路（并行、互不阻塞）**：
+> 角色改文件
+>   ├── staging 标记 → GM 提交 → GitHub（可能因 DNS 慢/卡）
+>   └── bash sync_to_asset_library.sh → Notion 资产库（独立，立即）
+
+> **详见**：COLLABORATION.md §九、NOTION_SYNC.md、sync_to_asset_library.sh
+
+---
+
 ### 🎨 2026-08-04 17:35 【PD 交付 UI-B8 AI 摘要胶囊 v1.0 · 四方案对比 · 已由 17:44 广播裁定为 A-1】
 
 > **PD 认领并交付 UI-B8**（TL-B18 的唯一前置，此前一直空缺，FS 被卡）。

@@ -29,9 +29,20 @@ CHAPTERS = [
     ("5", "测试验收",       ["05-测试验收"]),
     ("6", "上线复盘",       ["06-上线复盘"]),
     ("A", "附录·资产与日志", ["资产库归档", "项目日志.md", "新会话启动指南.md", "共享保险库使用指南.md"]),
+    ("C", "代码快照", []),  # 特殊：不收集 docs/，由 collect_code_files() 单独处理
 ]
 
 EXCLUDE_FILES = {"SOP-软件开发流程基准.md"}
+
+CODE_SNAPSHOT_DIRS = [
+    ("pages", "pages"),
+    ("cloudfunctions", "cloudfunctions"),
+    ("components", "components"),
+    ("utils", "utils"),
+    ("test", "test"),
+]
+CODE_EXTENSIONS = {".js", ".wxml", ".wxss", ".wxs", ".json", ".py", ".html", ".css", ".sh", ".yml", ".yaml", ".md"}
+CODE_EXCLUDE_DIRS = {"node_modules", ".git", ".notion_build", ".git-staging", "__pycache__", ".github", "assets", "images", "demo"}
 
 def slugify(s):
     s = re.sub(r"[^\w一-鿿\-]+", "-", s)
@@ -71,6 +82,61 @@ def render_doc(title, path):
         buf.append(demote_heading(ln))
     buf.append("")
     return "\n".join(buf)
+
+def collect_code_files():
+    """递归收集 CODE_SNAPSHOT_DIRS 下的代码文件，返回按目录分组的 [(目录名, [(相对路径, 绝对路径)])]"""
+    groups = []
+    for dir_name, dir_rel in CODE_SNAPSHOT_DIRS:
+        full_dir = os.path.join(REPO, dir_rel)
+        if not os.path.isdir(full_dir):
+            continue
+        files = []
+        for root, dirs, filenames in os.walk(full_dir):
+            dirs[:] = [d for d in dirs if d not in CODE_EXCLUDE_DIRS and not d.startswith(".")]
+            for fn in sorted(filenames):
+                ext = os.path.splitext(fn)[1].lower()
+                if ext in CODE_EXTENSIONS:
+                    abs_path = os.path.join(root, fn)
+                    rel_path = os.path.relpath(abs_path, REPO)
+                    files.append((rel_path, abs_path))
+        if files:
+            groups.append((dir_name, files))
+    return groups
+
+def render_code_snapshot(title, files):
+    """渲染代码快照：目录树 + 每个文件的源码。超过 1900 字符的文件截断标注。"""
+    lines = [f"## {title}", "", f"> 代码快照 · {len(files)} 个文件 · GitHub 不可用时可从 Notion 资产库独立恢复源码"]
+    lines.append("> 生成：" + datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+    lines.append("")
+    lines.append("### 文件清单")
+    lines.append("")
+    for rel_path, _ in files:
+        depth = rel_path.count(os.sep)
+        lines.append(f"{'  ' * depth}- `{rel_path}`")
+    lines.append("")
+    for rel_path, abs_path in files:
+        lines.append(f"### `{rel_path}`")
+        lines.append("")
+        try:
+            with open(abs_path, encoding="utf-8", errors="replace") as f:
+                content = f.read()
+        except Exception:
+            content = "(无法读取)"
+        ext = os.path.splitext(rel_path)[1].lower()
+        lang = {".js":"javascript",".wxml":"xml",".wxss":"css",".wxs":"javascript",
+                ".json":"json",".py":"python",".html":"html",".css":"css",
+                ".sh":"bash",".yml":"yaml",".yaml":"yaml",".md":"markdown"}.get(ext, "")
+        if len(content) > 1900:
+            lines.append(f"```{lang}")
+            lines.append(content[:1900])
+            lines.append("```")
+            lines.append(f"> ⚠️ {len(content)} 字符，已截断。完整内容见 GitHub。")
+        else:
+            lines.append(f"```{lang}")
+            lines.append(content)
+            lines.append("```")
+        lines.append("")
+    return "\n".join(lines)
 
 def main():
     os.makedirs(BUILD, exist_ok=True)
@@ -115,6 +181,31 @@ def main():
         unified_parts.append(chapter_md)
         unified_parts.append("")
         print(f"[章节] 第{idx}章 {title}: {len(files)} 篇, {len(chapter_md.encode('utf-8'))} 字节 -> {os.path.basename(chap_path)}")
+
+    # ---- 代码快照章节（第C章）----
+    code_groups = collect_code_files()
+    if code_groups:
+        total_code = sum(len(files) for _, files in code_groups)
+        code_parts = []
+        for dir_name, files in code_groups:
+            code_parts.append(render_code_snapshot(dir_name, files))
+        code_md = "\n\n".join(code_parts)
+        slug_c = slugify("代码快照")
+        cp = os.path.join(BUILD, f"chC_{slug_c}.md")
+        with open(cp, "w", encoding="utf-8") as f:
+            f.write(code_md)
+        chapters_meta.append({
+            "idx": "C", "title": "代码快照", "file": os.path.relpath(cp, REPO),
+            "docs": total_code, "bytes": len(code_md.encode("utf-8")),
+        })
+        toc.append(f"- 附录·代码快照（{total_code} 个文件）")
+        unified_parts.append("# 附录 代码快照")
+        unified_parts.append("")
+        unified_parts.append(f"> 代码快照，{total_code} 个文件。GitHub 不可用时从 Notion 资产库独立恢复全量源码。")
+        unified_parts.append("")
+        unified_parts.append(code_md)
+        unified_parts.append("")
+        print(f"[章节] 附录·代码快照: {total_code} 个文件, {len(code_md.encode('utf-8'))} 字节 -> {os.path.basename(cp)}")
 
     unified_parts.extend(["", "---", "", f"> 文档结束 · 共 {len(chapters_meta)} 个章节 · 生成于 {now}"])
     unified_text = "\n".join(unified_parts)

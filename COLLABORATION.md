@@ -518,4 +518,44 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ---
 
-> **本协议版本**：v4.0 | **生效日期**：2026-08-04（引入 GM 角色，5 角色架构，统一 git 管理）
+## 九、项目资产库同步（与 GM 完全解耦 · 独立于 GitHub）
+
+> **引入时间**：2026-08-04 | **核心理念**：文档+代码改完即自动同步到 Notion 资产库，**不依赖 GM、不依赖 GitHub**。
+
+### 9.1 为什么与 GM 解耦
+- GM 流程依赖 GitHub DNS 修复（间歇性阻断），存在不确定性。
+- 资产库同步走 Notion API，另一条网络通路。
+- 两个系统互相独立、互不阻塞：GM 可以慢，但资产库始终最新。
+
+### 9.2 资产库包含什么
+| 内容 | 来源 | 同步方式 |
+|------|------|---------|
+| 产品阶段文档（01~06 + 附录） | `docs/` 全部 .md | `merge_docs.py` 自动合并 |
+| 规划与协作机制文档 | `docs/00-规划/`、`docs/00-自查/` | 同上 |
+| **代码快照（全量源码）** | `pages/`、`cloudfunctions/`、`components/`、`utils/`、`test/` | 同上（含目录索引 + 源码嵌入） |
+| 协作框架 live 文档 | `TASK_BOARD.md`、`COMMLOG.md` 等 | **不含** |
+
+### 9.3 触发方式
+| 触发方 | 场景 | 操作 |
+|--------|------|------|
+| **各角色** | 完成改动、写完 staging 标记后 | `bash sync_to_asset_library.sh`（如果能连 Notion API） |
+| **项目经理（PJM）** | 定期巡检 / 收到角色告知 | `bash sync_to_asset_library.sh` |
+| **owner** | 随时需要 | 对 PJM 说「同步资产库」 |
+
+### 9.4 一键命令
+```bash
+cd /root/one-news && bash sync_to_asset_library.sh
+```
+> 前提：`NOTION_TOKEN` 环境变量或 `.notion_token` 文件。详见 `NOTION_SYNC.md`。
+
+### 9.5 与 GM 的关系
+```
+角色改文件
+  ├── staging 标记 → GM 提交 → GitHub（可能因 DNS 慢/卡）
+  └── bash sync_to_asset_library.sh → Notion 资产库（独立，立即）
+```
+**两条通路并行、互不阻塞。资产库是兜底保障。**
+
+---
+
+> **本协议版本**：v4.1 | **生效日期**：2026-08-04（新增 §九：项目资产库同步，与 GM 完全解耦）

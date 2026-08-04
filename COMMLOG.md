@@ -26,6 +26,35 @@
 
 ---
 ## [2026-08-04 17:35] 🎨 产品设计师 交付 UI-B8 AI 摘要胶囊 v1.0 · 四方案对比（已由 17:44 裁定为 A-1）| 会话：[产品设计师(PD)]
+## [2026-08-04 19:05] 🔧 项目经理 资产库同步机制升级：与 GM 完全解耦 · 文档+代码双保险
+
+> **触发**：owner 要求「所有文档、代码完成以后务必全部同步到项目资产库，不能只依赖 GitHub」 + 要求与 GM 流程完全解耦。
+
+### 一、已执行变更
+| 变更 | 文件 | 说明 |
+|------|------|------|
+| 扩展 merge_docs.py | merge_docs.py | 新增第C章「代码快照」（pages/cloudfunctions/components/utils/test/ 全量源码，~76文件） |
+| 新增一键同步脚本 | sync_to_asset_library.sh | bash sync_to_asset_library.sh = merge + notion sync，不依赖 GM/GitHub |
+| 新增 §九 | COLLABORATION.md | 「项目资产库同步（与 GM 完全解耦 · 独立于 GitHub）」 |
+| 广播全员 | TASK_BOARD.md | 19:05 置顶广播 |
+
+### 二、核心原则
+```
+角色改文件
+  ├── staging 标记 → GM 提交 → GitHub（可能因 DNS 慢/卡）
+  └── bash sync_to_asset_library.sh → Notion 资产库（独立，立即）
+```
+两条通路并行、互不阻塞。资产库是 GitHub 之外的独立兜底。
+
+### 三、各角色新规
+- 改完文件后，如果本会话能连 Notion API → 跑 bash sync_to_asset_library.sh
+- 如果不能 → 告知 owner/PJM「请同步资产库」，由 PJM 集中触发
+
+### 四、找谁
+- 项目经理（PJM，设计+实施+记录）｜🔔 关注人：全栈开发 + 产品经理 + 产品设计师 + Git 管理专家
+
+---
+
 ## [2026-08-04 17:36] 🧪 项目经理 自测 + 测试清单：双路径交叉验证全部通过，方案可行
 
 > **触发**：owner 追问「方案是否真的可行，如何测试」。PJM 执行双路径交叉自测并输出 8 步测试清单，已写入 TASK_BOARD 广播区。
