@@ -1,11 +1,11 @@
 /**
- * 云函数配置模块 v5.6 — getNewsDetail 专用配置
+ * 云函数配置模块 v6.2 — getNewsDetail 专用配置
  *
  * 说明：详情页正文获取 + AI 摘要生成
  *
  * 环境变量：
- *   JUHE_API_KEY        — 聚合数据（必填，正文接口）
- *   DASHSCOPE_API_KEY   — 阿里百炼（可选，AI 摘要生成；未配置则降级为原 summary）
+ *   JUHE_API_KEY   — 聚合数据（必填，正文接口）
+ *   ZHIPU_API_KEY  — 智谱 AI（可选，AI 摘要生成；未配置则降级为原 summary）
  */
 
 module.exports = {
@@ -17,12 +17,12 @@ module.exports = {
     timeout: 8000,
   },
 
-  // 阿里百炼 AI 摘要（v5.6 新增）
-  dashscope: {
-    apiKey: process.env.DASHSCOPE_API_KEY || '',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'deepseek-v3',
-    timeout: 6000,
+  // 智谱 GLM-4-Flash AI 摘要（v6.2：从百炼 DashScope 切换为智谱）
+  zhipuSummary: {
+    apiKey: process.env.ZHIPU_API_KEY || '',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4-flash',
+    timeout: 8000,
     maxInputChars: 2000,  // 截断喂给 AI 的正文长度
     summaryMaxChars: 150, // 期望摘要字数（100-150 字）
   },

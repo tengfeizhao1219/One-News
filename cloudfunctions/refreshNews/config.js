@@ -58,12 +58,13 @@ module.exports = {
     timeout: 8000,
   },
 
-  // 阿里百炼 AI 摘要（v6 新增：refreshNews 直接抓正文时同步生成摘要）
-  dashscope: {
-    apiKey: process.env.DASHSCOPE_API_KEY || '',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'deepseek-v3',
-    timeout: 6000,
+  // 智谱 GLM-4-Flash AI 摘要（v6.2：从百炼 DashScope 切换为智谱，统一 refreshNews 数据源）
+  // 使用 ZHIPU_API_KEY 环境变量（与新闻搜索共用同一个 Key）
+  zhipuSummary: {
+    apiKey: process.env.ZHIPU_API_KEY || '',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    model: 'glm-4-flash',
+    timeout: 8000,
     maxInputChars: 2000,
     summaryMaxChars: 150,
   },

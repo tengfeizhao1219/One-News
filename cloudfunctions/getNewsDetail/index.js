@@ -1,9 +1,9 @@
-// 获取新闻详情云函数 v5.6 — 聚合正文 + AI 摘要 + 内容清洗
+// 获取新闻详情云函数 v6.2 — 聚合正文 + AI 摘要（智谱 GLM-4-Flash）+ 内容清洗
 // ============================================================
 // v5.6 改造（2026-08-03）：
-//   抓取到正文后调用阿里百炼 DeepSeek 生成 100-150 字摘要，
+//   抓取到正文后调用智谱 GLM-4-Flash 生成 100-150 字摘要，
 //   写回 news_cache 的 summary 字段（下次列表刷新即展示高质量摘要）。
-//   未配置 DASHSCOPE_API_KEY 或调用失败时保持原 summary，不影响主流程。
+//   未配置 ZHIPU_API_KEY 或调用失败时保持原 summary，不影响主流程。
 //
 // v5.5 改造（2026-08-03）：
 //   详情页正文清洗增强：去除标题重复段、元信息行（时间+来源）、仅含来源段落。
@@ -357,28 +357,33 @@ function fetchJuheContent(uniquekey, options = {}) {
 }
 
 /**
- * 调用阿里百炼 DeepSeek 生成新闻摘要（v5.6）
- * 未配置 DASHSCOPE_API_KEY 时返回 null，调用方保持原 summary。
+ * 调用智谱 GLM-4-Flash 生成新闻摘要（v6.2）
+ * 未配置 ZHIPU_API_KEY 时返回 null，调用方保持原 summary。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
  * @returns {Promise<string|null>} 100-150 字中文摘要
  */
-function summarizeWithDashscope(content, title) {
+function summarizeWithZhipu(content, title) {
   const config = require('./config')
-  const apiKey = config.dashscope.apiKey
-  if (!apiKey) {
-    console.warn('[getNewsDetail] DASHSCOPE_API_KEY 未配置，跳过 AI 摘要')
+  const cfg = config.zhipuSummary
+  if (!cfg) {
+    console.warn('[getNewsDetail] zhipuSummary 配置不存在，跳过 AI 摘要')
     return Promise.resolve(null)
   }
-  if (!content || content.trim().length < 30) {
+  const apiKey = cfg.apiKey
+  if (!apiKey) {
+    console.warn('[getNewsDetail] ZHIPU_API_KEY 未配置，跳过 AI 摘要')
+    return Promise.resolve(null)
+  }
+  // v6.2：降低正文门槛到 10 字，提高 AI 摘要覆盖率
+  if (!content || content.trim().length < 10) {
     return Promise.resolve(null)
   }
 
-  // 截断喂给 AI 的正文，控制成本与耗时
-  const input = content.slice(0, config.dashscope.maxInputChars || 2000)
+  const input = content.slice(0, cfg.maxInputChars || 2000)
 
   const body = JSON.stringify({
-    model: config.dashscope.model || 'deepseek-v3',
+    model: cfg.model || 'glm-4-flash',
     messages: [
       {
         role: 'system',
@@ -395,14 +400,17 @@ function summarizeWithDashscope(content, title) {
 
   return new Promise((resolve) => {
     const https = require('https')
-    const req = https.request(config.dashscope.baseUrl, {
+    const url = new URL(cfg.baseUrl)
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
-      timeout: config.dashscope.timeout || 6000,
+      timeout: cfg.timeout || 8000,
     }, (res) => {
       let data = ''
       res.on('data', chunk => { data += chunk })
@@ -435,6 +443,11 @@ function summarizeWithDashscope(content, title) {
     req.write(body)
     req.end()
   })
+}
+
+// v6.2：保留旧函数名兼容
+function summarizeWithDashscope(content, title) {
+  return summarizeWithZhipu(content, title)
 }
 
 // ─── 主函数 ─────────────────────────────────────────
@@ -539,13 +552,13 @@ exports.main = async (event) => {
     console.log('[getNewsDetail] 使用 summary 兜底')
   }
 
-  // ── 第 5 步：AI 摘要（v5.6）──
-  // 抓取到正文后，用百炼 DeepSeek 生成 100-150 字摘要，写回 summary 字段，
+  // ── 第 5 步：AI 摘要（v6.2：智谱 GLM-4-Flash）──
+  // 抓取到正文后，用智谱 GLM-4-Flash 生成 100-150 字摘要，写回 summary 字段，
   // 下次列表刷新即展示高质量摘要；未配置 Key 或调用失败则保持原 summary。
   let aiSummary = null
   if (finalContent && contentSource !== 'summary_fallback') {
     const t0 = Date.now()
-    aiSummary = await summarizeWithDashscope(finalContent, doc.title)
+    aiSummary = await summarizeWithZhipu(finalContent, doc.title)
     if (aiSummary) {
       console.log(`[getNewsDetail] AI 摘要生成成功 (${aiSummary.length} 字, 耗时 ${Date.now() - t0}ms)`)
     } else {

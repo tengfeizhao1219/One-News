@@ -147,6 +147,7 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
         list: res.data.map(item => ({
           id: item.id, _id: item._id,
           title: item.title, summary: item.summary,
+          summarySource: item.summarySource || '', // v6.2：'ai' | 'desc' | 'title'
           category: item.category,
           categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '',

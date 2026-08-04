@@ -82,6 +82,8 @@ function formatNewsItem(item, includeContent = false) {
     _id: itemId,
     title: item.title,
     summary: item.summary,
+    // v6.2：透传 summarySource 供前端三档优先级（'ai' > 'desc' > 'title'）
+    summarySource: item.summarySource || 'desc',
     content: includeContent ? (item.content || item.summary) : undefined,
     category: item.category,
     categoryName: item.categoryName || CATEGORY_MAP[item.category] || item.category,

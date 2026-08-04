@@ -258,26 +258,31 @@ module.exports = {
   fetchWebPage,
   extractContentFromHtml,
   parseJuheKey,
-  summarizeWithDashscope,
+  summarizeWithZhipu,
 }
 
 /**
- * 调用阿里百炼 DeepSeek 生成新闻摘要
- * 未配置 DASHSCOPE_API_KEY 时返回 null。
- * v6.1：增加失败重试（最多 2 次，指数退避），提高 AI 摘要生成率。
+ * 调用智谱 GLM-4-Flash 生成新闻摘要（v6.2：从百炼 DashScope 切换为智谱）
+ * 未配置 ZHIPU_API_KEY 时返回 null。
+ * 正文长度门槛降至 10 字（v6.2：提高 AI 摘要覆盖率）。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
  * @returns {Promise<string|null>} 100-150 字中文摘要
  */
-function summarizeWithDashscope(content, title) {
-  const apiKey = config.dashscope.apiKey
-  if (!apiKey) return Promise.resolve(null)
-  if (!content || content.trim().length < 30) return Promise.resolve(null)
+function summarizeWithZhipu(content, title) {
+  const cfg = config.zhipuSummary
+  const apiKey = cfg.apiKey
+  if (!apiKey) {
+    console.warn('[contentFetcher] ZHIPU_API_KEY 未配置，跳过 AI 摘要')
+    return Promise.resolve(null)
+  }
+  // v6.2：降低正文门槛到 10 字，提高 AI 摘要覆盖率
+  if (!content || content.trim().length < 10) return Promise.resolve(null)
 
-  const input = content.slice(0, config.dashscope.maxInputChars || 2000)
+  const input = content.slice(0, cfg.maxInputChars || 2000)
 
   const body = JSON.stringify({
-    model: config.dashscope.model || 'deepseek-v3',
+    model: cfg.model || 'glm-4-flash',
     messages: [
       {
         role: 'system',
@@ -294,14 +299,17 @@ function summarizeWithDashscope(content, title) {
 
   const doRequest = () => new Promise((resolve) => {
     const https = require('https')
-    const req = https.request(config.dashscope.baseUrl, {
+    const url = new URL(cfg.baseUrl)
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
-      timeout: config.dashscope.timeout || 8000,
+      timeout: cfg.timeout || 8000,
     }, (res) => {
       let data = ''
       res.on('data', chunk => { data += chunk })
@@ -324,11 +332,11 @@ function summarizeWithDashscope(content, title) {
     req.end()
   })
 
-  // v6.1：最多重试 2 次（共 3 次尝试），指数退避 500ms/1500ms
+  // 最多重试 2 次（共 3 次尝试），指数退避 500ms/1500ms
   return new Promise(async (resolve) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       const summary = await doRequest()
-      if (summary && summary.length >= 30) {
+      if (summary && summary.length >= 20) {
         resolve(summary)
         return
       }
@@ -339,6 +347,10 @@ function summarizeWithDashscope(content, title) {
     resolve(null)
   })
 }
+
+// v6.2：保留旧函数名兼容（contentFetcher 内部已改用 summarizeWithZhipu）
+// 外部 getNewsDetail 可能仍引用旧名，保留别名
+const summarizeWithDashscope = summarizeWithZhipu
 
 /**
  * 批量 enrich：抓正文 + AI 摘要（并发控制）
@@ -364,10 +376,10 @@ async function enrichNewsList(newsList, concurrency = 8) {
         const rawSummary = (item.summary || '').trim()
         let summarySource = (!rawSummary || rawSummary === item.title) ? 'title' : 'desc'
 
-        // 3. 抓到正文后生成 AI 摘要（优先覆盖）
-        if (content && content.length > 30) {
-          const aiSummary = await summarizeWithDashscope(content, item.title)
-          if (aiSummary && aiSummary.length >= 30) {
+        // 3. 抓到正文后生成 AI 摘要（v6.2：智谱 GLM-4-Flash，优先覆盖）
+        if (content && content.length > 10) {
+          const aiSummary = await summarizeWithZhipu(content, item.title)
+          if (aiSummary && aiSummary.length >= 20) {
             enriched.summary = aiSummary
             summarySource = 'ai'
           }

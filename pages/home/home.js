@@ -348,13 +348,26 @@ Page({
         opacity: position === 0 ? 1 : 0, transitionClass: ''
       }
     }
-    const summary = item.summary || ''
+
+    // v6.2：三档摘要优先级 —— AI 摘要 > 正文摘要 > 标题兜底
+    var summarySource = item.summarySource || 'desc'
+    var displaySummary = item.summary || ''
+
+    if (summarySource === 'title') {
+      // 第三档：没有可用摘要，直接用标题作为显示文本（但不标记为 AI）
+      displaySummary = item.title || ''
+    }
+    // 'ai' / 'desc'：直接使用 item.summary（后端已生成好）
+
     return {
       ...item,
+      summary: displaySummary,
       // 最多取前 3 段，避免摘要过长把卡片撑高、导致标题被居中布局裁切
-      summaryParagraphs: summary.split(String.fromCharCode(10)).filter(p => p.trim()).slice(0, 3),
-      // v6.1：AI 摘要标记（'ai' | 'desc' | 'title'），前端胶囊提示依赖
-      isAiSummary: item.summarySource === 'ai',
+      summaryParagraphs: displaySummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3),
+      // v6.2：AI 摘要标记（仅 summarySource === 'ai' 时显示胶囊）
+      isAiSummary: summarySource === 'ai',
+      // 透传来源信息，WXML 按需使用
+      summarySource: summarySource,
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
       opacity: position === 0 ? 1 : 0,
