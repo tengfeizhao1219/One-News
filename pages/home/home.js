@@ -6,8 +6,8 @@ const { localCache } = require('../../utils/localCache')
 
 const app = getApp()
 
-// 侧边栏分类列表（标准 8 分类 + 收藏 Tab）
-var PANEL_CATEGORIES = CATEGORIES.concat([{ id: '__favorites__', name: '❤️ 收藏' }])
+// 侧边栏分类列表（纯新闻分类，收藏入口已迁移至 dock 菜单「我的收藏」）
+var PANEL_CATEGORIES = CATEGORIES
 
 Page({
   data: {
@@ -17,12 +17,12 @@ Page({
     currentIndex: 0,        // 当前卡片索引
     showPanel: false,       // 侧边栏是否显示
     categories: CATEGORIES,
-    panelCategories: PANEL_CATEGORIES,  // B-04: 侧边栏分类（含收藏 Tab）
+    panelCategories: PANEL_CATEGORIES,  // 侧边栏分类（仅新闻分类）
     currentCategory: 'all', // 首页当前分类
     panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: [],   // 侧边栏过滤后的列表
-    favList: [],             // B-04: 收藏列表
+    favList: [],             // 已废弃：收藏入口已迁移至 dock 菜单独立页
     // 页面状态
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
     errorMessage: '',       // 错误提示文案
@@ -679,9 +679,9 @@ Page({
 
   closePanel() {
     const { panelCategory, currentCategory } = this.data
-    // BUG-20260802-004: 分类已在 onCategoryChange 统一切换，此处仅兜底（收藏 Tab 不参与切分类）
-    if (panelCategory !== currentCategory && panelCategory !== '__favorites__') {
-      this._showCategoryHint(panelCategory) // BUG-20260802-006: 实际切分类时提示
+    // 关闭侧栏时，若侧栏分类与当前首页分类不一致，则切换
+    if (panelCategory !== currentCategory) {
+      this._showCategoryHint(panelCategory)
       this.loadCategory(panelCategory)
     }
     this.setData({ showPanel: false })
@@ -693,12 +693,6 @@ Page({
     this.setData({ panelCategory: cat })
     this._showCategoryHint(cat) // BUG-20260802-006: 切分类 0.5s 提示
 
-    // B-04: 收藏 Tab 特殊处理（同步读取，无网络延迟）
-    if (cat === '__favorites__') {
-      this._loadFavorites()
-      return
-    }
-
     // BUG-20260802-004: 侧栏与卡片同源 —— 切分类即切唯一数据源 newsList，侧栏由它派生
     if (cat === this.data.currentCategory) {
       this._syncPanelList()
@@ -708,49 +702,12 @@ Page({
   },
 
   /**
-   * B-04: 从 localCache 加载收藏列表
+   * 已废弃：收藏入口已迁移至 dock 菜单独立收藏页（pages/favorites）
+   * 原侧边栏「❤️ 收藏」Tab 及其 _loadFavorites() 于 2026-08-04 按 owner 决策删除。
    */
-  _loadFavorites: function () {
-    var favorites = localCache.get('favorites') || []
-    // 计算相对时间
-    var now = Date.now()
-    var list = favorites.map(function (item) {
-      var diff = now - (item.addedAt || 0)
-      var timeAgo = ''
-      if (diff < 60 * 1000) {
-        timeAgo = '刚刚'
-      } else if (diff < 60 * 60 * 1000) {
-        timeAgo = Math.floor(diff / (60 * 1000)) + '分钟前'
-      } else if (diff < 24 * 60 * 60 * 1000) {
-        timeAgo = Math.floor(diff / (60 * 60 * 1000)) + '小时前'
-      } else {
-        timeAgo = Math.floor(diff / (24 * 60 * 60 * 1000)) + '天前'
-      }
-      return Object.assign({}, item, { _timeAgo: timeAgo })
-    })
-    this.setData({
-      panelCategory: '__favorites__',
-      favList: list,
-    })
-  },
 
   onPanelItemTap(e) {
     var idx = e.currentTarget.dataset.index
-    var isFav = e.currentTarget.dataset.isFav
-
-    // B-04: 收藏列表项点击 → 直接跳转详情页
-    if (isFav) {
-      var favItem = this.data.favList[idx]
-      if (!favItem) return
-      // 设置详情页上下文（收藏列表作为阅读上下文）
-      app.globalData.detailContext = { category: favItem.category, list: this.data.favList }
-      var url = '/pages/detail/detail?id=' + favItem.id + '&index=' + idx + '&category=' + (favItem.category || 'all')
-      wx.navigateTo({
-        url: url,
-        fail: function (err) { console.error('[home] navigateTo fav fail:', err) }
-      })
-      return
-    }
 
     // 标准分类列表项点击
     // BUG-20260802-003: 选中对应卡片（不再跳转详情页，用户澄清「侧栏标题→跳首页卡片页」）
