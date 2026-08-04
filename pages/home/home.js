@@ -209,6 +209,7 @@ Page({
   /**
    * BUG-20260802-006: 分类切换 ~0.5s 分类名提示
    * 在卡片页可见区域中央短暂展示分类名（面板关闭后/选中卡片时触发）
+   * v6.2 增强：双重 hideToast 确保原生浮层关闭；延长展示到 600ms 提高可见性
    */
   _showCategoryHint: function (catId) {
     if (!catId) return
@@ -219,14 +220,16 @@ Page({
     }
     if (!name) return
     var that = this
-    // BUG-20260802-006: 「刷新中…」「加载更多…」用的是 wx.showToast 原生浮层，
-    // 它盖在所有页面视图之上，不受 z-index 影响，必须先关掉才能看到分类提示
+    // BUG-20260802-006: wx.showToast 是原生浮层，不受 CSS z-index 控制，
+    // 必须确保关闭后再展示分类提示。双重调用防止时序竞态。
     try { wx.hideToast() } catch (e) {}
     clearTimeout(this._categoryHintTimer)
     this.setData({ categoryHint: name })
+    // 延迟 50ms 再关一次 toast，防止 loadCategory 内部的异步 toast 覆盖
+    setTimeout(function () { try { wx.hideToast() } catch (e) {} }, 50)
     this._categoryHintTimer = setTimeout(function () {
       if (!that._destroyed) that.setData({ categoryHint: '' })
-    }, 500)
+    }, 600)
   },
 
   // ============ 数据加载 ============
@@ -745,6 +748,7 @@ Page({
     }
     this.setData({ panelCategory: cat })
     this._updatePanelSubtitle(cat)
+    this._showCategoryHint(cat) // BUG-20260802-006: 滚轮切分类也需 0.5s 提示
 
     // 同源切换：面板分类与首页一致 → 仅刷新列表；否则切换唯一数据源
     if (cat === this.data.currentCategory) {
