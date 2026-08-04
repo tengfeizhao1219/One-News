@@ -18,7 +18,7 @@
 
   <!-- 空态 -->
   <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
-    <view class="empty-icon">♡</view>
+    <view class="empty-icon" style="-webkit-mask-image: url('/assets/icons/favorite.svg'); mask-image: url('/assets/icons/favorite.svg');"></view>
     <view class="empty-text">还没有收藏任何新闻</view>
     <view class="empty-hint" bindtap="goHome">去首页看看</view>
   </view>

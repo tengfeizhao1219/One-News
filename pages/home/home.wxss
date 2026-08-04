@@ -195,10 +195,16 @@
 }
 
 .fixed-swipe-hint-icon {
-  font-size: 24rpx;
-  color: var(--text-secondary);
+  width: 32rpx;
+  height: 32rpx;
+  background-color: var(--text-secondary);
   opacity: 0.45;
-  line-height: 1;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
 }
 
 .fixed-swipe-hint-text {
