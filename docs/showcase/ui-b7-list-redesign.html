@@ -8,7 +8,7 @@
   :root {
     --bg-page: #F5F3F0; --bg-card: #FAF9F7; --text-primary: #1C1C1E; --text-body: #5E5E60;
     --text-secondary: #A0A0A0; --divider: #E8E6E1; --tag-bg: #EEECE8; --tag-text: #7A7A7A;
-    --overlay: rgba(0,0,0,.25); --panel-bg: rgba(250,249,247,.92); --chip: rgba(28,28,30,.85); --chip-text: #fff;
+    --overlay: rgba(0,0,0,.25); --panel-bg: rgba(250,249,247,.78); --chip: rgba(28,28,30,.85); --chip-text: #fff;
     --home-icon: #333; --primary: #007AFF; --highlight-bg: rgba(0,122,255,.07);
     --wheel-text-idle: rgba(0,0,0,.12); --wheel-selected-idle: rgba(0,0,0,.5);
     --wheel-text-active: rgba(0,0,0,.45); --wheel-selected-active: #007AFF;
@@ -19,7 +19,7 @@
   }
   [data-theme="dark"] {
     --bg-page:#000; --bg-card:#0D0D0D; --text-primary:#fff; --text-body:#A8A8A8; --text-secondary:#999;
-    --divider:#1C1C1E; --tag-bg:#1C1C1E; --tag-text:#999; --panel-bg:rgba(13,13,13,.92);
+    --divider:#1C1C1E; --tag-bg:#1C1C1E; --tag-text:#999; --panel-bg:rgba(13,13,13,.78);
     --home-icon:#E0E0E0; --primary:#0A84FF; --highlight-bg: rgba(10,132,255,.1);
     --wheel-text-idle: rgba(255,255,255,.12); --wheel-selected-idle: rgba(255,255,255,.5);
     --wheel-text-active: rgba(255,255,255,.45); --wheel-selected-active:#0A84FF;
@@ -90,7 +90,7 @@
   .wheel-item { height:34px; display:flex; align-items:center; justify-content:center; font-size:10px; color:var(--wheel-text-idle); transition:all .3s ease; cursor:pointer; white-space:nowrap; }
   .wheel-item.sel { font-size:12px; font-weight:500; color:var(--wheel-selected-idle); }
   .panel-wheel.active .wheel-item { color:var(--wheel-text-active); font-size:11px; }
-  .panel-wheel.active .wheel-item.sel { color:var(--wheel-selected-active); font-size:14px; font-weight:600; }
+  .panel-wheel.active .wheel-item.sel { color:var(--wheel-selected-active); font-size:14px; font-weight:600; background:var(--highlight-bg); border:1px solid var(--primary); border-radius:var(--radius); padding:0 8px; }
   .wheel-divider { width:22px; height:1px; background:var(--wheel-divider); margin:2px 0; }
   .wheel-glass { position:absolute; left:0; right:0; top:50%; transform:translateY(-50%); height:34px; background:var(--wheel-bg-active); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); opacity:0; transition:opacity .3s ease; pointer-events:none; border-top:1px solid var(--wheel-indicator); border-bottom:1px solid var(--wheel-indicator); }
   .panel-wheel-wrap.active .wheel-glass { opacity:1; }
