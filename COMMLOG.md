@@ -3840,3 +3840,26 @@ v6 已将超时调至 60s，3s 不再是硬约束。建议部署后在云函数�
 > **关联影响**：Q-03 收藏测试用例 P1-04「侧边栏收藏 Tab 渲染」用例废止；`产品文档统一库.md` 中多处「❤️ 收藏」Tab 描述待后续统一更新。
 
 > **找谁**：产品经理（交付人）｜🔔 关注人：全栈开发（注意 home.js 变更）+ owner（决策确认）
+
+---
+
+## [2026-08-04 10:05] 全栈开发 TL-B8 增强：news_cache_backup 集合自动创建 | 会话：[全栈开发(FS)]
+
+### 背景
+- 云函数日志显示 `[backupToCacheBackup] ... collection.remove:fail -502005 database collection not exists: news_cache_backup`
+- refreshNews 主流程正常（code:0 / 19 条入库），但备份集合未创建 → TL-B8 的 L3 兜底（上次成功快照）实际未生效
+
+### 修复内容（refreshNews/index.js）
+- 新增 `isCollectionNotExist(err)`：识别 `-502005 / DATABASE_COLLECTION_NOT_EXIST / collection not exists`
+- 新增 `ensureBackupCollection()`：集合不存在时 `db.createCollection('news_cache_backup')`，模块级标志保证单次运行只创建一次；已存在/无权限则打印警告跳过
+- 新增 `writeBackupSnapshot(category, docs)`：抽离单分类快照写入（先 remove 旧备份 → add 前 20 条）
+- `backupToCacheBackup`：捕获到「集合不存在」→ 自动创建后**重试一次**；其余错误保持非阻塞警告
+- 效果：**首次部署无需手工建集合**，兜底可真正生效
+
+### 变更文件
+- `cloudfunctions/refreshNews/index.js`（backupToCacheBackup 升级）
+- `docs/03-技术方案/ADR-003-一层兜底恢复.md`（§3.5 记录自动创建行为）
+
+### 状态
+- ⏳ 待 GM 提交（已写 `.git-staging/fs.ready`）
+- 部署验证：重新部署 refreshNews 后触发一次，日志应出现 `[backupToCacheBackup] 已自动创建 news_cache_backup 集合` 且各分类 `备份 N 条`

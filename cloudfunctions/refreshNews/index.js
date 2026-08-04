@@ -471,41 +471,87 @@ exports.main = async (event) => {
 
 // ── 🆕 TL-B8 备份快照写入（ADR-003 §3.1）────────────────────
 
+// 模块级标志：单次运行只尝试自动创建一次集合
+let _backupCollectionEnsured = false
+
+/**
+ * 判断错误是否为「集合不存在」
+ */
+function isCollectionNotExist(err) {
+  const msg = ((err && (err.errMsg || err.message)) || '').toString()
+  return msg.includes('collection not exists')
+    || msg.includes('DATABASE_COLLECTION_NOT_EXIST')
+    || msg.includes('502005')
+}
+
+/**
+ * 确保 news_cache_backup 集合存在（不存在则自动创建）
+ * 集合已存在或权限不足会抛错，可忽略（非阻塞）
+ */
+async function ensureBackupCollection() {
+  if (_backupCollectionEnsured) return
+  _backupCollectionEnsured = true
+  try {
+    await db.createCollection('news_cache_backup')
+    console.log('[backupToCacheBackup] 已自动创建 news_cache_backup 集合')
+  } catch (err) {
+    // 集合已存在（-501001/-501005 等）或权限不足：可忽略
+    console.warn('[backupToCacheBackup] 自动创建集合跳过（已存在或无权限）:', err.message)
+  }
+}
+
+/**
+ * 写入单个分类的快照（先删旧备份，再写前 20 条）
+ */
+async function writeBackupSnapshot(category, docs) {
+  // 先删旧备份
+  await db.collection('news_cache_backup')
+    .where({ category })
+    .remove()
+  // 取前 20 条写入新快照
+  const snapshot = docs.slice(0, 20).map(doc => ({
+    id: doc.id,
+    title: doc.title,
+    summary: doc.summary,
+    category: doc.category,
+    categoryName: doc.categoryName || '',
+    source: doc.source || '',
+    sourceUrl: doc.sourceUrl || '',
+    publishTime: doc.publishTime,
+    content: doc.content || '',
+    isRetained: doc.isRetained === true,
+    _backupAt: Date.now(),
+  }))
+  await db.collection('news_cache_backup').add(
+    snapshot.length === 1
+      ? { data: snapshot[0] }
+      : snapshot.map(d => ({ data: d }))
+  )
+  console.log(`[backupToCacheBackup] ${category}: 备份 ${snapshot.length} 条`)
+}
+
 /**
  * 将本次成功写入的新闻按分类覆盖写入 news_cache_backup
  * 每分类保留最多 20 条最新记录，用于 news_cache 为空时的一层兜底
- * 写入失败不阻塞主流程
+ * 集合不存在时自动创建后重试一次；写入失败不阻塞主流程
  */
 async function backupToCacheBackup(categories) {
-  const _ = db.command
   const backupPromises = Object.entries(categories).map(async ([category, docs]) => {
     if (!docs || docs.length === 0) return
     try {
-      // 先删旧备份
-      await db.collection('news_cache_backup')
-        .where({ category })
-        .remove()
-      // 取前 20 条写入新快照
-      const snapshot = docs.slice(0, 20).map(doc => ({
-        id: doc.id,
-        title: doc.title,
-        summary: doc.summary,
-        category: doc.category,
-        categoryName: doc.categoryName || '',
-        source: doc.source || '',
-        sourceUrl: doc.sourceUrl || '',
-        publishTime: doc.publishTime,
-        content: doc.content || '',
-        isRetained: doc.isRetained === true,
-        _backupAt: Date.now(),
-      }))
-      await db.collection('news_cache_backup').add(
-        snapshot.length === 1
-          ? { data: snapshot[0] }
-          : snapshot.map(d => ({ data: d }))
-      )
-      console.log(`[backupToCacheBackup] ${category}: 备份 ${snapshot.length} 条`)
+      await writeBackupSnapshot(category, docs)
     } catch (err) {
+      // 集合不存在 → 自动创建后重试一次
+      if (isCollectionNotExist(err)) {
+        await ensureBackupCollection()
+        try {
+          await writeBackupSnapshot(category, docs)
+          return
+        } catch (retryErr) {
+          console.warn(`[backupToCacheBackup] ${category} 重试备份失败（非阻塞）:`, retryErr.message)
+          return
+        }
+      }
       console.warn(`[backupToCacheBackup] ${category} 备份写入失败（非阻塞）:`, err.message)
     }
   })
