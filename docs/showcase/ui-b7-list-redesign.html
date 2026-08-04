@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>UI-B7 · 列表页重新设计 v3（手势滑入 + 极简列表 + 圆角高亮 + 底部固定提示）</title>
+<title>UI-B7 · 列表页重新设计 v4（统一描边图标 + 极简列表 + 圆角高亮 + 底部固定提示）</title>
 <style>
   :root {
     --bg-page: #F5F3F0; --bg-card: #FAF9F7; --text-primary: #1C1C1E; --text-body: #5E5E60;
@@ -13,6 +13,7 @@
     --wheel-text-idle: rgba(0,0,0,.12); --wheel-selected-idle: rgba(0,0,0,.5);
     --wheel-text-active: rgba(0,0,0,.45); --wheel-selected-active: #007AFF;
     --wheel-bg-active: rgba(255,255,255,.7); --wheel-indicator: rgba(0,0,0,.15); --wheel-divider: rgba(0,0,0,.2);
+    --icon-stroke: 2;
     --sans: "PingFang SC","Noto Sans SC",system-ui,sans-serif;
     --serif: "Songti SC","Noto Serif SC",ui-serif,Georgia,serif; --ease: cubic-bezier(.22,1,.36,1);
     --radius: 10px;
@@ -34,6 +35,9 @@
   .title-tag { font-size:12px; color:#888; letter-spacing:1px; margin-bottom:14px; text-align:center; }
   .phone { width:375px; height:812px; border-radius:44px; background:var(--bg-page); position:relative; overflow:hidden; box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 12px #161618,0 0 0 14px #2a2a2c; transition:background .4s var(--ease); }
   .statusbar { height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 28px; font-size:14px; font-weight:600; color:var(--text-primary); position:absolute; top:0; left:0; right:0; z-index:40; }
+  .bat { width:22px; height:11px; border:1.5px solid var(--text-secondary); border-radius:3px; position:relative; display:inline-block; }
+  .bat::before { content:""; position:absolute; right:-3px; top:3px; width:2px; height:5px; background:var(--text-secondary); border-radius:0 1px 1px 0; }
+  .bat::after { content:""; position:absolute; left:1.5px; top:1.5px; bottom:1.5px; width:14px; background:var(--text-secondary); border-radius:1px; opacity:.7; }
   .screen { position:absolute; inset:0; display:none; flex-direction:column; }
   .screen.active { display:flex; }
 
@@ -54,23 +58,23 @@
   .fs-summary { margin-top:14px; }
   .fs-summary-p { font-family:var(--serif); font-size:16px; color:var(--text-body); line-height:1.85; margin-bottom:12px; letter-spacing:.5px; }
 
-  /* ===== 底部固定滑动提示（首页 & 详情页）===== */
+  /* ===== 底部固定滑动提示 ===== */
   .swipe-bar { position:absolute; left:0; right:0; bottom:0; height:62px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; z-index:10; pointer-events:none; background:linear-gradient(transparent, var(--bg-card) 40%); }
   .swipe-bar-icon { font-size:14px; line-height:1; color:var(--text-secondary); opacity:.45; }
   .swipe-bar-text { font-size:9px; letter-spacing:2px; font-weight:300; color:var(--text-secondary); opacity:.45; }
   .swipe-bar-light { background:linear-gradient(transparent, var(--bg-page) 40%); }
 
-  /* ===== ⚙ dock 菜单（方案 F）===== */
+  /* ===== ⚙ dock 菜单（方案 F）+ 统一描边图标 ===== */
   .fab { position:absolute; right:20px; bottom:30px; width:48px; height:48px; border-radius:50%; background:var(--text-primary); color:var(--bg-page); display:flex; align-items:center; justify-content:center; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; transition:transform .25s var(--ease); }
-  .fab:active { transform:scale(.92); } .fab svg { width:26px; height:26px; } .fab svg path { fill:var(--bg-page); }
+  .fab:active { transform:scale(.92); } .fab svg { width:26px; height:26px; stroke:var(--bg-page); fill:none; stroke-width:var(--icon-stroke); stroke-linecap:round; stroke-linejoin:round; }
   .menu-mask { position:absolute; inset:0; background:rgba(0,0,0,.18); z-index:55; opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }
   .menu-mask.open { opacity:1; pointer-events:auto; }
   .dock { position:absolute; right:20px; bottom:90px; z-index:58; display:flex; flex-direction:column-reverse; gap:10px; align-items:flex-end; }
   .dock-item { display:flex; align-items:center; gap:10px; background:var(--panel-bg); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid var(--divider); border-radius:14px; padding:10px 16px 10px 12px; box-shadow:0 8px 24px rgba(0,0,0,.25); cursor:pointer; min-width:132px; transform:translateY(20px) scale(.8); opacity:0; transition:transform .28s var(--ease),opacity .28s var(--ease); }
   .dock.open .dock-item { transform:translateY(0) scale(1); opacity:1; }
   .dock.open .dock-item:nth-child(1){transition-delay:0s} .dock.open .dock-item:nth-child(2){transition-delay:.04s} .dock.open .dock-item:nth-child(3){transition-delay:.08s} .dock.open .dock-item:nth-child(4){transition-delay:.12s}
-  .dock-item:active { background:var(--text-primary); } .dock-item:active .dock-label, .dock-item:active svg { color:var(--bg-page); }
-  .dock-ico { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--tag-bg); flex-shrink:0; } .dock-ico svg { width:18px; height:18px; } .dock-ico svg path { fill:var(--text-body); }
+  .dock-item:active { background:var(--text-primary); } .dock-item:active .dock-label, .dock-item:active svg { color:var(--bg-page); stroke:var(--bg-page); }
+  .dock-ico { width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--tag-bg); flex-shrink:0; } .dock-ico svg { width:18px; height:18px; stroke:var(--text-body); fill:none; stroke-width:var(--icon-stroke); stroke-linecap:round; stroke-linejoin:round; }
   .dock-label { font-size:14px; color:var(--text-primary); font-weight:500; }
 
   /* ===== 侧边新闻列表页（左滑手势进入 + 左侧滚轮 + 极简标题列表 + 圆角高亮）===== */
@@ -78,8 +82,8 @@
   .panel-overlay.show { opacity:1; pointer-events:auto; }
   .slide-panel { position:absolute; top:0; right:0; width:90%; height:100%; background:var(--bg-card); z-index:71; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; box-shadow:-8px 0 48px var(--overlay); }
   .slide-panel.show { transform:translateX(0); }
-  .panel-close { position:absolute; top:50px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--tag-bg); color:var(--text-primary); display:flex; align-items:center; justify-content:center; font-size:18px; line-height:1; cursor:pointer; z-index:5; }
-  .panel-close:active { transform:scale(.9); }
+  .panel-close { position:absolute; top:50px; right:18px; width:30px; height:30px; border-radius:50%; background:var(--tag-bg); color:var(--text-primary); display:flex; align-items:center; justify-content:center; z-index:5; cursor:pointer; }
+  .panel-close:active { transform:scale(.9); } .panel-close svg { width:16px; height:16px; stroke:var(--text-primary); fill:none; stroke-width:var(--icon-stroke); stroke-linecap:round; stroke-linejoin:round; }
   .panel-header { padding:100px 20px 12px; flex-shrink:0; }
   .panel-title { font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:1px; }
   .panel-sub { font-size:11px; color:var(--text-secondary); margin-top:4px; }
@@ -107,7 +111,7 @@
   .detail-scroll .meta { font-size:11px; color:var(--text-secondary); margin-bottom:18px; }
   .detail-scroll p { font-size:15px; color:var(--text-body); line-height:1.9; }
   .home-btn { width:28px; height:28px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:8px; position:absolute; top:52px; left:16px; z-index:35; }
-  .home-btn:active { opacity:.6; } .home-btn svg { width:22px; height:22px; } .home-btn svg path { fill:var(--home-icon); }
+  .home-btn:active { opacity:.6; } .home-btn svg { width:22px; height:22px; stroke:var(--home-icon); fill:none; stroke-width:var(--icon-stroke); stroke-linecap:round; stroke-linejoin:round; }
 
   .toast { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(.9); background:var(--chip); color:var(--chip-text); padding:11px 18px; border-radius:12px; font-size:13px; z-index:90; opacity:0; pointer-events:none; transition:all .25s var(--ease); max-width:80%; text-align:center; }
   .toast.show { opacity:1; transform:translate(-50%,-50%) scale(1); }
@@ -120,37 +124,36 @@
 </style>
 </head>
 <body>
-  <div class="title-tag">UI-B7 · 列表页重新设计 v3（手势滑入 + 极简列表 + 圆角高亮 + 底部固定提示）</div>
+  <div class="title-tag">UI-B7 · 列表页重新设计 v4（统一描边图标 · 极简列表 · 圆角高亮 · 底部固定提示）</div>
   <div class="toolbar">
-    <button class="pill active" data-page="home">🏠 首页</button>
-    <button class="pill" data-page="detail">📄 详情</button>
-    <button class="pill" id="panelToggle">📋 列表页</button>
-    <button class="pill" id="themeToggle">🌙 暗色</button>
+    <button class="pill active" data-page="home">首页</button>
+    <button class="pill" data-page="detail">详情</button>
+    <button class="pill" id="panelToggle">列表页</button>
+    <button class="pill" id="themeToggle">暗色</button>
   </div>
 
   <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="right">📶 🔋</span></div>
+    <div class="statusbar"><span>9:41</span><span class="right"><i class="bat"></i></span></div>
 
     <!-- 首页（无按钮、无滚轮，左滑进列表） -->
     <div class="screen active" id="screen-home">
       <div class="top-bar"><span class="top-cat" id="topCat">科技</span><div class="progress-track"><div class="progress-fill" id="progFill" style="width:33%"></div></div></div>
       <div class="card-stage" id="cardStage"></div>
-      <!-- 底部固定滑动提示 -->
       <div class="swipe-bar"><span class="swipe-bar-icon">⇅</span><span class="swipe-bar-text">上滑阅读下一条</span></div>
 
-      <div class="fab" id="fab"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></div>
+      <div class="fab" id="fab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
       <div class="menu-mask" id="menuMask"></div>
       <div class="dock" id="dock">
-        <div class="dock-item" data-go="history"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 1 0 8.94 10H21.9A7 7 0 1 1 13 5v3l4-4-4-4v3zM12 8v5l4 2 .75-1.23L13.5 12V8z"/></svg></span><span class="dock-label">浏览记录</span></div>
-        <div class="dock-item" data-go="favorites"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-10-9.3C.3 8.1 1.6 4.5 5 4.5c2 0 3.3 1.1 4 2.2.7-1.1 2-2.2 4-2.2 3.4 0 4.7 3.6 3 7.2C19.5 16.4 12 21 12 21z"/></svg></span><span class="dock-label">我的收藏</span></div>
-        <div class="dock-item" id="dockSetting"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.49 7.49 0 0 0 .05-.94 7.49 7.49 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54a7.3 7.3 0 0 0 1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.7 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.49 7.49 0 0 0 0 1.88L2.82 14.54a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96a7.3 7.3 0 0 0 1.62.94l.36 2.54a.5.5 0 0 0 .5.42h3.84a.5.5 0 0 0 .5-.42l.36-2.54a7.3 7.3 0 0 0 1.62-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.01-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg></span><span class="dock-label">设置</span></div>
-        <div class="dock-item" id="dockExt"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M13 11V7h-2v4H7v2h4v4h2v-4h4v-2z"/></svg></span><span class="dock-label">扩展位</span></div>
+        <div class="dock-item" data-go="history"><span class="dock-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span><span class="dock-label">浏览记录</span></div>
+        <div class="dock-item" data-go="favorites"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg></span><span class="dock-label">我的收藏</span></div>
+        <div class="dock-item" id="dockSetting"><span class="dock-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span class="dock-label">设置</span></div>
+        <div class="dock-item" id="dockExt"><span class="dock-ico"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span><span class="dock-label">扩展位</span></div>
       </div>
 
       <!-- 侧边列表页（左滑进入） -->
       <div class="panel-overlay" id="panelOverlay"></div>
       <div class="slide-panel" id="slidePanel">
-        <div class="panel-close" id="panelClose">×</div>
+        <div class="panel-close" id="panelClose"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></div>
         <div class="panel-header">
           <div class="panel-title">今日新闻</div>
           <div class="panel-sub" id="panelSub">科技 · 3 条</div>
@@ -167,7 +170,7 @@
 
     <!-- 详情 -->
     <div class="screen" id="screen-detail">
-      <div class="home-btn" data-home="1"><svg viewBox="0 0 24 24"><path d="M12 3 2 12h3v8h6v-5h2v5h6v-8h3z"/></svg></div>
+      <div class="home-btn" data-home="1"><svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
       <div class="detail-scroll">
         <h1 id="detailTitle">标题</h1>
         <div class="meta" id="detailMeta">来源 · 时间</div>
@@ -180,19 +183,21 @@
   </div>
 
   <div class="spec">
-    <h3>📐 UI-B7 v3 修订（owner 2026-08-04 反馈）</h3>
+    <h3>UI-B7 v4 修订（owner 2026-08-04 反馈：图标统一设计）</h3>
     <table>
       <tr><th>#</th><th>反馈</th><th>改动</th></tr>
-      <tr><td>1</td><td>列表页入口：滑动进入，不要按钮</td><td>首页去掉 ☰ 按钮；<b>左滑手势直接滑出列表页</b>（touchstart→touchmove→touchend 跟手位移动画），右滑或点 × 关闭</td></tr>
-      <tr><td>2</td><td>列表极简：只要标题</td><td>列表项<b>仅显示新闻标题</b>（15px weight 600，2 行截断），去掉来源、时间等元信息</td></tr>
-      <tr><td>3</td><td>高亮圆角化</td><td>当前阅读项高亮改为 <code>border-radius: var(--radius)</code>（10px）圆角边框 + 淡色底，不用直角 border-left；全局排查：卡片/面板/列表项/按钮/dock-item 统一圆角</td></tr>
-      <tr><td>4</td><td>滑动提示固定底部</td><td>首页卡片流和详情页底部各一条固定 <code>position:absolute; bottom:0</code> 的「⇅ 上滑阅读下一条」提示条，不随内容滚动</td></tr>
+      <tr><td>1</td><td>左滑进入列表，不要按钮</td><td>首页无列表按钮；左滑手势滑出列表页（跟手位移），右滑或 × 关闭</td></tr>
+      <tr><td>2</td><td>列表极简，只显示标题</td><td>列表项仅标题（15px weight 600，2 行截断），无来源/时间</td></tr>
+      <tr><td>3</td><td>高亮圆角</td><td>当前项圆角边框 <code>border-radius:10px</code> + 淡色底，不用直角</td></tr>
+      <tr><td>4</td><td>滑动提示固定底部</td><td>首页卡片流 + 详情页底部各一条固定提示条</td></tr>
+      <tr><td>5</td><td>dock 浮层更轻</td><td>毛玻璃透明度 .92 → .78</td></tr>
+      <tr><td>6</td><td>图标统一设计</td><td><b>全部改为描边式（stroke）SVG</b>（齿轮/时钟/心形/加号/房子/关闭），去掉 emoji 与填充图标，与图标规范文档完全一致</td></tr>
     </table>
-    <p class="ok" style="margin-top:14px">✅ 演示：① 首页卡片流区域<b>左滑</b>打开列表页（跟手位移）；② 列表页左侧滚轮切分类；③ 列表项仅标题，当前项圆角高亮；④ 点列表项定位回首页；⑤ 卡片上滑切下条；⑥ 首页/详情底部固定提示条；⑦ ⚙ dock；⑧ 暗色。</p>
+    <p class="ok" style="margin-top:14px">演示：① 首页卡片流左滑打开列表页；② 列表页左侧滚轮切分类（选中项圆角高亮）；③ 列表项仅标题，当前项圆角高亮；④ 点列表项定位回首页；⑤ 卡片上滑切下条；⑥ 首页/详情底部固定提示条；⑦ ⚙ dock（描边图标）；⑧ 暗色。</p>
   </div>
 
 <script>
-  const CATS = ['推荐','科技','国际','体育','生活','三农','❤️收藏'];
+  const CATS = ['推荐','科技','国际','体育','生活','三农','收藏'];
   const NEWS = {
     '推荐': [
       {t:'国产大模型推理成本一年下降 90%，端侧部署成新战场', s:'新华社', time:'2 小时前', sum:['随着算力优化与蒸馏技术成熟，主流大模型推理单价较去年同期大幅下探。','多家厂商将战场推向手机与车机等端侧场景，力求更低功耗维持可用体验。']},
@@ -244,7 +249,6 @@
     document.getElementById('progFill').style.width = ((curIdx+1)/list.length*100)+'%';
   }
 
-  // 极简列表：仅标题，无来源/时间
   function renderList(){
     const list = NEWS[CATS[curCat]];
     document.getElementById('panelSub').textContent = `${CATS[curCat]} · ${list.length} 条`;
@@ -257,7 +261,6 @@
     });
   }
 
-  // 列表页内滚轮
   const wheel = document.getElementById('wheel'), wheelWrap = document.getElementById('panelWheelWrap');
   function renderWheel(){
     wheel.innerHTML = CATS.map((c,i)=>{
@@ -275,20 +278,20 @@
   wheelWrap.addEventListener('touchend',()=>{ setTimeout(()=>{ wheelWrap.classList.remove('active'); wheel.classList.remove('active'); },300); });
   wheelWrap.addEventListener('wheel',e=>{ setCat(Math.max(0,Math.min(CATS.length-1, curCat + (e.deltaY>0?1:-1)))); },{passive:true});
 
-  // 卡片流上滑切下一条
   const stage = document.getElementById('cardStage');
-  let sy=0, sm=false;
-  stage.addEventListener('touchstart',e=>{ sy=e.touches[0].clientY; sm=false; },{passive:true});
-  stage.addEventListener('touchmove',e=>{ if(Math.abs(e.touches[0].clientY-sy)>12) sm=true; },{passive:true});
+  let sx=0, sy=0, moved=false, horiz=false;
+  stage.addEventListener('touchstart',e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved=false; horiz=false; },{passive:true});
+  stage.addEventListener('touchmove',e=>{ const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy; if(Math.abs(dx)>12||Math.abs(dy)>12) moved=true; if(Math.abs(dx)>Math.abs(dy)) horiz=true; },{passive:true});
   stage.addEventListener('touchend',e=>{
-    const dy=e.changedTouches[0].clientY-sy;
-    if(!sm){ goPage('detail'); document.getElementById('detailTitle').textContent=NEWS[CATS[curCat]][curIdx].t; document.getElementById('detailMeta').textContent=NEWS[CATS[curCat]][curIdx].s+' · '+NEWS[CATS[curCat]][curIdx].time; showToast('点击阅读全文'); return; }
+    const dy=e.changedTouches[0].clientY-sy, dx=e.changedTouches[0].clientX-sx;
+    if(!moved){ goPage('detail'); document.getElementById('detailTitle').textContent=NEWS[CATS[curCat]][curIdx].t; document.getElementById('detailMeta').textContent=NEWS[CATS[curCat]][curIdx].s+' · '+NEWS[CATS[curCat]][curIdx].time; showToast('点击阅读全文'); return; }
+    if(horiz) return; // 横向滑动交给列表页左滑手势处理，不在卡片层响应
     const list=NEWS[CATS[curCat]];
     if(dy<-40 && curIdx<list.length-1){ curIdx++; renderCard(); }
     else if(dy>40 && curIdx>0){ curIdx--; renderCard(); }
   });
 
-  // ===== 左滑手势进入列表页（无按钮依赖）=====
+  // ===== 左滑手势进入列表页 =====
   const overlay=document.getElementById('panelOverlay'), panel=document.getElementById('slidePanel');
   let panelStartX=0, panelTrack=false;
   function openPanel(){ overlay.classList.add('show'); panel.classList.add('show'); renderWheel(); renderList(); }
@@ -322,7 +325,6 @@
     if (dx < -60) { openPanel(); } else { closePanel(); }
   });
 
-  // dock 菜单
   const fab=document.getElementById('fab'), dock=document.getElementById('dock'), mask=document.getElementById('menuMask');
   function openMenu(){ dock.classList.add('open'); mask.classList.add('open'); }
   function closeMenu(){ dock.classList.remove('open'); mask.classList.remove('open'); }
@@ -331,7 +333,7 @@
   document.querySelectorAll('.dock-item').forEach(it=>it.addEventListener('click',()=>{ const t=it.dataset.go; if(t){ showToast('跳转 → '+it.querySelector('.dock-label').textContent+'（占位）'); closeMenu(); } else { showToast('「'+it.querySelector('.dock-label').textContent+'」占位'); closeMenu(); } }));
 
   document.querySelectorAll('[data-home]').forEach(b=>b.addEventListener('click',()=>{ showToast('wx.reLaunch → 首页'); setTimeout(()=>goPage('home'),500); }));
-  document.getElementById('themeToggle').addEventListener('click',function(){ const h=document.documentElement, d=h.getAttribute('data-theme')==='dark'; h.setAttribute('data-theme',d?'light':'dark'); this.textContent=d?'🌙 暗色':'☀️ 浅色'; this.classList.toggle('active',!d); });
+  document.getElementById('themeToggle').addEventListener('click',function(){ const h=document.documentElement, d=h.getAttribute('data-theme')==='dark'; h.setAttribute('data-theme',d?'light':'dark'); this.textContent=d?'暗色':'浅色'; this.classList.toggle('active',!d); });
   pills.forEach(p=>p.addEventListener('click',()=>goPage(p.dataset.page)));
   renderWheel(); renderCard(); renderList(); goPage('home');
 </script>
