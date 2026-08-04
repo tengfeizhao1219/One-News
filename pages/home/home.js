@@ -353,6 +353,8 @@ Page({
       ...item,
       // 最多取前 3 段，避免摘要过长把卡片撑高、导致标题被居中布局裁切
       summaryParagraphs: summary.split(String.fromCharCode(10)).filter(p => p.trim()).slice(0, 3),
+      // v6.1：AI 摘要标记（'ai' | 'desc' | 'title'），前端胶囊提示依赖
+      isAiSummary: item.summarySource === 'ai',
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       translateY: position === 0 ? 0 : (position < 0 ? -PAGE_HEIGHT : PAGE_HEIGHT),
       opacity: position === 0 ? 1 : 0,

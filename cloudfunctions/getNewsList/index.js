@@ -74,6 +74,7 @@ async function queryCache(where, pageNum, pageSize) {
         list: res.data.map(item => ({
           id: item.id, _id: item._id,
           title: item.title, summary: item.summary,
+          summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
           isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态

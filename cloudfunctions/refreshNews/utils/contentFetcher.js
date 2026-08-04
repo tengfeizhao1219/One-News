@@ -264,6 +264,7 @@ module.exports = {
 /**
  * 调用阿里百炼 DeepSeek 生成新闻摘要
  * 未配置 DASHSCOPE_API_KEY 时返回 null。
+ * v6.1：增加失败重试（最多 2 次，指数退避），提高 AI 摘要生成率。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
  * @returns {Promise<string|null>} 100-150 字中文摘要
@@ -291,7 +292,7 @@ function summarizeWithDashscope(content, title) {
     temperature: 0.3,
   })
 
-  return new Promise((resolve) => {
+  const doRequest = () => new Promise((resolve) => {
     const https = require('https')
     const req = https.request(config.dashscope.baseUrl, {
       method: 'POST',
@@ -322,13 +323,29 @@ function summarizeWithDashscope(content, title) {
     req.write(body)
     req.end()
   })
+
+  // v6.1：最多重试 2 次（共 3 次尝试），指数退避 500ms/1500ms
+  return new Promise(async (resolve) => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const summary = await doRequest()
+      if (summary && summary.length >= 30) {
+        resolve(summary)
+        return
+      }
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
+      }
+    }
+    resolve(null)
+  })
 }
 
 /**
  * 批量 enrich：抓正文 + AI 摘要（并发控制）
+ * v6.1：为每条记录标记 summarySource（'ai' | 'desc' | 'title'），供前端判断是否 AI 摘要。
  * @param {Array<Object>} newsList - 待处理新闻列表
  * @param {number} [concurrency=8] - 并发数（控制外部 API 压力）
- * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary
+ * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
 async function enrichNewsList(newsList, concurrency = 8) {
   const result = new Array(newsList.length)
@@ -343,16 +360,23 @@ async function enrichNewsList(newsList, concurrency = 8) {
         const content = await fetchContentForItem(item)
         const enriched = { ...item, content }
 
-        // 2. 抓到正文后生成 AI 摘要（替换标题兜底）
+        // 2. 判断原始 summary 来源（description 或标题兜底）
+        const rawSummary = (item.summary || '').trim()
+        let summarySource = (!rawSummary || rawSummary === item.title) ? 'title' : 'desc'
+
+        // 3. 抓到正文后生成 AI 摘要（优先覆盖）
         if (content && content.length > 30) {
           const aiSummary = await summarizeWithDashscope(content, item.title)
           if (aiSummary && aiSummary.length >= 30) {
             enriched.summary = aiSummary
+            summarySource = 'ai'
           }
         }
+
+        enriched.summarySource = summarySource
         result[idx] = enriched
       } catch (err) {
-        result[idx] = item // 失败保留原样
+        result[idx] = { ...item, summarySource: 'title' } // 失败保留原样
       }
     }
   }

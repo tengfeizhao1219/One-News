@@ -189,15 +189,30 @@ async function batchInsert(newsList) {
   await batchParallel(newsList, async (item) => {
     try {
       const existed = existMap[item.id]
-      // 复用高质量 summary 的条件：已有 summary 与标题不同（说明是 AI 摘要或 description），
-      // 且长度明显大于标题兜底（标题兜底 = 标题全文）
-      let summary = item.summary
-      if (existed && existed.summary) {
-        const oldSum = existed.summary
-        const isTitleFallback = oldSum === existed.title
-        if (!isTitleFallback && oldSum.length >= 30) {
-          summary = oldSum // 保留已有高质量摘要（AI 生成或 description）
+      // v6.1：summary 优先级修正（summarySource 标记来源）
+      //   - AI 摘要（'ai'）为第一优先级：新 AI 覆盖旧非 AI；新 AI 覆盖旧 AI（重新生成更佳）
+      //   - 非 AI 新值不覆盖已有 AI 摘要
+      //   - 双方均非 AI → 保留更长的旧 description（若有）
+      let summary = item.summary || ''
+      let summarySource = item.summarySource || (!summary || summary === item.title ? 'title' : 'desc')
+      if (existed) {
+        const newIsAi = summarySource === 'ai'
+        const oldSource = existed.summarySource || (existed.summary && existed.summary !== existed.title ? 'desc' : 'title')
+        const oldIsAi = oldSource === 'ai'
+        const oldHasQuality = existed.summary && existed.summary.length >= 30 && existed.summary !== existed.title
+
+        if (oldIsAi && !newIsAi) {
+          // 旧值已是 AI 摘要，新值非 AI → 保留旧 AI
+          summary = existed.summary
+          summarySource = 'ai'
+        } else if (!oldIsAi && !newIsAi) {
+          // 双方均非 AI → 保留更长的旧 description（若有）
+          if (oldHasQuality && (existed.summary.length > summary.length)) {
+            summary = existed.summary
+            summarySource = 'desc'
+          }
         }
+        // 其余情况（新 AI 覆盖旧非 AI / 新 AI 覆盖旧 AI）→ 使用新 AI 摘要
       }
 
       // v7（TL-B12 / RQ-16 D2）：保留策略
@@ -217,6 +232,7 @@ async function batchInsert(newsList) {
         id: item.id,
         title: item.title,
         summary,
+        summarySource,        // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示依赖）
         content: item.content || '',   // v6：refreshNews 已直接抓正文
         category: item.category,
         categoryName: item.categoryName,

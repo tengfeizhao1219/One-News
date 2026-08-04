@@ -556,7 +556,10 @@ exports.main = async (event) => {
   // ── 第 6 步：补写 content + summary 到来源集合（下次直接命中缓存）──
   if (finalContent && contentSource !== 'fallback') {
     const cacheFields = { content: finalContent }
-    if (aiSummary) cacheFields.summary = aiSummary
+    if (aiSummary) {
+      cacheFields.summary = aiSummary
+      cacheFields.summarySource = 'ai' // v6.1：标记 AI 摘要来源（前端胶囊依赖）
+    }
     await cacheDoc(collection, newsId, cacheFields)
   }
 
