@@ -96,21 +96,30 @@
 > ⚠️ **GM 流程本轮例外**：本批次由 owner 直接授权 PD 提交，非 GM 执行；后续是否恢复 GM 统一提交待 owner 决定。
 
 
-### 🔧 2026-08-04 16:55 【路径已统一 · 唯一权威工作区 = `/root/one-news/` · 全员请测试验证】
+### 🔧 2026-08-04 16:55 【路径已统一 · 唯一权威工作区 = `/root/one-news/` · 全员请执行测试】
 
 > **问题**：核查发现机器上曾存在两个互相背离的仓库克隆——`/root/one-news/`（最新，带 PAT + `.git-staging`）与 `/workspace/One-News/`（陈旧克隆，落后、无 PAT、缺 `.git-staging`）。会话默认 cwd 为 `/workspace`，角色若用相对路径操作会误入陈旧克隆，GM 扫不到。
 
 > **修复（已执行）**：已将 `/workspace/One-News` 删除并软链到 `/root/one-news`。现在两条路径指向**同一棵树、同一提交、同一 `.git-staging`**。
 
-> **🧪 请各角色测试验证（重要）**：
-> 1. 在本会话工作区进入 `/root/one-news/`（或 `/workspace/One-News`，现已等价）。
-> 2. 随便改一个文件，或在 `docs/` 下新建一个临时测试文件。
-> 3. 写 `.git-staging/<你的角色>.ready` 标记。
-> 4. 告诉 owner "我改完了"，由 owner 对 GM 说「提交」。
-> 5. 验证：GM 提交后该改动出现在远程 main → 说明路径正确、GM 能读到。
-> 6. 测试完毕删除临时文件即可。
+> **自测验证（PJM 已完成，17:35）**：软链→真实路径写入/读取 ✅ | 真实路径→软链写入/读取 ✅ | git status/add 经软链正常 ✅ | .git-staging 经软链实时可见 ✅ | 双路径交叉验证全部通过。
 
-> **结论**：**唯一权威工作区 = `/root/one-news/`**；`/workspace/One-News` 仅为软链别名。所有改动都必须落在 `/root/one-news/` 内对应子目录。
+> **🧪 各角色请按以下清单执行测试（预计 2 分钟，一次性）**：
+
+| 步骤 | 操作 | 预期 |
+|:---:|---|------|
+| ① | `ls -la /workspace/One-News` | 输出含 `-> /root/one-news`（软链，不是独立目录） |
+| ② | `cd /workspace/One-News` | 正常进入，`pwd` 显示 `/workspace/One-News` |
+| ③ | 在 `docs/` 下新建临时文件：`echo "test" > docs/路径测试-<你的角色>.md` | 文件创建成功 |
+| ④ | 写 `.git-staging/<你的角色>.ready`（含 ready=true） | 标记创建成功 |
+| ⑤ | 告诉 owner "我做完路径测试，待 GM 提交" | — |
+| ⑥ | owner 对 GM 说「**提交**」→ GM 修复 DNS → pull --rebase → add -A → commit → push | 推送成功 |
+| ⑦ | 回到本会话，GM 提交后验证远程含你刚推的测试文件 | 远程出现你的测试文件 → 路径正确 |
+| ⑧ | 删除临时文件 `rm docs/路径测试-<你的角色>.md` → 重新 staging → 再走一次 GM 提交清理 | 远程干净，测试闭环 |
+
+> ⚠️ **如果步骤①看到的是目录列表（不是 `->` 软链）**，说明双克隆陷阱复发：立即告知项目经理，或直接执行 `rm -rf /workspace/One-News && ln -s /root/one-news /workspace/One-News`。
+
+> **结论**：**唯一权威工作区 = `/root/one-news/`**；`/workspace/One-News` 仅为软链别名。所有改动都必须落在 `/root/one-news/` 内对应子目录。PJM 已双路径交叉自测全部通过，方案可行。
 
 ---
 

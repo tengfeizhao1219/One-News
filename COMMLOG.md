@@ -1,3 +1,30 @@
+## [2026-08-04 17:36] 🧪 项目经理 自测 + 测试清单：双路径交叉验证全部通过，方案可行
+
+> **触发**：owner 追问「方案是否真的可行，如何测试」。PJM 执行双路径交叉自测并输出 8 步测试清单，已写入 TASK_BOARD 广播区。
+
+### 一、自测结果（PJM 已执行，全部通过）
+| 验证项 | 路径 | 结果 |
+|---|---|---|
+| 软链 → 真实路径写入/读取 | /workspace/One-News → /root/one-news/ | ✅ |
+| 真实路径 → 软链写入/读取 | /root/one-news/ → /workspace/One-News | ✅ |
+| git status（经软链） | git -C /workspace/One-News status | ✅ |
+| git add（经软链） | git -C /workspace/One-News add | ✅ |
+| .git-staging（经软链） | /workspace/One-News/.git-staging/ | ✅ |
+
+### 二、全员测试清单（见 TASK_BOARD 16:55 广播，8 步表格式清单）
+① ls -la 确认软链 → ② cd 进入 → ③ 建临时测试文件 → ④ 写 staging → ⑤ 告知 owner → ⑥ GM 提交 → ⑦ 验证远程 → ⑧ 清理闭环。
+
+### 三、唯一风险（边界条件）
+若会话重启后 `/workspace/One-News` 被云环境重建为独立克隆，软链会失效 → 立即执行 `rm -rf /workspace/One-News && ln -s /root/one-news /workspace/One-News`。**建议各角色首次进会话时用 `ls -la` 确认软链存在。**
+
+### 四、结论
+方案可行；软链本质是 OS 级文件系统重定向，git 看到的是同一 inode/同一工作树，角色从任意路径读写、GM 在任意路径 git add -A，扫到的都是同一份数据。
+
+### 五、找谁
+- 项目经理（PJM，记录 + 自测）｜🔔 关注人：Git 管理专家 + 全栈开发 + 产品经理 + 产品设计师
+
+---
+
 ## [2026-08-04 17:35] 🎨 产品设计师 交付 UI-B8 AI 摘要胶囊 v1.0 · 需 owner 裁定视觉 | 会话：[产品设计师(PD)]
 
 ### 一、认领理由
