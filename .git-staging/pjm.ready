@@ -1,7 +1,1 @@
-{
-  "role": "PJM",
-  "timestamp": "2026-08-04T09:10:00+08:00",
-  "summary": "GM 全权代理模式：各角色零 git 操作，GM 统一 pull+commit+push，DNS 修复 5→2 次",
-  "files": ["ROLE_CARDS.md", "COLLABORATION.md", "docs/00-规划/任务交接流转机制.md", "CONTEXT.md", "TASK_BOARD.md", "COMMLOG.md"],
-  "ready": true
-}
+done

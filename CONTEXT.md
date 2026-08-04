@@ -91,10 +91,40 @@ theme.json                       — 主题变量（浅色/暗色）
 | `ROLE_CARDS.md` | 5 个角色的身份卡（权责清单 + GM git 禁令） |
 | `TASK_BOARD.md` | 🔥 任务看板（广播区 + 全部任务） |
 | `COMMLOG.md` | 会话沟通记录（按时间倒序） |
-| `COLLABORATION.md` | 多会话协作协议 |
+| `COLLABORATION.md` | 多会话协作协议（含 §七 GM 机制 + §九 资产库同步） |
 | `RELAY.md` | 既定任务跟踪表 |
 | `docs/00-规划/任务交接流转机制.md` | 任务流转规则权威源 |
 | `docs/共享保险库使用指南.md` | GitHub Token 获取与使用 |
+| `docs/00-规划/资产库同步速查-文件该放哪个目录.md` | 📦 **资产库同步速查**（每个角色该把文件放哪个目录） |
+| `docs/00-规划/全栈开发初始化话术.md` | 全栈开发会话初始化话术 |
+
+---
+
+## 🔑 常用速查
+
+### GitHub Token 获取
+> 仓库公开，pull/clone 不需要 token；仅 push 需要。
+- 途径①：找项目经理直接要
+- 途径②：tdrive `vault/github_pat` → `tdrive file_download`
+- 详见 `docs/共享保险库使用指南.md`
+
+### GitHub 拉取失败（DNS 污染）
+> `github.com` 被解析到 `198.18.0.x`，TLS 握手失败。
+```bash
+# 方案A（推荐）：用真实 IP 强制解析
+git -c http.curloptResolve=github.com:443:20.205.243.166 pull --rebase
+
+# 方案B：跑修复脚本
+sudo python3 setup_github_dns.py && git pull --rebase
+
+# 都不通 → 换 IP 重试（140.82.121.3 / 140.82.113.3）→ 等几分钟再试
+```
+
+### 资产库同步（Notion）
+```bash
+bash sync_to_asset_library.sh   # 一键：merge 文档 + 代码快照 → Notion
+```
+> 详见 `docs/00-规划/资产库同步速查-文件该放哪个目录.md`
 
 ---
 
@@ -112,4 +142,4 @@ theme.json                       — 主题变量（浅色/暗色）
 
 ---
 
-> **最后更新**：2026-08-01 | **更新者**：项目经理 | **关联**：TASK_BOARD v4.6、DEP-01 ✅、阶段五测试验收中
+> **最后更新**：2026-08-04 | **更新者**：项目经理 | **关联**：TASK_BOARD v4.26+、资产库同步机制上线、GM 解耦
