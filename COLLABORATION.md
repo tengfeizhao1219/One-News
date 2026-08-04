@@ -10,7 +10,7 @@
 | 角色 | 代号 | 职责 |
 |------|------|------|
 | **产品经理** | PM | 需求定义、用户故事、PRD 撰写、测试用例、功能测试、Bug 管理、产品验收 |
-| **产品设计师** | PD | 页面流程、手势交互、配色方案、组件样式、图标、设计规范、设计走查 |
+| **产品设计师** | PD | 页面流程、手势交互、配色方案、组件样式、图标、设计规范、设计走查、**UI/UX 验收（开发还原度把关，不合格提 Bug）** |
 | **全栈开发** | FS | 技术方案、架构设计、前后端开发、代码审查 |
 | **项目经理** | PJM | 统一看板管理、既定任务跟踪表维护、任务分派、流程推进、风险预警、进度汇报、关口检查、上线决策 |
 | **Git 管理专家** | GM | 统一 git 操作（add/commit/push/merge/rebase）、分支管理、tag 管理、DNS 修复、staging 标记检查 |
@@ -171,6 +171,68 @@ PRD 定稿 → 产品设计师出设计稿(HTML) → 交付给 PM/FS 发布到 G
 - 模拟微信小程序真实视口比例（375×812，底部安全区 34px）
 
 > **注意**：此机制是对阶段二「设计评审」的强化——将原本团队内部评审升级为 owner 在线确认，减少返工风险。
+
+---
+### 阶段二·附·二：PD→FS 设计交付精度规范 + UI/UX 验收闭环（owner 2026-08-04 确立）
+
+> ⚠️ **适用范围**：后续所有**前端流转给后端（FS）的设计任务**，必须严格遵守此规范。
+> ⚠️ **核心原则**：产品设计师（PD）是 UI/UX 质量的最终权威，对开发还原度负责到底。
+
+#### 设计交付精度要求（PD 产出标准）
+
+设计文档中**必须明确标注每个 UI 元素的精确规格**，全栈开发严格按规格实现，不得自行推断：
+
+| 必须标注 | 示例 | 禁止 |
+|----------|------|------|
+| **位置** | `position: absolute; right: 20px; bottom: 30px` | 「右下角」 |
+| **尺寸** | `width: 48px; height: 48px` | 「约 50px」 |
+| **颜色** | `background: var(--tag-bg)` (#EEECE8) | 「浅灰色」 |
+| **圆角** | `border-radius: var(--radius)` (10px) | 「圆角」 |
+| **阴影** | `box-shadow: 0 2px 10px rgba(0,0,0,.08)` | 「轻阴影」 |
+| **字体** | `font-size: 15px; font-weight: 600; line-height: 1.4` | 「稍大一点」 |
+| **间距** | `padding: 13px 16px; margin: 0 12px 2px` | 「适当间距」 |
+| **图标** | SVG path + `stroke-width: 1.25` + 颜色 token | 「一个齿轮图标」 |
+| **透明度** | `opacity: .78` | 「半透明」 |
+| **动效** | `transition: transform .25s cubic-bezier(.22,1,.36,1)` | 「平滑过渡」 |
+
+> **交付物清单**：每个设计任务必须产出 ① 1:1 可交互 HTML 原型（`docs/showcase/`）+ ② 精确规格设计文档（含 CSS token 对照表）+ ③ 独立图标规范文档（含完整 SVG path + 颜色 token + 尺寸，如涉及图标）。
+
+#### UI/UX 验收闭环（PD 质量把关）
+
+```
+FS 开发完成 → PD 对照设计稿逐项走查 → 合格 → ✅ 标记通过
+                                      → 不合格 → 🐛 提 Bug 给 FS（标注偏差项 + 期望值 + 设计文档引用）
+                                      → FS 修复 → PD 复验 → 循环至通过
+```
+
+| 步骤 | 做什么 | 负责人 | 产出物 |
+|------|--------|--------|--------|
+| V-a | FS 开发完成，在 TASK_BOARD 标记「🔄 待 PD 验收」并 @PD | 全栈开发 | 可运行的开发版本 |
+| V-b | PD 打开开发版本，对照设计文档逐元素走查（位置/尺寸/颜色/图标/间距/动效/状态覆盖） | 产品设计师 | 走查清单 |
+| V-c | 全部合格 → PD 在 TASK_BOARD 标记「✅ UI/UX 验收通过」 | 产品设计师 | 验收记录 |
+| V-d | 存在偏差 → PD 在 TASK_BOARD / COMMLOG 提 Bug，格式：`🐛 [元素名] 实际值 → 期望值（设计文档 §X.X）` | 产品设计师 | Bug 清单 |
+| V-e | FS 修复 Bug → 重新标记「🔄 待 PD 验收」→ 回到 V-b | 全栈开发 | 修复记录 |
+| V-f | 全部通过后，PD 通知 PM 进入功能验收 | 产品设计师 | 验收通过通知 |
+
+#### Bug 提单格式（PD → FS）
+
+```
+🐛 [页面/组件] 元素名称
+   实际：当前开发版本的参数
+   期望：设计文档规定的精确值
+   引用：D-02-增量-UI-XXX.md §X.X / 原型第 N 行
+   优先级：P0（与设计稿不符）/ P1（体验偏差）/ P2（建议优化）
+```
+
+#### 不可自行推断的规则（FS 侧）
+
+- ❌ 不得自行调整颜色深浅、透明度高低、圆角大小
+- ❌ 不得自行替换图标（即使形状相似）
+- ❌ 不得自行改变间距、字体大小、字重
+- ❌ 不得自行省略设计稿中的状态覆盖（loading/empty/error/edge cases）
+- ✅ 如遇技术限制无法 1:1 还原，必须先 @PD 确认替代方案
+
+> **找谁**：产品设计师（验收）｜🔔 关注人：全栈开发（按规格实现）+ owner（质量监督）
 
 ---
 
@@ -404,13 +466,10 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ### 7.1 核心规则
 
-1. **GM 是唯一有权执行任何 git 操作的角色**。所有 git pull/add/commit/push/merge/rebase 由 GM 统一执行。
-2. **其他 4 角色零 git 操作**（不 pull、不 commit、不 push）。各角色直接读写工作区文件，GM pull 后各角色自动看到最新文件。
-3. **各角色产出文件后**，写入 `.git-staging/<role>.ready` 标记文件。
-4. **GM 两条指令**：
-   - 「**同步**」→ GM 修复 DNS → `git pull --rebase` → 各角色看到最新代码
-   - 「**提交**」→ GM 检查 staging → `git pull --rebase` → `git add -A` → `git commit` → `git push` → 清除标记
-5. **DNS 修复次数**：旧方案 5 次（4 角色各 pull 1 次 + GM push 1 次）→ 新方案 2 次（GM 同步 1 次 + GM 提交 1 次）
+1. **GM 是唯一有权执行 git 写操作的角色**。所有 git add/commit/push/merge/rebase 由 GM 统一执行。
+2. **其他 4 角色只能 `git pull`**，禁止任何 git 写操作。
+3. **各角色产出文件后**，不再自行 git 提交，改为写入 `.git-staging/<role>.ready` 标记文件。
+4. **GM 检查 staging 标记**后统一提交。触发方式：用户对 GM 说「提交」/ GM 主动检测。
 
 ### 7.2 Staging 标记格式
 
@@ -433,28 +492,20 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 ### 7.3 GM 工作流程
 
 ```
-[用户] 「同步」→ [GM] 修复 DNS → git pull --rebase → 「已同步: commit <hash>」
-                         │
-         ┌───────────────┼───────────────┐
-         ▼               ▼               ▼
-    [PM] 读文件      [FS] 读文件      [PD] 读文件
-    改文件           改文件           改文件
-    写 staging        写 staging        写 staging
-         │               │               │
-         └───────────────┼───────────────┘
-                         ▼
-[用户] 「提交」→ [GM] 修复 DNS → git pull --rebase → 读 staging
-         → git add -A → git commit → git push → 清除 staging → 「已提交: commit <hash>」
+[各角色] 产出文件 → 写 .git-staging/<role>.ready → COMMLOG 标记「📤 待 GM 提交」
+                                                          ↓
+[GM]     检查 staging → git pull --rebase → git add -A → git commit → git push
+         清除 staging 标记 → COMMLOG 记录「📤→✅ GM 已提交：commit <hash>」
 ```
 
 ### 7.4 GM 权限边界
 
 | 可以 | 不可以 |
 |------|--------|
-| git pull/add/commit/push/merge/rebase（唯一 git 操作者） | 修改业务代码 |
+| git add/commit/push/merge/rebase | 修改业务代码 |
 | 检查 staging 标记、清除标记 | 修改文档内容（只能改 COMMLOG） |
 | 解决 DNS 污染、分支管理、tag 管理 | 在 TASK_BOARD 认领业务任务 |
-| 写 COMMLOG 记录同步/提交 | 自行合并业务逻辑冲突 |
+| 写 COMMLOG 记录提交 | 自行合并业务逻辑冲突 |
 
 ### 7.5 冲突处理
 
@@ -467,4 +518,4 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ---
 
-> **本协议版本**：v4.1 | **生效日期**：2026-08-04（GM 全权代理模式：各角色零 git 操作，GM 统一 pull + commit + push）
+> **本协议版本**：v4.0 | **生效日期**：2026-08-04（引入 GM 角色，5 角色架构，统一 git 管理）
