@@ -1,3 +1,30 @@
+## [2026-08-04 16:55] 🔧 项目经理 修复：统一工作区路径（消除双克隆陷阱）+ 全员测试指引
+
+> **触发**：owner 要求核实广播所指向的目录 `/root/one-news/` 是否真实存在，核查发现机器上存在两个互相背离的仓库克隆。owner 授权按方案修复。
+
+### 一、核查发现
+- `/root/one-news/`（inode 544）：合法 git 根，HEAD `db8bcb6`（最新），含 `.git-staging`、remote 带 PAT ✅
+- `/workspace/One-News/`（inode 109，**不同目录**）：陈旧克隆，HEAD `cde306c`（落后）、无 `.git-staging`、remote 无 PAT、缺近期全部工作
+- 会话默认 cwd = `/workspace` → 角色若相对路径操作会误入陈旧克隆，GM（在 /root/one-news）扫不到
+
+### 二、修复（已执行）
+- `rm -rf /workspace/One-News && ln -s /root/one-news /workspace/One-News`
+- 验证：两路径 HEAD 均 `db8bcb6`、`.git-staging` 与 FS 文档经软链可见 → 已统一为同一棵树
+
+### 三、全员测试指引（见 TASK_BOARD 16:55 广播）
+1. 进入 `/root/one-news/`（或等价的 `/workspace/One-News`）
+2. 改一个文件 / 新建临时测试文件 → 写 `.git-staging/<role>.ready`
+3. 告诉 owner "我改完了" → owner 对 GM 说「提交」
+4. 验证 GM 提交后改动出现在远程 main → 路径正确；测完删临时文件
+
+### 四、结论
+**唯一权威工作区 = `/root/one-news/`**；`/workspace/One-News` 仅为软链别名。广播（16:15）指向的路径本身正确，但此前"所有角色都落在同一目录"的前提被双克隆打破，现已消除。
+
+### 五、找谁
+- 项目经理（PJM，记录）｜🔔 关注人：Git 管理专家 + 全栈开发 + 产品经理 + 产品设计师
+
+---
+
 ## [2026-08-04 16:15] 📦 项目经理 广播：后续版本推送具体方案（文件必须放 `/root/one-news/` 内对应子目录，GM 才读得到）
 
 > **触发**：owner 要求向全员广播后续版本推送的具体方案，重点明确「更新后的文件/版本应放在哪个路径，GM 才能读取并推送」。广播后直接提交 git。
