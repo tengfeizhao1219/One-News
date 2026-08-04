@@ -518,7 +518,7 @@
 | | TL-B5 | P0 复盘：把「WXML 事件绑定校验 / 禁旧基线覆盖」写入代码评审 checklist | 🔴 | 无 | 继承 |
 | | TL-B6 | 🆕 `refreshNews/config.json` 触发器改每小时属**线上行为变更**，请补 `CHANGELOG.md` 并知会 QA | 🟡 | 无 | 🆕 |
 | | TL-B7 | 🆕 **文档修订 DOC-01~DOC-04、DOC-06~DOC-09**（8 份技术文档与 v4.2 代码脱节，其中 DOC-01 自称「唯一真源」却描述已删除架构）+ 评估 PM 提议的防复发机制 | 🔴 | 无 | 🆕 |
-| | TL-B8 | 🆕 **P0-Q3 恢复一层兜底（owner 2026-08-03 裁定）**：`news_cache` 空/拉取失败时降级展示「本地上次成功缓存」或「内置精选列表」（`meta.source='cache-fallback'`），不得空白页。产品要求见 PRD §5.6；请定技术方案（含 ADR 更新）+ 指派 BE/FE 实现 | 🔴 | 无 | 🆕 |
+| | TL-B8 | 🔄 **P0-Q3 恢复一层兜底（owner 2026-08-03 裁定）**：`news_cache` 空/拉取失败时降级展示「本地上次成功缓存」或「内置精选列表」（`meta.source='cache-fallback'`），不得空白页。产品要求见 PRD §5.6；请定技术方案（含 ADR 更新）+ 指派 BE/FE 实现 | 🔴 | 无 | 🔄 全栈开发（2026-08-04 认领） |
 | | TL-B9 | ✅ **BUG-V5ACCEPT-001：回滚 tag `v3-ai-dual-engine` 已创建**（全栈开发 2026-08-03 19:48 交付，指向 `5ce0c90`，已推远端 `ae0c5b1`）。验收：`git tag` 可见 + `git checkout` 可恢复 ✅ | ✅ | 无 | 🆕（PM 指派 17:45）→ ✅ FS 已完成 |
 | | TL-B10 | ✅ **BUG-V5ACCEPT-002：清洗规则缺口已修复**（commit `a0bfbea`）。新增 `removeInlineBracketedMeta()` 覆盖括号包裹形态；行级规则增强为 `/^[（(]?(责任编辑\|编辑\|作者)[：:]/`；refreshNews + getNewsDetail 两处同步；本地复验 8 样本通过 ✅ | ✅ | 无 | 🆕（PM 指派 17:45）→ ✅ FS 已完成 |
 | | TL-B11 | 🟡 **BUG-V5ACCEPT-003：后端残留分类 finance/entertainment**（QA-B2 契约测试豁免告警项）——`getNewsList` CATEGORY_NAMES 与 `tianxing.js` 映射残留 v4.2 遗留分类（前端无 tab、无数据源语义）。**请随 TL-B2「B-08~B-14 清理裁定」一并处置**（删除或标注废弃）。验收：清理后 QA-B2 无告警，或看板记录明确裁定 | ✅ **FS 实现完成**（2026-08-03 21:20）—— 清理 tianxing/juhe/getNewsList 残留映射，QA-B2 契约 `v11-category-contract.js` 25/25 通过 | 已裁定（随 TL-B2 归档） | 🆕（PM 指派 17:45）→ ✅ FS 已完成 |
