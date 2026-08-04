@@ -20,7 +20,7 @@
   [data-theme="dark"] {
     --bg-page:#000; --bg-card:#0D0D0D; --text-primary:#fff; --text-body:#A8A8A8; --text-secondary:#999;
     --divider:#1C1C1E; --tag-bg:#1C1C1E; --tag-text:#999; --panel-bg:rgba(13,13,13,.78);
-    --home-icon:#E0E0E0; --primary:#0A84FF; --highlight-bg: rgba(10,132,255,.08);
+    --home-icon:#E0E0E0; --primary:#0A84FF; --highlight-bg: rgba(10,132,255,.10);
     --wheel-text-idle: rgba(255,255,255,.12); --wheel-selected-idle: rgba(255,255,255,.5);
     --wheel-text-active: rgba(255,255,255,.45);
   }
@@ -180,7 +180,7 @@
     <h3>UI-B7 v5.3-final（owner 2026-08-04 最终确认：淡蓝高亮 + 去关闭按钮 + 字号 14px）</h3>
     <table>
       <tr><th>#</th><th>反馈</th><th>改动</th></tr>
-      <tr><td>1</td><td>选中分类用淡淡蓝色高亮，保证夜晚模式下能看清</td><td>idle 选中项加淡蓝底色 <code>var(--highlight-bg)</code>（浅色 rgba(0,122,255,.06) / 暗色 rgba(10,132,255,.08)）</td></tr>
+      <tr><td>1</td><td>选中分类用淡淡蓝色高亮，保证夜晚模式下能看清</td><td>idle 选中项加淡蓝底色 <code>var(--highlight-bg)</code>（浅色 rgba(0,122,255,.06) / 暗色 rgba(10,132,255,.10)）</td></tr>
       <tr><td>2</td><td>确保当前分类固定在顶部第二行，不随其他分类滚动而移动</td><td>锚定逻辑确认：<code>translateY = max(0, -(curCat-1)×36px)</code>，选中项固定第二行不可移动</td></tr>
       <tr><td>3</td><td>移除面板右上角关闭按钮</td><td>删除 <code>.panel-close</code> HTML + CSS + JS 事件绑定（右滑关闭即可）</td></tr>
       <tr><td>4</td><td>列表字号再小一档</td><td>15px → <code>14px</code>，更紧凑节省空间</td></tr>
