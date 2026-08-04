@@ -1,3 +1,42 @@
+## [2026-08-04 22:04] 🚀 FS 第二轮交付：V5-FS-02 数据清洗 6 项修复 + BUG-20260802-006 分类提示修复 · main=ff5d077 | 会话：[全栈开发(FS)]
+
+✅ **Git Push 成功**：`04c3b47..ff5d077` → `github.com/tengfeizhao1219/One-News`
+
+### 一、V5-FS-02 数据清洗 6 项修复（原 🔴 阻塞告警）
+
+| # | 问题 | 修复文件 | 改动 |
+|---|---|---|---|
+| ⑥ P0 | 正文末尾串入其他新闻正文（IT之家延伸阅读） | `contentFetcher.js` / `getNewsDetail/index.js` | `locateBodyHtml` 严格容器优先级 + 新增 `trimExtraneousContent` 截断延伸阅读/相关推荐/广告声明之后的内容 |
+| ① P1 | 国际分类 0 条（天行 rate limit） | `sources/tianxing.js` | 分类间延迟 200ms→500ms；单分类最多 3 次重试，指数退避 500/1500/3000ms |
+| ② P2 | `gradedCleanup` `.limit().remove()` 可能不生效 | `refreshNews/index.js` | 改用 `.field(_id).get()` 取 ID → `.where(_id in ids).remove()` 分批精确删除 |
+| ③ P1 | 「广告声明」噪音未过滤 | `utils/newsCleaner.js` | `removeNoiseLines` + `removeTrailingNoise` 增加 `广告声明` 规则 |
+| ④ P1 | 图片说明残留 | `utils/newsCleaner.js` | 增加图说正则 + 短行（≤25字）图说启发式检测 |
+| ⑤ P1 | 微信扫码分享引导覆盖不全 | `utils/newsCleaner.js` | 增加「用微信扫描二维码」「分享至好友.*圈」「扫一扫.*分享」规则 |
+
+### 二、BUG-20260802-006 分类提示修复
+
+| 文件 | 改动 |
+|---|---|
+| `pages/home/home.js` | `onWheelChange` 滚轮切分类补 `_showCategoryHint`；`_showCategoryHint` 双重 `wx.hideToast` 防 toast 覆盖；展示时长 500ms→600ms |
+
+### 三、状态核实（无需改代码）
+
+- **BUG-20260802-001** 翻页单向：`detail.js` 已具备 `_measureScroll` SelectorQuery 真实高度 + `bindscrolltolower/bindscrolltoupper` 原生边界事件 + `_bottomScrollTop` 校准防误复位 → 代码层面已修复，待 owner 真机复测。
+- **B-08 / B-11**：PM 已裁定作废（`tianApi.js` 已于 v4.2 删除），当前 `tianxing.js` 已使用 `!==` 严格比较。
+- **B-16** 收藏/分享 30 天保留：`setNewsRetained` / `gradedCleanup` / `batchInsert isRetained` 保留逻辑均已实现。
+
+### 四、交付物
+
+- `.git-staging/fs.ready` 已创建（role=全栈开发, ready=true）
+- `TASK_BOARD.md` 已更新：V5-FS-02 ✅、BUG-20260802-006 ✅、BUG-20260802-001 待复测、BE-A1/A2 作废、BE-A3 ✅
+
+### 五、后续
+
+🔔 **产品经理（PM）**：请按 V5-PM-01 复验 TC-C01~C03 清洗质量 + TC-F04 国际分类数据条数。
+🔔 **产品 owner**：BUG-20260802-001 / 006 待真机复测确认。
+
+---
+
 ## [2026-08-04 19:30] 🚀 FS 批量交付已推送 GitHub · main=e7f028c | 会话：[全栈开发(FS)]
 
 ✅ **Git Push 成功**：`52ac593..e7f028c` → `github.com/tengfeizhao1219/One-News`
