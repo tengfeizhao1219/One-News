@@ -194,9 +194,9 @@
 <body>
 
 <div class="hd">
-  <h1>UI-B8 · AI 摘要胶囊视觉设计 <span class="badge">v1.0 待 owner 裁定</span></h1>
+  <h1>UI-B8 · AI 摘要胶囊视觉设计 <span class="badge">v1.1-final ✅ owner 已确认 A-1</span></h1>
   <div class="sub">
-    owner 已定 <b>方案 A（摘要区左上角胶囊）</b>；本原型就<b>具体视觉</b>提供三方案 1:1 对比。<br>
+    🟢 <b>owner 2026-08-04 17:44 裁定：采用 A-1 主题色轻胶囊</b>（淡蓝底 + 蓝字）。<b>FS 照 A-1 实现即可</b>，A-2/A-3/A-3′ 仅作取舍存档。<br>
     尺寸 1:1 还原（375px 屏宽，1rpx = 0.5px），色值 1:1 取自 <span class="mono">theme.json</span>。
   </div>
   <div class="ctrl">
@@ -216,12 +216,12 @@
 
 <!-- ============ 1. 三方案对比 ============ -->
 <div class="sec">
-  <div class="sec-t">1 · 三方案 1:1 对比 <span class="badge">请 owner 在此裁定</span></div>
-  <div class="sec-d">同一条 AI 摘要新闻，四种胶囊视觉。请对比「胶囊是否压过标题」与「与分类标签是否混淆」。</div>
+  <div class="sec-t">1 · 四方案对比（取舍存档） <span class="badge">✅ 已选 A-1</span></div>
+  <div class="sec-d">owner 已裁定 <b>A-1</b>。以下对比保留用于说明取舍理由，<b>实现只看 A-1 一张</b>。</div>
   <div class="row">
 
     <div class="phone">
-      <div class="phone-hd"><span class="rec">A-1 主题色轻胶囊</span><span class="tag">⭐ PD 推荐</span></div>
+      <div class="phone-hd"><span class="rec">A-1 主题色轻胶囊</span><span class="tag">✅ owner 已选 · 照此实现</span></div>
       <div class="card-stage"><div class="card">
         <div class="card-title">量子计算机首次实现千比特纠错运算</div>
         <div class="card-meta"><span class="category-tag">科技</span><span>科技日报</span><span>·</span><span>2 小时前</span></div>
@@ -233,7 +233,7 @@
     </div>
 
     <div class="phone">
-      <div class="phone-hd"><span>A-2 中性灰胶囊</span><span class="tag">最克制</span></div>
+      <div class="phone-hd"><span style="opacity:.55">A-2 中性灰胶囊</span><span class="tag">未采用</span></div>
       <div class="card-stage"><div class="card">
         <div class="card-title">量子计算机首次实现千比特纠错运算</div>
         <div class="card-meta"><span class="category-tag">科技</span><span>科技日报</span><span>·</span><span>2 小时前</span></div>
@@ -245,7 +245,7 @@
     </div>
 
     <div class="phone">
-      <div class="phone-hd"><span>A-3 蓝紫渐变</span><span class="tag">PM 原议</span></div>
+      <div class="phone-hd"><span style="opacity:.55">A-3 蓝紫渐变</span><span class="tag">PM 原议 · 未采用</span></div>
       <div class="card-stage"><div class="card">
         <div class="card-title">量子计算机首次实现千比特纠错运算</div>
         <div class="card-meta"><span class="category-tag">科技</span><span>科技日报</span><span>·</span><span>2 小时前</span></div>
@@ -257,7 +257,7 @@
     </div>
 
     <div class="phone">
-      <div class="phone-hd"><span>A-3′ 纯色醒目</span><span class="tag">若偏好醒目建议选此</span></div>
+      <div class="phone-hd"><span style="opacity:.55">A-3′ 纯色醒目</span><span class="tag">未采用</span></div>
       <div class="card-stage"><div class="card">
         <div class="card-title">量子计算机首次实现千比特纠错运算</div>
         <div class="card-meta"><span class="category-tag">科技</span><span>科技日报</span><span>·</span><span>2 小时前</span></div>
@@ -269,9 +269,9 @@
     </div>
 
   </div>
-  <div class="hint">
-    <b>PD 判断</b>：A-3 白字渐变的视觉重量高于 <span class="mono">card-title</span>，会让「标注」抢过「新闻标题」，与 owner 在 UI-B7 v5.1 的取向（连高亮底色都嫌重）方向相反；且 <span class="mono">theme.json</span> 现存 0 个渐变 token。
-    A-2 与分类标签几乎同款，易混淆语义。<b>故推荐 A-1</b>：复用已有 <span class="mono">--primary-subtle</span>，以色相而非重量区分。
+  <div class="hint ok">
+    <b>🟢 owner 2026-08-04 17:44 裁定：A-1</b> — 复用已有 <span class="mono">--primary-subtle</span> / <span class="mono">--primary</span>，零新增 token，以色相而非重量区分。<br>
+    <b>未采用理由存档</b>：A-3 白字渐变视觉重量高于 <span class="mono">card-title</span>，会让「标注」抢过「新闻标题」，与 owner 在 UI-B7 v5.1 的取向（连高亮底色都嫌重）方向相反，且 <span class="mono">theme.json</span> 现存 0 个渐变 token；A-2 与分类标签几乎同款，易混淆语义。
   </div>
 </div>
 
