@@ -3823,3 +3823,54 @@ v6 已将超时调至 60s，3s 不再是硬约束。建议部署后在云函数�
 
 > **找谁**：产品经理（交付人）｜🔔 关注人：全栈开发（需部署云函数）+ owner（验收决策）
 
+---
+## [2026-08-04 08:30] 全栈开发 认领 TL-B8（P0 恢复一层兜底）+ 碰撞恢复记录 | 会话：[全栈开发(FS)]
+
+### ⚠️ 并行会话 force-push 碰撞与 font-panel 恢复
+- **现象**：本会话此前交付的「反馈联系方式」（邮箱 ztengfei@hotmail.com + 微信 jiaowotengfei，点击复制）两个 commit 被另一并行会话的 force-push（`a15d13a`）覆盖——该会话重写 font-panel 为占位弹窗（tengfei@example.com，无微信），并把 TL-B9~B16 认领交付后强推。
+- **恢复**：按用户本会话最终意图重做 font-panel（关于·反馈 + 邮箱 + 微信 双可点行，各自点击复制），提交 `2cec79e` 已推送远端（`99c68a3..2cec79e`）。
+- **影响**：原 TL-B12/B13/B14「下迭代三需求」已由并行会话 ✅ 实现完成，不再是待认领；本会话改认领 TL-B8。
+- **建议**：同一仓库多会话勿并行强推 main；统一 `pull --rebase` 后 push，且任何人不得 force-push。
+
+### 认领 TL-B8（P0 恢复一层兜底）
+- **来源**：广播区 2026-08-03 技术负责人 TL-B8 · P0 立即认领；PD-B5 owner 裁定 ✅ 恢复一层兜底（news_cache 空/拉取失败 → 降级本地上次成功缓存或内置精选，不得空白页）。
+- **职责**：定技术方案（含 ADR 更新）+ 指派 BE/FE 实现；TL-B3 同步按新兜底重写 Q-新08 测试方案。
+- **下一步**：读 PRD §5.6 + 现状 news_cache/refreshNews 逻辑，产出兜底技术方案（cache-fallback 数据源选择、触发条件、与现有 TTL/清理的衔接），提交 ADR 并指派实现人。
+- **变更文件**：TASK_BOARD.md（TL-B8 状态 🆕→🔄 全栈开发认领）
+
+---
+
+## [2026-08-04 08:50] 全栈开发 交付 TL-B8（P0 恢复一层兜底）| 会话：[全栈开发(FS)]
+
+### 交付物
+- **ADR-003**：`docs/03-技术方案/ADR-003-一层兜底恢复.md` — 上次成功缓存优先 + 内置精选兜底
+- **getNewsList 三层降级**：news_cache（正常+stale）→ news_cache_backup（上次快照）→ 内置精选列表。均标注 `meta.source='cache-fallback'`
+- **refreshNews 备份写入**：每次成功写入后按分类覆盖 `news_cache_backup`（每分类 ≤20 条），写入失败不阻塞主流程
+
+### 降级优先级
+```
+getNewsList 数据查询：
+  L1: news_cache（未过期）         → meta.source='news_cache'
+  L2: news_cache（已过期，stale）  → meta.source='news_cache'（stale:true）
+  L3: news_cache_backup（快照）    → meta.source='cache-fallback'（engine:'cache-backup'）
+  L4: 内置精选列表（极端）         → meta.source='cache-fallback'（engine:'builtin'）
+```
+
+### 验收要点（6 条 AC-B8）
+- AC-B8-01：news_cache 空时返回 backup 数据（非空）
+- AC-B8-02：两集合均空时返回内置精选（非空）
+- AC-B8-03：refreshNews 成功后 backup 被更新
+- AC-B8-04：backup 写入失败不阻塞 refreshNews
+- AC-B8-05：正常路径不受影响（meta.source='news_cache'）
+- AC-B8-06：任何情况下用户不看到空白页
+
+### 变更文件
+- `docs/03-技术方案/ADR-003-一层兜底恢复.md`（🆕 技术决策文档）
+- `cloudfunctions/getNewsList/index.js`（新增 getFromCacheBackup + getBuiltinNewsList + 三层降级分支，~100 行）
+- `cloudfunctions/refreshNews/index.js`（新增 backupToCacheBackup + 调用点，~40 行）
+- `TASK_BOARD.md`（TL-B8 状态 🔄→✅ FS 实现完成）
+- `COMMLOG.md`（本记录）
+
+### 下游激活
+- **🔔 TL-B3**（测试工程师）：Q-新08 降级链路测试方案请按「news_cache 空→cache_backup→内置精选」新口径重写。原 L1→L4→L3 故障注入方案已失效。设计输入：ADR-003 §2.3 降级优先级表 + ADR-003 §5 验收标准。
+- **🔔 PM**：TL-B8 代码已交付，需部署 getNewsList + refreshNews 两个云函数到微信云环境后，按 AC-B8-01~06 验收（清空 news_cache → 验证 backup/内置精选兜底生效）。

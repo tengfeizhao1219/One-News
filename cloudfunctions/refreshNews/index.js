@@ -415,6 +415,9 @@ exports.main = async (event) => {
   // 5c. 分级清理（v7 / TL-B12 / RQ-16）：过期普通记录（7d）/ retained 记录（30d）
   const cleanup = await gradedCleanup()
 
+  // 5d. 🆕 TL-B8 备份快照写入（ADR-003 §3.1）：按分类覆盖写入 news_cache_backup
+  await backupToCacheBackup(categories)
+
   const elapsed = Date.now() - startTime
 
   // ── 写入刷新时间戳 ──
@@ -464,4 +467,47 @@ exports.main = async (event) => {
       engine,
     },
   }
+}
+
+// ── 🆕 TL-B8 备份快照写入（ADR-003 §3.1）────────────────────
+
+/**
+ * 将本次成功写入的新闻按分类覆盖写入 news_cache_backup
+ * 每分类保留最多 20 条最新记录，用于 news_cache 为空时的一层兜底
+ * 写入失败不阻塞主流程
+ */
+async function backupToCacheBackup(categories) {
+  const _ = db.command
+  const backupPromises = Object.entries(categories).map(async ([category, docs]) => {
+    if (!docs || docs.length === 0) return
+    try {
+      // 先删旧备份
+      await db.collection('news_cache_backup')
+        .where({ category })
+        .remove()
+      // 取前 20 条写入新快照
+      const snapshot = docs.slice(0, 20).map(doc => ({
+        id: doc.id,
+        title: doc.title,
+        summary: doc.summary,
+        category: doc.category,
+        categoryName: doc.categoryName || '',
+        source: doc.source || '',
+        sourceUrl: doc.sourceUrl || '',
+        publishTime: doc.publishTime,
+        content: doc.content || '',
+        isRetained: doc.isRetained === true,
+        _backupAt: Date.now(),
+      }))
+      await db.collection('news_cache_backup').add(
+        snapshot.length === 1
+          ? { data: snapshot[0] }
+          : snapshot.map(d => ({ data: d }))
+      )
+      console.log(`[backupToCacheBackup] ${category}: 备份 ${snapshot.length} 条`)
+    } catch (err) {
+      console.warn(`[backupToCacheBackup] ${category} 备份写入失败（非阻塞）:`, err.message)
+    }
+  })
+  await Promise.all(backupPromises)
 }
