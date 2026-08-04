@@ -80,22 +80,53 @@ function fetchWebPage(url) {
 }
 
 /**
- * 定位正文容器
+ * 定位正文容器（v6.3: 严格限定，避免延伸阅读/相关推荐混入）
  */
 function locateBodyHtml(html) {
   const patterns = [
+    // 优先：严格语义标签
     /<article[^>]*>([\s\S]*?)<\/article>/i,
+    // IT之家 / 聚合数据 特定容器
     /<div[^>]*id=["']paragraph["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    // 更严格的 class 匹配：只取 article-content 而非 article-*
+    /<div[^>]*class=["']article-content["'][^>]*>([\s\S]*?)<\/div>/i,
+    // 兜底：更宽松的 article 类容器（排最后，仅在前述全部失败时使用）
+    /<div[^>]*class=["'][^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
   ]
   for (const re of patterns) {
     const m = html.match(re)
-    if (m && m[1]) return m[1]
+    if (m && m[1]) {
+      // v6.3(V5-FS-02-⑥): 在容器内截断"延伸阅读/相关推荐"之后的全部内容
+      return trimExtraneousContent(m[1])
+    }
   }
   return null
+}
+
+/**
+ * v6.3(V5-FS-02-⑥): 截断正文容器内"延伸阅读/相关推荐"及之后的内容
+ * 解决 IT之家等来源正文末尾混入其他新闻段落的问题
+ */
+function trimExtraneousContent(html) {
+  if (!html) return null
+  // 匹配"延伸阅读""相关推荐""推荐阅读"等区域标记（含 HTML 标签包裹形态）
+  const cutoffPatterns = [
+    /<[^>]*class=["'][^"']*(?:related|recommend|extend|extra)[^"']*["'][^>]*>/i,
+    /(?:延伸阅读|相关推荐|推荐阅读|相关新闻|热门推荐|猜你喜欢|更多阅读)[：:]/i,
+    /<h\d[^>]*>(?:延伸阅读|相关推荐|推荐阅读|相关新闻)[\s\S]*?<\/h\d>/i,
+    // IT之家: "广告声明：文内含有的对外跳转链接..." 之后的内容
+    /广告声明[：:][\s\S]*?(?:链接|二维码|口令)/i,
+  ]
+  for (const pattern of cutoffPatterns) {
+    const idx = html.search(pattern)
+    if (idx > 100) { // 只在正文足够长（>100字符）时才截断，避免误伤短正文
+      return html.slice(0, idx).trim()
+    }
+  }
+  return html
 }
 
 /**

@@ -68,6 +68,7 @@ async function clearOldCacheExcept(category, keepIds) {
 /**
  * 分级清理（v7 / TL-B12 / RQ-16 §5.2 E7）
  * 按 cacheExpire 过期清理：普通记录 7 天 / retained 记录 30 天。
+ * v6.3(V5-FS-02-②): 修复 .limit().remove() 可能不生效问题 — 改用 .get()→按 _id.remove()
  * 分批 ≤ 100 条/批，单轮 ≤ 2s，避免云函数超时。
  * @returns {Promise<{removedNormal:number, removedRetained:number, durationMs:number}>}
  */
@@ -79,34 +80,44 @@ async function gradedCleanup() {
   let removedRetained = 0
   const startTime = Date.now()
 
+  // v6.3(V5-FS-02-②): 分批辅助函数 — get IDs → remove by IDs
+  // 微信云数据库 .limit().remove() 可能忽略 limit 删除全部匹配文档，
+  // 改用 .get() 取 _id 列表再分批 .remove()，确保每批 ≤ BATCH
+  async function batchCleanup(where, label) {
+    let removed = 0
+    while (Date.now() - startTime < MAX_MS) {
+      // 先查一批 IDs
+      const getRes = await db.collection('news_cache')
+        .where(where)
+        .field({ _id: true })
+        .limit(BATCH)
+        .get()
+      const ids = (getRes.data || []).map(doc => doc._id)
+      if (ids.length === 0) break
+
+      // 按 IDs 精确删除
+      const rmRes = await db.collection('news_cache')
+        .where({ _id: db.command.in(ids) })
+        .remove()
+      const n = rmRes.stats?.removed || 0
+      removed += n
+      if (n < BATCH) break
+    }
+    return removed
+  }
+
   try {
     // 1. 普通记录（isRetained !== true 且 cacheExpire < now）
-    while (Date.now() - startTime < MAX_MS) {
-      const res = await db.collection('news_cache')
-        .where({
-          isRetained: db.command.neq(true),
-          cacheExpire: db.command.lt(now),
-        })
-        .limit(BATCH)
-        .remove()
-      const n = res.stats?.removed || 0
-      removedNormal += n
-      if (n < BATCH) break
-    }
+    removedNormal = await batchCleanup({
+      isRetained: db.command.neq(true),
+      cacheExpire: db.command.lt(now),
+    }, '普通')
 
     // 2. retained 记录（isRetained === true 且 cacheExpire < now，即 retainedAt + 30d 已到期）
-    while (Date.now() - startTime < MAX_MS) {
-      const res = await db.collection('news_cache')
-        .where({
-          isRetained: true,
-          cacheExpire: db.command.lt(now),
-        })
-        .limit(BATCH)
-        .remove()
-      const n = res.stats?.removed || 0
-      removedRetained += n
-      if (n < BATCH) break
-    }
+    removedRetained = await batchCleanup({
+      isRetained: true,
+      cacheExpire: db.command.lt(now),
+    }, 'retained')
   } catch (err) {
     console.warn('[refreshNews] 分级清理异常:', err.message)
   }

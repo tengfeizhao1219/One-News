@@ -92,6 +92,10 @@ function removeNoiseLines(text) {
   const noiseLinePatterns = [
     // ── 分享 / 关注引导 ──
     /^(扫码|长按|点击|打开|分享)[\s\S]{0,30}(朋友圈|微信|群|好友|分享)/i,
+    // v6.3(V5-FS-02-⑤): "用微信扫描二维码" + "分享至好友和朋友圈" 两行形态
+    /用微信(扫描|扫一扫)?二维码/i,
+    /分享至.*好友.*圈/i,
+    /扫一扫.*分享/i,
     /^(关注|订阅|添加)[\s\S]{0,30}(公众号|频道|微信|微博)/i,
     /^(转发|收藏)[\s\S]{0,20}(朋友圈|微信|微博)/i,
 
@@ -108,6 +112,8 @@ function removeNoiseLines(text) {
     /^未经(许可|授权|允许)/i,
 
     // ── 广告 / 商务 ──
+    // v6.3(V5-FS-02-③): "广告声明：文内含有的对外跳转链接..." IT之家固定模板
+    /^(广告声明|广告)[：:]/i,
     /^(广告合作|商务合作|广告投放|广告热线|联系方式)[：:]/i,
     /^(招商|赞助|冠名)[：:]/i,
 
@@ -127,6 +133,13 @@ function removeNoiseLines(text) {
     /^返回(顶部|首页|上一页)/i,
     /^下一页[：:]/i,
     /^(当前|第)\d+页/i,
+
+    // ── v6.3(V5-FS-02-④): 图片说明残留 ──
+    // "购卡凭证（央广网发 受访者供图）" / "（受访者供图）" / "图源：XX" / "图片来源：XX"
+    /[（(]\s*(受访者供图|央广网发|新华社发|图源|图片来源|视觉中国|IC\s*photo|中新社发|人民网发|新华网发)[^）)]*[）)]/i,
+    /^[（(].*?(供图|摄|摄影|拍摄|拍照).*?[）)]$/i,
+    /^(图源|图片来源|图片说明|照片说明)[：:]/i,
+    // 单独成段且含「图」「摄」「供」+ 短行（< 25 字）的图说模式
   ]
 
   const lines = text.split('\n')
@@ -134,6 +147,15 @@ function removeNoiseLines(text) {
     const trimmed = line.trim()
     // 空行保留（后续统一处理）
     if (trimmed.length === 0) return true
+
+    // v6.3(V5-FS-02-④): 短行图说启发式检测
+    // 单独成段、≤25字、含"图/摄/供/发/拍"+"图/发/摄/供图"类词 → 大概率是图说
+    if (trimmed.length <= 25) {
+      const hasPhotoKeyword = /(供图|摄|摄影|拍摄|拍照|图源|图片来源|图片)/.test(trimmed)
+      const hasAttribution = /(央广网|新华社|中新社|人民网|新华网|视觉中国|受访者|记者|通讯员)/.test(trimmed)
+      if (hasPhotoKeyword || (hasAttribution && trimmed.length <= 15)) return false
+    }
+
     // 检查是否匹配噪音模式
     for (const pattern of noiseLinePatterns) {
       if (pattern.test(trimmed)) return false
@@ -160,6 +182,8 @@ function removeTrailingNoise(text) {
     /商务合作[：:][\s\S]*$/i,
     /版权声明[：:][\s\S]*$/i,
     /免责声明[：:][\s\S]*$/i,
+    // v6.3(V5-FS-02-③): "广告声明：文内含有的对外跳转链接..." 及之后全部截断
+    /广告声明[：:][\s\S]*$/i,
   ]
 
   let result = text

@@ -106,6 +106,7 @@ function fetchWebPage(url) {
 
 /**
  * 从 HTML 中定位正文容器（优先语义标签，其次常见 class/id）
+ * v6.3(V5-FS-02-⑥): 严格限定容器并截断延伸阅读/相关推荐
  * @param {string} html
  * @returns {string|null} 容器 HTML
  */
@@ -116,15 +117,35 @@ function locateBodyHtml(html) {
     /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*article-content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    /<div[^>]*class=["']article-content["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class=["'][^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     /<div[^>]*class=["'][^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
   ]
   for (const re of patterns) {
     const m = html.match(re)
-    if (m && m[1]) return m[1]
+    if (m && m[1]) return trimExtraneousContent(m[1])
   }
   return null
+}
+
+/**
+ * v6.3(V5-FS-02-⑥): 截断正文容器内"延伸阅读/相关推荐"及之后的内容
+ */
+function trimExtraneousContent(html) {
+  if (!html) return null
+  const cutoffPatterns = [
+    /<[^>]*class=["'][^"']*(?:related|recommend|extend|extra)[^"']*["'][^>]*>/i,
+    /(?:延伸阅读|相关推荐|推荐阅读|相关新闻|热门推荐|猜你喜欢|更多阅读)[：:]/i,
+    /<h\d[^>]*>(?:延伸阅读|相关推荐|推荐阅读|相关新闻)[\s\S]*?<\/h\d>/i,
+    /广告声明[：:][\s\S]*?(?:链接|二维码|口令)/i,
+  ]
+  for (const pattern of cutoffPatterns) {
+    const idx = html.search(pattern)
+    if (idx > 100) {
+      return html.slice(0, idx).trim()
+    }
+  }
+  return html
 }
 
 /**

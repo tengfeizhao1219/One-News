@@ -125,7 +125,7 @@ function formatTianNewsItem(rawItem, category) {
 }
 
 /**
- * 批量拉取多个分类的新闻列表
+ * 批量拉取多个分类的新闻列表（v6.3: 增强重试+指数退避，修复国际分类 0 条问题）
  * @param {string[]} categories  分类 ID 列表
  * @param {number} [perCategory=10]  每分类条数
  * @returns {Promise<{ news: Array, stats: Object }>}
@@ -134,21 +134,40 @@ async function fetchAllCategories(categories, perCategory = 10) {
   const results = []
   const stats = {}
 
-  // 串行请求，分类间加 200ms 间隔（防天行 rate limit: code=130）
+  // v6.3(V5-FS-02-①): 分类间延迟增至 500ms，添加重试+指数退避（500ms/1500ms/3000ms）
   for (const category of categories) {
-    try {
-      const rawList = await fetchTianNewsList(category, perCategory)
+    let rawList = []
+    let lastErr = null
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        rawList = await fetchTianNewsList(category, perCategory)
+        if (rawList.length > 0) break // 成功获取数据，跳出重试
+        // 空结果也重试（可能是临时限流）
+        console.warn(`[tianxing] ${category} 第 ${attempt + 1} 次返回 0 条，${attempt < 2 ? '重试' : '放弃'}`)
+      } catch (err) {
+        lastErr = err
+        console.warn(`[tianxing] ${category} 第 ${attempt + 1} 次失败: ${err.message}`)
+      }
+      if (attempt < 2) {
+        await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
+      }
+    }
+
+    if (rawList.length > 0) {
       const formatted = rawList.map(item => formatTianNewsItem(item, category))
       results.push(...formatted)
       stats[category] = formatted.length
-    } catch (err) {
-      console.error(`[tianxing] ${category} 失败:`, err.message)
+    } else {
+      if (lastErr) {
+        console.error(`[tianxing] ${category} 3 次重试均失败:`, lastErr.message)
+      }
       stats[category] = 0
     }
 
-    // 分类间延迟 200ms（最后一个分类后无需等待）
+    // 分类间延迟 500ms（最后一个分类后无需等待）
     if (category !== categories[categories.length - 1]) {
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
 
