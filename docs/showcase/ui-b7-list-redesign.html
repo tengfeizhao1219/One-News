@@ -64,7 +64,7 @@
   .swipe-bar-text { font-size:9px; letter-spacing:2px; font-weight:300; color:var(--text-secondary); opacity:.45; }
   .swipe-bar-light { background:linear-gradient(transparent, var(--bg-page) 40%); }
 
-  /* ===== ⚙ dock 菜单（方案 F）+ 统一描边图标 ===== */
+  /* ===== dock 菜单（方案 F）+ 统一描边图标 ===== */
   .fab { position:absolute; right:20px; bottom:30px; width:48px; height:48px; border-radius:50%; background:var(--text-primary); color:var(--bg-page); display:flex; align-items:center; justify-content:center; z-index:60; box-shadow:0 8px 24px rgba(0,0,0,.35); cursor:pointer; transition:transform .25s var(--ease); }
   .fab:active { transform:scale(.92); } .fab svg { width:26px; height:26px; stroke:var(--bg-page); fill:none; stroke-width:var(--icon-stroke); stroke-linecap:round; stroke-linejoin:round; }
   .menu-mask { position:absolute; inset:0; background:rgba(0,0,0,.18); z-index:55; opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }
@@ -193,7 +193,7 @@
       <tr><td>5</td><td>dock 浮层更轻</td><td>毛玻璃透明度 .92 → .78</td></tr>
       <tr><td>6</td><td>图标统一设计</td><td><b>全部改为描边式（stroke）SVG</b>（齿轮/时钟/心形/加号/房子/关闭），去掉 emoji 与填充图标，与图标规范文档完全一致</td></tr>
     </table>
-    <p class="ok" style="margin-top:14px">演示：① 首页卡片流左滑打开列表页；② 列表页左侧滚轮切分类（选中项圆角高亮）；③ 列表项仅标题，当前项圆角高亮；④ 点列表项定位回首页；⑤ 卡片上滑切下条；⑥ 首页/详情底部固定提示条；⑦ ⚙ dock（描边图标）；⑧ 暗色。</p>
+    <p class="ok" style="margin-top:14px">演示：① 首页卡片流左滑打开列表页；② 列表页左侧滚轮切分类（选中项圆角高亮）；③ 列表项仅标题，当前项圆角高亮；④ 点列表项定位回首页；⑤ 卡片上滑切下条；⑥ 首页/详情底部固定提示条；⑦ dock（描边图标）；⑧ 暗色。</p>
   </div>
 
 <script>
@@ -225,7 +225,7 @@
       {t:'高标准农田建设提速，粮食综合生产能力增强', s:'农民日报', time:'5 小时前', sum:['集中连片改造提升灌排与机耕条件。','亩产与水肥利用效率同步改善。']},
       {t:'电商助农直播带动特色农产品出村进城', s:'农业频道', time:'昨天', sum:['产地直连消费者，缩短流通环节。','品牌化运营提升农户溢价能力。']},
     ],
-    '❤️收藏': [
+    '收藏': [
       {t:'端侧大模型部署的隐私合规边界', s:'科技', time:'已收藏', sum:['端侧推理把数据留在本地，天然契合隐私保护。','但模型蒸馏与日志上报仍需合规约束。']},
       {t:'一文读懂逆回购工具', s:'财经', time:'已收藏', sum:['逆回购是央行向市场投放短期流动性的操作。','利率变化传递货币政策边际信号。']},
     ],
