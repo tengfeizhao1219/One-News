@@ -9,3 +9,8 @@ __pycache__/
 
 # Notion 集成 token（本地文件，绝不进仓库）
 .notion_token
+
+# GitHub 推送/冲突解决临时脚本（含硬编码 PAT 或一次性工具，绝不进仓库）
+push_retry.py
+push_retry.sh
+resolve_rebase_conflicts.py
