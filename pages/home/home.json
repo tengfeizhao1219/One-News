@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "font-panel": "../../components/font-panel/font-panel"
+    "font-panel": "../../components/font-panel/font-panel",
+    "category-wheel": "../../components/category-wheel/category-wheel"
   },
   "navigationStyle": "custom",
   "disableScroll": true,

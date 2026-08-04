@@ -22,6 +22,7 @@ Page({
     panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: [],   // 侧边栏过滤后的列表
+    panelSubtitle: '',      // UI-B7：面板头部副标题「当前分类 · N 条」
     favList: [],             // 已废弃：收藏入口已迁移至 dock 菜单独立页
     // 页面状态
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
@@ -189,6 +190,20 @@ Page({
       filteredNewsList: filtered,
       panelCurrentIndex: typeof index === 'number' ? index : this.data.currentIndex,
     })
+    this._updatePanelSubtitle(cat, filtered.length)
+  },
+
+  /**
+   * UI-B7：更新面板头部副标题「当前分类 · N 条」
+   */
+  _updatePanelSubtitle(cat, count) {
+    var name = '全部'
+    var cats = this.data.categories
+    for (var i = 0; i < cats.length; i++) {
+      if (cats[i].id === cat) { name = cats[i].name; break }
+    }
+    var n = typeof count === 'number' ? count : (this.data.filteredNewsList || []).length
+    this.setData({ panelSubtitle: name + ' · ' + n + ' 条' })
   },
 
   /**
@@ -691,9 +706,32 @@ Page({
     var cat = e.currentTarget.dataset.cat
     // UX-BUG03: 立即切换高亮，不等待数据（消除 ~1s 滞后感）
     this.setData({ panelCategory: cat })
+    this._updatePanelSubtitle(cat)
     this._showCategoryHint(cat) // BUG-20260802-006: 切分类 0.5s 提示
 
     // BUG-20260802-004: 侧栏与卡片同源 —— 切分类即切唯一数据源 newsList，侧栏由它派生
+    if (cat === this.data.currentCategory) {
+      this._syncPanelList()
+      return
+    }
+    this.loadCategory(cat)
+  },
+
+  /**
+   * UI-B7：左侧分类滚轮 change 事件（RQ-15-D 实时切换 + snap）
+   * @param {Object} e - { detail: { category, index } }
+   */
+  onWheelChange(e) {
+    var cat = e.detail && e.detail.category
+    if (!cat) return
+    if (cat === this.data.panelCategory) {
+      this._updatePanelSubtitle(cat)
+      return
+    }
+    this.setData({ panelCategory: cat })
+    this._updatePanelSubtitle(cat)
+
+    // 同源切换：面板分类与首页一致 → 仅刷新列表；否则切换唯一数据源
     if (cat === this.data.currentCategory) {
       this._syncPanelList()
       return

@@ -1,0 +1,92 @@
+/* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） */
+
+.wheel {
+  position: relative;
+  overflow: hidden;
+  width: 128rpx;
+  opacity: 0.35;               /* idle 默认态 */
+  transition: opacity 300ms ease-out;
+}
+
+.wheel.active {
+  opacity: 0.92;               /* active 激活态 */
+}
+
+/* 列表整体（通过 translateY 让选中项居中） */
+.wheel-list {
+  width: 100%;
+  will-change: transform;
+}
+
+/* 单项 */
+.wheel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.wheel-label {
+  font-size: 24rpx;
+  color: rgba(0, 0, 0, 0.5);
+  font-weight: 500;
+  padding: 0 8rpx;
+  border-radius: 10rpx;
+  transition: color 300ms ease-out, background-color 300ms ease-out, border-color 300ms ease-out;
+}
+
+/* 选中项：圆角 chip 高亮（v3.1） */
+.wheel-label.active {
+  color: var(--primary, #007AFF);
+  font-size: 28rpx;
+  font-weight: 600;
+  border: 1px solid var(--primary, #007AFF);
+  border-radius: var(--radius, 10px);
+  padding: 0 12rpx;
+  background-color: var(--primary-subtle, rgba(0, 122, 255, 0.12));
+  line-height: 1.5;
+}
+
+/* 激活态毛玻璃背景 */
+.wheel.active .wheel-item {
+  /* 背景由父级 page 提供毛玻璃；此处保持透明 */
+}
+
+/* 选中项上下 1px 指示线（激活态显示） */
+.wheel-indicator-top,
+.wheel-indicator-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+  pointer-events: none;
+}
+
+.wheel.active .wheel-indicator-top,
+.wheel.active .wheel-indicator-bottom {
+  opacity: 1;
+}
+
+.wheel-indicator-top {
+  top: 50%;
+  margin-top: -40rpx; /* centerIndex(3) * itemHeight(72) - 一半 */
+}
+
+.wheel-indicator-bottom {
+  bottom: 50%;
+  margin-bottom: -40rpx;
+}
+
+/* 暗色模式 */
+@media (prefers-color-scheme: dark) {
+  .wheel-label {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .wheel-indicator-top,
+  .wheel-indicator-bottom {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}

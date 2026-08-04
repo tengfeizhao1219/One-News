@@ -64,22 +64,21 @@
             <text wx:if="{{item.source && item.time}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
-          <!-- 摘要 -->
-          <view class="card-summary">
-            <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
-              <view class="summary-p">{{item}}</view>
-            </block>
-          </view>
-        </view>
-
-        <!-- 底部提示 -->
-        <!-- UX-FIX-F4: S2 图标化，提升可发现性（不恢复遮罩式引导） -->
-        <view class="swipe-hint">
-          <text class="swipe-hint-icon">⇅</text>
-          <text class="swipe-hint-text">上滑阅读下一条</text>
+        <!-- 摘要 -->
+        <view class="card-summary">
+          <block wx:for="{{item.summaryParagraphs}}" wx:key="*this">
+            <view class="summary-p">{{item}}</view>
+          </block>
         </view>
       </view>
-    </block>
+    </view>
+  </block>
+  </view>
+
+  <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于屏幕底部，不随内容滚动，不响应点击） -->
+  <view class="fixed-swipe-hint" wx:if="{{pageState === 'ready' && !showPanel}}">
+    <text class="fixed-swipe-hint-icon">⇅</text>
+    <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>
 
   <!-- 导航指示点（UX-IMPROVE06: 支持点击跳转） -->
@@ -98,26 +97,26 @@
 
   <!-- BUG-20260802-005 / TL-B16：⚙ 浮动按钮升级为「更多功能」dock 菜单主入口 -->
   <view class="floating-more {{showPanel ? 'hidden' : ''}}" bindtap="toggleMoreMenu">
-    <text class="more-icon">⚙</text>
+    <view class="more-icon"></view>
   </view>
 
   <!-- 更多功能菜单（dock 栈向上弹出，毛玻璃背景，点击空白或再次点击⚙收起） -->
   <view class="more-mask {{showMoreMenu ? 'show' : ''}}" bindtap="toggleMoreMenu"></view>
   <view class="more-menu {{showMoreMenu ? 'show' : ''}}">
     <view class="more-item" data-target="history" bindtap="onMoreMenuTap">
-      <text class="more-item-icon">🕐</text>
+      <view class="more-item-icon" style="-webkit-mask-image: url('/assets/icons/history.svg'); mask-image: url('/assets/icons/history.svg');"></view>
       <text class="more-item-label">浏览记录</text>
     </view>
     <view class="more-item" data-target="favorites" bindtap="onMoreMenuTap">
-      <text class="more-item-icon">♥</text>
+      <view class="more-item-icon" style="-webkit-mask-image: url('/assets/icons/favorite.svg'); mask-image: url('/assets/icons/favorite.svg');"></view>
       <text class="more-item-label">我的收藏</text>
     </view>
     <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
-      <text class="more-item-icon">⚙</text>
+      <view class="more-item-icon" style="-webkit-mask-image: url('/assets/icons/settings.svg'); mask-image: url('/assets/icons/settings.svg');"></view>
       <text class="more-item-label">设置</text>
     </view>
     <view class="more-item more-item--ext" data-target="ext" bindtap="onMoreMenuTap">
-      <text class="more-item-icon">＋</text>
+      <view class="more-item-icon" style="-webkit-mask-image: url('/assets/icons/plus.svg'); mask-image: url('/assets/icons/plus.svg');"></view>
       <text class="more-item-label">扩展位</text>
     </view>
   </view>
@@ -128,38 +127,40 @@
     bindtap="closePanel">
   </view>
 
-  <!-- 侧边栏面板 -->
+  <!-- 侧边栏面板（UI-B7：左侧分类滚轮 + 右侧仅标题列表，圆角高亮） -->
   <view class="slide-panel {{showPanel ? 'show' : ''}}">
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
+      <text class="panel-subtitle">{{panelSubtitle}}</text>
+      <view class="panel-close" bindtap="closePanel">
+        <view class="panel-close-icon" style="-webkit-mask-image: url('/assets/icons/close.svg'); mask-image: url('/assets/icons/close.svg');"></view>
+      </view>
     </view>
 
-    <!-- 分类标签（当前分类高亮，切换不关闭面板） -->
-    <scroll-view class="panel-tabs" scroll-x enable-flex>
-      <view 
-        wx:for="{{panelCategories}}" 
-        wx:key="id"
-        class="panel-tab {{panelCategory === item.id ? 'active' : ''}}"
-        data-cat="{{item.id}}"
-        bindtap="onCategoryChange">
-        {{item.name}}
-      </view>
-    </scroll-view>
+    <view class="panel-body">
+      <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
+      <category-wheel
+        class="panel-wheel"
+        categories="{{panelCategories}}"
+        activeId="{{panelCategory}}"
+        bind:change="onWheelChange">
+      </category-wheel>
 
-    <!-- 新闻列表 -->
-    <scroll-view class="panel-list" scroll-y>
-      <view 
-        wx:for="{{filteredNewsList}}" 
-        wx:key="id"
-        class="panel-item {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}"
-        data-index="{{item._originalIndex}}"
-        bindtap="onPanelItemTap">
-        <view class="panel-item-title {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}">{{item.title}}</view>
-      </view>
-      <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
-        暂无新闻
-      </view>
-    </scroll-view>
+      <!-- 右侧仅标题列表（去缩略图/来源/时间，当前项圆角高亮） -->
+      <scroll-view class="panel-list" scroll-y>
+        <view 
+          wx:for="{{filteredNewsList}}" 
+          wx:key="id"
+          class="panel-item {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}"
+          data-index="{{item._originalIndex}}"
+          bindtap="onPanelItemTap">
+          <text class="panel-item-title">{{item.title}}</text>
+        </view>
+        <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
+          暂无新闻
+        </view>
+      </scroll-view>
+    </view>
   </view>
 
   <!-- 字体设置面板（底部半屏） -->

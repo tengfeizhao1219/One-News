@@ -28,7 +28,7 @@
   <view class="nav-bar">
     <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <text class="nav-home-icon">🏠</text>
+      <view class="nav-home-icon" style="-webkit-mask-image: url('/assets/icons/home.svg'); mask-image: url('/assets/icons/home.svg');"></view>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -92,6 +92,12 @@
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
     <text>🟡 网络开小差，下拉重试</text>
+  </view>
+
+  <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于操作栏上方，不随内容滚动） -->
+  <view class="fixed-swipe-hint" wx:if="{{pageState === 'ready'}}">
+    <text class="fixed-swipe-hint-icon">⇅</text>
+    <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->

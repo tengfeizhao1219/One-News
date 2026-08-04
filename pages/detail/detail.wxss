@@ -36,9 +36,11 @@
   opacity: 0.6; /* 点击反馈，跟随 PRD §5.7.4 */
 }
 .nav-home-icon {
-  font-size: 44rpx;
-  line-height: 56rpx;
-  color: var(--text-primary); /* 跟随主题（日间/暗色自动切换） */
+  width: 44rpx;
+  height: 44rpx;
+  background-color: var(--text-secondary); /* v4.1: 图标退让至辅助色 */
+  -webkit-mask: url('/assets/icons/home.svg') no-repeat center / contain;
+  mask: url('/assets/icons/home.svg') no-repeat center / contain;
 }
 
 .nav-back {
@@ -223,6 +225,36 @@
   backdrop-filter: var(--setting-panel-blur);
   -webkit-backdrop-filter: var(--setting-panel-blur);
   border-top: 1rpx solid var(--divider);
+}
+
+/* UI-B7 §3.5: 详情页底部固定滑动提示条（位于操作栏上方，不响应点击） */
+.fixed-swipe-hint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(100rpx + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx 0;
+  pointer-events: none;
+  z-index: 19;
+}
+
+.fixed-swipe-hint-icon {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  opacity: 0.45;
+  line-height: 1;
+}
+
+.fixed-swipe-hint-text {
+  font-size: 18rpx;
+  color: var(--text-secondary);
+  letter-spacing: 4rpx;
+  font-weight: 300;
+  opacity: 0.45;
 }
 
 .bottom-bar-btn {

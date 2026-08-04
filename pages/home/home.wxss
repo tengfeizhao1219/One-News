@@ -162,29 +162,35 @@
   letter-spacing: 0.5rpx;
 }
 
-.swipe-hint {
+/* UI-B7 §3.5: 底部固定滑动提示条（固定屏幕底部，不随内容滚动，不响应点击） */
+.fixed-swipe-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6rpx;
-  text-align: center;
-  padding: 24rpx 0 72rpx;
-  font-size: 16rpx;
-  color: var(--text-secondary);
-  flex-shrink: 0;
-  opacity: 0.45;
+  gap: 8rpx;
+  padding: 16rpx 0 calc(16rpx + env(safe-area-inset-bottom));
+  background: linear-gradient(transparent, var(--bg-card) 40%);
+  pointer-events: none;
+  z-index: 20;
 }
 
-.swipe-hint-icon {
-  font-size: 28rpx;
+.fixed-swipe-hint-icon {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  opacity: 0.45;
   line-height: 1;
 }
 
-.swipe-hint-text {
+.fixed-swipe-hint-text {
   font-size: 18rpx;
+  color: var(--text-secondary);
   letter-spacing: 4rpx;
   font-weight: 300;
+  opacity: 0.45;
 }
 
 /* ============ 导航指示点 ============ */
@@ -262,7 +268,8 @@
 .panel-header {
   display: flex;
   align-items: center;
-  padding: 100rpx 40rpx 32rpx;
+  gap: 16rpx;
+  padding: 100rpx 40rpx 28rpx;
   flex-shrink: 0;
 }
 
@@ -271,6 +278,57 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 1rpx;
+  flex-shrink: 0;
+}
+
+/* UI-B7: 副标题「当前分类 · N 条」 */
+.panel-subtitle {
+  flex: 1;
+  font-size: calc(24rpx * var(--font-scale));
+  color: var(--text-secondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* UI-B7: × 关闭按钮（描边图标，mask 染色） */
+.panel-close {
+  width: 56rpx;
+  height: 56rpx;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.panel-close-icon {
+  width: 32rpx;
+  height: 32rpx;
+  background-color: var(--text-secondary);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+/* UI-B7: 面板主体 = 左侧滚轮 + 右侧列表 */
+.panel-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.panel-wheel {
+  flex-shrink: 0;
+  width: 128rpx;
+  padding: 20rpx 0;
+  border-right: 1rpx solid var(--divider);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ============ 分类Tab（更醒目的高亮） ============ */
@@ -316,11 +374,13 @@
   background-color: var(--tag-bg);
 }
 
-/* 当前阅读的新闻高亮（UX-BUG14: 浅蓝底色 + 左侧色条，增强可辨识度） */
+/* UI-B7 §3.1: 当前阅读项圆角边框高亮（10px 圆角 + 主题色边框 + 淡色底，不用直角 border-left） */
 .panel-item.current {
-  background-color: var(--flash-tech-bg);
-  border-left: 4rpx solid var(--flash-tech);
-  padding-left: 36rpx;
+  margin: 12rpx 20rpx;
+  padding: 24rpx 24rpx;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background-color: var(--primary-subtle);
 }
 
 .panel-item-title {
@@ -539,8 +599,11 @@
 }
 
 .more-icon {
-  font-size: 44rpx;
-  line-height: 1;
+  width: 56rpx;
+  height: 56rpx;
+  background-color: var(--bg-page); /* fab 反色，保证可读性 */
+  -webkit-mask: url('/assets/icons/settings.svg') no-repeat center / contain;
+  mask: url('/assets/icons/settings.svg') no-repeat center / contain;
 }
 
 @keyframes floatY {
@@ -618,9 +681,14 @@
 
 .more-item-icon {
   width: 40rpx;
-  font-size: 32rpx;
-  line-height: 1;
-  text-align: center;
+  height: 40rpx;
+  background-color: var(--text-secondary); /* v4.1: 图标退让至辅助色 */
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
 }
 
 .more-item-label {

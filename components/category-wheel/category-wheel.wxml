@@ -1,0 +1,24 @@
+<!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
+<!-- 选中项固定滚轮垂直居中；触摸实时切分类 + 松手 snap + 震动 -->
+<view
+  class="wheel {{touching ? 'active' : ''}}"
+  style="height: {{wheelHeight}}rpx;"
+  bindtouchstart="onTouchStart"
+  bindtouchmove="onTouchMove"
+  bindtouchend="onTouchEnd"
+  bindtouchcancel="onTouchEnd">
+
+  <view class="wheel-list" style="height: {{listHeight}}rpx; transform: translateY({{translateY}}rpx); transition: {{touching ? 'none' : 'transform 300ms cubic-bezier(.4,0,.2,1)'}};">
+    <view
+      wx:for="{{categories}}"
+      wx:key="id"
+      class="wheel-item {{item.id === activeId ? 'active' : ''}}"
+      style="height: {{itemHeight}}rpx; line-height: {{itemHeight}}rpx;">
+      <text class="wheel-label {{item.id === activeId ? 'active' : ''}}">{{item.name}}</text>
+    </view>
+  </view>
+
+  <!-- 选中项上下 1px 指示线（激活态） -->
+  <view class="wheel-indicator-top"></view>
+  <view class="wheel-indicator-bottom"></view>
+</view>
