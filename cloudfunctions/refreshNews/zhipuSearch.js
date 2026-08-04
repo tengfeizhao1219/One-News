@@ -203,7 +203,7 @@ function buildPrompt(categoryName, sources) {
 const CATEGORY_PROMPTS = {
   recommend: buildPrompt('国内要闻', 'xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com'),
   tech: buildPrompt('科技新闻', '36kr.com, huxiu.com, techcrunch.com'),
-  sports: buildPrompt('体育新闻', 'xinhuanet.com, cctv.com, thepaper.cn, reuters.com'),
+  sports: buildPrompt('科学探索新闻', 'xinhuanet.com, cctv.com, thepaper.cn, reuters.com, nationalgeographic.com, science.org'),
   international: buildPrompt('国际新闻', 'reuters.com, bbc.com, apnews.com, huanqiu.com, chinanews.com'),
   life: buildPrompt('社会生活新闻', 'people.com.cn, thepaper.cn, chinanews.com, cctv.com'),
 }
@@ -237,8 +237,8 @@ function parseNewsFromContent(content, category) {
   }
 
   const categoryNames = {
-    recommend: '推荐', tech: '科技', sports: '体育',
-    international: '国际', life: '生活',
+    recommend: '推荐', tech: '科技', sports: '科学探索',
+    international: '国际', life: '社会',
   }
 
   const domainMap = {

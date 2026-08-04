@@ -471,8 +471,8 @@ exports.main = async (event) => {
 
 // ── 🆕 TL-B8 备份快照写入（ADR-003 §3.1）────────────────────
 
-// 模块级标志：单次运行只尝试自动创建一次集合
-let _backupCollectionEnsured = false
+// 模块级共享 Promise：保证并发调用只创建一次集合，且所有调用方都等待创建完成后再重试
+let _backupCollectionEnsurePromise = null
 
 /**
  * 判断错误是否为「集合不存在」
@@ -486,18 +486,22 @@ function isCollectionNotExist(err) {
 
 /**
  * 确保 news_cache_backup 集合存在（不存在则自动创建）
+ * 使用共享 Promise：并发调用只创建一次，且所有调用方都等待创建完成后再重试
  * 集合已存在或权限不足会抛错，可忽略（非阻塞）
  */
 async function ensureBackupCollection() {
-  if (_backupCollectionEnsured) return
-  _backupCollectionEnsured = true
-  try {
-    await db.createCollection('news_cache_backup')
-    console.log('[backupToCacheBackup] 已自动创建 news_cache_backup 集合')
-  } catch (err) {
-    // 集合已存在（-501001/-501005 等）或权限不足：可忽略
-    console.warn('[backupToCacheBackup] 自动创建集合跳过（已存在或无权限）:', err.message)
+  if (!_backupCollectionEnsurePromise) {
+    _backupCollectionEnsurePromise = (async () => {
+      try {
+        await db.createCollection('news_cache_backup')
+        console.log('[backupToCacheBackup] 已自动创建 news_cache_backup 集合')
+      } catch (err) {
+        // 集合已存在（-501001/-501005 等）或权限不足：可忽略
+        console.warn('[backupToCacheBackup] 自动创建集合跳过（已存在或无权限）:', err.message)
+      }
+    })()
   }
+  return _backupCollectionEnsurePromise
 }
 
 /**

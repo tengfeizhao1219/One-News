@@ -8,7 +8,7 @@
  * 分类 → 聚合 type 映射：
  *   recommend     → top（头条）
  *   tech          → keji（科技）
- *   sports        → tiyu（体育）
+ *   sports        → tiyu（体育）⚠️ 前端 tab 已改「科学探索」，聚合无科学探索分类，内容仍为体育（降级源可接受）
  *   international → guoji（国际）
  *   life          → shehui（社会）
  *
@@ -34,7 +34,7 @@ const APP_TO_JUHE_TYPE = {
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '体育',
+  sports: '科学探索',
   international: '国际',
   life: '社会',
 }
