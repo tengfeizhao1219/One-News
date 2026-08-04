@@ -128,11 +128,53 @@
 
 /* 底部关于·反馈 */
 .panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 24rpx 48rpx 48rpx;
+  gap: 16rpx;
 }
 
-.footer-text {
+.footer-label {
   font-size: 24rpx;
   color: var(--text-secondary);
   letter-spacing: 1rpx;
+  flex-shrink: 0;
+}
+
+/* 联系方式容器（邮箱 + 微信 纵向堆叠，右对齐） */
+.footer-contacts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.footer-email {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  letter-spacing: 0.5rpx;
+  text-decoration: underline;
+  text-underline-offset: 4rpx;
+  transition: opacity 0.15s ease;
+  /* 点击热区扩大 */
+  padding: 8rpx 0;
+}
+
+.footer-email:active {
+  opacity: 0.6;
+}
+
+.footer-wechat {
+  font-size: 24rpx;
+  color: var(--text-primary);
+  letter-spacing: 0.5rpx;
+  text-decoration: underline;
+  text-underline-offset: 4rpx;
+  transition: opacity 0.15s ease;
+  padding: 8rpx 0;
+}
+
+.footer-wechat:active {
+  opacity: 0.6;
 }

@@ -58,19 +58,34 @@ Component({
     noop: function () {},
 
     /**
-     * 关于·反馈（修复死热区：原 footer 无绑定）
+     * 点击邮箱 → 复制到剪贴板并提示（小程序无 mailto: 能力，复制后可粘贴到任意邮件客户端）
      */
-    onFooterTap: function () {
-      wx.showModal({
-        title: '一页 · One-News',
-        content: '极简新闻速览小程序。\n问题反馈请联系：tengfei@example.com',
-        showCancel: true,
-        cancelText: '关闭',
-        confirmText: '复制邮箱',
-        success: function (res) {
-          if (res.confirm) {
-            wx.setClipboardData({ data: 'tengfei@example.com' })
-          }
+    onEmailTap: function () {
+      var email = 'ztengfei@hotmail.com'
+      wx.setClipboardData({
+        data: email,
+        success: function () {
+          wx.showToast({ title: '邮箱已复制，可粘贴到邮件客户端', icon: 'none', duration: 2000 })
+        },
+        fail: function () {
+          wx.showToast({ title: '复制失败，请手动输入：' + email, icon: 'none', duration: 2500 })
+        }
+      })
+    },
+
+    /**
+     * 点击微信号 → 复制到剪贴板并提示
+     * 小程序无法直接拉起“添加微信好友”界面，复制后由用户在微信内搜索添加
+     */
+    onWechatTap: function () {
+      var wxid = 'jiaowotengfei'
+      wx.setClipboardData({
+        data: wxid,
+        success: function () {
+          wx.showToast({ title: '微信号已复制，请在微信搜索添加', icon: 'none', duration: 2000 })
+        },
+        fail: function () {
+          wx.showToast({ title: '复制失败，请手动添加：' + wxid, icon: 'none', duration: 2500 })
         }
       })
     },

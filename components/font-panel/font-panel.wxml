@@ -40,7 +40,11 @@
   <view class="panel-divider"></view>
 
   <!-- 关于·反馈 -->
-  <view class="panel-footer" bindtap="onFooterTap">
-    <text class="footer-text">关于 · 反馈</text>
+  <view class="panel-footer">
+    <text class="footer-label">关于 · 反馈</text>
+    <view class="footer-contacts">
+      <text class="footer-email" bindtap="onEmailTap">ztengfei@hotmail.com</text>
+      <text class="footer-wechat" bindtap="onWechatTap">微信：jiaowotengfei</text>
+    </view>
   </view>
 </view>
