@@ -8,7 +8,7 @@
 > - `docs/02-产品设计/D-02-增量-UI-B6全局导航框架设计.md`（方案 F dock 菜单）
 > - 现状 `pages/home/home.wxml` / `home.wxss`（RQ-15 滚轮未实现、⚙ 仍为旧设置按钮、右侧 nav-dots 与滚轮规划冲突）
 > **可交互原型（1:1）**：https://tengfeizhao1219.github.io/One-News/showcase/ui-b7-list-redesign.html
-> **状态**：v4 修订中（owner 2026-08-04 累计反馈：左滑手势进列表 + 列表仅标题 + 圆角高亮 + 底部固定提示 + dock 更通透 + 统一描边图标），待 owner 在线确认
+> **状态**：✅ UI 设计通过（owner 2026-08-04 确认 v4.2：左滑手势 + 极简列表 + 圆角高亮 + 底部提示 + dock 通透 + 弱化图标），下游 TL-B17 + RQ-15 组件已解锁
 
 ---
 
