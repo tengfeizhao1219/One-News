@@ -4616,3 +4616,14 @@ v6 已将超时调至 60s，3s 不再是硬约束。建议部署后在云函数�
 > **📤 待 GM 提交**：pm.ready 已更新（11 文件，含 FS 任务单）。广播区已更新（owner 直接指派通知）。
 
 > **找谁**：全栈开发（立即认领所有 P0，优先 V5-FS-02）｜🔔 关注人：owner + 产品经理（PM 复验）
+
+## [2026-08-04 21:31] 📤→✅ PM 直接提交（owner 授权）· commit e110b1c
+
+> **owner 授权（21:31）**：本次授权直接提交。PM 执行完整 git 流程：stash → pull --rebase（远端有 46 文件更新，含 FS 已交付 V5-FS-02 + UI-B8 设计稿）→ 解决 docs/产品文档统一库.md 冲突 → commit → push。
+
+> **提交**：`e110b1c` — PM: RQ-18 AI搜索更多PRD + FS任务单(owner直接指派) + V5验收全景图 + 数据清洗3类问题 + Notion同步 + .gitignore兜底 + GM流程测试
+> **文件数**：7 个（git 将 11 个文件中的 tracked 文件合并为 7 个 changes：.gitignore / sync_state.json / COMMLOG.md / TASK_BOARD.md / 需求池.md / V5-PM-01验收清单.md / 产品文档统一库.md；4 个 untracked 新文件未纳入本次——待后续处理）
+
+> **注意**：远端已有 FS 交付（V5-FS-02 + UI-B8 设计稿），pull 后自动合并。pm.ready 已清除。
+
+> **找谁**：全栈开发（V5-FS-02 已交付？待 PM 复验确认）｜🔔 关注人：owner
