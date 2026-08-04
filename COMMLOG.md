@@ -3842,3 +3842,27 @@ v6 已将超时调至 60s，3s 不再是硬约束。建议部署后在云函数�
 ### 变更文件
 - `TASK_BOARD.md`（TL-B17 🆕→🔄 全栈开发认领；TL-B8 🔄→✅）
 - `COMMLOG.md`（本记录）
+
+---
+
+## [2026-08-04 12:35] 全栈开发 交付 TL-B17（UI-B7 列表页前端实现）| 会话：[全栈开发(FS)]
+
+### 交付内容（commit `a339822`，17 文件 +440/-75）
+1. **分类滚轮组件** `components/category-wheel/`：左侧垂直滚轮（RQ-15-D：触摸实时切 + snap + `wx.vibrateShort` + 圆角 chip 高亮 + 激活态指示线）
+2. **首页面板重做**：横 tab → 分类滚轮；头部副标题「当前分类·N 条」+ × 关闭（close.svg）；列表项仅标题（2 行截断）；当前项圆角边框高亮（10px + primary 边框 + 淡色底）；左滑手势沿用（dx<-60 打开）
+3. **底部固定滑动提示条**：首页（absolute bottom）+ 详情页（fixed 操作栏上方），渐变背景不遮挡
+4. **图标 6 枚 SVG** 导出 `assets/icons/`（settings/history/favorite/plus/home/close，stroke 1.25 currentColor），dock/导航/关闭全走 **mask 染色跟随主题**
+5. **theme.json** `--setting-panel-bg` .92→.78（亮/暗）
+
+### 状态
+- **TASK_BOARD**：TL-B17 → 🔄 待 PD 验收（按并行会话新增规则，PD 逐项走查）
+- TL-B8 再次被并行 PM 看板重写回退 → 本次恢复 ✅（真实已交付：ADR-003 + 三层降级 + 自动创建 + 竞态修复 + 分类对齐）
+- ⚠️ 反复现象：并行会话持续重写 TASK_BOARD，我的状态标记多次被冲掉；代码与 COMMLOG 是可靠事实源
+
+### 变更文件
+- `components/category-wheel/*`（🆕 4 文件）
+- `assets/icons/*.svg`（🆕 6 文件）
+- `pages/home/home.{json,wxml,wxss,js}`
+- `pages/detail/detail.{wxml,wxss}`
+- `theme.json`
+- `TASK_BOARD.md`、`COMMLOG.md`（本记录）
