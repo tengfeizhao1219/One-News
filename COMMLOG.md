@@ -1,39 +1,42 @@
-## [2026-08-04 09:10] 🔀 项目经理 GM 增强：全权代理模式 — 各角色零 git 操作 + DNS 修复 5→2 次
+## [2026-08-04 11:54] ✅ 产品设计师 UI-B7 设计确认通过 + TASK_BOARD/COMMLOG 更新 + 下游 TL-B17 解锁 | 会话：[产品设计师(PD)]
 
-> **触发**：owner 指出上一版 GM 方案的盲点 —— 各角色仍需 `git pull`，而每次 pull 都需要各自修复 DNS 污染，浪费时间和积分。
+### UI-B7 列表页重新设计 v4.2 · owner 最终确认
+- **迭代历程**：v1→v2→v3→v3.1→v4→v4.1→v4.2 共 7 轮，逐轮响应 owner 反馈
+- **最终规格（owner 拍板）**：
+  1. 左滑手势进入列表页（跟手位移，阈值 60px），首页无按钮
+  2. 列表项仅标题（15px/600，2 行截断），无来源/时间
+  3. 全局圆角高亮（`border-radius:10px` + 主色边框 + 淡色底）
+  4. 列表页左侧竖排分类滚轮（6 分类 + 收藏），选中项圆角 chip
+  5. 首页 + 详情页底部固定「上滑阅读下一条」提示
+  6. dock 浮层毛玻璃 `.92 → .78`
+  7. 图标：描边 1.25 + 颜色退让至 `--text-secondary`（#A0A0A0）
+  8. fab 浮动按钮：浅灰半透明 `--tag-bg`，细阴影
+- **设计交付物**：
+  - 设计文档：`docs/02-产品设计/D-02-增量-UI-B7-列表页重新设计.md`（状态 ✅）
+  - 图标规范：`docs/02-产品设计/D-02-增量-UI-B7-图标规范.md`（6 枚 SVG，开发直接复用）
+  - 1:1 原型：`docs/showcase/ui-b7-list-redesign.html`（Pages 线上可交互）
 
-### 一、方案升级
+### TASK_BOARD 更新
+- 新增 📚 广播区「UI-B7 确认通过 · 下游开发解锁」
+- 新增 **UI-B7** 设计任务行 → ✅ 设计通过
+- 新增 **TL-B17**（列表页前端实现）→ 🆕 待全栈开发认领
+- 下游 RQ-15 滚轮组件已解锁
 
-| 维度 | v1（上一版） | v2（本次） |
-|------|------------|----------|
-| 各角色 git 权限 | 只能 `git pull` | **零 git 操作**（不 pull/commit/push） |
-| GM 职责 | commit + push | **pull + commit + push** |
-| DNS 修复次数 | 5 次（4 角色 pull + GM push） | **2 次**（GM 同步 + GM 提交） |
-| 触发指令 | 「提交」 | 「**同步**」（pull）+「**提交**」（push） |
+### 真机待办（开发侧）
+- [ ] 同步 `theme.json` `--setting-panel-bg` `.92 → .78`
+- [ ] 导出 6 枚 `.svg` 至 `assets/icons/`（按图标规范 §5 文件名）
+- [ ] 落地 TL-B17 全部 8 项（见 TASK_BOARD TL-B17 行）
 
-### 二、变更文件
+### 变更文件
+- `docs/showcase/ui-b7-list-redesign.html`（v4.2 最终版，commit `7618a60`）
+- `docs/02-产品设计/D-02-增量-UI-B7-列表页重新设计.md`（新建，状态 ✅）
+- `docs/02-产品设计/D-02-增量-UI-B7-图标规范.md`（新建）
+- `TASK_BOARD.md`（新增广播 + UI-B7 + TL-B17）
+- `COMMLOG.md`（本条目）
 
-| 文件 | 变更 |
-|------|------|
-| `ROLE_CARDS.md` v3.0→v3.1 | 各角色「不可以」从「只能 git pull」→「零 git 操作」；GM 增加 pull 代理 + 同步/提交双指令 |
-| `COLLABORATION.md` v4.0→v4.1 | §7.1 核心规则更新：零 git 操作 + DNS 次数对比；§7.3 工作流增加同步步骤 |
-| `docs/00-规划/任务交接流转机制.md` | §2.2 认领步骤移除 `git pull` |
-| `CONTEXT.md` | 注意事项 #6 更新为零 git 操作 |
-| `TASK_BOARD.md` v4.24→v4.25 | 广播区更新为 GM v2 公告 |
-| `COMMLOG.md` | 本条目 |
-
-### 三、关键变化
-
-- 🚫 **各角色完全不需要知道 git 的存在**，只读写工作区文件
-- 🔄 用户开始工作前对 GM 说「同步」，GM pull 后各角色自动看到最新代码（共享工作区）
-- 📤 各角色产出后写 staging 标记，用户对 GM 说「提交」
-- 💰 **DNS 修复从 5 次降到 2 次，节省大量时间和积分**
-
-### 四、找谁
-- 项目经理（PJM，方案设计 + 本次实施）｜🔔 关注人：Git 管理专家 + 全栈开发 + 产品经理 + 产品设计师
+> **找谁**：全栈开发（认领 TL-B17 + RQ-15 滚轮组件）｜🔔 关注人：产品经理 + owner
 
 ---
-
 ## [2026-08-04 09:00] 🔀 项目经理 引入 Git 管理专家（GM）— 5 角色架构，统一 git 管理
 
 > **触发**：owner 指令「引入 git 管理专家角色，统一负责所有 git 版本的提交、合并和推送，解决多人提交导致的冲突问题」。
@@ -72,21 +75,7 @@
 
 ---
 
-## [2026-08-04 08:25] 🎨 产品设计师 认领 UI-B7 列表页重新设计（分类滚轮 + 空间协调，待确认）
-
-> **任务**：UI-B7 列表页重新设计。owner 2026-08-04 指示「新闻分类切换不方便，参考 PRD 初始建议，并审视页面空间布局」。
-
-> **交付**：① 1:1 原型 https://tengfeizhao1219.github.io/One-News/showcase/ui-b7-list-redesign.html；② 设计文档 `docs/02-产品设计/D-02-增量-UI-B7-列表页重新设计.md`。
-
-> **核心设计**：采纳 RQ-15 右侧垂直滚轮（分类切换，移除侧边栏 Tab）；**滚轮替代 nav-dots**（选中居中即位置指示，条数进度改顶部细进度条）；⚙ 升级为方案 F dock 菜单；侧边栏列表去 Tab/去缩略图/按分类联动。
-
-> **待 owner 在线确认**；确认后通知相关全栈开发（RQ-15 滚轮组件 / TL-B15/TL-B16 菜单 / 列表页前端）协同落地。
-
-> **找谁**：产品设计师（交付人）｜🔔 关注人：全栈开发 + 产品经理 + 项目经理
-
----
-
-## [2026-08-04 08:07] 🎨 产品设计师 UI-B4/B5/B6 全部通过（owner 确认）→ 四条下游全部解锁解锁
+## [2026-08-04 08:07] 🎨 产品设计师 UI-B4/B5/B6 全部通过（owner 确认）→ 四条下游全部解锁
 
 > **任务**：UI-B4（浏览记录页）、UI-B5（收藏云同步展示）、UI-B6（全局导航框架 + 首页全屏单卡片流）全部设计稿 owner 在线确认通过。
 
@@ -3824,42 +3813,16 @@ v6 已将超时调至 60s，3s 不再是硬约束。建议部署后在云函数�
 > **找谁**：产品经理（交付人）｜🔔 关注人：全栈开发（需部署云函数）+ owner（验收决策）
 
 ---
+## [2026-08-04 08:30] 全栈开发 认领 TL-B8（P0 恢复一层兜底）+ 碰撞恢复记录 | 会话：[全栈开发(FS)]
 
-## [2026-08-04 09:14] 📋 产品经理 删除侧边栏「❤️ 收藏」Tab（owner 决策）
+### ⚠️ 并行会话 force-push 碰撞与 font-panel 恢复
+- **现象**：本会话此前交付的「反馈联系方式」（邮箱 ztengfei@hotmail.com + 微信 jiaowotengfei，点击复制）两个 commit 被另一并行会话的 force-push（`a15d13a`）覆盖——该会话重写 font-panel 为占位弹窗（tengfei@example.com，无微信），并把 TL-B9~B16 认领交付后强推。
+- **恢复**：按用户本会话最终意图重做 font-panel（关于·反馈 + 邮箱 + 微信 双可点行，各自点击复制），提交 `2cec79e` 已推送远端（`99c68a3..2cec79e`）。
+- **影响**：原 TL-B12/B13/B14「下迭代三需求」已由并行会话 ✅ 实现完成，不再是待认领；本会话改认领 TL-B8。
+- **建议**：同一仓库多会话勿并行强推 main；统一 `pull --rebase` 后 push，且任何人不得 force-push。
 
-> **决策背景**：owner 指出 dock 菜单「♥ 我的收藏」独立页入口已可用（`pages/favorites`，本地秒开 + `getUserFavorites` 云端合并），侧边栏中的「❤️ 收藏」Tab 属于重复入口且功能更弱（仅本地读取，无云端合并），信息架构上也不应把收藏混在新闻分类中。
-
-> **变更内容**：
-> - **`pages/home/home.js`**：`PANEL_CATEGORIES` 恢复为纯 `CATEGORIES`（移除 `__favorites__` 拼接）；删除 `_loadFavorites()` 函数（~25 行）；`onCategoryChange` 移除收藏分支；`onPanelItemTap` 移除 `isFav` 收藏跳转分支；`closePanel` 移除 `__favorites__` 特判
-> - **`pages/home/home.wxml`**：删除整个「B-04 收藏列表」块（L149-170，含收藏空态）
-> - **`pages/home/home.wxss`**：删除 `.fav-source` / `.fav-time` / `.panel-empty-fav` / `.empty-fav-icon` / `.empty-fav-text` / `.empty-fav-hint` 共 6 个收藏样式规则
-> - **`docs/02-产品设计/PRD-阶段二功能增强.md`**：§5.4 入口①标注「已删除，owner 决策」
-
-> **不受影响**：详情页底部操作栏收藏按钮（♡/♥）、dock 菜单「我的收藏」入口、独立收藏页 `pages/favorites`、云端收藏同步（`setUserFavorite`/`getUserFavorites`）、`isRetained` 30 天保留联动。
-
-> **关联影响**：Q-03 收藏测试用例 P1-04「侧边栏收藏 Tab 渲染」用例废止；`产品文档统一库.md` 中多处「❤️ 收藏」Tab 描述待后续统一更新。
-
-> **找谁**：产品经理（交付人）｜🔔 关注人：全栈开发（注意 home.js 变更）+ owner（决策确认）
-
----
-
-## [2026-08-04 10:05] 全栈开发 TL-B8 增强：news_cache_backup 集合自动创建 | 会话：[全栈开发(FS)]
-
-### 背景
-- 云函数日志显示 `[backupToCacheBackup] ... collection.remove:fail -502005 database collection not exists: news_cache_backup`
-- refreshNews 主流程正常（code:0 / 19 条入库），但备份集合未创建 → TL-B8 的 L3 兜底（上次成功快照）实际未生效
-
-### 修复内容（refreshNews/index.js）
-- 新增 `isCollectionNotExist(err)`：识别 `-502005 / DATABASE_COLLECTION_NOT_EXIST / collection not exists`
-- 新增 `ensureBackupCollection()`：集合不存在时 `db.createCollection('news_cache_backup')`，模块级标志保证单次运行只创建一次；已存在/无权限则打印警告跳过
-- 新增 `writeBackupSnapshot(category, docs)`：抽离单分类快照写入（先 remove 旧备份 → add 前 20 条）
-- `backupToCacheBackup`：捕获到「集合不存在」→ 自动创建后**重试一次**；其余错误保持非阻塞警告
-- 效果：**首次部署无需手工建集合**，兜底可真正生效
-
-### 变更文件
-- `cloudfunctions/refreshNews/index.js`（backupToCacheBackup 升级）
-- `docs/03-技术方案/ADR-003-一层兜底恢复.md`（§3.5 记录自动创建行为）
-
-### 状态
-- ⏳ 待 GM 提交（已写 `.git-staging/fs.ready`）
-- 部署验证：重新部署 refreshNews 后触发一次，日志应出现 `[backupToCacheBackup] 已自动创建 news_cache_backup 集合` 且各分类 `备份 N 条`
+### 认领 TL-B8（P0 恢复一层兜底）
+- **来源**：广播区 2026-08-03 技术负责人 TL-B8 · P0 立即认领；PD-B5 owner 裁定 ✅ 恢复一层兜底（news_cache 空/拉取失败 → 降级本地上次成功缓存或内置精选，不得空白页）。
+- **职责**：定技术方案（含 ADR 更新）+ 指派 BE/FE 实现；TL-B3 同步按新兜底重写 Q-新08 测试方案。
+- **下一步**：读 PRD §5.6 + 现状 news_cache/refreshNews 逻辑，产出兜底技术方案（cache-fallback 数据源选择、触发条件、与现有 TTL/清理的衔接），提交 ADR 并指派实现人。
+- **变更文件**：TASK_BOARD.md（TL-B8 状态 🆕→🔄 全栈开发认领）
