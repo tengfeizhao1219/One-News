@@ -1,0 +1,15 @@
+{
+  "role": "fe",
+  "timestamp": "2026-08-05T18:35:00+08:00",
+  "summary": "BUG-20260805-001（owner 直连）：⚙ dock 菜单被蒙板打灰。修蒙板 0.35→0.22、blur 4px→2px；菜单项阴影加深 0 8rpx 24rpx(0.18)→0 16rpx 48rpx(0.32)+0 4rpx 12rpx(0.18)",
+  "files": [
+    "pages/home/home.wxss",
+    "COMMLOG.md"
+  ],
+  "details": {
+    "BUG-20260805-001": "owner 真机反馈：点击 ⚙ 弹出菜单时，菜单项和背景都呈灰色，菜单项视觉上被蒙板覆盖。z-index 已正确（menu:28 > mask:27），问题在视觉对比度：蒙板 0.35+blur(4px) 致背景'灰雾'；菜单项阴影 0.18 太弱无法让卡片'浮'出。",
+    "fix": "1) .more-mask 不透明度 0.35→0.22 + blur 4px→2px；2) .more-item 阴影 0 8rpx 24rpx rgba(0,0,0,0.18) → 0 16rpx 48rpx rgba(0,0,0,0.32), 0 4rpx 12rpx rgba(0,0,0,0.18) 双层阴影。",
+    "verify": "回归 b06(20/0)/v5(18/0)/v5.11(40/0)/v6(20/0)/v7-runtime(41/0)/v10(53/0)/v11(25/0) 全过"
+  },
+  "ready": true
+}
