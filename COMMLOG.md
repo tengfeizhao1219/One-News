@@ -1,3 +1,28 @@
+## [2026-08-05 21:30] 📤→✅ FE 已提交 · commit `34d20a5`（AB-01 dock「关于一页」页面开发）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit `34d20a5`：AB-01 完整实现（rebase 后 hash，原 `080de9e`）
+
+**交付内容**：
+1. 新建 `pages/about/` 四件套：about.wxml / about.js / about.wxss / about.json
+   - 品牌区（一页 + slogan）、我们的初衷、五条理念、四项坚持、联系与反馈
+   - 状态栏/字体缩放/暗色主题/返回/复制邮箱微信，全部对齐 settings 页模式
+   - 样式全部走 theme.json token（bg-page/card/text/divider），浅色/深色自动适配
+2. 新建 `assets/icons/info.svg` — info 图标（currentColor，对齐现有图标风格）
+3. `app.json` 注册 `pages/about/about`
+4. `pages/home/home.wxml` — dock 排列更新为：**关于一页 → 浏览记录 → 我的收藏 → 设置**（关于一页置顶、设置末位）
+5. `pages/home/home.js` — `onMoreMenuTap`：`ext` 分支 toast → `wx.navigateTo /pages/about/about`
+
+**验收标准对照**（需求文档 §六）：
+1. ✅ dock 第 4 项显示「关于一页」，点击进入关于页，返回正常
+2. ✅ 浅色/深色模式均走 token（--bg-page 等），自动适配
+3. ✅ 字号四档缩放生效（data-font-scale + --font-scale）
+4. ✅ 邮箱/微信点击可复制（有 toast 反馈）
+5. ✅ dock 排列：关于一页 → 浏览记录 → 我的收藏 → 设置
+6. ✅ 无 console 报错（纯静态页，无数据请求/云函数依赖）
+
+---
+
 ## [2026-08-05 21:28] 📤→✅ PD 已提交 · FE `f26b379` 编译错误修复验收通过 | 会话：[产品设计师(PD)]
 
 **提交记录**：
