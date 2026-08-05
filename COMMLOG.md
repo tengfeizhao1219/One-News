@@ -1,7 +1,7 @@
-## [2026-08-05 19:55] 📤→✅ FE 已提交 · commit `TBD`（D-07 FE 部分 · 暗色可见性契约修复）| 会话：[小程序前端开发(FE)]
+## [2026-08-05 19:55] 📤→✅ FE 已提交 · commit `f3bf107`（D-07 FE 部分 · 暗色可见性契约修复）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：
-- commit `TBD`：D-07 FE 部分 + owner 截图修复（app.wxss / font-panel.wxss / settings.wxss / test 新增）
+- commit `f3bf107`：D-07 FE 部分 + owner 截图修复（app.wxss / font-panel.wxss / settings.wxss / test 新增）
   - **根因（PD D-07.1 定位）**：
     1. G-03 P0：`.page--dark` 块缺 `--wheel-*`（7 个）→ 手动深色+系统浅色时分类轮盘取系统浅色值，黑字落深底不可见（owner 截图 1）
     2. 发现 C：`--flash-*`（5 个）未入 `.page--dark` 块 → 手动深色下详情页进度分类名高亮色偏暗（owner 截图"高亮颜色不可见"）
