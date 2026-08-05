@@ -106,26 +106,33 @@ console.log('\n【静态】home.js _animateSwipeNext/Prev 屏外起始（Bug1 �
 }
 
 // ===== 详情页：单元素模型 no-transition 吸附修复（反向 Bug）=====
-console.log('\n【静态】detail.js _swipeToNext/Prev 无穿越反向（详情页预期方向）')
+console.log('\n【静态】detail.js _swipeToNext/Prev 翻页动画（详情页预期方向）')
 {
   const js = read(files.detailJs)
   check('detail _swipeToNext 以 in-up no-transition 起始（从底部上滑入）',
     js.includes("animClass: 'in-up no-transition'"))
-  check('detail _swipeToPrev 以 in-down no-transition 起始（从顶部下滑入）',
-    js.includes("animClass: 'in-down no-transition'"))
-  // 防止回退为「裸 in-up / in-down」（会穿越全屏导致反向）
+  // v5.12: 翻上一页不再用 in-down 整屏滑入，改用 fade-in 淡入（不同新闻长度不同导致速度感不一致）
+  check('detail _swipeToPrev 以 fade-in no-transition 起始（淡入）',
+    js.includes("animClass: 'fade-in no-transition'"))
+  // 防止回退为「裸 in-up」（会穿越全屏导致反向）
   check('detail _swipeToNext 无裸 in-up（必带 no-transition）',
     !/setData\(\{\s*animClass:\s*'in-up'\s*\}/.test(js))
-  check('detail _swipeToPrev 无裸 in-down（必带 no-transition）',
-    !/setData\(\{\s*animClass:\s*'in-down'\s*\}/.test(js))
+  // v5.12: 确认 in-down 已被 fade-in 替代
+  check('detail _swipeToPrev 不再使用 in-down 整屏滑入',
+    !js.includes("animClass: 'in-down"))
 }
 
-// ===== 详情页 WXSS：no-transition 类存在 =====
-console.log('\n【静态】detail.wxss .article.no-transition 无过渡类')
+// ===== 详情页 WXSS：no-transition + fade-in 类存在 =====
+console.log('\n【静态】detail.wxss .article 动画类')
 {
   const wxss = read(files.detailWxss)
   check('detail.wxss 含 .article.no-transition { transition: none }',
     /\.article\.no-transition\s*\{\s*transition:\s*none/.test(wxss))
+  // v5.12: 翻上一页改用 fade-in 淡入，不再 in-down 整屏滑入
+  check('detail.wxss 含 .article.fade-in { opacity: 0 }',
+    /\.article\.fade-in\s*\{\s*opacity:\s*0/.test(wxss))
+  check('detail.wxss 不含 .article.in-down（已被 fade-in 替代）',
+    !wxss.includes('.article.in-down'))
 }
 
 // ===== 首页 WXSS：no-transition 类存在（多卡片模型吸附修复） =====
@@ -156,7 +163,7 @@ console.log('\n【静态】home.wxss / detail.wxss 翻页偏移使用 --page-h�
     ".article.out-up   { transform: translateY(calc(-1 * var(--page-h",
     ".article.out-down { transform: translateY(var(--page-h",
     ".article.in-up    { transform: translateY(var(--page-h",
-    ".article.in-down  { transform: translateY(calc(-1 * var(--page-h",
+    // v5.12: .article.in-down 已被 .article.fade-in 替代，不再检查
   ]
   dNeed.forEach(function (s) {
     check('detail.wxss ' + s.trim().split(' ')[0] + ' 使用 --page-h', dWxss.includes(s))
@@ -166,6 +173,22 @@ console.log('\n【静态】home.wxss / detail.wxss 翻页偏移使用 --page-h�
     !/\.card\.(out|in)-(up|down)\s*\{\s*transform:\s*translateY\(-?100vh\)/.test(homeWxss))
   check('detail.wxss .article 翻页 transform 无裸 100vh',
     !/\.article\.(out|in)-(up|down)\s*\{\s*transform:\s*translateY\(-?100vh\)/.test(dWxss))
+}
+
+// ===== v5.12：短内容翻页保护 + 翻上一页淡入淡出 =====
+console.log('\n【静态】detail.js 短内容保护 _needsSecondSwipe + onScrollToLower 清除')
+{
+  const dJs = read(files.detailJs)
+  check('detail.js onLoad 初始化 _needsSecondSwipe = false',
+    dJs.includes('this._needsSecondSwipe = false'))
+  check('detail.js _measureScroll 短内容设 _needsSecondSwipe = true',
+    dJs.includes('that._needsSecondSwipe = true'))
+  check('detail.js onTouchEnd 上滑分支含 _needsSecondSwipe 判断',
+    dJs.includes('if (this._needsSecondSwipe)'))
+  check('detail.js _needsSecondSwipe 为 true 时不调用 _swipeToNext',
+    /if\s*\(\s*this\._needsSecondSwipe\s*\)\s*\{[\s\S]*?_needsSecondSwipe\s*=\s*false[\s\S]*?return/.test(dJs))
+  check('detail.js onScrollToLower 清除 _needsSecondSwipe',
+    /onScrollToLower[\s\S]*?_needsSecondSwipe\s*=\s*false/.test(dJs))
 }
 
 // ===== JS 注入 --page-h（pageH: PAGE_HEIGHT），与 WXSS var(--page-h) 对应 =====

@@ -89,6 +89,8 @@ Page({
 
     // UI-B11: 滑动提示同会话仅显示一次
     this._swipeHintDismissed = false
+    // 短内容翻页保护：内容不足一屏时需两次上滑才翻页（第一次滚到底，第二次翻页）
+    this._needsSecondSwipe = false
 
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
@@ -155,9 +157,11 @@ Page({
           var viewH = res[0].height
           var contentH = res[1] ? res[1].height : 0
           if (viewH > 0) that._clientHeight = viewH
-          // 内容不足一屏时根本不会触发 scroll 事件，需直接视为已触底，否则上滑翻页永不可用
+          // 内容不足一屏时，标记需两次上滑才翻页（第一次滚到底确认，第二次才翻页）
+          // 同时直接视为已触底，否则 onScrollToLower 不会触发
           if (viewH > 0 && contentH > 0 && contentH <= viewH + 5) {
             that._isAtBottom = true
+            that._needsSecondSwipe = true
           }
         })
     } catch (e) {}
@@ -340,6 +344,14 @@ Page({
       }
     } else if (dy < 0 && !this.data.isLast) {
       if (this._isAtBottom) {
+        // 短内容保护：内容不足一屏时，第一次上滑仅确认"已到底"，第二次才翻页
+        if (this._needsSecondSwipe) {
+          this._needsSecondSwipe = false
+          // 给一个微弱的视觉反馈（scrollTop 轻弹），让用户感知"到底了"
+          this.setData({ scrollTop: 1 })
+          setTimeout(function () { that.setData({ scrollTop: 0 }) }, 150)
+          return
+        }
         this._swipeToNext()
       }
     }
@@ -377,6 +389,7 @@ Page({
 
   onScrollToLower: function () {
     this._isAtBottom = true
+    this._needsSecondSwipe = false  // 手动滚到底 = 已确认触底，无需二次滑动保护
     // 记录真实底部位置，供 onContentScroll 复位时校准
     this._bottomScrollTop = this._lastScrollTop || 0
   },
@@ -497,15 +510,14 @@ Page({
     setTimeout(function () {
       contentPromise.then(function () {
         that._switching = false
-        // 先切换为新内容（此刻 animClass 仍是 out-down，元素停在 +100vh，旧内容已移出）
+        // out-down 阶段结束，旧内容已移出屏幕下方。
+        // v5.12: 翻上一页不再用 in-down 整屏滑入（不同新闻长度不同导致速度感不一致），
+        // 改用 fade-in 淡入——新内容直接渲染在顶部(scrollTop:0)，从透明淡入。
         that._applyPendingDetail()
-        // 关键修复：元素当前在 +100vh（out-down 终点）。直接置 in-down 会让 transition
-        // 从 +100vh 一路滑到 -100vh（穿越全屏），30ms 清除后从「近底部→中心」滑入，
-        // 表现为新内容从【底部】上滑——与预期（从顶部下滑）相反。
-        // 先以 no-transition 瞬间吸附到 in-down 起点(-100vh)，再移除 class 触发「从顶部往下滑入」。
-        that.setData({ animClass: 'in-down no-transition', scrollTop: 0 })
+        // 先以 no-transition 瞬间吸附回中心（清除 out-down 的 translateY(+page-h)），
+        // 同时设 fade-in（opacity:0），再移除 no-transition+fade-in 触发 transition 淡入
+        that.setData({ animClass: 'fade-in no-transition', scrollTop: 0 })
         setTimeout(function () {
-          // 移除 in-down 与 no-transition：元素从 -100vh 滑入中心（从顶部往下滑入）
           that.setData({ animClass: '' })
           that._animating = false
         }, 30)
