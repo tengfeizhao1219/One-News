@@ -206,4 +206,105 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 - [ ] **通用**：所有色值引用 token，无硬编码 HEX；安全区 `env(safe-area-inset-bottom)` 避让；动效时长符合 §0 约定。
 
 ---
+
+## 8. 静态验收报告 — DRD vs 源码逐项比对（2026-08-05 12:40）
+
+> **方法**：对照 DRD §0–§7 逐项检查当前 `main` 分支（`2874b69`）源码。✅=通过，⚠️=有偏差需修复，❌=缺失。
+
+### 8.1 总纲硬约束（§0）
+
+| # | 约束项 | 状态 | 证据 |
+|---|---|---|---|
+| 0.1 | 单位用 rpx | ✅ | 全站 WXSS 均用 rpx |
+| 0.2 | 颜色即 token，不硬编码 HEX | ⚠️ | `detail.wxss` L478-494 暗色媒体查询含 `#FFFFFF`/`#999999`/`#D4D4D4`；`font-panel.wxss` L100 `#FFFFFF`；但均为 fallback 场景（暗色兜底 / radio-dot 白色），**非阻断** |
+| 0.3 | 翻页 flick-only 70px+500ms | ✅ | `detail.js:320` `home.js:419` |
+| 0.4 | 动效时长 350ms ease / 120-500ms | ✅ | 全站一致 |
+| 0.5 | 图标 mask + 强对比背景色 | ✅ | 已修复为实心 SVG + 硬编码 fallback（`2874b69`） |
+
+### 8.2 收藏页（§1）
+
+| # | 规格项 | 状态 | 偏差描述 |
+|---|---|---|---|
+| 1.1 | 不展示缩略图 | ✅ | 纯文字列表，无 img |
+| 1.2 | 筛选胶囊横滑 | ❌ **缺失** | wxml 中无 `scroll-x` 分类胶囊；DRD 要求 `[全部][科技][世界][体育][生活]`，当前**完全未实现** |
+| 1.3 | 实时计数「共 N 条」 | ❌ **缺失** | nav-bar 仅「我的收藏」，无右侧计数；DRD 要求「共 N 条」随筛选联动 |
+| 1.4 | 长按 500ms → ActionSheet 删除 | ❌ **缺失** | `favorites.wxml` 仅 `bindtap`，无 `bindlongpress`；`favorites.js` 无删除逻辑 |
+| 1.5 | 空态区分两种文案 | ⚠️ **部分** | 仅有「还没有收藏任何新闻」一种空态；DRD 要求「筛选无结果」单独文案 |
+| 1.6 | 列表项 padding 13rpx | ⚠️ | 当前 `24rpx 0`（`favorites.wxss:104`），DRD 要求 `13rpx` 上下 |
+| 1.7 | 分类标签文字色用 flash-* | ⚠️ | `fav-meta` 无分类标签渲染，仅显示 `source`；DRD 要求 `[科技] 来源 · 时间` 格式 |
+
+### 8.3 详情页（§2）
+
+| # | 规格项 | 状态 | 偏差描述 |
+|---|---|---|---|
+| 2.1 | 进度条 3rpx + --progress | ✅ | `detail.wxss:262` 3rpx；`theme.json` --progress 值正确 |
+| 2.2 | 滑动提示 3.5s 淡出 + 同会话一次 | ✅ | `detail.js` `_swipeHintDismissed` 标记已落地 |
+| 2.3 | 已收藏 label 改「已收藏」 | ❌ **未实现** | `detail.wxml:112` label 静态文本「收藏」；DRD 要求 `isFavorited` 时改为「已收藏」 |
+| 2.4 | 收藏图标 is-favorited 填充+高亮 | ✅ | `detail.wxss:364` `.is-favorited` 变色逻辑正确 |
+| 2.5 | 心跳动画 350ms | ✅ | `heartBeat` keyframes 0.3s |
+
+### 8.4 设置页（§3）
+
+| # | 规格项 | 状态 | 偏差描述 |
+|---|---|---|---|
+| 3.1 | 显示组（跟随系统 + 深色模式） | ❌ **缺失** | `font-panel.wxml` 仅含字体档位 + 关于；DRD 要求「显示组」有跟随系统和深色模式开关 |
+| 3.2 | 阅读组（4档 + 预览卡） | ✅ | tier-list 4 档，每行有预览文字 |
+| 3.3 | 实时预览卡缩小 | ⚠️ **DRD 规格未落地** | `font-panel.wxss` 无 `.preview-wrap`/`.preview-card`/`.pv-title`/`.pv-meta`/`.pv-summary` 等选择器；当前用的是 `.tier-preview`（单行文字），DRD 要求的是**迷你新闻卡**（标题+元信息+摘要2行） |
+| 3.4 | 关于组（版本+反馈+联系） | ⚠️ **部分** | 有邮箱和微信，但**无版本号**（DRD 要求「版本」） |
+
+### 8.5 首页（§4）
+
+| # | 规格项 | 状态 | 偏差描述 |
+|---|---|---|---|
+| 4.1 | ⚙ 图标可见 | ✅ | `.more-icon` 已改 `var(--text-secondary, #6B6B70)` |
+| 4.2 | 滑动提示与详情一致 | ✅ | `home.js` `_swipeHintDismissed` 标记已落地 |
+| 4.3 | 侧边栏列表正确 | ✅ | `_syncPanelList` 已传入 list 参数 |
+| 4.4 | 右滑关闭面板 | ✅ | `onPanelTouchStart/End` 已实现 |
+
+### 8.6 通用（§7）
+
+| # | 规格项 | 状态 | 偏差描述 |
+|---|---|---|---|
+| 6.1 | 安全区避让 | ✅ | `env(safe-area-inset-bottom)` 全站使用 |
+| 6.2 | 暗色全 token 生效 | ✅ | `theme.json` dark 节点完整 |
+
+---
+
+## 9. FE 任务分配（基于 §8 静态验收）
+
+> **分配人**：FE（小程序前端开发）
+> **优先级**：P0 = 阻断上线 / DRD 明确要求但未实现
+
+### TASK-FE-001：收藏页缺失功能补全（P0）
+
+**范围**：`pages/favorites/`
+
+| 子项 | 描述 |
+|---|---|
+| 筛选胶囊 | 顶部横滑胶囊栏 `[全部][科技][世界][体育][生活]`，`scroll-x`，当前项 `--primary` 实底白字，其余 `--tag-bg` 底 `--tag-text` 字。纯前端 `filter`，不改底层 `list`。 |
+| 实时计数 | nav-bar 右侧「共 N 条」；随筛选联动（全部=N / 某类=该类数）。 |
+| 长按删除 | `bindlongpress` 500ms → `wx.showActionSheet({ itemList: ['取消收藏'] })` → 乐观更新本地 `localCache.favorites` 移除 + 云端 `setUserFavorite(false)`；失败回滚 toast。 |
+| 空态 B | 新增「该分类下暂无收藏」空态文案（当前仅空态 A）。 |
+| 列表样式 | `fav-item` padding 改为 `13rpx 0`（DRD §1.2）；元信息行增加分类标签 `[科技]` 格式，标签色 `var(--flash-*)`。 |
+
+### TASK-FE-002：详情页收藏态 label 动态化（P0）
+
+**范围**：`pages/detail/detail.wxml`
+
+| 子项 | 描述 |
+|---|---|
+| label 切换 | 未收藏：`<text>收藏</text>`；已收藏：`<text>已收藏</text>`。用 `{{isFavorited ? '已收藏' : '收藏'}}` 三元表达式。 |
+
+### TASK-FE-003：设置页补齐 DRD 分组（P1）
+
+**范围**：`components/font-panel/`
+
+| 子项 | 描述 |
+|---|---|
+| 显示组 | 新增「跟随系统」开关 + 「深色模式」开关（调用 `wx.setBackgroundTextStyle` / 手动切换主题）。 |
+| 预览卡缩小 | 将 `.tier-preview` 单行文字替换为迷你新闻卡（标题+元信息+摘要 2 行截断），按 DRD §3.2 规格缩小 padding/字号。 |
+| 版本号 | 关于组增加「版本」行（读取 `app.json` 或硬编码 `v1.0`）。 |
+
+---
+
 *关联演示（已同步更新）：`docs/showcase/favorites-redesign.html` · `detail-redesign.html` · `settings-redesign.html` · 看板 `docs/index.html` → 🎨 交互原型*
