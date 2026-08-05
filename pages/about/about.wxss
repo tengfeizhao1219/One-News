@@ -1,0 +1,201 @@
+/* 关于一页 — AB-01 独立全屏页 */
+
+.page {
+  height: 100vh;
+  background-color: var(--bg-page);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+}
+
+/* 顶部栏 */
+.nav-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 6rpx 14rpx 10rpx;
+  flex-shrink: 0;
+}
+.nav-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+}
+.nav-back--hover {
+  opacity: 0.6;
+}
+.nav-back-icon {
+  font-size: 44rpx;
+  line-height: 1;
+  color: var(--text-primary);
+}
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 滚动区 */
+.scroller {
+  flex: 1;
+  padding: 0 28rpx;
+}
+
+/* 品牌区 */
+.brand-section {
+  padding: 40rpx 0 32rpx;
+  text-align: center;
+}
+.brand-name {
+  font-size: calc(56rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 8rpx;
+  margin-bottom: 16rpx;
+}
+.brand-slogan {
+  font-size: calc(22rpx * var(--font-scale-meta));
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 分组 */
+.group {
+  margin-bottom: 28rpx;
+}
+.group-label {
+  font-size: calc(22rpx * var(--font-scale-meta));
+  color: var(--text-tertiary);
+  padding: 0 8rpx 12rpx;
+  text-transform: uppercase;
+  letter-spacing: 2rpx;
+}
+
+/* 卡片 */
+.card {
+  background: var(--bg-card);
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+/* 正文段落 */
+.section-text {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.8;
+  margin-bottom: 16rpx;
+}
+.section-text:last-child {
+  margin-bottom: 0;
+}
+.section-text--highlight {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* 理念条目 */
+.principle-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid var(--divider);
+}
+.principle-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.principle-row:first-child {
+  padding-top: 0;
+}
+.principle-num {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-size: calc(22rpx * var(--font-scale-meta));
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  margin-top: 4rpx;
+}
+.principle-body {
+  flex: 1;
+}
+.principle-title {
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4rpx;
+}
+.principle-desc {
+  font-size: calc(24rpx * var(--font-scale-meta));
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* 坚持事项 */
+.feature-item {
+  display: flex;
+  padding: 14rpx 0;
+}
+.feature-item:first-child {
+  padding-top: 0;
+}
+.feature-item:last-child {
+  padding-bottom: 0;
+}
+.feature-bullet {
+  color: var(--text-tertiary);
+  margin-right: 12rpx;
+  font-size: calc(28rpx * var(--font-scale));
+}
+.feature-text {
+  flex: 1;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.7;
+}
+
+/* 联系行 */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--divider);
+}
+.row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.row:first-child {
+  padding-top: 0;
+}
+.row--hover {
+  opacity: 0.65;
+}
+.row--no-tap {
+  /* 版本号不可点击 */
+}
+.row-label {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-primary);
+}
+.row-value {
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-secondary);
+}
+
+/* 底部留白 */
+.bottom-spacer {
+  height: 60rpx;
+}

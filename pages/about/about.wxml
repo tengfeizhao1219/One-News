@@ -1,0 +1,88 @@
+<!-- 关于一页 — AB-01 独立全屏页 -->
+<view class="page {{themeClass}}" data-font-scale="{{fontScaleTier}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 顶部栏：返回 + 标题 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+      <text class="nav-back-icon">‹</text>
+    </view>
+    <view class="nav-title">关于一页</view>
+  </view>
+
+  <scroll-view class="scroller" scroll-y>
+
+    <!-- 1. 品牌区 -->
+    <view class="brand-section">
+      <view class="brand-name">一页</view>
+      <view class="brand-slogan">极简沉浸式新闻阅读 · 打开即读 · 零干扰</view>
+    </view>
+
+    <!-- 2. 我们的初衷 -->
+    <view class="group">
+      <view class="group-label">我们的初衷</view>
+      <view class="card">
+        <view class="section-text">
+          新闻本该是「知道今天发生了什么」。
+        </view>
+        <view class="section-text">
+          可打开任何一个新闻 App，迎接你的往往是：信息流、弹窗、算法推荐、无限下拉、视频、广告……你只是想看几条新闻，却像走进了一个喧闹的集市。
+        </view>
+        <view class="section-text section-text--highlight">
+          所以我们做了「一页」——一个简单到近乎固执的新闻阅读器：打开就是今天值得读的一条，上下滑动逐页翻看。没有信息流，没有「猜你喜欢」，没有无限刷。
+        </view>
+      </view>
+    </view>
+
+    <!-- 3. 我们的理念 -->
+    <view class="group">
+      <view class="group-label">我们的理念</view>
+      <view class="card">
+        <view class="principle-row" wx:for="{{principles}}" wx:key="id">
+          <view class="principle-num">{{item.id}}</view>
+          <view class="principle-body">
+            <view class="principle-title">{{item.title}}</view>
+            <view class="principle-desc">{{item.desc}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 4. 我们坚持的事 -->
+    <view class="group">
+      <view class="group-label">我们坚持的事</view>
+      <view class="card">
+        <view class="feature-item" wx:for="{{features}}" wx:key="*this">
+          <text class="feature-bullet">-</text>
+          <text class="feature-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 5. 联系与反馈 -->
+    <view class="group">
+      <view class="group-label">联系与反馈</view>
+      <view class="card">
+        <view class="row" bindtap="copyEmail" hover-class="row--hover">
+          <view class="row-label">邮箱</view>
+          <view class="row-value">{{email}}</view>
+        </view>
+        <view class="row" bindtap="copyWechat" hover-class="row--hover">
+          <view class="row-label">微信</view>
+          <view class="row-value">{{wechat}}</view>
+        </view>
+        <view class="row row--no-tap">
+          <view class="row-label">版本</view>
+          <view class="row-value">{{appVersion}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部留白 -->
+    <view class="bottom-spacer"></view>
+
+  </scroll-view>
+
+</view>

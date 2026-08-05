@@ -762,10 +762,10 @@ Page({
 
   /**
    * TL-B16: 更多功能菜单项点击分发
+   *   about     → 关于一页
    *   history   → 浏览记录页
    *   favorites → 我的收藏页
    *   settings  → 字体设置面板
-   *   ext       → 扩展位（占位，敬请期待）
    */
   onMoreMenuTap(e) {
     var target = e.currentTarget.dataset.target
@@ -787,8 +787,11 @@ Page({
         url: '/pages/settings/settings',
         fail: function (err) { console.error('[home] navigate settings fail:', err) }
       })
-    } else if (target === 'ext') {
-      wx.showToast({ title: '敬请期待', icon: 'none' })
+    } else if (target === 'about') {
+      wx.navigateTo({
+        url: '/pages/about/about',
+        fail: function (err) { console.error('[home] navigate about fail:', err) }
+      })
     }
   },
 

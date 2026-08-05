@@ -91,6 +91,11 @@
   <!-- 更多功能菜单（dock 栈向上弹出，毛玻璃背景，点击空白或再次点击⚙收起） -->
   <view class="more-mask {{showMoreMenu ? 'show' : ''}}" bindtap="toggleMoreMenu"></view>
   <view class="more-menu {{showMoreMenu ? 'show' : ''}}">
+    <!-- AB-01: dock 排列 — 关于一页置顶，设置末位 -->
+    <view class="more-item" data-target="about" bindtap="onMoreMenuTap">
+      <image class="more-item-icon-img" src="/assets/icons/info.svg" mode="aspectFit"></image>
+      <text class="more-item-label">关于一页</text>
+    </view>
     <view class="more-item" data-target="history" bindtap="onMoreMenuTap">
       <image class="more-item-icon-img" src="/assets/icons/history.svg" mode="aspectFit"></image>
       <text class="more-item-label">浏览记录</text>
@@ -102,10 +107,6 @@
     <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
       <image class="more-item-icon-img" src="/assets/icons/settings.svg" mode="aspectFit"></image>
       <text class="more-item-label">设置</text>
-    </view>
-    <view class="more-item more-item--ext" data-target="ext" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/plus.svg" mode="aspectFit"></image>
-      <text class="more-item-label">扩展位</text>
     </view>
   </view>
 
