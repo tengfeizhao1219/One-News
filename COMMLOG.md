@@ -1,3 +1,19 @@
+## [2026-08-05 22:55] 📤→✅ FE 已提交 · commit `e29290f`（BUG-FE-20260805-001 二级页面无法滚动修复）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit `e29290f`：修复设置页/浏览记录/我的收藏/关于一页内容超一屏无法上下滑动
+
+**根因**：flex 布局子项默认 `min-height:auto`，scroll-view 高度被内容撑开（= 内容高度），超出 `.page`（100vh）后被全局 `page{overflow:hidden}` 裁剪。scroll-view 原生滚动未生效 + 页面级滚动被禁 → 完全无法滑动。detail 页正常是因为 `.content` 有 `overflow-y:auto`（CSS 滚动兜底）。
+
+**修复**：四个页面 scroll 容器统一对齐 detail 页已验证方案：
+- `min-height: 0`（允许 flex 收缩，防止被内容撑开）
+- `overflow-y: auto`（CSS 滚动兜底）
+- about 页原 `overflow:hidden` 直接裁剪内容，一并修复
+
+**涉及文件**：`pages/settings/settings.wxss`、`pages/history/history.wxss`、`pages/favorites/favorites.wxss`、`pages/about/about.wxss`
+
+---
+
 ## [2026-08-05 21:30] 📤→✅ FE 已提交 · commit `34d20a5`（AB-01 dock「关于一页」页面开发）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：
