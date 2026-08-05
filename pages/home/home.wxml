@@ -74,7 +74,7 @@
   </view>
 
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于屏幕底部，不随内容滚动，不响应点击） -->
-  <view class="fixed-swipe-hint" wx:if="{{pageState === 'ready' && !showPanel}}">
+  <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready' && !showPanel}}">
     <view class="fixed-swipe-hint-icon" style="-webkit-mask-image: url('/assets/icons/swipe.svg'); mask-image: url('/assets/icons/swipe.svg');"></view>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>

@@ -83,7 +83,7 @@
   .longpress-hint { font-size: 11px; color: var(--text-tertiary); padding: 0 16px 8px; }
   .fav-list { padding: 2px 16px 28px; }
   .fav-card { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--divider); cursor: pointer; align-items: flex-start; transition: opacity .2s; }
-  .fav-card .thumb { width: 60px; height: 60px; border-radius: 12px; background: var(--tag-bg); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  /* owner 决策：收藏列表不展示缩略图，故移除 .fav-card .thumb 样式 */
   .fav-card .body { flex: 1; min-width: 0; }
   .fav-card .ftitle { font-size: calc(16px * var(--fs)); color: var(--text-primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .fav-card .fmeta { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: calc(12px * var(--fsm)); color: var(--text-secondary); }
@@ -205,15 +205,15 @@
   <div class="sec-t">3 · 落地规格（FS 照此实现）</div>
   <table>
     <tr><th>维度</th><th>现状</th><th>优化后</th></tr>
-    <tr><td class="k">列表项</td><td>标题 + 来源·时间两行</td><td>缩略图(60px) + 标题(2行截断) + 分类标签 + 来源·时间</td></tr>
-    <tr><td class="k">缩略图兜底</td><td colspan="2">有 <code>thumbUrl</code> 用 image；无则分类色块占位（emoji + 分类色），不破版</td></tr>
+    <tr><td class="k">列表项</td><td>标题 + 来源·时间两行</td><td>标题(2行截断) + 分类标签 + 来源·时间（<b>无缩略图</b>）</td></tr>
+    <tr><td class="k">分类色标识</td><td colspan="2">不展示缩略图；分类用 <code>--flash-*</code> 文字色做视觉区分（owner 决策：列表去缩略图）</td></tr>
     <tr><td class="k">收藏计数</td><td>无</td><td>nav 右侧「共 N 条」；随筛选联动（全部=N / 某类=该类数）</td></tr>
     <tr><td class="k">分类筛选</td><td>无</td><td>nav 下横滑胶囊（全部+各分类），纯前端 <code>filter</code>，不改数据结构</td></tr>
     <tr><td class="k">删除交互</td><td>无入口</td><td>长按列表项 → ActionSheet「取消收藏 / 取消」（微信习惯，零破坏）</td></tr>
     <tr><td class="k">取消收藏写入</td><td colspan="2">本地 <code>localCache.favorites</code> 立即移除 + 云端 <code>setUserFavorite(false)</code> 双写；列表即时重渲染</td></tr>
     <tr><td class="k">空态</td><td>「还没有收藏任何新闻」</td><td>保留 + 引导「收藏后这里会按分类整理」；筛选无结果变体「该分类下暂无收藏」</td></tr>
-    <tr><td class="k">前置依赖</td><td colspan="2">确认 <code>localCache.favorites</code> 是否存 <code>thumbUrl</code>；若未存，加收藏时补存（轻量）</td></tr>
-    <tr><td class="k">token 来源</td><td colspan="2">全部色值取自 <code>theme.json</code>，缩略图色块用 <code>--flash-*</code> / <code>--tag-bg</code>，零新增</td></tr>
+    <tr><td class="k">前置依赖</td><td colspan="2">确认 <code>localCache.favorites</code> 字段完整性（标题/分类/来源/时间）；<b>不依赖 thumbUrl</b></td></tr>
+    <tr><td class="k">token 来源</td><td colspan="2">全部色值取自 <code>theme.json</code>，分类标识用 <code>--flash-*</code> 文字色，零新增</td></tr>
   </table>
   <div class="hint">
     <b>交互边界</b>：① 筛选只改视图、不动底层 <code>list</code> 数组；② 取消收藏走异步双写，列表乐观更新（先移除再回滚失败）；③ 缩略图缺失一律色块兜底。<br>
@@ -261,7 +261,7 @@
     }
     listEl.innerHTML = items.map(function (i) {
       return '<div class="fav-card" data-id="' + i.id + '" data-title="' + i.title + '">' +
-        '<div class="thumb ' + cls[i.cat] + '">' + i.emoji + '</div>' +
+        '' +  /* owner 决策：收藏列表不展示缩略图 */
         '<div class="body"><div class="ftitle">' + i.title + '</div>' +
         '<div class="fmeta"><span class="fchip ' + cls[i.cat] + '">' + i.name + '</span><span>' + i.source + '</span><span>·</span><span>' + i.time + '</span></div></div></div>';
     }).join('');

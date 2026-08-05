@@ -247,6 +247,12 @@
   padding: 12rpx 0;
   pointer-events: none;
   z-index: 19;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.fixed-swipe-hint.hide {
+  opacity: 0;
 }
 
 .fixed-swipe-hint-icon {

@@ -39,6 +39,8 @@ Page({
     _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
     // TL-B16: 更多功能菜单
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
+    // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
+    showSwipeHint: true,
   },
 
   // 触摸状态（v5.9: 与详情页完全对齐——JS 线程处理、70px/500ms flick-only）
@@ -46,6 +48,19 @@ Page({
   _touchStartX: 0,
   _isAnimating: false,
   _lastSwipeTime: 0,
+
+  /**
+   * 首页底部滑动提示自动消失：进入 ready 显示，3.5s 后淡出；
+   * 用户首次有效滑动时由 onTouchEnd 立即清除（与详情页 UI-B11 行为一致）。
+   */
+  _startSwipeHintTimer() {
+    clearTimeout(this._swipeHintTimer)
+    this.setData({ showSwipeHint: true })
+    var that = this
+    this._swipeHintTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ showSwipeHint: false })
+    }, 3500)
+  },
 
   onLoad() {
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
@@ -249,6 +264,7 @@ Page({
       // resolveIndex 由详情页返回定位使用；未传则沿用当前位置（renderCards 内会做边界钳制）
       const idx = typeof resolveIndex === 'function' ? resolveIndex(list) : undefined
       this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false })
+      this._startSwipeHintTimer()
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
       this._syncPanelList(list)
@@ -393,12 +409,13 @@ Page({
     // 左滑呼出面板：横向手势优先判定，必须早于纵向早退（Math.abs(dy) < 70），
     // 否则纯横向左滑（dy 很小）会被纵向判定直接 return，导致面板永远打不开（Bug 2）。
     if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-      this.setData({ showPanel: true })
+      this.setData({ showPanel: true, showSwipeHint: false }) // 左滑呼出面板 = 有效手势，提示立即淡出
       return
     }
 
     // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
     if (Math.abs(dy) < 70 || dt > 500) return
+    this.setData({ showSwipeHint: false }) // 首次有效上/下滑 → 提示消失（与详情页一致）
 
     var atLast = this.data.currentIndex >= this.data.newsList.length - 1
     var atFirst = this.data.currentIndex <= 0

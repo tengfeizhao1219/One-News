@@ -198,6 +198,12 @@
   background: linear-gradient(transparent, var(--bg-card) 40%);
   pointer-events: none;
   z-index: 20;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.fixed-swipe-hint.hide {
+  opacity: 0;
 }
 
 .fixed-swipe-hint-icon {
@@ -539,7 +545,7 @@
 .more-icon {
   width: 56rpx;
   height: 56rpx;
-  background-color: var(--bg-page); /* fab 反色，保证可读性 */
+  background-color: var(--text-secondary); /* 与 .more-item-icon 同色；原 --bg-page 与 FAB 浅灰近似导致真机浅色模式图标不可见（空白圆圈）*/
   -webkit-mask: url('/assets/icons/settings.svg') no-repeat center / contain;
   mask: url('/assets/icons/settings.svg') no-repeat center / contain;
 }

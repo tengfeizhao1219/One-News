@@ -48,6 +48,8 @@ Page({
     _fontScaleValue: 1,
     // UX-FIX-F12: 元信息/操作栏缩放（封顶 1.15）
     _metaScaleValue: 1,
+    // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
+    showSwipeHint: true,
   },
 
   // 引擎实例
@@ -58,6 +60,19 @@ Page({
   _animating: false,
 
   // ============ 生命周期 ============
+
+  /**
+   * 底部滑动提示自动消失：渲染 ready 显示，3.5s 后淡出；
+   * 用户首次有效滑动时由 onTouchEnd 立即清除（与首页一致）。
+   */
+  _startSwipeHintTimer: function () {
+    clearTimeout(this._swipeHintTimer)
+    this.setData({ showSwipeHint: true })
+    var that = this
+    this._swipeHintTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ showSwipeHint: false })
+    }, 3500)
+  },
 
   onLoad: function (options) {
     var id = options.id
@@ -228,6 +243,7 @@ Page({
       // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
       that._measureScroll()
     })
+    that._startSwipeHintTimer()
     // UX-BUG02: 内容加载后重置滚动状态
     that._isAtTop = true
     that._isAtBottom = false
@@ -273,6 +289,7 @@ Page({
           loading: false,
           pageState: 'ready',
         })
+        that._startSwipeHintTimer()
         if (news && news.id) that._checkFavorite(news.id)
     }).catch(function () {
       that.setData({ pageState: 'error', errorMessage: '新闻详情暂不可用，请返回重试' })
@@ -295,6 +312,7 @@ Page({
     if (Math.abs(dy) < 70 || dt > 500) {
       return
     }
+    this.setData({ showSwipeHint: false }) // 首次有效上/下滑 → 提示消失（与首页一致）
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
     // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶
