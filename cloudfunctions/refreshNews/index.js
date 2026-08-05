@@ -322,11 +322,12 @@ exports.main = async (event) => {
   let skipAiSummary = false
 
   // 1a. 智谱 AI 搜索（主力，v6.6）
-  //     超时安全靠两点：① SEARCH_CONCURRENCY=5 全分类并行→单批~45s 而非两批~90s
-  //     ② 55s 硬预算兜底（正常 45s 完成，不会触发；仅异常时降级天行避免 ret=-3）
+  //     超时安全靠两点：① SEARCH_CONCURRENCY=5 全分类并行→单批而非两批
+  //     ② 30s 硬预算兜底：天行兜底流水线需 ~25s（搜索3+enrich19+写入3），
+  //        故智谱阶段最多占 30s，保证 30+25 < 60s 不触发 ret=-3
   if (zhipuKey) {
     const { searchAllCategories: zhipuSearchAll } = require('./zhipuSearch')
-    const ZHIPU_BUDGET_MS = 55000
+    const ZHIPU_BUDGET_MS = 30000
     try {
       const zhipuResult = await Promise.race([
         zhipuSearchAll(CATEGORIES, db),
