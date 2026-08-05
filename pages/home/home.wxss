@@ -662,3 +662,86 @@
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
+
+/* ============ 暗色模式兜底（BUG-20260805-002 · owner 直连）============
+   微信真机 theme.json CSS 变量偶发失效（detail.wxss 已记录同坑并加兜底），
+   首页此前无兜底 → 暗色模式下背景/文字全部退化，视觉上像被蒙板盖住。
+   此处硬编码 theme.json dark 分支取值，与 detail 页兜底同款模式。
+   色值来源：theme.json dark（--bg-page:#000 / --bg-card:#0D0D0D /
+   --text-primary:#FFF / --text-secondary:#999 / --text-body:#D4D4D4 /
+   --tag-bg:#1C1C1E / --tag-text:#999 / --divider:#1C1C1E /
+   --primary:#0A84FF / --primary-subtle:rgba(10,132,255,0.18)） */
+@media (prefers-color-scheme: dark) {
+  .page {
+    background-color: #000000;
+  }
+  .card {
+    background-color: #0D0D0D;
+  }
+  .card-title,
+  .panel-title,
+  .panel-item-title,
+  .more-item,
+  .category-hint {
+    color: #FFFFFF;
+  }
+  .card-meta,
+  .card-meta text,
+  .panel-subtitle,
+  .panel-empty,
+  .fixed-swipe-hint-text,
+  .state-message {
+    color: #999999;
+  }
+  .summary-p {
+    color: #D4D4D4;
+  }
+  /* AI 摘要胶囊（UI-B8）：变量失效时兜底暗色值 */
+  .ai-chip {
+    color: #0A84FF;
+    background-color: rgba(10, 132, 255, 0.18);
+  }
+  /* 分类标签（全局 app.wxss 定义，此处兜底首页内出现的） */
+  .category-tag {
+    background-color: #1C1C1E;
+    color: #999999;
+  }
+  /* 底部滑动提示渐变（暗色底为 #0D0D0D） */
+  .fixed-swipe-hint {
+    background: linear-gradient(transparent, #0D0D0D 40%);
+  }
+  /* 状态重试按钮：白底黑字（与 var 正常时反转一致） */
+  .state-retry {
+    background-color: #FFFFFF;
+    color: #0D0D0D;
+  }
+  /* 顶部设置按钮 / 浮动 ⚙ / 菜单按压态 */
+  .top-bar-settings,
+  .floating-more,
+  .more-item:active,
+  .panel-item:active {
+    background-color: #1C1C1E;
+  }
+  /* dock 菜单项 */
+  .more-item {
+    background-color: #0D0D0D;
+  }
+  /* 分类切换提示 */
+  .category-hint {
+    background-color: #0D0D0D;
+  }
+  /* 侧边栏面板 */
+  .slide-panel {
+    background-color: #0D0D0D;
+  }
+  /* 骨架屏 */
+  .skeleton-card {
+    background-color: #0D0D0D;
+  }
+  .sk-title,
+  .sk-line,
+  .sk-tag,
+  .sk-source {
+    background: linear-gradient(90deg, #1C1C1E 0%, #0D0D0D 50%, #1C1C1E 100%);
+  }
+}

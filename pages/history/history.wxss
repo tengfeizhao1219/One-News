@@ -163,3 +163,29 @@
   font-size: 24rpx;
   color: var(--text-secondary);
 }
+
+/* ============ 暗色模式兜底（BUG-20260805-002 · owner 直连）============
+   微信真机 theme.json CSS 变量偶发失效 → 页面文字/背景退化。与 detail/home 同款兜底。 */
+@media (prefers-color-scheme: dark) {
+  .page {
+    background-color: #000000;
+  }
+  .nav-title,
+  .history-title {
+    color: #FFFFFF;
+  }
+  .history-meta,
+  .empty-text {
+    color: #999999;
+  }
+  .empty-hint {
+    color: #0A84FF;
+    background-color: #1C1C1E;
+  }
+  .skeleton-item .sk-line {
+    background: #1C1C1E;
+  }
+  .history-item:active {
+    background-color: rgba(255, 255, 255, 0.06);
+  }
+}
