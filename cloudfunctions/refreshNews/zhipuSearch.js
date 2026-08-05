@@ -176,7 +176,7 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
 
 // ─── 分类 Prompt 模板（每分类 15 条，含 content 正文）──
 
-const PER_CATEGORY_COUNT = 15
+const PER_CATEGORY_COUNT = 5  // v6.6：对齐聚合/天行量级，保证 60s 超时内完成
 
 /**
  * 生成分类搜索 Prompt（统一要求 content 正文）
@@ -454,12 +454,15 @@ async function searchNewsByCategory(category, db, quotaRef) {
 
 /**
  * 搜索所有分类的新闻
- * B-12 策略1: 分类间调用间隔（minCallGapMs）
+ * v6.6 超时优化：分类搜索限并发并行（CONCURRENCY_LIMIT），
+ *   搜索阶段从 顺序≈57s 降至 并行≈20s，确保云函数 60s 内完成。
  * B-12 策略4+6: 读取当日配额，传给各分类；搜索完成后写回
  *
  * @param {string[]} categories - 分类列表（默认全部）
  * @param {object} db - 云数据库实例（用于配额读写）
  */
+const SEARCH_CONCURRENCY = 3  // v6.6：分类搜索并发上限（避免瞬时打满 API 限流）
+
 async function searchAllCategories(categories = null, db = null) {
   const cats = categories || Object.keys(CATEGORY_PROMPTS)
   const allNews = []
@@ -478,23 +481,28 @@ async function searchAllCategories(categories = null, db = null) {
     deepseekCalls: quota.deepseekCalls || 0,
   }
 
-  let isFirst = true
-  for (const cat of cats) {
-    // 策略1: 分类间调用间隔（首类不睡）
-    if (!isFirst) {
-      await sleep(MIN_CALL_GAP_MS)
-    }
-    isFirst = false
-
-    const result = await searchNewsByCategory(cat, db, quotaRef)
-    allNews.push(...result.news)
-    stats[cat] = { success: result.news.length > 0, count: result.news.length, engine: result.engine }
-
-    // 策略6: 告警阈值
-    if (quotaRef.zhipuCalls > (RL.zhipuWarnThreshold || 200)) {
-      console.warn(`[zhipuSearch] ⚠️ 智谱单日调用 ${quotaRef.zhipuCalls} 次，已超告警阈值`)
+  // v6.6：限并发并行搜索（替代顺序，规避 60s 超时）
+  let cursor = 0
+  async function worker() {
+    while (cursor < cats.length) {
+      const i = cursor++
+      const cat = cats[i]
+      try {
+        const result = await searchNewsByCategory(cat, db, quotaRef)
+        allNews.push(...result.news)
+        stats[cat] = { success: result.news.length > 0, count: result.news.length, engine: result.engine }
+        if (quotaRef.zhipuCalls > (RL.zhipuWarnThreshold || 200)) {
+          console.warn(`[zhipuSearch] ⚠️ 智谱单日调用 ${quotaRef.zhipuCalls} 次，已超告警阈值`)
+        }
+      } catch (err) {
+        console.error(`[zhipuSearch] 分类 ${cat} 搜索异常:`, err.message)
+        stats[cat] = { success: false, count: 0, engine: 'none' }
+      }
     }
   }
+
+  const workers = Array.from({ length: Math.min(SEARCH_CONCURRENCY, cats.length) }, () => worker())
+  await Promise.all(workers)
 
   // 策略6: 写回当日配额
   if (db) {

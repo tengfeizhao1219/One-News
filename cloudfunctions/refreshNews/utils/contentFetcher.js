@@ -386,11 +386,15 @@ const summarizeWithDashscope = summarizeWithZhipu
 /**
  * 批量 enrich：抓正文 + AI 摘要（并发控制）
  * v6.1：为每条记录标记 summarySource（'ai' | 'desc' | 'title'），供前端判断是否 AI 摘要。
+ * v6.5：新增 skipFetch 参数——智谱 AI 搜索返回的新闻自带 content，跳过网页抓取。
+ * v6.6：新增 skipAiSummary 参数——智谱 prompt 已内联 summary（AI 来源），跳过二次 AI 摘要。
  * @param {Array<Object>} newsList - 待处理新闻列表
  * @param {number} [concurrency=8] - 并发数（控制外部 API 压力）
+ * @param {boolean} [skipFetch=false] - 是否跳过网页抓取（智谱已自带正文）
+ * @param {boolean} [skipAiSummary=false] - 是否跳过 AI 摘要生成（智谱已内联 summary）
  * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
-async function enrichNewsList(newsList, concurrency = 8) {
+async function enrichNewsList(newsList, concurrency = 8, skipFetch = false, skipAiSummary = false) {
   const result = new Array(newsList.length)
   let cursor = 0
 
@@ -399,16 +403,21 @@ async function enrichNewsList(newsList, concurrency = 8) {
       const idx = cursor++
       const item = newsList[idx]
       try {
-        // 1. 抓正文
-        const content = await fetchContentForItem(item)
+        // 1. 抓正文（skipFetch 为 true 时跳过，使用已有的 content）
+        const content = skipFetch ? (item.content || '') : await fetchContentForItem(item)
         const enriched = { ...item, content }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）
         const rawSummary = (item.summary || '').trim()
         let summarySource = (!rawSummary || rawSummary === item.title) ? 'title' : 'desc'
 
-        // 3. 抓到正文后生成 AI 摘要（v6.2：智谱 GLM-4-Flash，优先覆盖）
-        if (content && content.length > 10) {
+        // 3. AI 摘要（v6.6：skipAiSummary 时跳过——智谱已内联 summary，标记为 'ai'）
+        if (skipAiSummary) {
+          // 智谱 prompt 已内联 summary，且经过 AI 生成 → 标记为 'ai'
+          if (rawSummary && rawSummary.length >= 20 && rawSummary !== item.title) {
+            summarySource = 'ai'
+          }
+        } else if (content && content.length > 10) {
           const aiSummary = await summarizeWithZhipu(content, item.title)
           if (aiSummary && aiSummary.length >= 20) {
             enriched.summary = aiSummary
