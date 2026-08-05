@@ -38,5 +38,22 @@
   "editorSetting": {
     "tabIndent": "insertSpaces",
     "tabSize": 2
+  },
+  "packOptions": {
+    "ignore": [
+      { "type": "folder", "value": "scripts" },
+      { "type": "folder", "value": "test" },
+      { "type": "folder", "value": "docs" },
+      { "type": "folder", "value": "demo" },
+      { "type": "folder", "value": "config" },
+      { "type": "folder", "value": "node_modules" },
+      { "type": "folder", "value": ".github" },
+      { "type": "folder", "value": ".github-scripts" },
+      { "type": "folder", "value": ".notion_build" },
+      { "type": "folder", "value": ".git-staging" },
+      { "type": "regexp", "value": "\\.md$" },
+      { "type": "regexp", "value": "\\.py$" },
+      { "type": "regexp", "value": "\\.sh$" }
+    ]
   }
 }
