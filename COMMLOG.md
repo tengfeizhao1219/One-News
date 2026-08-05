@@ -1,3 +1,48 @@
+## [2026-08-05 08:03] 🔧 PD 发布 GitHub 推送修复方案 v3.0（废弃 GM v2.0） | 会话：[产品设计师(PD)]
+
+**背景**：GM v2.0 方案（dnsmasq + resolv.conf + git ls-remote 8 IP 并发探测）步骤多、易失败、影响全局 DNS。今天 push 验收 v1.4 时踩坑——8 个 IP 全挂，最终用 `curloptResolve` 一行搞定。
+
+### v3.0 方案（curloptResolve）
+
+**原理**：git 内嵌 libcurl，`CURLOPT_RESOLVE` 在发起连接前直接喂 DNS 结果，完全绕过系统 DNS 和 DPI 劫持。
+
+```bash
+git config http.https://github.com.curloptresolve "github.com:443:140.82.113.4"
+```
+
+就这么一行。恢复也简单：
+```bash
+git config --unset http.https://github.com.curloptresolve
+```
+
+### 自动化脚本
+
+`scripts/setup_github_dns.sh`：
+- 用系统 openssl 探测 8 个候选 IP（哪个 TLS 握手能通过）
+- 自动写入 git config
+- 支持 `--global`（全局）和 `--check`（仅检查）
+
+```bash
+bash .github-scripts/setup_github_dns.sh          # 当前仓库
+bash .github-scripts/setup_github_dns.sh --global  # 全局
+bash .github-scripts/setup_github_dns.sh --check   # 仅检查
+```
+
+### 对比
+
+| | GM v2.0 | PD v3.0 |
+|---|---|---|
+| 步骤 | 8 IP 并发探测 → 写 dnsmasq → 重启服务 → 改 resolv.conf → git 验证 | 1 条 git config |
+| 依赖 | dnsmasq + resolv.conf bind mount | 零额外依赖 |
+| 影响面 | 本机所有 github.com 流量 | 仅当前仓库 git 操作 |
+| 失败率 | 高（resolv.conf bind mount 写入不可靠） | 低（纯 git 内置机制） |
+
+### 交付物
+
+- 🆕 `scripts/setup_github_dns.sh`（v3.0 自动化脚本）
+- `TASK_BOARD.md`（08:03 广播区置顶，标注 GM v2.0 已废弃）
+
+---
 ## [2026-08-05 07:40] 🔍 PD 验收 v1.4：BUG-TL17-016 关闭 ✅ · 新增 2 个 🔴 提单 · 整体不予通过 | 会话：[产品设计师(PD)]
 
 **owner 指令（07:37）**：「验收一下」。基线 `6907a1e`（含 `8d698a2` / `d8880bb` / `04c3b47` / `ff5d077`）。

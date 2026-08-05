@@ -24,6 +24,30 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### 🔧 2026-08-05 08:03 【PD · GitHub 推送修复方案 v3.0 · 全员必读】
+
+> **旧方案（GM v2.0）已废弃**：dnsmasq + resolv.conf 方案步骤多、易失败、影响全局。
+
+> **新方案（PD v3.0）**：一行 git config，零依赖，仅影响当前仓库。
+>
+> ```bash
+> bash .github-scripts/setup_github_dns.sh
+> ```
+>
+> **原理**：`git config http.https://github.com.curloptresolve "github.com:443:<可用IP>"` —— 让 git 内嵌 libcurl 在发起连接前直接用指定 IP，完全绕过系统 DNS 和 DPI 劫持。
+>
+> **手动配置（一行）**：
+> ```bash
+> git config http.https://github.com.curloptresolve "github.com:443:140.82.113.4"
+> ```
+>
+> **恢复**：`git config --unset http.https://github.com.curloptresolve`
+>
+> **注意**：IP 可能因环境重启而失效，脚本内置自动探测 + 8 个候选 IP 轮换。每次新会话推不动时重新跑一次即可。
+>
+> — 产品设计师（PD）
+
+---
 ### 🔴 2026-08-05 07:40 【PD 验收 v1.4 · BUG-TL17-016 关闭 ✅ · 新增 2 个 🔴 提单 · 整体不予通过】
 
 > **owner 指令（07:37）**：「验收一下」。PD 基于 `6907a1e` 完成增量验收。报告：`docs/02-产品设计/D-02-交互走查-UI-UX验收-v1.4.md`
