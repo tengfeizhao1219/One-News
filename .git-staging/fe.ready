@@ -1,19 +1,16 @@
 {
   "role": "fe",
-  "timestamp": "2026-08-05T15:25:00+08:00",
-  "summary": "详情页+浏览记录+收藏页+设置页按 demo 一一对齐优化",
+  "timestamp": "2026-08-05T15:30:00+08:00",
+  "summary": "按用户截图还原浏览记录/收藏页：SVG home图标、34rpx标题、收藏筛选去「全部」、标签去色、列表简化",
   "files": [
-    "pages/detail/detail.js",
     "pages/detail/detail.wxml",
     "pages/detail/detail.wxss",
-    "pages/history/history.*",
-    "pages/favorites/favorites.*",
-    "pages/settings/settings.*",
-    "pages/home/home.js",
-    "pages/home/home.wxml",
-    "app.json",
-    "theme.json"
+    "pages/history/history.wxml",
+    "pages/history/history.wxss",
+    "pages/favorites/favorites.wxml",
+    "pages/favorites/favorites.wxss",
+    "pages/favorites/favorites.js"
   ],
   "ready": true,
-  "commit": "306b791"
+  "commit": ""
 }

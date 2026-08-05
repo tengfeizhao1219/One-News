@@ -39,11 +39,6 @@
   width: 44rpx;
   height: 44rpx;
 }
-.nav-home-icon-text {
-  font-size: 44rpx;
-  line-height: 1;
-  color: var(--primary);
-}
 
 .nav-back {
   font-size: calc(28rpx * var(--font-scale));  /* D-05#2: 参与字号缩放 */

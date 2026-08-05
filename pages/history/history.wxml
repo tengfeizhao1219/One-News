@@ -6,8 +6,7 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <!-- UI-B4: 主页图标使用文本符号，跟随 --primary 着色 -->
-      <text class="nav-home-icon-text">⌂</text>
+      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">浏览记录</view>
   </view>
@@ -44,7 +43,7 @@
       <view class="history-main">
         <view class="history-title">{{item.title}}</view>
         <view class="history-meta">
-          <text wx:if="{{item.source || item.categoryName}}">{{item.source || item.categoryName}}</text>
+          <text>{{item.source || item.categoryName || ''}}</text>
           <text wx:if="{{(item.source || item.categoryName) && item._time}}">·</text>
           <text>{{item._time}}</text>
         </view>

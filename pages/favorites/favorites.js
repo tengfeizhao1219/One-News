@@ -8,22 +8,14 @@ var app = getApp()
 // 与首页侧边栏同源 Storage（localCache 'lc:' 前缀），可读到详情页写入的 favorites
 var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000 })
 
-// UI-B10: 分类筛选胶囊（与 reading-engine 跨分类顺序一致）
+// UI-B10: 分类筛选胶囊（与 reading-engine 跨分类顺序一致；去掉「全部」，默认展示全部）
 var CATEGORIES = [
-  { id: 'all', name: '全部' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '世界' },
   { id: 'sports', name: '体育' },
   { id: 'life', name: '生活' },
 ]
 
-// 分类 → CSS 强调色类名
-var CATEGORY_CLASS_MAP = {
-  tech: 'c-tech',
-  international: 'c-world',
-  sports: 'c-sports',
-  life: 'c-life',
-}
 
 Page({
   data: {
@@ -31,7 +23,7 @@ Page({
     list: [],
     filteredList: [],
     categories: CATEGORIES,
-    activeCategory: 'all',
+    activeCategory: '',
     filteredCount: 0,
     loading: true,
     isEmpty: false,
@@ -73,22 +65,17 @@ Page({
    * UI-B10: 统一设置列表并应用当前筛选
    */
   _setList: function (list) {
-    var decorated = list.map(function (item) {
-      return Object.assign({}, item, {
-        categoryClass: CATEGORY_CLASS_MAP[item.category] || '',
-      })
-    })
-    this._allList = decorated
-    this._applyFilter(decorated, this.data.activeCategory)
+    this._allList = list
+    this._applyFilter(list, this.data.activeCategory)
   },
 
   /**
    * UI-B10: 应用分类筛选
    */
   _applyFilter: function (list, category) {
-    var filtered = category === 'all'
-      ? list
-      : list.filter(function (item) { return item.category === category })
+    var filtered = category
+      ? list.filter(function (item) { return item.category === category })
+      : list
     this.setData({
       list: list,
       filteredList: filtered,
@@ -138,8 +125,9 @@ Page({
    */
   onFilterTap: function (e) {
     var cat = e.currentTarget.dataset.id
-    this.setData({ activeCategory: cat })
-    this._applyFilter(this._allList || this.data.list, cat)
+    var next = this.data.activeCategory === cat ? '' : cat
+    this.setData({ activeCategory: next })
+    this._applyFilter(this._allList || this.data.list, next)
   },
 
   /**

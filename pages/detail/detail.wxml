@@ -28,8 +28,7 @@
   <view class="nav-bar">
     <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <!-- UI-B11: 主页图标使用文本符号，可跟随 --primary 着色（SVG image 无法继承 currentColor） -->
-      <text class="nav-home-icon-text">⌂</text>
+      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>

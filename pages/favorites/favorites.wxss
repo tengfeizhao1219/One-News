@@ -37,11 +37,6 @@
   width: 44rpx;
   height: 44rpx;
 }
-.nav-home-icon-text {
-  font-size: 44rpx;
-  line-height: 1;
-  color: var(--primary);
-}
 .nav-title {
   font-size: 34rpx;
   font-weight: 600;
@@ -67,7 +62,7 @@
 }
 .filter-chip {
   flex-shrink: 0;
-  font-size: 26rpx;
+  font-size: 28rpx;
   padding: 10rpx 24rpx;
   border-radius: 24rpx;
   background: var(--tag-bg);
@@ -76,15 +71,15 @@
   transition: all 0.15s;
 }
 .filter-chip.on {
-  background: var(--primary);
-  color: #fff;
+  background: var(--text-primary);
+  color: var(--bg-card);
 }
 
 /* UI-B10: 长按提示 */
 .longpress-hint {
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--text-tertiary);
-  padding: 0 32rpx 12rpx;
+  padding: 0 32rpx 16rpx;
   flex-shrink: 0;
 }
 
@@ -146,20 +141,16 @@
   flex: 1;
   padding: 2rpx 32rpx 40rpx;
 }
-.fav-card {
-  display: flex;
-  gap: 16rpx;
+.fav-item {
   padding: 24rpx 0;
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
-  align-items: flex-start;
   transition: opacity 0.2s;
 }
-.fav-body {
-  flex: 1;
-  min-width: 0;
+.fav-item:active {
+  background-color: rgba(0, 0, 0, 0.04);
 }
 .fav-title {
-  font-size: 30rpx;
+  font-size: 34rpx;
   color: var(--text-primary);
   line-height: 1.4;
   display: -webkit-box;
@@ -168,27 +159,21 @@
   overflow: hidden;
 }
 .fav-meta {
-  margin-top: 14rpx;
+  margin-top: 10rpx;
   display: flex;
   align-items: center;
   gap: 8rpx;
-  font-size: 22rpx;
+  font-size: 24rpx;
   color: var(--text-secondary);
   flex-wrap: wrap;
 }
-.fav-chip {
-  padding: 2rpx 14rpx;
-  border-radius: 10rpx;
+.fav-tag {
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
   background: var(--tag-bg);
-  font-size: 20rpx;
-  font-weight: 500;
+  font-size: 22rpx;
   color: var(--tag-text);
 }
-/* UI-B10: 分类标签强调色 */
-.fav-card.c-tech .fav-chip { color: var(--flash-tech); }
-.fav-card.c-world .fav-chip { color: var(--flash-world); }
-.fav-card.c-sports .fav-chip { color: var(--flash-sports); }
-.fav-card.c-life .fav-chip { color: var(--flash-life); }
 
 /* UI-B10: 长按 ActionSheet */
 .sheet-mask {

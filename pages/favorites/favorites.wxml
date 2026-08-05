@@ -6,14 +6,13 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中）+ 计数（右） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <!-- UI-B10: 主页图标使用文本符号，跟随 --primary 着色 -->
-      <text class="nav-home-icon-text">⌂</text>
+      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">我的收藏</view>
     <view class="nav-count" wx:if="{{!loading}}">共 {{filteredCount}} 条</view>
   </view>
 
-  <!-- UI-B10: 分类筛选胶囊 -->
+  <!-- UI-B10: 分类筛选胶囊（无「全部」，默认展示全部） -->
   <view class="filter-bar" wx:if="{{!loading && !isEmpty}}">
     <view
       class="filter-chip {{activeCategory === item.id ? 'on' : ''}}"
@@ -54,7 +53,7 @@
   <!-- 列表 -->
   <scroll-view class="list-scroll" scroll-y wx:if="{{!loading && !isEmpty}}">
     <view
-      class="fav-card {{item.categoryClass}}"
+      class="fav-item"
       wx:for="{{filteredList}}"
       wx:key="id"
       data-id="{{item.id}}"
@@ -63,14 +62,12 @@
       bindlongpress="onLongPress"
       bindtouchstart="onTouchStart"
       bindtouchend="onTouchEnd">
-      <view class="fav-body">
-        <view class="fav-title">{{item.title}}</view>
-        <view class="fav-meta">
-          <text class="fav-chip">{{item.categoryName}}</text>
-          <text wx:if="{{item.source}}">{{item.source}}</text>
-          <text wx:if="{{item.source && item._time}}">·</text>
-          <text>{{item._time}}</text>
-        </view>
+      <view class="fav-title">{{item.title}}</view>
+      <view class="fav-meta">
+        <text class="fav-tag">{{item.categoryName}}</text>
+        <text wx:if="{{item.source}}">{{item.source}}</text>
+        <text wx:if="{{item.source && item._time}}">·</text>
+        <text>{{item._time}}</text>
       </view>
     </view>
   </scroll-view>
