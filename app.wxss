@@ -13,7 +13,7 @@ page {
    注入 class="page--dark"。此处变量定义作用于任意页面根节点（原定义在
    settings.wxss，仅设置页自身生效——这就是手动夜晚模式只改设置页的根因）。
    变量值 = theme.json dark 分支，与系统暗色一致。
-   D-07 补全（2026-08-05 FE）：补 --flash-*/--wheel-*/--color-favorite-active/
+   D-07 补全（2026-08-05 FE）：补 --flash-★ --wheel-★ --color-favorite-active
    --setting-panel-blur —— 此前缺失导致「手动深色+系统浅色」时分类轮盘取系统
    浅色值（G-03 文字不可见）、分类高亮色偏暗（发现 C）、进度条分类名着色错位。 */
 .page--dark {
