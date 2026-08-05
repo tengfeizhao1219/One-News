@@ -111,28 +111,23 @@ console.log('\n【静态】detail.js _swipeToNext/Prev 翻页动画（详情页�
   const js = read(files.detailJs)
   check('detail _swipeToNext 以 in-up no-transition 起始（从底部上滑入）',
     js.includes("animClass: 'in-up no-transition'"))
-  // v5.12: 翻上一页不再用 in-down 整屏滑入，改用 fade-in 淡入（不同新闻长度不同导致速度感不一致）
-  check('detail _swipeToPrev 以 fade-in no-transition 起始（淡入）',
-    js.includes("animClass: 'fade-in no-transition'"))
-  // 防止回退为「裸 in-up」（会穿越全屏导致反向）
+  check('detail _swipeToPrev 以 in-down no-transition 起始（从顶部整屏下滑入）',
+    js.includes("animClass: 'in-down no-transition'"))
+  // 防止回退为「裸 in-up / in-down」（会穿越全屏导致反向）
   check('detail _swipeToNext 无裸 in-up（必带 no-transition）',
     !/setData\(\{\s*animClass:\s*'in-up'\s*\}/.test(js))
-  // v5.12: 确认 in-down 已被 fade-in 替代
-  check('detail _swipeToPrev 不再使用 in-down 整屏滑入',
-    !js.includes("animClass: 'in-down"))
+  check('detail _swipeToPrev 无裸 in-down（必带 no-transition）',
+    !/setData\(\{\s*animClass:\s*'in-down'\s*\}/.test(js))
 }
 
-// ===== 详情页 WXSS：no-transition + fade-in 类存在 =====
+// ===== 详情页 WXSS：动画类存在 =====
 console.log('\n【静态】detail.wxss .article 动画类')
 {
   const wxss = read(files.detailWxss)
   check('detail.wxss 含 .article.no-transition { transition: none }',
     /\.article\.no-transition\s*\{\s*transition:\s*none/.test(wxss))
-  // v5.12: 翻上一页改用 fade-in 淡入，不再 in-down 整屏滑入
-  check('detail.wxss 含 .article.fade-in { opacity: 0 }',
-    /\.article\.fade-in\s*\{\s*opacity:\s*0/.test(wxss))
-  check('detail.wxss 不含 .article.in-down（已被 fade-in 替代）',
-    !wxss.includes('.article.in-down'))
+  check('detail.wxss 含 .article.in-down（整屏从上方滑入）',
+    wxss.includes('.article.in-down'))
 }
 
 // ===== 首页 WXSS：no-transition 类存在（多卡片模型吸附修复） =====
@@ -163,7 +158,7 @@ console.log('\n【静态】home.wxss / detail.wxss 翻页偏移使用 --page-h�
     ".article.out-up   { transform: translateY(calc(-1 * var(--page-h",
     ".article.out-down { transform: translateY(var(--page-h",
     ".article.in-up    { transform: translateY(var(--page-h",
-    // v5.12: .article.in-down 已被 .article.fade-in 替代，不再检查
+    ".article.in-down  { transform: translateY(calc(-1 * var(--page-h",
   ]
   dNeed.forEach(function (s) {
     check('detail.wxss ' + s.trim().split(' ')[0] + ' 使用 --page-h', dWxss.includes(s))

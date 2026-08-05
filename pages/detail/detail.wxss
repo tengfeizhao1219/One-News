@@ -97,8 +97,9 @@
 .article.out-down { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
 /* 上滑翻下一条：新内容从下方滑入（+page-h→0，由移除 class 触发 transition） */
 .article.in-up    { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
-/* 下滑翻上一条（v5.12）：旧内容向下移出(out-down)后，新内容直接淡入，
-   不再整屏滑入（不同新闻长度不同导致 in-down 滑入速度感不一致）。 */
+/* 下滑翻上一条：新内容从上方滑入（-page-h→0，整屏滑入，与翻下一页对称） */
+.article.in-down  { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
+/* 备用：淡入效果（当前未使用，保留供后续切换） */
 .article.fade-in  { opacity: 0; }
 
 /* ============ 边界提示 Chip ============ */

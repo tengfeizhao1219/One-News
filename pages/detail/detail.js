@@ -511,12 +511,12 @@ Page({
       contentPromise.then(function () {
         that._switching = false
         // out-down 阶段结束，旧内容已移出屏幕下方。
-        // v5.12: 翻上一页不再用 in-down 整屏滑入（不同新闻长度不同导致速度感不一致），
-        // 改用 fade-in 淡入——新内容直接渲染在顶部(scrollTop:0)，从透明淡入。
+        // 翻上一页：旧内容向下移出后，新内容整屏从上方滑入（in-down: -page-h→0）。
+        // 与翻下一页（in-up: +page-h→0）对称，均为一整屏画面滑入，与正文长度无关。
         that._applyPendingDetail()
-        // 先以 no-transition 瞬间吸附回中心（清除 out-down 的 translateY(+page-h)），
-        // 同时设 fade-in（opacity:0），再移除 no-transition+fade-in 触发 transition 淡入
-        that.setData({ animClass: 'fade-in no-transition', scrollTop: 0 })
+        // 先以 no-transition 瞬间吸附到 -page-h（屏幕上方整屏位置），
+        // 再移除 class 触发 transition 从上方整屏滑入
+        that.setData({ animClass: 'in-down no-transition', scrollTop: 0 })
         setTimeout(function () {
           that.setData({ animClass: '' })
           that._animating = false
