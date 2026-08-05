@@ -52,10 +52,12 @@
   color: var(--text-primary);
 }
 
-/* 滚动容器 */
+/* 滚动容器（BUG-FE-20260805-001：min-height:0 + overflow-y:auto，修复内容超一屏无法滚动，
+   与 detail 页 .content 方案对齐；原 overflow:hidden 会直接裁剪内容） */
 .scroller {
   flex: 1;
-  overflow: hidden;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* 品牌区 */

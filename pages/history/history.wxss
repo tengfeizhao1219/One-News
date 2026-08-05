@@ -123,9 +123,12 @@
   background: var(--tag-bg, rgba(0,0,0,0.04));
 }
 
-/* 列表 */
+/* 列表（BUG-FE-20260805-001：min-height:0 + overflow-y:auto，修复内容超一屏无法滚动，
+   与 detail 页 .content 方案对齐） */
 .list-scroll {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 8rpx 16rpx 40rpx;
 }
 .history-item {

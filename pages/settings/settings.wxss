@@ -44,6 +44,11 @@
 
 .scroller {
   flex: 1;
+  /* BUG-FE-20260805-001：flex 子项默认 min-height:auto 会被内容撑开，超出 .page 被裁剪
+     导致内容超过一屏无法滚动。min-height:0 允许收缩到 flex 分配高度 + overflow-y:auto
+     CSS 滚动兜底（与 detail 页 .content 已验证方案对齐）。 */
+  min-height: 0;
+  overflow-y: auto;
   padding: 6rpx 0 40rpx;
 }
 
