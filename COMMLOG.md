@@ -1,3 +1,19 @@
+## [2026-08-05 23:01] 📤→✅ FE 已提交 · commit `129a31a`（BUG-20260805-004 详情页已收藏按钮背景变红）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit `129a31a`（rebase 后 hash，原 `d5d0596`）：修复详情页收藏按钮区域变红
+
+**owner 反馈**：点击收藏后只需红心 icon 为红色，按钮区域（背景）不需展示为红色。
+
+**修复**：
+- `detail.wxss`：移除 `.bottom-bar-btn.is-favorited { background-color: var(--color-favorite-tint); }`（粉红背景）
+- `detail.wxss`：移除 `.bottom-bar-btn.is-favorited .bottom-bar-label { color: var(--color-favorite); }`（文字变红）
+- `detail.wxml`：移除 `.bottom-bar-label` 的 inline style（文字颜色恢复默认 `--text-secondary`）
+
+**效果**：收藏态仅红心 icon 为红色（由 favorite-fill.svg 固定 `fill='#FF3B30'` 提供），按钮背景与文字保持普通样式。
+
+---
+
 ## [2026-08-05 22:55] 📤→✅ FE 已提交 · commit `e29290f`（BUG-FE-20260805-001 二级页面无法滚动修复）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：
