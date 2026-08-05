@@ -256,6 +256,20 @@
   opacity: 0;
 }
 
+/* UI-B11: 顶部阅读进度细条（nav-bar 下方） */
+.reading-progress {
+  height: 2rpx;
+  background: var(--divider);
+  flex-shrink: 0;
+}
+
+.reading-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--progress);
+  transition: width 0.08s linear;
+}
+
 .fixed-swipe-hint-icon {
   width: 32rpx;
   height: 32rpx;

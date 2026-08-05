@@ -36,6 +36,11 @@
     </view>
   </view>
 
+  <!-- 阅读进度细条（UI-B11：nav 下方 2rpx 浅蓝线） -->
+  <view class="reading-progress" wx:if="{{pageState === 'ready' && total > 1}}">
+    <view class="reading-progress-bar" style="width: {{progressPercent}}%;"></view>
+  </view>
+
   <!-- 内容 -->
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
@@ -95,7 +100,7 @@
   </view>
 
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于操作栏上方，不随内容滚动） -->
-  <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready'}}">
+  <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready' && showSwipeHint !== false}}">
     <view class="fixed-swipe-hint-icon" style="-webkit-mask-image: url('/assets/icons/swipe.svg'); mask-image: url('/assets/icons/swipe.svg');"></view>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>

@@ -50,6 +50,8 @@ Page({
     _fontScaleValue: 1,
     // UX-FIX-F12: 元信息/操作栏缩放（封顶 1.15）
     _metaScaleValue: 1,
+    // UI-B11: 阅读进度条百分比
+    progressPercent: 0,
     // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
     showSwipeHint: true,
   },
@@ -244,6 +246,7 @@ Page({
       scrollTop: 0,
       loading: false,
       pageState: 'ready',
+      progressPercent: 0,
     }, function () {
       // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
       that._measureScroll()
@@ -341,6 +344,10 @@ Page({
     var scrollHeight = e.detail.scrollHeight
     var clientHeight = this._clientHeight || 500
     this._lastScrollTop = scrollTop
+    // UI-B11: 实时更新进度条百分比
+    var progressMax = scrollHeight - clientHeight
+    var pct = progressMax > 0 ? Math.min(100, Math.round(scrollTop / progressMax * 100)) : 0
+    this.setData({ progressPercent: pct })
     // 触顶阈值 10px，触底阈值 50px（微信 scroll-view 可能无法精确到 0）
     this._isAtTop = scrollTop <= 10
     // BUG-20260802-001: 触底以原生 scrolltolower 为准，此处只负责「明确离开底部」时复位，
