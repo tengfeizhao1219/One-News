@@ -1,7 +1,13 @@
 {
   "role": "fe",
-  "timestamp": "2026-08-05T12:51:00+08:00",
-  "summary": "巡检确认 BUG-PD-017/018 已在 v5.10 修复，更新 TASK_BOARD 状态为已完成",
-  "files": ["TASK_BOARD.md"],
-  "ready": true
+  "timestamp": "2026-08-05T15:10:00+08:00",
+  "summary": "详情页按 UI-B11 demo 一一优化视觉与交互（收藏态/进度条/底栏/滑动提示等）",
+  "files": [
+    "pages/detail/detail.js",
+    "pages/detail/detail.wxml",
+    "pages/detail/detail.wxss",
+    "theme.json"
+  ],
+  "ready": true,
+  "commit": "71a3bfc"
 }
