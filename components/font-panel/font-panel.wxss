@@ -97,7 +97,9 @@
   width: 12rpx;
   height: 12rpx;
   border-radius: 50%;
-  background-color: #FFFFFF;
+  /* D-07 S3 #3（FE 2026-08-05）：原 #FFFFFF 硬编码 → var(--bg-card)，
+     暗色下圆底 var(--text-primary)=白、点须为深色，否则白点+白圆不可见 */
+  background-color: var(--bg-card);
 }
 /* D-07 S3（G-07）：深色下选中圆点背景=--text-primary=白色，白点不可见 → 显式深色覆盖 */
 .page--dark .radio-dot {

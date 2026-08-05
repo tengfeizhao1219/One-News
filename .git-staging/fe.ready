@@ -1,10 +1,13 @@
 {
   "role": "FE",
-  "task": "BUG-20260805-001-followup2",
-  "title": "首页 dock 菜单灰蒙蒙复反馈修复",
-  "summary": "owner 复反馈：dock 菜单选项仍灰蒙蒙 + 蒙板太透明。根因①：⚙ 按钮 z-index 26 < 蒙板 27 被盖住；根因②：暗色下菜单项 #0D0D0D 与纯黑背景几乎同色。修复：蒙板 0.22→0.26(+20%)，⚙ z-index→29，暗色菜单项浮层表面色 #1C1C1E + 阴影加深，.page--dark 手动深色同步覆盖。",
+  "task": "D-07-FE-PART",
+  "title": "D-07 FE 部分：暗色可见性契约修复（owner 截图）",
+  "summary": "认领 D-07 治理中 FE 职责部分（PD D-07.1 定位缺口）：① G-03 分类轮盘手动深色文字不可见 → app.wxss .page--dark 补 --wheel-* 7 个；② 发现 C 高亮分类色偏暗 → 补 --flash-* 5 个；③ font-panel radio-dot 白点不可见 → var(--bg-card)；④ settings switch-knob 裸色收敛。值=theme.json dark 逐项一致。新增 test/v13-fe-dark-visibility.js 84/0。",
   "files": [
-    "pages/home/home.wxss"
+    "app.wxss",
+    "components/font-panel/font-panel.wxss",
+    "pages/settings/settings.wxss",
+    "test/v13-fe-dark-visibility.js"
   ],
-  "testResults": "v5 18/0, v6 20/0, v5.11 40/0, v7-runtime OK, v11 25/0"
+  "testResults": "v13 84/0, v5 18/0, v6 20/0, v5.11 40/0, v7-runtime OK, v11 25/0, b06 20/0, v12 33/0"
 }
