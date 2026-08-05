@@ -133,11 +133,14 @@ console.log('\n【静态】detail.js UI 层架构不变量')
   check('含 animClass 动画状态（out-up/out-down/in-up/in-down）',
     js.includes("animClass:"))
 
-  // 边界提示
-  check('含 _showBoundary 边界提示方法',
-    js.includes('_showBoundary'))
-  check('边界提示自动消失（2s timer）',
-    js.includes('_boundaryTimer'))
+  // 边界提示（UX-SIMPLIFY 变更：边界 Chip 逻辑已移除，保留 wxml 模板仅作兼容；
+  //  当前提示实现 = 底部固定滑动提示条 fixed-swipe-hint + 跨分类分类名着色 flashColor）
+  check('含跨分类分类名着色（flashColor，UX-SIMPLIFY05 替代闪烁条）',
+    js.includes('flashColor'))
+  check('含底部滑动提示自动消失（_swipeHintTimer）',
+    js.includes('_swipeHintTimer'))
+  check('含 _getCategoryColorVar 分类色映射',
+    js.includes('_getCategoryColorVar'))
 
   // 返回定位
   check('goBack 前写入 globalData._detailReturnState',
@@ -169,7 +172,8 @@ console.log('\n【静态】detail.wxml UI 模板')
   const wxml = read(files.detailWxml)
   check('含导航栏返回按钮', wxml.includes('goBack'))
   check('含进度指示器（positionText）', wxml.includes('positionText'))
-  check('含跨分类闪烁条（flashVisible）', wxml.includes('flashVisible'))
+  check('含跨分类分类名着色元素（position-category，UX-SIMPLIFY05）', wxml.includes('position-category'))
+  check('含底部固定滑动提示条（fixed-swipe-hint，UI-B7 §3.5）', wxml.includes('fixed-swipe-hint'))
   check('含标题展示', wxml.includes('news.title'))
   check('含正文段落列表', wxml.includes('paragraphs'))
   check('含 scroll-view（正文滚动）', wxml.includes('scroll-view'))
@@ -213,7 +217,7 @@ console.log('\n【静态】home.js 详情页入口与返回定位')
 console.log('\n【静态】引导文案')
 {
   const wxml = read(files.homeWxml)
-  check('引导文案更新为"点击卡片进入阅读"', wxml.includes('点击卡片进入阅读'))
+  check('引导文案为"上滑阅读下一条"（UI-B7 §3.5，替代旧"点击卡片进入阅读"）', wxml.includes('上滑阅读下一条'))
   check('引导文案不再含"阅读全文"', !wxml.includes('阅读全文'))
 }
 
