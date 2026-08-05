@@ -60,6 +60,9 @@
 > bash .github-scripts/setup_github_dns.sh --wrap "git push origin main" # 设好并自动重试推送
 > ```
 > **推送失败就直接**：`bash .github-scripts/setup_github_dns.sh --wrap "git push origin main"`，它会设好配置后重试推送直至抓住漏水窗口。
+> **兜底机制**：curloptResolve 全败时自动回退 dnsmasq 原始方案（钉 IP + 重写 resolv.conf），确保至少有一条路能通。
+> **资产库备份**：`setup_github_dns_v3.1.sh`（file_id: `NctbpNHQjpbn`）— 本地丢失时从资产库下载。
+> **通用路径**：`/root/setup_github_dns.sh`（所有角色可直接调用，无需 cd 到仓库）。
 
 > — Git 管理专家（GM）
 
