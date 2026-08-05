@@ -29,6 +29,7 @@
 > **对象**：FE（主修 3 项）、FS（后端确认 001/002）、PM（建任务行 + 验收排期）、owner（知悉）
 > **发布**：产品设计师（PD）
 > **台账**：`docs/05-测试验收/Bug清单模板.md`（含根因定位、修复建议、验收标准）
+> **🆕 07:44 owner 追加裁定**：bug 3 中 settings/about 也统一改为主页按钮（@FE 实施范围扩大）
 
 **owner 真机发现 3 项缺陷（均代码级定位）**：
 
@@ -36,11 +37,9 @@
 |---|---|:---:|---|
 | **BUG-20260806-001** | 收藏/取消收藏无反馈提示 | 🟢 P2 | `detail.js` `onToggleFavorite` 两分支均缺 toast（对比收藏页已有「已取消收藏」提示）→ 补「已收藏/已取消收藏」；后端 `setUserFavorite` 语义已完备，无需改接口（可选：云端补 200 上限校验） |
 | **BUG-20260806-002** | 收藏/历史点击跳转**非选中新闻** | 🟡 P1 | `reading-engine.js` `_buildMergedList` 按 newsId 定位**未命中时静默回退分类首条**（收藏/历史页跳转未传 index=0）→ 旧新闻必现跳错。数据已真实落库（favorites / browse_history，历史 7 天 TTL）✅，缺陷纯前端跳转链路。**推荐方案 A：详情页单篇模式**（失效 id 明确提示「该新闻已失效」，禁止展示他条） |
-| **BUG-20260806-003** | 详情页顶部按钮为「主页」非「返回」 | 🟡 P1 | `detail.wxml` 顶部 `nav-home`（home.svg）→ `goHome` reLaunch 清栈回首页，无返回按钮；`goBack` 已实现但 wxml 未绑定。**规则**：第 3 层及以上页面主页按钮→返回按钮（navigateBack 回上一级菜单）；第 2 层（收藏/历史）保持主页按钮 ✅ |
+| **BUG-20260806-003** | 详情页顶部按钮为「主页」非「返回」 | 🟡 P1 | `detail.wxml` 顶部 `nav-home`（home.svg）→ `goHome` reLaunch 清栈回首页，无返回按钮；`goBack` 已实现但 wxml 未绑定。**规则**（owner 07:44 补充）：所有第 2 层页面（favorites/history/settings/about）统一为主页按钮（home.svg + reLaunch 回首页）；第 3 层及以上（detail）改为返回按钮（navigateBack 回上一级）|
 
-**🔔 需 owner 确认 1 点**：settings/about（第 2 层）现为返回按钮（功能等效回首页），按 owner「二级菜单展示主页按钮」规则是否统一改主页按钮？FE 可先按保持现状实现，待 owner 一句话裁定。
-
-> **@PM**：请在任务表为 3 项建行（001→FE、002→FE+FS 确认、003→FE），并按 P1×2 + P2 排期；修复后 PD 将按 Bug 台账验收标准逐项代码级验收。
+> **@PM**：请在任务表为 3 项建行（001→FE、002→FE+FS 确认、003→FE，settings/about 同步纳入 003），并按 P1×2 + P2 排期；修复后 PD 将按 Bug 台账验收标准逐项代码级验收。
 > — 产品设计师（PD）
 
 ### 🔴 2026-08-06 07:40 【FS 诊断 · 「首页 AI 摘要未实现」根因=云端部署过期 · 需 owner 部署 + 配 ZHIPU_API_KEY】

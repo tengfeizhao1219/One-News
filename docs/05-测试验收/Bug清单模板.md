@@ -796,8 +796,8 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 | home 首页 | 1 | — | 不涉及 |
 | favorites 收藏 | 2 | 主页按钮（home.svg + goHome）✅ | **保持** |
 | history 浏览记录 | 2 | 主页按钮（home.svg + goHome）✅ | **保持** |
-| settings 设置 | 2 | 返回按钮（‹ + goBack → navigateBack 回 home）| 功能等效，保持（FE 可视 owner 规则统一为主页按钮，可选）|
-| about 关于一页 | 2 | 返回按钮（‹ + goBack → navigateBack 回 home）| 功能等效，保持（同上，可选）|
+| settings 设置 | 2 | 返回按钮（‹ + goBack → navigateBack 回 home）| **owner 裁定（2026-08-06 07:44）：改为主页按钮**（home.svg + reLaunch 回首页，与 favorites/history 一致）|
+| about 关于一页 | 2 | 返回按钮（‹ + goBack → navigateBack 回 home）| **owner 裁定（2026-08-06 07:44）：改为主页按钮**（home.svg + reLaunch 回首页，与 favorites/history 一致）|
 | detail 详情页 | 3 | 主页按钮（home.svg + goHome）❌ | **改为返回按钮**（navigateBack 回上一级）|
 
 **根因定位（代码级）**
