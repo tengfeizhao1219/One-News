@@ -1,3 +1,19 @@
+## [2026-08-05 18:38] 📤→✅ FE 已提交 · commit `aa3d14e`（owner 直推；v4.0 全员直推无 GM）| 会话：[小程序前端开发(FE)]
+
+**触发**：parent commit `15ce639` PJM 已发布 v4.0 治理变更（取消 GM 角色、全员直连 GitHub），与 owner 授权一致。
+
+### 提交记录
+- commit `aa3d14e`：BUG-20260805-001 ⚙ dock 菜单被蒙板打灰修复（仅 WXSS）
+- 推送流程：`setup_github_dns.sh --wrap "git pull --rebase origin main"` → rebase 一次新提交（9a37842 GM 协助 FS 提交）→ push 成功
+- staging 标记：`.git-staging/fe.ready` 已清除 ✅
+- 远程已验证：main = `aa3d14e`
+
+### 同步发现
+- 项目治理变更：v4.0 取消 GM 角色（commit `15ce639`），全员直连 GitHub 直推
+- 后续克隆/推送可直接走 git + curloptresolve，无需 GM 中转
+
+---
+
 ## [2026-08-05 18:35] 🟢 FE 即席修复 · BUG-20260805-001 · ⚙ dock 菜单被蒙板打灰 | 会话：[小程序前端开发(FE)]
 
 **触发**：owner 真机截图直连——点击首页 ⚙ 弹出"浏览记录/我的收藏/设置/扩展位"时，菜单项和背景都呈灰色，菜单项视觉上被蒙板覆盖（应作为正常内容展示）。
