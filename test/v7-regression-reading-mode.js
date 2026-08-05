@@ -179,7 +179,7 @@ console.log('\n【静态】detail.wxml UI 模板')
   check('含 scroll-view（正文滚动）', wxml.includes('scroll-view'))
   check('含 bindtouchstart/bindtouchend 手势绑定', wxml.includes('bindtouchstart') && wxml.includes('bindtouchend'))
   check('含底部操作栏（收藏 + 分享）', wxml.includes('detail-bottom-bar'))
-  check('含边界提示 Chip', wxml.includes('boundary-chip'))
+  check('无边界提示 Chip 死代码（UX-SIMPLIFY 移除 · AB-01 清理 · 2026-08-05）', !wxml.includes('boundary-chip'))
   check('含网络兜底 Toast', wxml.includes('network-toast'))
   check('detail.wxml 为合法 UTF-8', isStrictUtf8(fs.readFileSync(files.detailWxml)))
 }
