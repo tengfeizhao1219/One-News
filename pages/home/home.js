@@ -316,7 +316,7 @@ Page({
    * 渲染卡片数据（仅构建数据，不涉及动画状态）
    * 始终以 targetIndex 为中心生成 3 张卡片
    */
-  renderCards(list, targetIndex) {
+  renderCards(list, targetIndex, incomingAnim) {
     const safeList = Array.isArray(list) ? list : []
     const currentIndex = targetIndex !== undefined ? targetIndex : (this.data.currentIndex || 0)
     const total = safeList.length
@@ -329,7 +329,7 @@ Page({
     const idx = Math.max(0, Math.min(currentIndex, total - 1))
     const cards = []
     if (idx > 0 && safeList[idx - 1]) cards.push(this.buildCard(safeList[idx - 1], -1))
-    if (safeList[idx]) cards.push(this.buildCard(safeList[idx], 0))
+    if (safeList[idx]) cards.push(this.buildCard(safeList[idx], 0, incomingAnim))
     if (idx < total - 1 && safeList[idx + 1]) cards.push(this.buildCard(safeList[idx + 1], 1))
 
     this.setData({ currentIndex: idx, cards })
@@ -340,13 +340,13 @@ Page({
     }
   },
 
-  buildCard(item, position) {
+  buildCard(item, position, animClass) {
     if (!item) {
       return {
         id: '', title: '', summary: '', summaryParagraphs: [],
         category: '', categoryName: '', source: '', time: '',
         state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-        animClass: ''
+        animClass: animClass || ''
       }
     }
 
@@ -371,7 +371,7 @@ Page({
       isAiSummary: summarySource === 'ai',
       summarySource: summarySource,
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
-      animClass: ''
+      animClass: animClass || ''
     }
   },
 
@@ -387,20 +387,18 @@ Page({
     if (this._isAnimating) return
 
     var dy = e.changedTouches[0].clientY - this._touchStartY
+    var dx = e.changedTouches[0].clientX - (this._touchStartX || 0)
     var dt = Date.now() - this._touchStartT
 
-    // 与详情页 onTouchEnd 完全一致的判定：
-    //   - 阈值 70px（不是原卡片页的 50px）
-    //   - 时间窗 500ms（慢拖不翻）
-    //   - 无跟手拖拽、无回弹：不达标直接忽略
-    if (Math.abs(dy) < 70 || dt > 500) return
-
-    // 左滑呼出面板
-    var dx = e.changedTouches[0].clientX - (this._touchStartX || 0)
+    // 左滑呼出面板：横向手势优先判定，必须早于纵向早退（Math.abs(dy) < 70），
+    // 否则纯横向左滑（dy 很小）会被纵向判定直接 return，导致面板永远打不开（Bug 2）。
     if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       this.setData({ showPanel: true })
       return
     }
+
+    // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
+    if (Math.abs(dy) < 70 || dt > 500) return
 
     var atLast = this.data.currentIndex >= this.data.newsList.length - 1
     var atFirst = this.data.currentIndex <= 0
@@ -435,9 +433,7 @@ Page({
     // 阶段 1: out-up —— 当前卡片向上移出
     var cards = this.data.cards.map(function (card) {
       var next = { ...card }
-      if (card.state === 'active') {
-        next.animClass = 'out-up'
-      } else if (card.state === 'below') {
+      if (card.state === 'active' || card.state === 'below') {
         next.animClass = 'out-up'
       }
       return next
@@ -445,26 +441,18 @@ Page({
     this.setData({ cards: cards })
     this._lastSwipeTime = Date.now()
 
-    // 350ms 后重建 cards（新索引），新卡片从下方滑入
+    // 350ms 后重建 cards（新索引）。
+    // 关键修复：新激活卡直接在 renderCards 里以 in-up（+100vh 屏外）起始渲染，
+    // 移除 animClass 后由 transition 从底部上滑入——避免旧实现「先闪现中央→下滑→上滑」的反向错觉。
     var newIndex = currentIndex + 1
     setTimeout(function () {
-      // 先重建到新位置
-      that.renderCards(that.data.newsList, newIndex)
-
-      // 标记新激活卡 in-up，然后立刻移除 animClass 触发 transition 滑入
+      that.renderCards(that.data.newsList, newIndex, 'in-up')
       setTimeout(function () {
-        var updated = that.data.cards.map(function (card) {
-          if (card.state === 'active') return { ...card, animClass: 'in-up' }
-          return card
+        var cleared = that.data.cards.map(function (card) {
+          return { ...card, animClass: '' }
         })
-        that.setData({ cards: updated })
-        setTimeout(function () {
-          var cleared = that.data.cards.map(function (card) {
-            return { ...card, animClass: '' }
-          })
-          that.setData({ cards: cleared })
-          that._isAnimating = false
-        }, 30)
+        that.setData({ cards: cleared })
+        that._isAnimating = false
       }, 30)
     }, 350)
   },
@@ -484,9 +472,7 @@ Page({
     // 阶段 1: out-down —— 当前卡片向下移出
     var cards = this.data.cards.map(function (card) {
       var next = { ...card }
-      if (card.state === 'active') {
-        next.animClass = 'out-down'
-      } else if (card.state === 'above') {
+      if (card.state === 'active' || card.state === 'above') {
         next.animClass = 'out-down'
       }
       return next
@@ -494,23 +480,17 @@ Page({
     this.setData({ cards: cards })
     this._lastSwipeTime = Date.now()
 
+    // 350ms 后重建 cards（新索引）。新激活卡以 in-down（-100vh 屏外）起始，
+    // 移除 animClass 后从顶部下滑入，与详情页 .article 行为一致。
     var newIndex = currentIndex - 1
     setTimeout(function () {
-      that.renderCards(that.data.newsList, newIndex)
-
+      that.renderCards(that.data.newsList, newIndex, 'in-down')
       setTimeout(function () {
-        var updated = that.data.cards.map(function (card) {
-          if (card.state === 'active') return { ...card, animClass: 'in-down' }
-          return card
+        var cleared = that.data.cards.map(function (card) {
+          return { ...card, animClass: '' }
         })
-        that.setData({ cards: updated })
-        setTimeout(function () {
-          var cleared = that.data.cards.map(function (card) {
-            return { ...card, animClass: '' }
-          })
-          that.setData({ cards: cleared })
-          that._isAnimating = false
-        }, 30)
+        that.setData({ cards: cleared })
+        that._isAnimating = false
       }, 30)
     }, 350)
   },

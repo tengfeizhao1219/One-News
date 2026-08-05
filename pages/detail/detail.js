@@ -392,11 +392,15 @@ Page({
     setTimeout(function () {
       contentPromise.then(function () {
         that._switching = false
-        // 先切换为新内容（此刻 animClass 仍是 out-up，但内容已换、旧内容已移出）
+        // 先切换为新内容（此刻 animClass 仍是 out-up，元素停在 -100vh，旧内容已移出）
         that._applyPendingDetail()
-        // 新内容就绪 → 先设 in-up（从下方 +100vh 起始），移除 class 后滑入到原位（从底部往上滑入）
-        that.setData({ animClass: 'in-up', scrollTop: 0 })
+        // 关键修复：单元素复用模型下，元素当前在 -100vh（out-up 终点）。
+        // 若直接置 in-up，transition 会从 -100vh 一路滑到 +100vh（穿越全屏），
+        // 30ms 后清除时停留在「近顶部→中心」，表现为新内容从【顶部】下滑——与预期相反。
+        // 因此先以 no-transition 瞬间吸附到 in-up 起点(+100vh)，再移除 class 触发「从底部上滑入」。
+        that.setData({ animClass: 'in-up no-transition', scrollTop: 0 })
         setTimeout(function () {
+          // 移除 in-up 与 no-transition：元素从 +100vh 滑入中心（从底部往上滑入）
           that.setData({ animClass: '' })
           that._animating = false
         }, 30)
@@ -454,11 +458,15 @@ Page({
     setTimeout(function () {
       contentPromise.then(function () {
         that._switching = false
-        // 先切换为新内容（此刻 animClass 仍是 out-down，但内容已换、旧内容已移出）
+        // 先切换为新内容（此刻 animClass 仍是 out-down，元素停在 +100vh，旧内容已移出）
         that._applyPendingDetail()
-        // 新内容就绪 → 先设 in-down（从上方 -100vh 起始），移除 class 后滑入到原位（从顶部往下滑入）
-        that.setData({ animClass: 'in-down', scrollTop: 0 })
+        // 关键修复：元素当前在 +100vh（out-down 终点）。直接置 in-down 会让 transition
+        // 从 +100vh 一路滑到 -100vh（穿越全屏），30ms 清除后从「近底部→中心」滑入，
+        // 表现为新内容从【底部】上滑——与预期（从顶部下滑）相反。
+        // 先以 no-transition 瞬间吸附到 in-down 起点(-100vh)，再移除 class 触发「从顶部往下滑入」。
+        that.setData({ animClass: 'in-down no-transition', scrollTop: 0 })
         setTimeout(function () {
+          // 移除 in-down 与 no-transition：元素从 -100vh 滑入中心（从顶部往下滑入）
           that.setData({ animClass: '' })
           that._animating = false
         }, 30)

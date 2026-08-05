@@ -86,6 +86,13 @@
   transition: transform 0.35s ease, opacity 0.35s ease;
   will-change: transform, opacity;
 }
+/* 单元素复用模型修复：out 阶段结束后元素停在 -100vh/+100vh，
+   切换 in 阶段时需先「无过渡」瞬间吸附到 in-up/in-down 起点，
+   再移除 class 触发 transition 滑入中心；否则 transition 会从 out 终点一路穿越全屏，
+   导致新内容从【反方向】滑入（与预期相反）。 */
+.article.no-transition {
+  transition: none;
+}
 /* 上滑翻下一条：旧内容向上移出（一屏高度） */
 .article.out-up   { transform: translateY(-100vh); opacity: 0; }
 /* 下滑翻上一条：旧内容向下移出（一屏高度） */
