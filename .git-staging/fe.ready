@@ -1,13 +1,19 @@
 {
   "role": "fe",
-  "timestamp": "2026-08-05T15:10:00+08:00",
-  "summary": "详情页按 UI-B11 demo 一一优化视觉与交互（收藏态/进度条/底栏/滑动提示等）",
+  "timestamp": "2026-08-05T15:25:00+08:00",
+  "summary": "详情页+浏览记录+收藏页+设置页按 demo 一一对齐优化",
   "files": [
     "pages/detail/detail.js",
     "pages/detail/detail.wxml",
     "pages/detail/detail.wxss",
+    "pages/history/history.*",
+    "pages/favorites/favorites.*",
+    "pages/settings/settings.*",
+    "pages/home/home.js",
+    "pages/home/home.wxml",
+    "app.json",
     "theme.json"
   ],
   "ready": true,
-  "commit": "71a3bfc"
+  "commit": "306b791"
 }
