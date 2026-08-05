@@ -334,8 +334,11 @@
   width: 44rpx;
   height: 44rpx;
 }
-.bottom-bar-icon--favorite {
-  /* 已收藏态红色通过 .is-favorited 的 background-color 覆写（见下方） */
+.bottom-bar-icon-faved {
+  font-size: 44rpx;
+  line-height: 1;
+  color: var(--color-favorite);
+}
 
 .bottom-bar-label {
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
@@ -343,8 +346,8 @@
   color: var(--text-secondary);
 }
 
-.bottom-bar-btn.is-favorited .bottom-bar-icon--favorite {
-  background-color: var(--color-favorite);
+.bottom-bar-btn.is-favorited .bottom-bar-icon-faved {
+  /* 已收藏态颜色由 .bottom-bar-icon-faved 的 color 属性控制 */
 }
 
 @keyframes heartBeat {
@@ -354,7 +357,7 @@
   100% { transform: scale(1); }
 }
 
-.bottom-bar-btn.heart-anim .bottom-bar-icon {
+.bottom-bar-btn.heart-anim .bottom-bar-icon-faved {
   animation: heartBeat 0.3s ease-out;
 }
 

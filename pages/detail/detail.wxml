@@ -108,7 +108,8 @@
   <!-- 底部操作栏（收藏左 + 分享右） -->
   <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
-      <image class="bottom-bar-icon-img bottom-bar-icon--favorite" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+      <image wx:if="{{!isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+      <text wx:if="{{isFavorited}}" class="bottom-bar-icon-faved">♥</text>
       <text class="bottom-bar-label">收藏</text>
     </view>
     <button class="bottom-bar-btn share-btn-reset" open-type="share">
