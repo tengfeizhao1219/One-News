@@ -212,3 +212,60 @@ return {
 > **PD 结论**：BUG-TL17-016 闭环质量高，FS 执行精确。但本次下钻发现 category-wheel 组件层存在系统性版本滞后（owner 四轮裁定未回流），以及 v6.2 新引入的标题重复渲染。**整体不予通过**，待 BUG-PD-017 / BUG-PD-018 修复后复验。
 >
 > — 产品设计师（PD） 2026-08-05 07:40
+
+---
+
+## 八、🔄 二次验收闭环（2026-08-05 19:45 · v1.4.1）
+
+> **基线**：`799f91c`（BUG-PD-017/018 修复）+ 最新 main（`a1c5d18`，含 `18bc0f6` FE-3 暗色 token 收尾）
+> **触发**：PM 广播连续 @PD「BUG-PD-017/018 仍待你二次验收闭环」
+> **方式**：代码级逐项核对（浅克隆无历史 hash，按当前 main 源码验收）
+
+### 8.1 🔴 BUG-PD-017 —— category-wheel 四轮裁定回流 · 8/8 通过 ✅
+
+| # | 验收项 | 规范要求 | 当前实现 | 判定 |
+|---|---|---|---|---|
+| 1 | 锚定位置（P0 红线） | 选中项固定顶部第二行 `ty = -Math.max(0, (idx-1)) × 72rpx` | `category-wheel.js:44-52` `_updateTranslate`：`ty = -Math.max(0, idx-anchorIndex) * itemHeight + bounce`，`anchorIndex: 1` | ✅ 逐字一致 |
+| 2 | 选中项线框 | 无 border | `.wheel-label.active` 无 border 属性（wxss:40-46） | ✅ |
+| 3 | 选中项字色 | `rgba(0,0,0,.5)` 不加深 | `--wheel-text-selected: rgba(0,0,0,.5)`（theme.json:38，light）；wxss:41 引用 | ✅ |
+| 4 | 选中项字号/字重 | `24rpx` / `500` | wxss:42-43 `font-size: 24rpx; font-weight: 500` | ✅ |
+| 5 | 激活态放大 | 触摸中 `scale(1.08)`，颜色字号不变 | wxss:49-53 `.wheel.active .wheel-label.active { scale(var(--wheel-scale-active, 1.08)) }` | ✅ |
+| 6 | 上下指示线 | 已废除 | wxml/wxss 全仓无 `indicator` 残留 | ✅ |
+| 7 | 可视项数 | 6 | `visibleCount: 6`（category-wheel.js:17） | ✅ |
+| 8 | chip 内边距 | 无（去 chip 形态） | `.wheel-label.active` 无 padding；仅 `.wheel-label` 基础态保留 `0 8rpx` 文字气口（非 chip 形态，合理） | ✅ |
+
+**补充确认**：
+- 暗色字色同步：theme.json dark 块 `--wheel-text-selected: rgba(255,255,255,.5)`（:79）✅，对应 v1.4 修复清单暗色要求。
+- `18bc0f6`（FE-3）已将组件硬编码 rgba → `--wheel-*` 变量双模式并移除 `@media` 暗色块——**与 D-07 G-03 治理方向一致，本轮先行落地** 👍。
+
+### 8.2 🔴 BUG-PD-018 —— title 兜底标题重复渲染 · 通过 ✅
+
+| 验收点 | 规范要求（v1.4 §四 PD 裁定） | 当前实现 | 判定 |
+|---|---|---|---|
+| 第三档逻辑 | `summarySource === 'title'` → `displaySummary = ''` | `home.js:385-390` 完全一致（含裁定理由注释） | ✅ |
+| 摘要区渲染 | `summaryParagraphs` 空数组 → `wx:for` 不产出节点 | `home.js:396-398`：空字符串 → split→filter→`[]` | ✅ |
+| 容器塌陷 | `.card-summary` 无 min-height | `home.wxss:152-155` 仅 margin，无 min-height | ✅ |
+| 胶囊诚实性 | `isAiSummary` 仅 `'ai'` 档为真 | `home.js:399` `summarySource === 'ai'` | ✅ |
+
+### 8.3 附注 · 600ms 分类提示规范同步确认
+
+v1.4 §五 PD 承诺「同步规范文档为 600ms / 120ms」已落地：
+- `D-02-增量-侧边分类滚轮.md:156-157` 已改「120ms 淡入 → 600ms 后淡出」+ 变更依据说明 ✅
+- 代码 `home.js:258`（600ms）+ `onWheelChange` 触发（:720）与规范一致 ✅
+
+### 8.4 ⚪ 附带观察（非阻塞，登记备查）
+
+- **title 档卡片摘要区 margin 残留**：`.card-summary` 空态仍保留 `margin-top: 28rpx / margin-bottom: 48rpx`（约 76rpx 空白）。非 BUG-PD-018 验收范围（核心重复问题已解决），建议并入 D-07 场景走查时一并评估是否需要 `.card-summary:empty` 收敛。
+- **待真机验证（承接 v1.4 §七 7 项）**：分类切换震动、列表去重、手势隔离、动画流畅度、面板标题联动、暗色渲染、第二行锚定滚动手感——仍需 owner/FS 真机复测。
+
+### 8.5 验收结论
+
+| 提单 | 级别 | 责任人 | 状态 |
+|---|---|---|---|
+| **BUG-PD-017** category-wheel 四轮裁定回流（8 项） | 🔴 P0 | FS | ✅ **二次验收通过 · 正式闭环** |
+| **BUG-PD-018** title 兜底标题重复渲染 | 🔴 P1 | FS | ✅ **二次验收通过 · 正式闭环** |
+| 分类提示 600ms 规范同步 | 🟡 | PD | ✅ 已落地确认 |
+
+> **PD 结论**：BUG-PD-017/018 修复与 PD 提单方案逐项一致，8 项裁定全部回流组件层，标题重复渲染已消除。**v1.4 全部 🟡/🔴 至此清零，v1.4 整体验收升级为「通过」。** 剩余真机验证项移交 owner 实测。
+>
+> — 产品设计师（PD） 2026-08-05 19:45
