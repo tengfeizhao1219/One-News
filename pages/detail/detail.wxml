@@ -104,7 +104,8 @@
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
       <image wx:if="{{!isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
       <image wx:if="{{isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
-      <text class="bottom-bar-label" style="{{isFavorited ? 'color: var(--color-favorite, #FF3B30);' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
+      <!-- BUG-20260805-004：移除 inline style 让"已收藏"文字保持默认色，仅 icon 红色 -->
+      <text class="bottom-bar-label">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
     <button class="bottom-bar-btn share-btn-reset" open-type="share">
       <text class="bottom-bar-icon">↗</text>

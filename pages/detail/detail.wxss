@@ -329,16 +329,11 @@
   /* 已收藏态颜色由 .bottom-bar-icon-faved 的 color 属性控制 */
 }
 
-/* UI-B11 §2.3 收藏态微高亮：已收藏时 label 同步主题红，与图标呼应 */
-.bottom-bar-btn.is-favorited .bottom-bar-label,
-.bottom-bar-label--favorited {
-  color: var(--color-favorite);
-}
+/* UI-B11 §2.3 收藏态微高亮：已收藏时 label 同步主题红，与图标呼应
+   BUG-20260805-004（owner 反馈）：按钮区域不需要展示为红色，仅 icon 变红即可。
+   文字颜色恢复为默认，仅保留 icon 红色（由 favorite-fill.svg 固定提供）。 */
 
-/* UI-B11: 已收藏态按钮背景微高亮 */
-.bottom-bar-btn.is-favorited {
-  background-color: var(--color-favorite-tint);
-}
+/* UI-B11: 已收藏态按钮背景微高亮 → 已移除（owner 反馈：按钮区域不需红色背景） */
 
 @keyframes heartBeat {
   0%   { transform: scale(1); }
