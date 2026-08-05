@@ -1,33 +1,30 @@
-// 新闻自动刷新云函数 v6.6 — 智谱 AI 搜索主力 + 聚合/天行兜底（超时安全版）
+// 新闻自动刷新云函数 v7 — 拆分架构（按分类并行云函数，彻底绕开 60s 限制）
 // ============================================================
-// v6.6 改造（2026-08-05）：
-//   数据源优先级：智谱 AI 搜索（主力）→ 聚合 API（备选）→ 天行 API（兜底）
-//   超时安全：PER_CATEGORY_COUNT 5→5（对齐聚合量级），智谱 prompt 内联 summary/content，
-//   skipFetch + skipAiSummary 双跳，省 ~35s。单次调用预计 ~35s（稳在 60s 内）。
+// v7 改造（2026-08-05）：拆分云函数架构
+//   将"全分类在单次 60s 调用内串行完成"改为"每个分类独立占用一次 60s 调用、5 个并行"。
+//   实现方式：refreshNews 自扇出（self-fan-out）—— 同一函数既是"编排器"也是"单分类工人"，
+//   通过 event.category 区分：
+//     - 编排模式（event 无 category）：手动冷却 → 并行 cloud.callFunction 自调 5 次
+//       （每分类一次）→ 全局 gradedCleanup → 全空续期 → 写刷新时间戳 → 聚合返回。
+//     - 工人模式（event.category 存在）：执行该分类完整流水线并返回统计。
+//   收益：
+//     ① 每个分类独占 60s，单分类智谱超时从 30s 放开回 50s，AI 覆盖更全；
+//     ② 故障隔离 + 按分类降级：某分类智谱/DeepSeek 失败只该分类降级聚合/天行，不连累其他；
+//     ③ 并行墙钟 ≈ 最慢单分类（而非 5 倍求和）。
+//   对调用方零改动：前端 wx.cloud.callFunction({name:'refreshNews', data:{}}) 与定时器空参触发，
+//   编排器仍返回 {code, data:{inserted,...}}。
 //
-// v6.5（已回退，超时 68s+）：
-//   三数据源优先级，但 PER_CATEGORY_COUNT=15 导致 75 条 + 全量 AI 摘要 ≈ 90s 超时。
+// v6.6（已并入）：智谱 AI 搜索主力 + 聚合/天行兜底；PER_CATEGORY_COUNT=5；skipFetch+skipAiSummary 双跳。
+// v6.0（已并入）：owner 将 refreshNews 超时从 3s 调至 60s，函数内直接抓取正文 + AI 摘要。
+// v5.9（已并入）：双数据源降级 + 续期；getNewsList stale 兜底。
 //
-// v6.0 改造（2026-08-03）：
-//   owner 将 refreshNews 超时从 3s 调至 60s，因此可在此函数内直接抓取正文：
-//   拉取列表 → 校验 → 安全审核 → enrich（并行抓正文 + AI 摘要）→ 写 news_cache。
-//   详情页 getNewsDetail 命中 content 直接返回，不再每次按需抓取。
-//
-// v5.9 改造（2026-08-03）：
-//   1. 双数据源降级：聚合优先，失败/空 → 天行兜底
-//   2. 双数据源均失败 → 保留旧缓存并续期 cacheExpire
-//   3. getNewsList 增加 stale 兜底（未过期无数据 → 查历史数据）
-//
-// v5.0 改造（2026-08-03）：
-//   背景：微信云函数默认超时 3 秒，智谱/DeepSeek AI 调用需要 45s+，无法完成。
-//   回滚标记：git tag v3-ai-dual-engine / v5-tianxing / v5-juhe
-//
-// 数据源：智谱 AI 搜索（主）+ 聚合（备）+ 天行（兜底）
+// 数据源：智谱 AI 搜索（主）+ DeepSeek（智谱降级）+ 聚合 API（备）+ 天行 API（兜底）
 // 写入集合：news_cache（列表 + content + AI 摘要）
 //
 // 触发方式：
-//   1. 定时触发器（每小时：0 * * * *）
-//   2. 小程序手动调用（下拉刷新）
+//   1. 定时触发器（每小时：0 0 * * * *）
+//   2. 小程序手动调用（下拉刷新，data:{}）
+//   3. 自扇出工人调用（data:{category, shard:true, quotaBaseline}）
 // ============================================================
 
 const cloud = require('wx-server-sdk')
@@ -40,9 +37,12 @@ const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 
 // ─── 分类列表（聚合支持的分类）───
-// v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
-// 与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
+// v7（TL-B11）：与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
 const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life']
+
+// 单分类流水线写库阈值：通过校验+安全审核的有效条数 ≥ 此值才覆盖该分类旧缓存；
+// 否则视为该分类本次刷新偏弱，保留旧缓存（不清旧、不写入），不影响其他分类。
+const MIN_PER_CATEGORY = 3
 
 // ─── 数据库操作 ─────────────────────────────────────
 
@@ -278,11 +278,185 @@ async function batchInsert(newsList) {
   return { inserted, failed }
 }
 
-// ─── 主函数 ─────────────────────────────────────────
+// ─── 单分类流水线（v7 工人模式核心）────────────────────
+// 执行单个分类的完整流程：搜索（按分类降级）→ 校验 → 安全 → enrich → 写库 → 清理 → 备份
+// @param {string} category - 分类 ID
+// @param {object} quotaBaseline - 编排器传入的当日配额基线 {zhipuCalls, deepseekCalls}
+// @returns {Promise<object>} 该分类统计 {category, inserted, engine, skipped, quotaDelta, elapsedMs}
+async function runCategoryPipeline(category, quotaBaseline) {
+  const catStart = Date.now()
+  const baseZ = (quotaBaseline && quotaBaseline.zhipuCalls) || 0
+  const baseD = (quotaBaseline && quotaBaseline.deepseekCalls) || 0
+  const quotaRef = { zhipuCalls: baseZ, deepseekCalls: baseD }
+
+  // 1. 搜索（按分类降级：智谱/DeepSeek → 聚合 → 天行）
+  let news = []
+  let engine = 'none'
+  let skipFetch = false
+  let skipAiSummary = false
+
+  const zhipuKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
+  if (zhipuKey) {
+    const { searchNewsByCategory } = require('./zhipuSearch')
+    try {
+      const r = await searchNewsByCategory(category, db, quotaRef)
+      if (r.news && r.news.length > 0) {
+        news = r.news
+        engine = r.engine // 'zhipu' | 'deepseek'
+        skipFetch = true       // 智谱/DeepSeek 已自带 content（300-500 字正文）
+        skipAiSummary = true   // 已内联 summary（AI 来源）
+        console.log(`[refreshNews][${category}] 智谱/DeepSeek 命中: ${news.length} 条 (engine=${engine})`)
+      } else {
+        console.warn(`[refreshNews][${category}] 智谱/DeepSeek 无结果，降级聚合/天行`)
+      }
+    } catch (err) {
+      console.error(`[refreshNews][${category}] 智谱搜索异常:`, err.message)
+    }
+  }
+
+  // 1b. 聚合兜底（智谱/DeepSeek 空/未配置/失败）
+  if (news.length === 0) {
+    skipFetch = false
+    skipAiSummary = false
+    const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
+    if (!config.juhe.apiKey) {
+      console.warn(`[refreshNews][${category}] JUHE_API_KEY 未配置，跳过聚合`)
+    } else {
+      try {
+        const r = await fetchAllJuhe([category], 5)
+        if (r.news && r.news.length > 0) {
+          news = r.news
+          engine = 'juhe'
+          console.log(`[refreshNews][${category}] 聚合兜底: ${news.length} 条`)
+        }
+      } catch (err) {
+        console.error(`[refreshNews][${category}] 聚合失败:`, err.message)
+      }
+    }
+  }
+
+  // 1c. 天行兜底（聚合也失败/空）
+  if (news.length === 0) {
+    skipFetch = false
+    skipAiSummary = false
+    const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
+    if (!config.tian.apiKey) {
+      console.warn(`[refreshNews][${category}] TIAN_API_KEY 未配置，跳过天行`)
+    } else {
+      try {
+        const r = await fetchAllTian([category], 5)
+        if (r.news && r.news.length > 0) {
+          news = r.news
+          engine = 'tianxing'
+          console.log(`[refreshNews][${category}] 天行兜底: ${news.length} 条`)
+        }
+      } catch (err) {
+        console.error(`[refreshNews][${category}] 天行失败:`, err.message)
+      }
+    }
+  }
+
+  // 1d. 三源全失败 → 保留旧缓存（不清理、不写入）
+  if (news.length === 0) {
+    console.warn(`[refreshNews][${category}] 智谱+聚合+天行均无数据，保留旧缓存`)
+    return {
+      category,
+      inserted: 0,
+      skipped: true,
+      engine: 'none',
+      quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
+      elapsedMs: Date.now() - catStart,
+    }
+  }
+
+  // 2. 质量校验 + 去重
+  const { valid, rejected, stats: validationStats } = validateAndClean(news)
+  console.log(`[refreshNews][${category}] 校验: ${validationStats.passed} 通过, ${validationStats.rejected} 拒绝, ${validationStats.duplicatesRemoved} 去重`)
+
+  // 3. 内容安全审核
+  const security = new SecurityCheck({ enabled: config.security.enabled })
+  if (config.security.enabled === false) {
+    console.warn(`[refreshNews][${category}] ⚠️ 内容安全检测已禁用，全部新闻直接放行`)
+  }
+  const secResult = await security.checkBatch(valid)
+  const { passed: secPassed, blocked: secBlocked } = secResult
+  console.log(`[refreshNews][${category}] 安全审核: ${secPassed.length} 通过, ${secBlocked.length} 拦截`)
+
+  // 4. 有效新闻过少 → 保留旧缓存（不清旧，避免把分类清空/降级为少量低质内容）
+  if (secPassed.length < MIN_PER_CATEGORY) {
+    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${secPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存`)
+    return {
+      category,
+      inserted: 0,
+      skipped: true,
+      engine,
+      quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
+      elapsedMs: Date.now() - catStart,
+    }
+  }
+
+  // 5. 正文抓取 + AI 摘要（智谱/DeepSeek 源 skipFetch + skipAiSummary；聚合/天行源照常抓+摘要）
+  const enrichStart = Date.now()
+  const enriched = await enrichNewsList(secPassed, 8, skipFetch, skipAiSummary)
+  const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
+  const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
+  console.log(`[refreshNews][${category}] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
+
+  // 6. 按分类写入 news_cache
+  const { inserted, failed } = await batchInsert(enriched)
+
+  // 7. 清理该分类旧缓存（保留新 ids）
+  const newIds = enriched.map(it => it.id)
+  const cleared = await clearOldCacheExcept(category, newIds)
+  console.log(`[refreshNews][${category}]: 清理旧数据 ${cleared} 条`)
+
+  // 8. 备份快照
+  await backupToCacheBackup({ [category]: enriched })
+
+  const elapsedMs = Date.now() - catStart
+  console.log(`[refreshNews][${category}] ===== 完成: 写入 ${inserted} 条, 耗时 ${elapsedMs}ms =====`)
+
+  return {
+    category,
+    inserted,
+    failed,
+    count: enriched.length,
+    engine,
+    skipped: false,
+    quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
+    elapsedMs,
+  }
+}
+
+// ─── 主函数（v7：编排 / 工人 双模式）─────────────────
 
 exports.main = async (event) => {
   const startTime = Date.now()
-  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v6.6 智谱AI搜索) ==========')
+
+  // 工人模式：event.category 存在 → 只跑单分类流水线
+  if (event && (event.category || event.shard)) {
+    const category = event.category
+    console.log(`[refreshNews] ===== 单分类工作模式: ${category} =====`)
+    try {
+      const result = await runCategoryPipeline(category, event.quotaBaseline || { zhipuCalls: 0, deepseekCalls: 0 })
+      return { code: 0, category, ...result }
+    } catch (err) {
+      console.error(`[refreshNews][${category}] 流水线异常:`, err.message)
+      return {
+        code: 0,
+        category,
+        inserted: 0,
+        skipped: true,
+        engine: 'error',
+        error: err.message,
+        quotaDelta: { zhipuCalls: 0, deepseekCalls: 0 },
+        elapsedMs: Date.now() - startTime,
+      }
+    }
+  }
+
+  // ── 编排模式（前端/定时器触发，event 无 category）──
+  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v7 拆分架构: 5 分类并行) ==========')
 
   // ── 手动触发冷却 ──
   const isManual = event && (event.source === 'manual' || event.trigger === 'manual')
@@ -308,191 +482,87 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 检查智谱 API Key（v6.6 主力数据源）──
-  const zhipuKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
-  if (!zhipuKey) {
-    console.warn('[refreshNews] ZHIPU_API_KEY 未配置，将跳过智谱搜索，直接使用聚合兜底')
+  // ── 读当日配额基线（一次）──
+  let quotaBaseline = { zhipuCalls: 0, deepseekCalls: 0 }
+  try {
+    const { readDailyQuota } = require('./zhipuSearch')
+    quotaBaseline = await readDailyQuota(db)
+    console.log(`[refreshNews] 当日配额基线: 智谱=${quotaBaseline.zhipuCalls}, DeepSeek=${quotaBaseline.deepseekCalls}`)
+  } catch (err) {
+    console.warn('[refreshNews] 读取当日配额失败，从 0 计:', err.message)
   }
 
-  // 1. 三数据源拉取（v6.6：智谱 AI 搜索优先 → 聚合备选 → 天行兜底）
-  let searchResult = null
-  let engine = 'juhe'  // 默认（智谱未配置/失败时）
-  let zhipuQuota = { zhipuCalls: 0, deepseekCalls: 0 }
-  let skipFetch = false
-  let skipAiSummary = false
-
-  // 1a. 智谱 AI 搜索（主力，v6.6）
-  //     超时安全靠两点：① SEARCH_CONCURRENCY=5 全分类并行→单批而非两批
-  //     ② 30s 硬预算兜底：天行兜底流水线需 ~25s（搜索3+enrich19+写入3），
-  //        故智谱阶段最多占 30s，保证 30+25 < 60s 不触发 ret=-3
-  if (zhipuKey) {
-    const { searchAllCategories: zhipuSearchAll } = require('./zhipuSearch')
-    const ZHIPU_BUDGET_MS = 30000
-    try {
-      const zhipuResult = await Promise.race([
-        zhipuSearchAll(CATEGORIES, db),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`智谱搜索超时(>${ZHIPU_BUDGET_MS}ms)，降级天行兜底`)), ZHIPU_BUDGET_MS)
-        ),
-      ])
-      zhipuQuota = zhipuResult.quota || zhipuQuota
-      const zhipuCats = new Set(zhipuResult.news.map(n => n.category))
-      // 覆盖阈值：≥3 个分类才采用智谱（避免"满屏同一分类"的稀薄结果），否则降级天行保覆盖
-      if (zhipuResult.news.length >= 5 && zhipuCats.size >= 3) {
-        searchResult = { news: zhipuResult.news, stats: zhipuResult.stats }
-        engine = 'zhipu'
-        skipFetch = true       // 智谱已自带 content（300-500 字正文）
-        skipAiSummary = true   // 智谱 prompt 已内联 summary（AI 来源）
-        console.log(`[refreshNews] 智谱 AI 搜索完成: ${searchResult.news.length} 条/${zhipuCats.size}分类, 分类统计:`, JSON.stringify(searchResult.stats))
-      } else {
-        console.warn(`[refreshNews] ⚠️ 智谱覆盖不足（${zhipuResult.news.length}条/${zhipuCats.size}分类），降级聚合/天行保覆盖`)
-        searchResult = null    // 清空 → 走 1b/1c 兜底
-      }
-    } catch (err) {
-      console.error('[refreshNews] 智谱 AI 搜索异常/超时:', err.message)
-    }
-  }
-
-  // 1b. 聚合备选（智谱失败/空/未配置时）
-  if (!searchResult || searchResult.news.length === 0) {
-    skipFetch = false
-    skipAiSummary = false
-    const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
-    if (!config.juhe.apiKey) {
-      console.warn('[refreshNews] JUHE_API_KEY 未配置，跳过聚合')
-    } else {
-      try {
-        searchResult = await fetchAllJuhe(CATEGORIES, 5)
-        engine = 'juhe'
-        console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
-      } catch (err) {
-        console.error('[refreshNews] 聚合 API 拉取异常:', err.message)
-        searchResult = null
-      }
-    }
-  }
-
-  // 1c. 天行兜底（聚合也失败/空）
-  if (!searchResult || searchResult.news.length === 0) {
-    skipFetch = false
-    skipAiSummary = false
-    const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
-    console.warn('[refreshNews] ⚠️ 聚合未返回数据，尝试天行兜底')
-    try {
-      const tianResult = await fetchAllTian(CATEGORIES, 5)
-      if (tianResult && tianResult.news.length > 0) {
-        searchResult = tianResult
-        engine = 'tianxing'
-        console.log(`[refreshNews] 天行兜底成功: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
-      } else {
-        console.warn('[refreshNews] ⚠️ 天行也未返回数据')
-        searchResult = { news: [], stats: {} }
-      }
-    } catch (err) {
-      console.error('[refreshNews] 天行兜底失败:', err.message)
-      searchResult = { news: [], stats: {} }
-    }
-  }
-
-  // 1d. 三数据源都失败 → 保留旧缓存 + 续期（v5.9：避免历史数据 TTL 过期后列表空白）
-  if (searchResult.news.length === 0) {
-    console.warn('[refreshNews] ⚠️ 智谱+聚合+天行均无数据，保留旧缓存并续期 cacheExpire')
-    const renewed = await renewCacheExpire()
-    return {
-      code: 0,
-      message: '智谱+聚合+天行均未返回新闻，保留旧缓存',
-      data: {
-        total: 0,
-        inserted: 0,
-        retained: true,
-        renewed,
-        stats: searchResult.stats,
-        engine,
-      },
-    }
-  }
-
-  // 2. 质量校验 + 去重
-  const { valid, rejected, stats: validationStats } = validateAndClean(searchResult.news)
-  console.log(`[refreshNews] 校验: ${validationStats.passed} 通过, ${validationStats.rejected} 拒绝, ${validationStats.duplicatesRemoved} 去重`)
-
-  if (rejected.length > 0) {
-    console.warn('[refreshNews] 拒绝详情:', JSON.stringify(rejected.slice(0, 3)))
-  }
-
-  // 3. 内容安全审核
-  const security = new SecurityCheck({ enabled: config.security.enabled })
-  if (config.security.enabled === false) {
-    console.warn('[refreshNews] ⚠️ 内容安全检测已禁用（SECURITY_CHECK_ENABLED=false，个人主体/手动关闭），全部新闻直接放行')
-  }
-  const secResult = await security.checkBatch(valid)
-  const { passed: secPassed, blocked: secBlocked, stats: securityStats } = secResult
-
-  console.log(`[refreshNews] 安全审核: ${secPassed.length} 通过, ${secBlocked.length} 拦截`)
-
-  // 4. 有效新闻太少 → 保留旧缓存
-  if (secPassed.length < 5) {
-    console.warn(`[refreshNews] ⚠️ 有效新闻仅 ${secPassed.length} 条，保留旧缓存`)
-    return {
-      code: 0,
-      message: `有效新闻不足(${secPassed.length}条)，保留旧缓存`,
-      data: {
-        total: valid.length,
-        securityPassed: secPassed.length,
-        securityBlocked: secBlocked.length,
-        inserted: 0,
-        retained: true,
-        searchStats: searchResult.stats,
-        validation: validationStats,
-        security: securityStats,
-      },
-    }
-  }
-
-  // 4.5 正文抓取 + AI 摘要（v6：60s 超时下直接抓正文写库，详情页免按需抓取）
-  //     v6.6：智谱源 skipFetch + skipAiSummary（已自带 content + AI summary），省 ~35s
-  //     聚合/天行源照常抓正文 + AI 摘要
-  //     并发 8 控制外部 API 压力；单条失败保留原 summary，不影响写入
-  const enrichStart = Date.now()
-  const enriched = await enrichNewsList(secPassed, 8, skipFetch, skipAiSummary)
-  const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
-  const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
-  console.log(`[refreshNews] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
-  // 注意：secPassed 是 const 解构变量，不能重新赋值；富化结果用新变量 finalList
-  const finalList = enriched
-
-  // 5. 按分类分组写入（v5.1：一次合并写入 + 并行清理，省去 7 次串行循环）
-  const categories = {}
-  const allItems = []
-  finalList.forEach(item => {
-    const cat = item.category || 'unknown'
-    if (!categories[cat]) categories[cat] = []
-    categories[cat].push(item)
-    allItems.push(item)
-  })
-
-  // 5a. 一次批量写入全部新闻（内部按 10 条一批并行）
-  const { inserted: totalInserted, failed: totalFailed } = await batchInsert(allItems)
-
-  // 5b. 并行清理各分类旧缓存（保留新 ids）
-  const clearResults = await Promise.all(
-    Object.entries(categories).map(async ([category, items]) => {
-      if (items.length === 0) return 0
-      const newIds = items.map(it => it.id)
-      const cleared = await clearOldCacheExcept(category, newIds)
-      console.log(`[refreshNews] ${category}: 清理旧数据 ${cleared} 条`)
-      return cleared
-    })
+  // ── 并行自扇出：每分类一次独立云函数调用 ──
+  console.log(`[refreshNews] 并行拉取 ${CATEGORIES.length} 个分类（各自独立 60s 预算）...`)
+  const shards = await Promise.all(
+    CATEGORIES.map(category =>
+      cloud.callFunction({
+        name: 'refreshNews',
+        data: { category, shard: true, quotaBaseline },
+      })
+        .then(res => res.result || {})
+        .catch(err => ({
+          category,
+          inserted: 0,
+          skipped: true,
+          engine: 'shard_error',
+          error: err.message,
+          quotaDelta: { zhipuCalls: 0, deepseekCalls: 0 },
+          elapsedMs: 0,
+        }))
+    )
   )
-  const totalCleared = clearResults.reduce((sum, n) => sum + n, 0)
 
-  // 5c. 分级清理（v7 / TL-B12 / RQ-16）：过期普通记录（7d）/ retained 记录（30d）
+  // ── 汇总各分类结果 ──
+  const categories = {}
+  let totalInserted = 0
+  let totalFailed = 0
+  let totalZhipu = 0
+  let totalDeepseek = 0
+  let allEmpty = true
+  const engineCounts = {}
+  const shardDetails = []
+  for (const r of shards) {
+    const cat = r.category || 'unknown'
+    const ins = r.inserted || 0
+    categories[cat] = ins
+    totalInserted += ins
+    totalFailed += (r.failed || 0)
+    if (ins > 0) allEmpty = false
+    totalZhipu += (r.quotaDelta?.zhipuCalls || 0)
+    totalDeepseek += (r.quotaDelta?.deepseekCalls || 0)
+    if (r.engine) engineCounts[r.engine] = (engineCounts[r.engine] || 0) + 1
+    shardDetails.push({
+      category: cat,
+      inserted: ins,
+      engine: r.engine,
+      elapsedMs: r.elapsedMs || 0,
+      skipped: !!r.skipped,
+      error: r.error || null,
+    })
+  }
+  console.log(`[refreshNews] 各分类结果:`, JSON.stringify(shardDetails))
+
+  // ── 全局分级清理（过期普通/retained 记录）──
   const cleanup = await gradedCleanup()
 
-  // 5d. 🆕 TL-B8 备份快照写入（ADR-003 §3.1）：按分类覆盖写入 news_cache_backup
-  await backupToCacheBackup(categories)
+  // ── 全分类均无新数据 → 续期旧缓存（避免 TTL 过期后列表空白）──
+  let renewed = 0
+  if (allEmpty) {
+    console.warn('[refreshNews] ⚠️ 全部分类均无新数据，保留旧缓存并续期 cacheExpire')
+    renewed = await renewCacheExpire()
+  }
 
-  const elapsed = Date.now() - startTime
+  // ── 写回当日配额（仅一次，避免并发写竞争）──
+  try {
+    const { writeDailyQuota } = require('./zhipuSearch')
+    await writeDailyQuota(db, {
+      zhipuCalls: (quotaBaseline.zhipuCalls || 0) + totalZhipu,
+      deepseekCalls: (quotaBaseline.deepseekCalls || 0) + totalDeepseek,
+    })
+  } catch (err) {
+    console.warn('[refreshNews] 写回当日配额失败:', err.message)
+  }
 
   // ── 写入刷新时间戳 ──
   try {
@@ -512,34 +582,27 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 写入刷新时间戳失败:', err.message)
   }
 
-  console.log(`[refreshNews] ========== 刷新完成: ${totalInserted} 条, 耗时 ${elapsed}ms ==========`)
+  const elapsed = Date.now() - startTime
+  console.log(`[refreshNews] ========== 刷新完成(编排): 总计 ${totalInserted} 条, 耗时 ${elapsed}ms ==========`)
 
   return {
     code: 0,
     message: `刷新完成，共 ${totalInserted} 条新闻`,
     data: {
-      total: valid.length,
-      securityPassed: finalList.length,
-      securityBlocked: secBlocked.length,
+      total: totalInserted,
       inserted: totalInserted,
       failed: totalFailed,
-      cleared: totalCleared,
+      categories,
       cleanup: {
         removedNormal: cleanup.removedNormal,
         removedRetained: cleanup.removedRetained,
         durationMs: cleanup.durationMs,
       },
-      categories: Object.fromEntries(
-        Object.entries(categories).map(([k, v]) => [k, v.length])
-      ),
-      searchStats: searchResult.stats,
-      validation: validationStats,
-      security: securityStats,
-      enrichedCount,
-      aiSummaryCount,
+      renewed,
+      engineCounts,
+      zhipuQuota: { zhipuCalls: totalZhipu, deepseekCalls: totalDeepseek },
       elapsedMs: elapsed,
-      engine,
-      zhipuQuota,   // v6.6：智谱/DeepSeek 当日调用统计
+      shards: shardDetails,
     },
   }
 }

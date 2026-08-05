@@ -25,7 +25,7 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
-const ZHIPU_TIMEOUT = 30000  // v6.6：单分类调用超时（与 index.js 30s 预算对齐，失败调用快速失败，避免拖累整批）
+const ZHIPU_TIMEOUT = 50000  // v7：单分类隔离后可独占 60s 预算；50s 上限留出写库/清理余量，超时才降级聚合/天行
 
 // ─── DeepSeek API 配置（降级）──────────────────────
 
