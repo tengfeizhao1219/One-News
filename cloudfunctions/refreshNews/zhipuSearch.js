@@ -475,6 +475,8 @@ async function searchAllCategories(categories = null, db = null) {
     quota = await readDailyQuota(db)
     console.log(`[zhipuSearch] 当日配额: 智谱=${quota.zhipuCalls}, DeepSeek=${quota.deepseekCalls}/${DEEPSEEK_DAILY_CAP}`)
   }
+  // 启动自检：打印双引擎 key 就位状态（不打印 key 明文），便于排查 401 / 降级失效
+  console.log(`[zhipuSearch] 引擎配置: 智谱=${ZHIPU_API_KEY ? '✅' : '❌'}, DeepSeek=${DEEPSEEK_API_KEY ? '✅' : '❌'}（智谱失败自动降级 DeepSeek）`)
 
   // 可变引用，供各分类递增
   const quotaRef = {
