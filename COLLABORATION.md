@@ -532,7 +532,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 |------|------|---------|
 | 产品阶段文档（01~06 + 附录） | `docs/` 全部 .md | `merge_docs.py` 自动合并 |
 | 规划与协作机制文档 | `docs/00-规划/`、`docs/00-自查/` | 同上 |
-| **代码快照（全量源码）** | `pages/`、`cloudfunctions/`、`components/`、`utils/`、`test/` | 同上（含目录索引 + 源码嵌入） |
+| **代码快照（全量源码）** | `pages/`、`cloudfunctions/`、`components/`、`utils/`、`test/`、`.github-scripts/`、`scripts/` | 同上（含目录索引 + 源码嵌入） |
 | 协作框架 live 文档 | `TASK_BOARD.md`、`COMMLOG.md` 等 | **不含** |
 
 ### 9.3 触发方式

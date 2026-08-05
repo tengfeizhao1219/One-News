@@ -6,6 +6,7 @@
 范围（推荐方案）：
   - 包含：docs/00-规划、docs/00-自查、docs/01-需求规划 ~ docs/06-上线复盘
           + docs/资产库归档、docs/项目日志.md、docs/新会话启动指南.md、docs/共享保险库使用指南.md（附录）
+  - 代码快照：pages/ cloudfunctions/ components/ utils/ test/ .github-scripts/ scripts/
   - 排除：docs/SOP-软件开发流程基准.md、docs/templates/* （协作流程/模板，保持独立）
 
 产物：
@@ -40,6 +41,8 @@ CODE_SNAPSHOT_DIRS = [
     ("components", "components"),
     ("utils", "utils"),
     ("test", "test"),
+    ("github-scripts", ".github-scripts"),
+    ("scripts", "scripts"),
 ]
 CODE_EXTENSIONS = {".js", ".wxml", ".wxss", ".wxs", ".json", ".py", ".html", ".css", ".sh", ".yml", ".yaml", ".md"}
 CODE_EXCLUDE_DIRS = {"node_modules", ".git", ".notion_build", ".git-staging", "__pycache__", ".github", "assets", "images", "demo"}
