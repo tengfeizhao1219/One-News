@@ -14,7 +14,6 @@
 | **全栈开发** | FS | 技术方案、架构设计、前后端开发、云函数、代码审查、FE 上级 |
 | **小程序前端开发** | FE | 前端页面/组件/工具函数开发（候补，FS 任务堆叠时按需激活） |
 | **项目经理** | PJM | 统一看板管理、既定任务跟踪表维护、任务分派、流程推进、风险预警、进度汇报、关口检查、上线决策 |
-| **Git 管理专家** | GM | 统一 git 操作（add/commit/push/merge/rebase）、分支管理、tag 管理、DNS 修复、staging 标记检查 |
 
 ### 协作关系
 
@@ -30,11 +29,7 @@
        │                 │    │                      │
        │         小程序前端开发  │                      │
        │        （FE·候补·前端编码）                    │
-       └──────────────────────┼──────────────────────┘
-                              │
-                              ▼
-                      Git 管理专家（GM）
-                    （统一 git 提交 · 分支管理）
+       └──────────────────────┴──────────────────────┘
 ```
 
 ### 决策权分配
@@ -72,11 +67,11 @@
 
 ### 目标
 
-创建 4 个固定角色会话，每个会话确定永久身份，后续复用有连续性。
+创建 5 个角色会话（其中 FE 为候补，按需激活），每个会话确定永久身份，后续复用有连续性。
 
 ### 步骤
 
-1. 创建 4 个新会话（每个角色一个）
+1. 创建 5 个新会话（PM / PD / FS / FE / PJM 各一个；FE 会话平时空闲，PJM 广播「FE 激活」后才接活）
 2. 对每个会话说（复制 ROLE_CARDS.md 中对应初始化指令）：
 
 > 你是本项目的**[角色名]** AI 会话。请读取仓库根目录 `ROLE_CARDS.md` 中**[角色名]** 部分，记住你的身份、权限边界和参与阶段。之后等待接棒指令，不要主动做事。
@@ -90,7 +85,8 @@
 | 会话 1 | 产品经理 | 阶段一、二、五、六 |
 | 会话 2 | 产品设计师 | 阶段二、四 |
 | 会话 3 | 全栈开发 | 阶段三、四、六 |
-| 会话 4 | 项目经理 | 全程 |
+| 会话 4 | 小程序前端（候补） | 阶段三、四（按需激活） |
+| 会话 5 | 项目经理 | 全程 |
 
 ---
 
@@ -463,73 +459,63 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 
 ---
 
-## 七、Git 管理专家（GM）机制
+## 七、全员直连 GitHub（Git 权限）
 
-> **引入时间**：2026-08-04 | **引入理由**：4 角色共享同一工作区，各自 `git commit/push` 导致频繁 merge conflict（320 次 commit 中 20 个 merge commit）。GM 统一管理 git，彻底消除并行提交冲突。
+> **变更时间**：2026-08-05 | **变更说明**：**取消 Git 管理专家（GM）角色**，全员直连 GitHub。自本版本起，所有角色不再经由 GM 代提交，各自直接对自己的职责范围内文件执行 git 操作。原 `.git-staging/<role>.ready` 标记机制一并废弃。
 
 ### 7.1 核心规则
 
-1. **GM 是唯一有权执行 git 写操作的角色**。所有 git add/commit/push/merge/rebase 由 GM 统一执行。
-2. **其他 4 角色只能 `git pull`**，禁止任何 git 写操作。
-3. **各角色产出文件后**，不再自行 git 提交，改为写入 `.git-staging/<role>.ready` 标记文件。
-4. **GM 检查 staging 标记**后统一提交。触发方式：用户对 GM 说「提交」/ GM 主动检测。
+1. **所有角色均拥有直接 git 权限**：`pull` / `add` / `commit` / `push` / `merge` / `rebase`。
+2. **各角色只改自己职责范围内的文件**（见 ROLE_CARDS.md 各角色「产出物目录」与「可以 / 不可以」）。跨角色文件如需改动，先在 RELAY.md / TASK_BOARD 协调，避免越界合并冲突。
+3. **产出即提交**：文件改完 → `git add <file>` → `git commit` → `git push`。不再写 `.git-staging/<role>.ready` 标记，不再等待 GM 统一提交。
+4. **提交前先 `git pull --rebase`**，避免覆盖他人改动；遇到冲突按 7.4 处理。
 
-### 7.2 Staging 标记格式
+### 7.2 各角色 git 职责边界
 
-```json
-{
-  "role": "FS",
-  "timestamp": "2026-08-04T08:45:00+08:00",
-  "summary": "修复 #1 翻页 + 适配 5 分类",
-  "files": ["pages/home/home.js", "utils/constants.js"],
-  "ready": true
-}
-```
+| 角色 | git 权限 | 负责提交的文件范围 |
+|------|----------|-------------------|
+| 产品经理 PM | pull/add/commit/push/merge/rebase | 根目录协作框架文档、`docs/00-规划`、`docs/01`（产品规划）等自身产出 |
+| 产品设计师 PD | 同上 | `docs/02`（设计）等自身产出 |
+| 全栈开发 FS | 同上 | `cloudfunctions/`、`utils/`、`test/`、相关 `pages` 与组件 |
+| 小程序前端 FE（候补） | 同上 | 分配到的纯前端文件（`pages/`、`components/` 相关） |
+| 项目经理 PJM | 同上 | `RELAY.md`、`TASK_BOARD.md`、广播与治理文档 |
 
-各角色在 `.git-staging/` 目录写入 `<role>.ready`：
-- `pm.ready` — 产品经理
-- `pd.ready` — 产品设计师
-- `fs.ready` — 全栈开发
-- `fe.ready` — 小程序前端开发（候补）
-- `pjm.ready` — 项目经理
-
-### 7.3 GM 工作流程
+### 7.3 标准提交流程
 
 ```
-[各角色] 产出文件 → 写 .git-staging/<role>.ready → COMMLOG 标记「📤 待 GM 提交」
-                                                          ↓
-[GM]     检查 staging → git pull --rebase → git add -A → git commit → git push
-         清除 staging 标记 → COMMLOG 记录「📤→✅ GM 已提交：commit <hash>」
+[角色] 本地改完职责内文件
+   → git pull --rebase          （先拉最新，避免冲突）
+   → git add <具体文件>          （避免 -A 误带他人/临时文件）
+   → git commit -m "角色前缀: 摘要"
+   → git push
+   → COMMLOG 记录「✅ <role> 已提交：commit <hash>」
 ```
 
-### 7.4 GM 权限边界
+### 7.4 冲突处理
 
-| 可以 | 不可以 |
-|------|--------|
-| git add/commit/push/merge/rebase | 修改业务代码 |
-| 检查 staging 标记、清除标记 | 修改文档内容（只能改 COMMLOG） |
-| 解决 DNS 污染、分支管理、tag 管理 | 在 TASK_BOARD 认领业务任务 |
-| 写 COMMLOG 记录提交 | 自行合并业务逻辑冲突 |
+| 场景 | 处理方式 |
+|------|----------|
+| 多角色改不同文件 | 各自提交，互不冲突 |
+| 多角色改同一文件不同区域 | git 自动合并，直接提交 |
+| 多角色改同一文件同一区域 | 暂停，相关角色在 TASK_BOARD / RELAY 协调后再提交 |
+| COMMLOG 多人追加 | 各自按时间戳追加，互不覆盖（建议用 `>>` 或单独段落） |
 
-### 7.5 冲突处理
+### 7.5 DNS 污染与 Token（环境修复）
 
-| 场景 | GM 处理方式 |
-|------|------------|
-| 多角色改不同文件 | 直接合并提交 |
-| 多角色改同一文件不同区域 | git 自动合并，GM 直接提交 |
-| 多角色改同一文件同一区域 | GM 标记冲突，通知相关角色协调 |
-| COMMLOG 多人追加 | GM 按时间戳排序合并 |
+- 沙箱到 GitHub 存在间歇性 DNS / TLS 阻断。修复与 Token 获取见 `GITHUB_PUSH_AI_MANUAL.md` 与 `docs/共享保险库使用指南.md`。
+- 推送命令参考：`GIT_SSL_NO_VERIFY=1 git -c http.curloptResolve=github.com:443:<IP> push`（可用 IP 见手册，如 `20.205.243.166`）。
+- 提交信息建议带角色前缀（如 `PM: 更新协作框架`、`FS: 修复 v6.3 清洗`），便于追溯。
 
 ---
 
-## 九、项目资产库同步（与 GM 完全解耦 · 独立于 GitHub）
+## 九、项目资产库同步（独立于 GitHub）
 
-> **引入时间**：2026-08-04 | **核心理念**：文档+代码改完即自动同步到 Notion 资产库，**不依赖 GM、不依赖 GitHub**。
+> **引入时间**：2026-08-04 | **核心理念**：文档+代码改完即自动同步到 Notion 资产库，**不依赖 GitHub 推送是否成功**。
 
-### 9.1 为什么与 GM 解耦
-- GM 流程依赖 GitHub DNS 修复（间歇性阻断），存在不确定性。
+### 9.1 为什么独立于 GitHub
+- GitHub 在沙箱环境存在间歇性 DNS / TLS 阻断，推送可能失败或变慢。
 - 资产库同步走 Notion API，另一条网络通路。
-- 两个系统互相独立、互不阻塞：GM 可以慢，但资产库始终最新。
+- 两个系统互相独立、互不阻塞：GitHub 推送可以慢或失败，但资产库始终最新。
 
 ### 9.2 资产库包含什么
 | 内容 | 来源 | 同步方式 |
@@ -542,7 +528,7 @@ curl -s -o /dev/null -w "%{http_code}\n" https://github.com   # 应返回 200
 ### 9.3 触发方式
 | 触发方 | 场景 | 操作 |
 |--------|------|------|
-| **各角色** | 完成改动、写完 staging 标记后 | `bash sync_to_asset_library.sh`（如果能连 Notion API） |
+| **各角色** | 完成改动、提交 GitHub 后 | `bash sync_to_asset_library.sh`（如果能连 Notion API） |
 | **项目经理（PJM）** | 定期巡检 / 收到角色告知 | `bash sync_to_asset_library.sh` |
 | **owner** | 随时需要 | 对 PJM 说「同步资产库」 |
 
@@ -552,14 +538,14 @@ cd /root/one-news && bash sync_to_asset_library.sh
 ```
 > 前提：`NOTION_TOKEN` 环境变量或 `.notion_token` 文件。详见 `NOTION_SYNC.md`。
 
-### 9.5 与 GM 的关系
+### 9.5 与 GitHub 的关系
 ```
 角色改文件
-  ├── staging 标记 → GM 提交 → GitHub（可能因 DNS 慢/卡）
-  └── bash sync_to_asset_library.sh → Notion 资产库（独立，立即）
+  ├── git add/commit/push → GitHub（沙箱可能 DNS 慢/卡，需 DNS 修复）
+  └── bash sync_to_asset_library.sh → Notion 资产库（独立通路，立即）
 ```
-**两条通路并行、互不阻塞。资产库是兜底保障。**
+**两条通路并行、互不阻塞。资产库是兜底保障，GitHub 是代码权威源。**
 
 ---
 
-> **本协议版本**：v4.1 | **生效日期**：2026-08-04（新增 §九：项目资产库同步，与 GM 完全解耦）
+> **本协议版本**：v4.2 | **生效日期**：2026-08-05（移除 Git 管理专家 GM 角色，全员直连 GitHub：§七改写为「全员直连 GitHub（Git 权限）」，§九去 GM 解耦措辞；与 ROLE_CARDS.md v4.0 治理变更保持一致）
