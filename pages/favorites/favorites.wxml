@@ -12,6 +12,12 @@
     <view class="nav-count" wx:if="{{!loading}}">共 {{filteredCount}} 条</view>
   </view>
 
+  <!-- UI-11: 云端合并中顶部细进度条（UI-B5 设计稿，合并完成静默收起） -->
+  <view class="sync-bar {{syncing ? 'show' : ''}}"></view>
+
+  <!-- UI-14: 云端同步失败轻提示条（非阻断式，点击重试） -->
+  <view class="sync-fail {{syncFailed ? 'show' : ''}}" bindtap="onSyncRetry">收藏同步失败，点击重试</view>
+
   <!-- UI-B10: 分类筛选胶囊（无「全部」，默认展示全部） -->
   <view class="filter-bar" wx:if="{{!loading && !isEmpty}}">
     <view
@@ -69,6 +75,8 @@
         <text wx:if="{{item.source && item._time}}">·</text>
         <text>{{item._time}}</text>
       </view>
+      <!-- UI-13: 待同步角标（离线收藏未上云条目，点按重试该条上云） -->
+      <view class="fav-pending" wx:if="{{item._pending}}" data-id="{{item.id}}" catchtap="onPendingTap">☁️ 待同步</view>
     </view>
   </scroll-view>
 

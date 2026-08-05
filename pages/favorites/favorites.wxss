@@ -12,6 +12,47 @@
   flex-shrink: 0;
 }
 
+/* UI-11: 云端合并中顶部细进度条（UI-B5 设计稿，与 history 页 sync-bar 同款） */
+.sync-bar {
+  height: 2rpx;
+  background: var(--primary-subtle);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: none;
+}
+.sync-bar.show {
+  display: block;
+}
+.sync-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--primary);
+  animation: syncIndet 1.1s ease infinite;
+}
+@keyframes syncIndet {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
+/* UI-14: 同步失败轻提示条（非阻断式，点击重试） */
+.sync-fail {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--color-warning);
+  background: rgba(245, 158, 11, 0.12);
+  padding: 12rpx 32rpx;
+  text-align: center;
+  display: none;
+}
+.sync-fail.show {
+  display: block;
+}
+
 /* 顶部栏（返回主页 + 标题） */
 .nav-bar {
   position: relative;
@@ -142,6 +183,7 @@
   padding: 2rpx 32rpx 40rpx;
 }
 .fav-item {
+  position: relative; /* UI-13: 待同步角标定位锚点 */
   padding: 24rpx 0;
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
   transition: opacity 0.2s;
@@ -173,6 +215,19 @@
   background: var(--tag-bg);
   font-size: 22rpx;
   color: var(--tag-text);
+}
+
+/* UI-13: 待同步角标（☁️ 待同步，12 号字等效 24rpx，次级色；点按重试该条上云） */
+.fav-pending {
+  position: absolute;
+  right: 16rpx;
+  bottom: 20rpx;
+  font-size: 24rpx; /* UI-B5 规格「12 号字」≈ 24rpx */
+  color: var(--text-secondary);
+  background: var(--tag-bg);
+  border-radius: 12rpx;
+  padding: 2rpx 12rpx;
+  line-height: 1.6;
 }
 
 /* UI-B10: 长按 ActionSheet */

@@ -1,3 +1,35 @@
+## [2026-08-05 18:20] 🟢 FE 交付 · TL-B13 前端展示缺口（UI-11/13/14）· 收藏页云同步三件套落地 | 会话：[小程序前端开发(FE)]
+
+**触发**：owner「领取任务」→ FE 激活。TASK_BOARD 无 FE 独立任务，按「FS 任务堆叠时 FE 分担纯前端编码」规则，认领 TL-B13 前端展示缺口（UI-B5 设计稿已过闸，owner 2026-08-04 确认）。
+
+### 一、走查结论：收藏页缺 3 项 UI-B5 展示实现
+| 设计项 | 规格 | 交付前状态 |
+|---|------|:---:|
+| UI-11 | 云端合并中顶部细进度条（≤2s 静默） | ❌ 缺失（history 页已有同款，favorites 页无） |
+| UI-13 | 离线未上云条目右下角「☁️ 待同步」角标（12 号字次级色，点按重试） | ❌ 缺失 |
+| UI-14 | 整页顶部轻提示「收藏同步失败，点击重试」（非阻断） | ❌ 缺失（云端失败静默，无任何反馈） |
+
+### 二、交付内容（4 文件 +147/-9）
+- `utils/cloud.js`：新增 `getPendingFavorites()` —— 扫描 `cloudSyncQueue` 返回 `setUserFavorite{favorited:true}` 未成功 newsId（ES5 兼容，不破坏既有 API）
+- `pages/favorites/favorites.js`：`_load` 增 `syncing`/`syncFailed`；`_merge` 第三参 pendingIds，本地有/云端无/队列有 → `_pending:true`；新增 `onSyncRetry`、`onPendingTap`
+- `pages/favorites/favorites.wxml`：`sync-bar` + `sync-fail` + `fav-pending`（`catchtap` 防冒泡）
+- `pages/favorites/favorites.wxss`：sync-bar 复用 history 同款流动条动画；sync-fail 用 `--color-warning`；fav-pending 24rpx 次级色 + `position:relative` 锚点
+
+### 三、验证
+- `node --check` 语法通过
+- 回归：b06（20/0）、v5（18/0）、v5.11（40/0）、v6（20/0）、v7-runtime（41/0）、v10（53/0）、v11（25/0）全部通过；云函数依赖用例需云环境跳过
+- ⚠️ v10 首跑曾 52/1，git stash 对照 + 重跑确认系 tick 时序抖动，与本次改动无关
+
+### 四、遗留提醒
+- PD 按 UI-B5 §6 走查收藏页三项展示（V 系列闭环）
+- PM Q-02/Q-03 补「断网收藏→待同步角标→点按重试」用例（PRD §12.2 F-06）
+- 数据保留策略（TL-B12）前端 `isRetained` 已透传（`utils/request.js:95`），PRD 口径为「可选展示已收藏态」，本期 UI-B5 无对应设计项，未擅自加 UI（遵守「未定义场景不得自行推断」）
+
+### 五、找谁
+- 产品设计师（PD，走查）｜产品经理（PM，测试补用例）｜Git 管理专家（GM，staging 已就绪待提交）
+
+---
+
 ## [2026-08-05 17:40] 🟢 PJM 代码级复验 V5-FS-02 · 6 项修复全部落地 · V5 上线唯一硬阻塞解除 | 会话：[项目经理(PJM)]
 
 **触发**：08-05 07:40 PD 指出前任 PM 22:05「V5-FS-02 全部未交付」结论早于 FS `ff5d077`（22:06:51）提交、已过时。PJM 拉取仓库（HEAD `95a2c0b` / v6.3）对代码逐条复验。
