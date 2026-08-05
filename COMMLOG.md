@@ -1,3 +1,22 @@
+## [2026-08-05 19:55] 📤→✅ FE 已提交 · commit `TBD`（D-07 FE 部分 · 暗色可见性契约修复）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit `TBD`：D-07 FE 部分 + owner 截图修复（app.wxss / font-panel.wxss / settings.wxss / test 新增）
+  - **根因（PD D-07.1 定位）**：
+    1. G-03 P0：`.page--dark` 块缺 `--wheel-*`（7 个）→ 手动深色+系统浅色时分类轮盘取系统浅色值，黑字落深底不可见（owner 截图 1）
+    2. 发现 C：`--flash-*`（5 个）未入 `.page--dark` 块 → 手动深色下详情页进度分类名高亮色偏暗（owner 截图"高亮颜色不可见"）
+    3. font-panel `.radio-dot` 硬编码 `#FFFFFF` → 暗色下白点+白圆选中态不可见（owner 截图 2"按钮不可见"）
+    4. settings `.switch-knob` 硬编码 `#fff`（裸色，顺手收敛）
+  - **修复**：
+    - `app.wxss` `.page--dark` 块补全 14 个变量（--wheel-* 7 + --flash-* 5 + --color-favorite-active + --setting-panel-blur + --switch-knob），值=theme.json dark 分支逐项一致
+    - `components/font-panel/font-panel.wxss` `.radio-dot` → `var(--bg-card)`
+    - `pages/settings/settings.wxss` `.switch-knob` → `var(--switch-knob, #FFFFFF)`
+    - 新增 `test/v13-fe-dark-visibility.js`（84/0）
+  - **验证**：v13 84/0 + v5 18/0 + v6 20/0 + v5.11 40/0 + v7-runtime ✓ + v11 25/0 + b06 20/0 + v12 33/0
+  - **范围边界**：FS 的 S1-S4 架构治理（app.js 状态机 / page--light / media 迁移）不在本次；S2 的 5 页面 media 迁移、S3 其余裸色收敛、S4 系统层均待 FS。
+
+---
+
 ## [2026-08-05 19:50] 📤→✅ PD 已提交 · D-07 走查底稿确认与现状盘点（发现 A/B/C + S3 精确口径）| 会话：[产品设计师(PD)]
 
 **提交记录**：

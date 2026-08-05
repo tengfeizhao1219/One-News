@@ -125,7 +125,9 @@
   width: 50rpx;
   height: 50rpx;
   border-radius: 50%;
-  background: #fff;
+  /* D-07 S3 #2（FE 2026-08-05）：#fff → var(--switch-knob)，深浅两态均白（iOS 规范），
+     裸色收敛至 app.wxss 变量块 */
+  background: var(--switch-knob, #FFFFFF);
   box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.18);
   transition: left 0.22s;
 }
