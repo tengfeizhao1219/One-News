@@ -54,11 +54,11 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 
 ## 2. 详情页 `pages/detail`（UI-B11）
 
-### 2.1 顶部阅读进度细条（**新增**，owner 反馈①：颜色调浅）
-- 位置：紧贴 nav-bar 下方，`height: 2rpx`，底色 `--divider`。
-- **进度色用新增 token `--progress`**（实色 `--primary` 太深，真机刺眼）：
-  - light: `--progress: rgba(0, 122, 255, 0.38)`
-  - dark:  `--progress: rgba(10, 132, 255, 0.42)`
+### 2.1 顶部阅读进度细条（**新增**，owner 反馈①：颜色调浅但需可见）
+- 位置：紧贴 nav-bar 下方，`height: 3rpx`，底色 `--divider`。
+- **进度色用新增 token `--progress`**（实色 `--primary` 太深，真机刺眼；过浅会完全看不见）：
+  - light: `--progress: rgba(0, 122, 255, 0.55)`
+  - dark:  `--progress: rgba(10, 132, 255, 0.60)`
   - ⚠️ **FS 需在 `theme.json` 的 light/dark 两处各加 `--progress`**，否则变量未定义。
 - 宽度绑定：`width = scrollTop / (scrollHeight - clientHeight) * 100%`，在 `onContentScroll` 实时 `setData`，过渡 `width .08s linear`。
 
@@ -67,8 +67,9 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 - **行为（home 与 detail 必须完全一致）**：
   1. 页面 `ready` 即显示；
   2. **停留 3.5s 后淡出**（`opacity` 过渡 `0.5s`）；
-  3. **用户首次有效滑动（任意 flick）立即消失**。
-- 实现：数据态 `showSwipeHint`（默认 `true`）；`_startSwipeHintTimer()` 在 `ready` 后启动 3.5s 定时器置 `false`；`onTouchEnd` 在确认是有效 flick 后置 `false`。淡出用 `.fixed-swipe-hint.hide { opacity: 0; }`，**不要 `wx:if` 直接销毁**（需保留 DOM 完成过渡）。
+  3. **用户首次有效滑动（任意 flick）立即消失**；
+  4. **同一页面会话内只出现一次**：detail 翻到下一条、home 切分类/刷新后均不再复现。
+- 实现：数据态 `showSwipeHint`（默认 `true`）；`_startSwipeHintTimer()` 在 `ready` 后启动 3.5s 定时器置 `false`；`onTouchEnd` 在确认是有效 flick 后置 `false`。淡出用 `.fixed-swipe-hint.hide { opacity: 0; }`，**不要 `wx:if` 直接销毁**（需保留 DOM 完成过渡）。同会话内已消失后通过 `_swipeHintDismissed` 标记阻止再次触发。
 
 ### 2.3 收藏态强化（底部操作栏）
 - 未收藏：图标 `favorite.svg` 描边 + label「收藏」。
@@ -141,7 +142,7 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 | 分隔线 | `--divider #E8E6E1` | `#1C1C1E` |
 | 标签底 | `--tag-bg #EEECE8` | `#1C1C1E` |
 | 主题蓝 | `--primary #007AFF` | `#0A84FF` |
-| 进度蓝(新) | `--progress rgba(0,122,255,.38)` | `rgba(10,132,255,.42)` |
+| 进度蓝(新) | `--progress rgba(0,122,255,.55)` | `rgba(10,132,255,.60)` |
 | 收藏红 | `--color-favorite #FF3B30` | `#FF453A` |
 | 分类色 | `--flash-tech/world/sports/life` | 同 light 族 |
 
@@ -152,7 +153,7 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 ## 6. 验收清单（Dev 自测，真机优先）
 
 - [ ] **收藏页**：无缩略图；计数实时且随筛选联动；横滑胶囊选中态正确；**长按 500ms 出 ActionSheet**；取消收藏乐观更新 + 云端双写；两种空态文案区分；暗色全 token 生效。
-- [ ] **详情页**：顶部 2px 进度条用 `--progress`（浅蓝，非实色）；宽度随滚动实时；**滑动提示 3.5s 淡出 + 首次滑动消失**；收藏态 label/心跳正确；暗色 `--progress` 生效。
+- [ ] **详情页**：顶部 3rpx 进度条用 `--progress`（浅蓝可见，非实色）；宽度随滚动实时；**滑动提示 3.5s 淡出 + 首次滑动消失 + 同会话不重复出现**；收藏态 label/心跳正确；暗色 `--progress` 生效。
 - [ ] **设置页**：实时预览卡明显缩小（padding/字号/2 行摘要）；档位切换预览实时缩放；暗色切换正常。
 - [ ] **首页**：⚙ 按钮**真机浅色 + 暗色均可见齿轮**（无空白圆圈）；滑动提示 3.5s 淡出 + 首次滑动消失，与详情页表现一致；其余交互无回归。
 - [ ] **通用**：所有色值引用 token，无硬编码 HEX；安全区 `env(safe-area-inset-bottom)` 避让；动效时长符合 §0 约定。

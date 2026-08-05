@@ -258,7 +258,7 @@
 
 /* UI-B11: 顶部阅读进度细条（nav-bar 下方） */
 .reading-progress {
-  height: 2rpx;
+  height: 3rpx;
   background: var(--divider);
   flex-shrink: 0;
 }

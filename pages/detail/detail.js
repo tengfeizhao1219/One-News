@@ -68,13 +68,17 @@ Page({
   /**
    * 底部滑动提示自动消失：渲染 ready 显示，3.5s 后淡出；
    * 用户首次有效滑动时由 onTouchEnd 立即清除（与首页一致）。
+   * 同一详情页会话内仅显示一次，翻到下一条后不重复出现。
    */
   _startSwipeHintTimer: function () {
+    if (this._swipeHintDismissed) return
     clearTimeout(this._swipeHintTimer)
     this.setData({ showSwipeHint: true })
     var that = this
     this._swipeHintTimer = setTimeout(function () {
-      if (!that._destroyed) that.setData({ showSwipeHint: false })
+      if (that._destroyed) return
+      that._swipeHintDismissed = true
+      that.setData({ showSwipeHint: false })
     }, 3500)
   },
 
@@ -82,6 +86,9 @@ Page({
     var id = options.id
     var index = parseInt(options.index, 10) || 0
     var category = options.category || 'all'
+
+    // UI-B11: 滑动提示同会话仅显示一次
+    this._swipeHintDismissed = false
 
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
@@ -320,7 +327,9 @@ Page({
     if (Math.abs(dy) < 70 || dt > 500) {
       return
     }
-    this.setData({ showSwipeHint: false }) // 首次有效上/下滑 → 提示消失（与首页一致）
+    // 首次有效上/下滑 → 提示消失（与首页一致），同会话内不再复现
+    this._swipeHintDismissed = true
+    this.setData({ showSwipeHint: false })
 
     // UX-BUG02: 只有滚动到边界时才触发翻页
     // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶

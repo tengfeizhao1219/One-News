@@ -52,17 +52,23 @@ Page({
   /**
    * 首页底部滑动提示自动消失：进入 ready 显示，3.5s 后淡出；
    * 用户首次有效滑动时由 onTouchEnd 立即清除（与详情页 UI-B11 行为一致）。
+   * 同一首页会话内仅显示一次，切分类/刷新后不再复现。
    */
   _startSwipeHintTimer() {
+    if (this._swipeHintDismissed) return
     clearTimeout(this._swipeHintTimer)
     this.setData({ showSwipeHint: true })
     var that = this
     this._swipeHintTimer = setTimeout(function () {
-      if (!that._destroyed) that.setData({ showSwipeHint: false })
+      if (that._destroyed) return
+      that._swipeHintDismissed = true
+      that.setData({ showSwipeHint: false })
     }, 3500)
   },
 
   onLoad() {
+    // UI-B11: 滑动提示同会话仅显示一次
+    this._swipeHintDismissed = false
     // 翻页动画偏移：JS 计算的像素高度（= windowHeight），替代 WXSS transform 内的 100vh（部分机型/Webview 下方向异常）
     this.setData({ pageH: PAGE_HEIGHT })
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
@@ -411,13 +417,17 @@ Page({
     // 左滑呼出面板：横向手势优先判定，必须早于纵向早退（Math.abs(dy) < 70），
     // 否则纯横向左滑（dy 很小）会被纵向判定直接 return，导致面板永远打不开（Bug 2）。
     if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
-      this.setData({ showPanel: true, showSwipeHint: false }) // 左滑呼出面板 = 有效手势，提示立即淡出
+      // 左滑呼出面板 = 有效手势，提示立即淡出，同会话内不再复现
+      this._swipeHintDismissed = true
+      this.setData({ showPanel: true, showSwipeHint: false })
       return
     }
 
     // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
     if (Math.abs(dy) < 70 || dt > 500) return
-    this.setData({ showSwipeHint: false }) // 首次有效上/下滑 → 提示消失（与详情页一致）
+    // 首次有效上/下滑 → 提示消失（与详情页一致），同会话内不再复现
+    this._swipeHintDismissed = true
+    this.setData({ showSwipeHint: false })
 
     var atLast = this.data.currentIndex >= this.data.newsList.length - 1
     var atFirst = this.data.currentIndex <= 0
