@@ -6,19 +6,28 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <!-- UI-B4: 主页图标使用文本符号，跟随 --primary 着色 -->
+      <text class="nav-home-icon-text">⌂</text>
     </view>
     <view class="nav-title">浏览记录</view>
   </view>
 
+  <!-- UI-B4: 顶部云端合并进度条（进入页面 ≤2s 自动消失） -->
+  <view class="sync-bar {{syncing ? 'show' : ''}}"></view>
+
   <!-- 加载态 -->
   <view class="loading-wrap" wx:if="{{loading}}">
-    <view class="skeleton-item" wx:for="{{3}}" wx:key="*this"></view>
+    <view class="skeleton-item" wx:for="{{4}}" wx:key="*this">
+      <view class="sk-lines">
+        <view class="sk-line s1"></view>
+        <view class="sk-line s2"></view>
+      </view>
+    </view>
   </view>
 
   <!-- 空态 -->
   <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
-    <view class="empty-icon">🕘</view>
+    <image class="empty-icon-img" src="/assets/icons/history.svg" mode="aspectFit"></image>
     <view class="empty-text">暂无浏览记录</view>
     <view class="empty-hint" bindtap="goHome">去首页看看</view>
   </view>
@@ -32,10 +41,13 @@
       data-id="{{item.id}}"
       data-cat="{{item.category}}"
       bindtap="onItemTap">
-      <view class="history-title">{{item.title}}</view>
-      <view class="history-meta">
-        <text class="history-source">{{item.source || item.categoryName}}</text>
-        <text class="history-time">{{item._time}}</text>
+      <view class="history-main">
+        <view class="history-title">{{item.title}}</view>
+        <view class="history-meta">
+          <text wx:if="{{item.source || item.categoryName}}">{{item.source || item.categoryName}}</text>
+          <text wx:if="{{(item.source || item.categoryName) && item._time}}">·</text>
+          <text>{{item._time}}</text>
+        </view>
       </view>
     </view>
   </scroll-view>

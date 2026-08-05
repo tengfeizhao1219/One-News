@@ -37,21 +37,68 @@
   width: 44rpx;
   height: 44rpx;
 }
+.nav-home-icon-text {
+  font-size: 44rpx;
+  line-height: 1;
+  color: var(--primary);
+}
 .nav-title {
   font-size: 34rpx;
   font-weight: 600;
   color: var(--text-primary);
 }
 
+/* UI-B4: 顶部同步进度条 */
+.sync-bar {
+  height: 2rpx;
+  background: var(--primary-subtle);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: none;
+}
+.sync-bar.show {
+  display: block;
+}
+.sync-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--primary);
+  animation: syncIndet 1.1s ease infinite;
+}
+@keyframes syncIndet {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+
 /* 加载态骨架 */
 .loading-wrap {
-  padding: 24rpx 32rpx;
+  padding: 16rpx 32rpx 40rpx;
 }
 .skeleton-item {
-  height: 96rpx;
-  border-radius: 16rpx;
+  padding: 24rpx 16rpx;
+  border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
+  display: flex;
+}
+.sk-lines {
+  flex: 1;
+}
+.sk-line {
+  height: 24rpx;
+  border-radius: 12rpx;
   background: var(--tag-bg, rgba(0,0,0,0.05));
-  margin-bottom: 20rpx;
+  margin-bottom: 16rpx;
+  animation: skPulse 1.2s infinite;
+}
+.sk-line.s1 { width: 80%; }
+.sk-line.s2 { width: 50%; height: 20rpx; }
+@keyframes skPulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
 /* 空态 */
@@ -62,9 +109,10 @@
   align-items: center;
   justify-content: center;
 }
-.empty-icon {
-  font-size: 96rpx;
-  opacity: 0.5;
+.empty-icon-img {
+  width: 96rpx;
+  height: 96rpx;
+  opacity: 0.4;
   margin-bottom: 24rpx;
 }
 .empty-text {
@@ -83,11 +131,25 @@
 /* 列表 */
 .list-scroll {
   flex: 1;
-  padding: 8rpx 32rpx 40rpx;
+  padding: 8rpx 16rpx 40rpx;
 }
 .history-item {
-  padding: 24rpx 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 24rpx 16rpx;
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
+  align-items: flex-start;
+  cursor: pointer;
+  position: relative;
+  border-radius: 8rpx;
+  min-height: 88rpx;
+}
+.history-item:active {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+.history-main {
+  flex: 1;
+  min-width: 0;
 }
 .history-title {
   font-size: 30rpx;
@@ -97,15 +159,12 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  margin-bottom: 6rpx;
 }
 .history-meta {
-  margin-top: 10rpx;
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  font-size: 24rpx;
+  gap: 8rpx;
+  font-size: 22rpx;
   color: var(--text-secondary);
-}
-.history-time {
-  margin-left: auto;
 }

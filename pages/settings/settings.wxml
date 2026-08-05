@@ -1,0 +1,115 @@
+<!-- 设置页 — UI-B9 独立全屏页 -->
+<view class="page {{manualDark ? 'page--dark' : ''}}" data-font-scale="{{fontScaleTier}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 顶部栏：返回 + 标题 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+      <text class="nav-back-icon">‹</text>
+    </view>
+    <view class="nav-title">设置</view>
+  </view>
+
+  <scroll-view class="scroller" scroll-y>
+
+    <!-- 显示 -->
+    <view class="group">
+      <view class="group-label">显示</view>
+      <view class="card">
+        <view class="row" bindtap="toggleFollowSystem">
+          <view>
+            <view class="row-label">跟随系统</view>
+            <view class="row-sub">开启时深色模式由系统决定</view>
+          </view>
+          <view class="switch {{followSystem ? 'on' : ''}}">
+            <view class="switch-knob"></view>
+          </view>
+        </view>
+        <view class="row" bindtap="toggleDarkMode">
+          <view>
+            <view class="row-label">深色模式</view>
+            <view class="row-sub">{{followSystem ? '关闭手动切换后可调整' : '手动覆盖外观'}}</view>
+          </view>
+          <view class="switch {{darkMode ? 'on' : ''}} {{followSystem ? 'disabled' : ''}}">
+            <view class="switch-knob"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 阅读 -->
+    <view class="group">
+      <view class="group-label">阅读</view>
+      <view class="card">
+        <view class="row row--block">
+          <view class="row-label">字体大小</view>
+          <view class="seg">
+            <view
+              class="seg-item {{fontScaleTier === item.value ? 'on' : ''}}"
+              wx:for="{{tiers}}"
+              wx:key="value"
+              data-tier="{{item.value}}"
+              bindtap="onSelectTier">
+              {{item.label}}
+            </view>
+          </view>
+        </view>
+
+        <!-- 实时预览卡 -->
+        <view class="preview-wrap">
+          <view class="preview-label">实时预览（随上方档位缩放）</view>
+          <view class="preview-card">
+            <view class="pv-title">量子计算机首次实现千比特纠错运算</view>
+            <view class="pv-meta">
+              <text class="pv-tag">科技</text>
+              <text>科技日报</text>
+              <text>·</text>
+              <text>2 小时前</text>
+            </view>
+            <view class="pv-summary">
+              <text class="pv-chip">AI 摘要</text>研究团队宣布在超导量子芯片上实现了千比特级别的实时纠错，错误率降至十万分之一以下。
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 关于 -->
+    <view class="group">
+      <view class="group-label">关于</view>
+      <view class="card">
+        <view class="row">
+          <view class="row-label">版本</view>
+          <view class="row-val">{{appVersion}}</view>
+        </view>
+        <view class="row" bindtap="onFeedback">
+          <view class="row-label">意见反馈</view>
+          <text class="row-chev">›</text>
+        </view>
+        <view class="row" bindtap="toggleContact">
+          <view class="row-label">联系开发者</view>
+          <text class="row-chev {{contactOpen ? 'row-chev--open' : ''}}">›</text>
+        </view>
+      </view>
+      <view class="contact {{contactOpen ? 'show' : ''}}">
+        <view class="contact-item">
+          <view>
+            <view>邮箱</view>
+            <view class="contact-key">ztengfei@hotmail.com</view>
+          </view>
+          <view class="contact-copy" bindtap="copyEmail">复制</view>
+        </view>
+        <view class="contact-item">
+          <view>
+            <view>微信</view>
+            <view class="contact-key">jiaowotengfei</view>
+          </view>
+          <view class="contact-copy" bindtap="copyWechat">复制</view>
+        </view>
+      </view>
+    </view>
+
+  </scroll-view>
+</view>

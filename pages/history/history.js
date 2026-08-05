@@ -15,6 +15,7 @@ Page({
     list: [],
     loading: true,
     isEmpty: false,
+    syncing: false,
     _lastHomeTap: 0,
   },
 
@@ -32,7 +33,7 @@ Page({
    */
   _load: function () {
     var that = this
-    this.setData({ loading: true })
+    this.setData({ loading: true, syncing: true })
 
     var local = _cache.get('browseHistory') || []
     var merged = that._merge(local, [])
@@ -42,9 +43,10 @@ Page({
     cloud.callCloudFunction('getBrowseHistory', {}).then(function (res) {
       var cloudList = (res && res.data && res.data.list) || []
       var merged2 = that._merge(local, cloudList)
-      that.setData({ list: merged2, isEmpty: merged2.length === 0 })
+      that.setData({ list: merged2, isEmpty: merged2.length === 0, syncing: false })
     }).catch(function () {
       // 云端失败：保持本地数据
+      that.setData({ syncing: false })
     })
   },
 

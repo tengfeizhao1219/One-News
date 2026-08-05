@@ -32,8 +32,7 @@ Page({
     currentPage: 1,         // 当前分页（用于边界加载更多）
     loadingMore: false,    // 边界加载更多/刷新中
     categoryHint: '',      // BUG-20260802-006: 分类切换 0.5s 提示文案
-    // 字体面板
-    showFontPanel: false,   // 字体面板是否显示
+    // UI-B9: 字体设置已迁移到独立设置页；首页仅保留当前档位同步
     fontScaleTier: 0,       // 当前字体档位 0-3
     _fontScaleValue: 1,     // CSS --font-scale 数值（由 app 注入）
     _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
@@ -779,8 +778,10 @@ Page({
         fail: function (err) { console.error('[home] navigate favorites fail:', err) }
       })
     } else if (target === 'settings') {
-      this._syncFontScale()
-      this.setData({ showFontPanel: true })
+      wx.navigateTo({
+        url: '/pages/settings/settings',
+        fail: function (err) { console.error('[home] navigate settings fail:', err) }
+      })
     } else if (target === 'ext') {
       wx.showToast({ title: '敬请期待', icon: 'none' })
     }
