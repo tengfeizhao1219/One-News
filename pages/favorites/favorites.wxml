@@ -45,14 +45,15 @@
 
   <!-- 空态（无收藏） -->
   <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
-    <image class="empty-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+    <!-- BUG-FS-20260805-001: 深色模式切换白色版（image 渲染 SVG 时 currentColor 不生效→黑色） -->
+    <image class="empty-icon-img" src="/assets/icons/favorite{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     <view class="empty-text">还没有收藏任何新闻</view>
     <view class="empty-hint" bindtap="goHome">去首页看看</view>
   </view>
 
   <!-- 空态（筛选无结果） -->
   <view class="empty-wrap" wx:if="{{!loading && !isEmpty && filteredList.length === 0}}">
-    <image class="empty-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+    <image class="empty-icon-img" src="/assets/icons/favorite{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     <view class="empty-text">该分类下暂无收藏</view>
   </view>
 

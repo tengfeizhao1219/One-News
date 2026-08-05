@@ -20,6 +20,24 @@
 
 ---
 
+## [2026-08-05 23:05] 📤→✅ FS 已提交 · BUG-FS-20260805-001 详情页收藏星星深色模式显示黑色 | 会话：[全栈开发(FS)]
+
+**触发**：owner 反馈——夜晚模式下详情页底部收藏星星 icon 显示为黑色，应展示为白色（与底栏其他元素协调）。
+
+**根因**：`favorite.svg` 用 `fill="currentColor"`，但微信小程序 `<image>` 渲染 SVG 文件时 **currentColor 不生效**（固定 fallback 黑色），深色下 `.page--dark .bottom-bar-btn{color:#999999}` 无法传导到 image 内 SVG → 星星黑色。
+
+**修复**：
+1. 新增 `assets/icons/favorite-dark.svg`（白色 #FFFFFF 版）
+2. detail 页：未收藏星星 src 按 `isDark` 切换（与 themeClass 同批同步，页面无 onShow 不引入错位）
+3. 同根因顺手修复 favorites 空态（深色下纯黑底+黑星星几乎不可见）：favorites.js 加 `_isSystemDark()`（onLoad/onShow 刷新）+ 两处空态 icon 切换
+4. 已知遗留：home 更多面板 4 个 currentColor icon 同根因，改动面大暂缓
+
+**验证**：`node --check` 全通过；SVG XML 校验通过。
+
+**找谁**：PD 走查深色模式详情页/收藏页空态；owner 真机确认（iOS/Android）。
+
+---
+
 ## [2026-08-05 23:01] 📤→✅ FE 已提交 · commit `129a31a`（BUG-20260805-004 详情页已收藏按钮背景变红）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：

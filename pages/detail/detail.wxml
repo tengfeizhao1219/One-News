@@ -102,7 +102,8 @@
   <!-- 底部操作栏（收藏左 + 分享右） -->
   <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
-      <image wx:if="{{!isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+      <!-- BUG-FS-20260805-001: 深色模式用白色版星星（image 渲染 SVG 时 currentColor 不生效→黑色） -->
+      <image wx:if="{{!isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <image wx:if="{{isFavorited}}" class="bottom-bar-icon-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
       <!-- BUG-20260805-004：移除 inline style 让"已收藏"文字保持默认色，仅 icon 红色 -->
       <text class="bottom-bar-label">{{isFavorited ? '已收藏' : '收藏'}}</text>

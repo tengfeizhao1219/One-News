@@ -44,6 +44,8 @@ Page({
     // 收藏
     isFavorited: false,
     heartAnim: false,
+    // BUG-FS-20260805-001: 深色模式下收藏星星 icon 切换白色版（image 渲染 SVG 时 currentColor 不生效，固定为黑色）
+    isDark: false,
     // 字体档位（UX-FIX04 截断保护用）
     fontScaleTier: 0,
     // UX-FIX-F13: CSS --font-scale 数值（此前详情页完全缺失，导致正文缩放失效）
@@ -124,7 +126,9 @@ Page({
       _fontScaleValue: scaleVal,
       _metaScaleValue: metaVal,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
-      themeClass: (app && app.globalData && app.globalData.themeClass) || ''
+      themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-FS-20260805-001: 与 themeClass 同批同步（页面无 onShow，避免错位）
+      isDark: this._isSystemDark()
     })
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
