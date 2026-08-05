@@ -7,7 +7,9 @@
 // B-05：底部操作栏（收藏♡/♥ + 分享↗）+ onShareAppMessage
 // ============================================================
 
-var STATUS_BAR_HEIGHT = require('../../utils/constants').STATUS_BAR_HEIGHT
+var C = require('../../utils/constants')
+var STATUS_BAR_HEIGHT = C.STATUS_BAR_HEIGHT
+var PAGE_HEIGHT = C.PAGE_HEIGHT
 var getNewsDetail = require('../../utils/request').getNewsDetail
 var ReadingEngine = require('./reading-engine')
 var LocalCache = require('../../utils/localCache').LocalCache
@@ -87,6 +89,9 @@ Page({
     var metaVal = (app && typeof app.globalData._metaScaleValue === 'number')
       ? app.globalData._metaScaleValue
       : (scaleVal > 1.15 ? 1.15 : scaleVal)
+
+    // 翻页动画偏移：用 JS 计算的像素高度（= windowHeight），避免 WXSS transform 内用 100vh 在部分机型/Webview 下失效/方向异常
+    this.setData({ pageH: PAGE_HEIGHT })
 
     // UX-BUG02: 初始化滚动状态 + 获取可视区高度
     this._isAtTop = true

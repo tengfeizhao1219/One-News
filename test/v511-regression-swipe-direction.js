@@ -113,6 +113,58 @@ console.log('\n【静态】detail.wxss .article.no-transition 无过渡类')
     /\.article\.no-transition\s*\{\s*transition:\s*none/.test(wxss))
 }
 
+// ===== v5.9 回归根因修复：100vh 在 transform 内不可靠 → 改用 JS 注入的 --page-h 像素值 =====
+// 用户反馈：v5.9 将翻页偏移由 PAGE_HEIGHT(px) 改为 100vh 后，翻页方向在部分机型/Webview 下随机/反向；
+// pre-v5.9 卡片页用 PAGE_HEIGHT(px) 偏移方向正确。修复：CSS 变量 --page-h（= windowHeight px）。
+console.log('\n【静态】home.wxss / detail.wxss 翻页偏移使用 --page-h（避免 100vh 在 transform 内失效）')
+{
+  const homeWxss = read(path.join(ROOT, 'pages/home/home.wxss'))
+  const dWxss = read(files.detailWxss)
+  const homeNeed = [
+    ".card.out-up   { transform: translateY(calc(-1 * var(--page-h",
+    ".card.out-down { transform: translateY(var(--page-h",
+    ".card.in-up    { transform: translateY(var(--page-h",
+    ".card.in-down  { transform: translateY(calc(-1 * var(--page-h",
+  ]
+  homeNeed.forEach(function (s) {
+    check('home.wxss ' + s.trim().split(' ')[0] + ' 使用 --page-h', homeWxss.includes(s))
+  })
+  const dNeed = [
+    ".article.out-up   { transform: translateY(calc(-1 * var(--page-h",
+    ".article.out-down { transform: translateY(var(--page-h",
+    ".article.in-up    { transform: translateY(var(--page-h",
+    ".article.in-down  { transform: translateY(calc(-1 * var(--page-h",
+  ]
+  dNeed.forEach(function (s) {
+    check('detail.wxss ' + s.trim().split(' ')[0] + ' 使用 --page-h', dWxss.includes(s))
+  })
+  // 反向校验：transform 内不得残留裸 100vh（var(--page-h, 100vh) 的 fallback 不算）
+  check('home.wxss .card 翻页 transform 无裸 100vh',
+    !/\.card\.(out|in)-(up|down)\s*\{\s*transform:\s*translateY\(-?100vh\)/.test(homeWxss))
+  check('detail.wxss .article 翻页 transform 无裸 100vh',
+    !/\.article\.(out|in)-(up|down)\s*\{\s*transform:\s*translateY\(-?100vh\)/.test(dWxss))
+}
+
+// ===== JS 注入 --page-h（pageH: PAGE_HEIGHT），与 WXSS var(--page-h) 对应 =====
+console.log('\n【静态】home.js / detail.js 注入 pageH = PAGE_HEIGHT（配套 --page-h）')
+{
+  const homeJs = read(files.homeJs)
+  const dJs = read(files.detailJs)
+  check('home.js onLoad 注入 pageH: PAGE_HEIGHT',
+    homeJs.includes('this.setData({ pageH: PAGE_HEIGHT })'))
+  check('detail.js onLoad 注入 pageH: PAGE_HEIGHT',
+    dJs.includes('this.setData({ pageH: PAGE_HEIGHT })'))
+  check('home.js 已导入 PAGE_HEIGHT', homeJs.includes('PAGE_HEIGHT'))
+  check('detail.js 已导入 PAGE_HEIGHT', dJs.includes('var PAGE_HEIGHT = C.PAGE_HEIGHT'))
+  // WXML 根节点需将 pageH 注入为 --page-h CSS 变量
+  const homeWxml = read(path.join(ROOT, 'pages/home/home.wxml'))
+  const dWxml = read(path.join(ROOT, 'pages/detail/detail.wxml'))
+  check('home.wxml 根节点注入 --page-h: {{pageH}}px',
+    homeWxml.includes('--page-h: {{pageH}}px;'))
+  check('detail.wxml 根节点注入 --page-h: {{pageH}}px',
+    dWxml.includes('--page-h: {{pageH}}px;'))
+}
+
 // ===== 总结 =====
 console.log('\n==============================================')
 console.log('v5.11 回归测试（翻页方向 Bug1/Bug2/详情反向）：通过 ' + pass + ' / 失败 ' + fail)

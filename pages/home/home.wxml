@@ -3,7 +3,7 @@
 <view
   class="page"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
 
   <!-- 固定顶部栏（S4 owner 2026-08-02 决策：取消 R 按钮，刷新入口统一为下拉刷新） -->
   <view class="fixed-top-bar" style="padding-top: {{statusBarHeight + 6}}px;">

@@ -63,6 +63,8 @@ Page({
   },
 
   onLoad() {
+    // 翻页动画偏移：JS 计算的像素高度（= windowHeight），替代 WXSS transform 内的 100vh（部分机型/Webview 下方向异常）
+    this.setData({ pageH: PAGE_HEIGHT })
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
     this.loadNews()
     // 同步字体档位（由 app._initFontScale 初始化）

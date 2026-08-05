@@ -93,14 +93,15 @@
 .article.no-transition {
   transition: none;
 }
-/* 上滑翻下一条：旧内容向上移出（一屏高度） */
-.article.out-up   { transform: translateY(-100vh); opacity: 0; }
+/* 上滑翻下一条：旧内容向上移出（一屏高度，使用 JS 计算的 --page-h 像素值，避免 100vh 在 transform 内不可靠）
+   注意：pre-v5.9 卡片页曾用 PAGE_HEIGHT(px) 偏移，方向正确；v5.9 切换到 100vh 后出现方向随机/反向问题。 */
+.article.out-up   { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
 /* 下滑翻上一条：旧内容向下移出（一屏高度） */
-.article.out-down { transform: translateY(100vh);  opacity: 0; }
-/* 上滑翻下一条：新内容从下方滑入（+100vh→0，由移除 class 触发 transition） */
-.article.in-up    { transform: translateY(100vh);  opacity: 0; }
-/* 下滑翻上一条：新内容从上方滑入（-100vh→0） */
-.article.in-down  { transform: translateY(-100vh); opacity: 0; }
+.article.out-down { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
+/* 上滑翻下一条：新内容从下方滑入（+page-h→0，由移除 class 触发 transition） */
+.article.in-up    { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
+/* 下滑翻上一条：新内容从上方滑入（-page-h→0） */
+.article.in-down  { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
 
 /* ============ 边界提示 Chip ============ */
 
