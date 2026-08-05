@@ -93,10 +93,16 @@ console.log('\n【静态】home.js _animateSwipeNext/Prev 屏外起始（Bug1 �
     /renderCards[\s\S]*?no-transition/.test(nextFn))
   check('_animateSwipePrev renderCards 后立即加 no-transition 吸附',
     /renderCards[\s\S]*?no-transition/.test(prevFn))
-  check('_animateSwipeNext 30ms 后移除 no-transition 触发 transition',
-    /\.replace\('no-transition'[\s\S]*?30/.test(nextFn))
-  check('_animateSwipePrev 30ms 后移除 no-transition 触发 transition',
-    /\.replace\('no-transition'[\s\S]*?30/.test(prevFn))
+  check('_animateSwipeNext 30ms 后 animClass 全部清空为 \'\'（触发 transition）',
+    /animClass:\s*''/.test(nextFn))
+  check('_animateSwipePrev 30ms 后 animClass 全部清空为 \'\'（触发 transition）',
+    /animClass:\s*''/.test(prevFn))
+  // 反向校验：最终清空时不得残留 replace('no-transition')（那只会去掉 no-transition，
+  // 但 in-up/in-down 还在，卡片永远停在屏外导致空白）
+  check('_animateSwipeNext 清空逻辑不使用 replace(\'no-transition\')（避免残留 in-up）',
+    !nextFn.includes("replace('no-transition'"))
+  check('_animateSwipePrev 清空逻辑不使用 replace(\'no-transition\')（避免残留 in-down）',
+    !prevFn.includes("replace('no-transition'"))
 }
 
 // ===== 详情页：单元素模型 no-transition 吸附修复（反向 Bug）=====

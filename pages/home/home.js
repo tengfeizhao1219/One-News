@@ -482,10 +482,10 @@ Page({
         return { ...card, animClass: (card.animClass || '') + ' no-transition' }
       })
       that.setData({ cards: snapped })
-      // 阶段 2b: 下一帧移除 no-transition，触发 transition 从 +page-h→0（底部上滑入）
+      // 阶段 2b: 下一帧移除 no-transition + in-up，触发 transition 从 +page-h→0（底部上滑入）
       setTimeout(function () {
         var cleared = that.data.cards.map(function (card) {
-          return { ...card, animClass: (card.animClass || '').replace('no-transition', '').trim() }
+          return { ...card, animClass: '' }
         })
         that.setData({ cards: cleared })
         that._isAnimating = false
@@ -526,10 +526,10 @@ Page({
         return { ...card, animClass: (card.animClass || '') + ' no-transition' }
       })
       that.setData({ cards: snapped })
-      // 阶段 2b: 下一帧移除 no-transition，触发 transition 从 -page-h→0（顶部下滑入）
+      // 阶段 2b: 下一帧移除 no-transition + in-down，触发 transition 从 -page-h→0（顶部下滑入）
       setTimeout(function () {
         var cleared = that.data.cards.map(function (card) {
-          return { ...card, animClass: (card.animClass || '').replace('no-transition', '').trim() }
+          return { ...card, animClass: '' }
         })
         that.setData({ cards: cleared })
         that._isAnimating = false
