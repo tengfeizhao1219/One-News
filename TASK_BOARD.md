@@ -24,6 +24,48 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-05 20:05 【FS 交付 · D-07 全局深浅色治理 S1-S4 全部落地 · commit `9b697f7` · 待 PD 走查 + owner 真机】
+
+> **对象**：全员（FS 交付 / PD 走查 / PM 验收 / owner 真机）
+> **发布**：全栈开发（FS）
+
+**FS 已按 D-07 方案 S1→S4 顺序整体实施完毕（commit `9b697f7`）**：
+
+| 步骤 | 内容 | 关闭缺口 |
+|------|------|:---:|
+| S1 | `app.js` 主题状态机重构：`effectiveTheme` 单一事实源 + **始终注入** `page--dark`/`page--light`（删 `''` 分支）+ `wx.onThemeChange` 监听 + `app.wxss` 新增 `.page--light` 变量块 | G-01/G-04 |
+| S2 | 5 页面 + category-wheel 全部 `@media` 迁移为 `.page--dark` 前缀；`--wheel-*` token 补入 app.wxss 双变量块（组件 isolated 隔离下仅 CSS 变量继承可行，已注释说明） | G-02/G-03 |
+| S3 | 硬编码收敛：font-panel `radio-dot` 白点深色不可见修复 + settings `switch-knob` 显式声明；其余裸色均在 `.page--dark` 兜底块内（真机 var() 失效防护，保留合理） | G-07 |
+| S4 | `wx.setBackgroundColor` 窗口背景跟随生效主题（方案 B）+ `detail.js` share-card `isDark` 改读 `globalData.effectiveTheme` | G-05/G-08 |
+
+**验证**：`node --check` 全通过；JSON 合法；v13 静态断言自检 ①无 media ②含 page--light ③无空串分支 ④变量块就位 ✅。
+
+**🔔 分配**：
+- **[PD]** 走查 D-07 §四 场景 1-25（深浅两套），重点：分类轮盘（G-03 标志用例：手动深色+系统浅色文字可见）、dock 菜单、字体面板、AI 胶囊、骨架屏；对比度 ≥4.5:1
+- **[PM]** 验收 D-07 §6.1 三态×系统主题矩阵（「手动浅色+系统深色」保持浅色为 G-01 标志用例）；可补 v13 测试脚本
+- **[owner]** 真机验证（三态 × iOS/Android）+ O-1~O-3 裁定（分享卡片深浅策略 / toast 手动模式接受口径 / dock 蒙版统一）
+- **[owner 确认]** 真机验证由 owner 执行，BLK-09 不再阻塞 FE-5/真机回归项
+
+---
+### ✅ 2026-08-05 20:05 【FS 交付 · AB-01 关于一页落地 · commit `d89d56f` · 可走查】
+
+> **对象**：PD（走查）/ owner（验收）
+> **发布**：全栈开发（FS）
+
+**AB-01 已按需求文档落地（commit `d89d56f`）**：
+- 🆕 `pages/about/about` 独立页：品牌区（Slogan）+ 我们的初衷 + 五条设计理念 + 我们坚持的事 + 联系与反馈（邮箱/微信可复制）
+- 🆕 `assets/icons/info.svg`（Material 风格，对齐现有图标）
+- `app.json` 注册页面；home dock 第 4 项「扩展位」→「关于一页」+ 图标换 info.svg；**设置挪至 dock 最末**（owner 确认排列）
+- `home.js` `ext` 分支 → `navigateTo /pages/about/about`；删除 `more-item--ext` 淡化样式
+- 顺手清理：detail 页 `boundary-chip` 死代码（wxml + wxss，PM 19:30 广播低优项）
+
+**验证**：`node --check` 全通过；JSON 合法；关于页走 theme token（暗色 + 字号缩放自动适配）✅
+
+**🔔 分配**：
+- **[PD]** 走查关于页视觉（浅/深色 + 四档字号）
+- **[owner]** 真机确认 dock 排列与页面滚动体验
+
+---
 ### 📢 2026-08-05 19:50 【PD · D-07 走查底稿确认与现状盘点 · 3 个实施关键点 @FS/FE 必读】
 
 > **对象**：FS / FE（实施参考）、PM（方案微调确认）
@@ -2056,7 +2098,7 @@
 | **RQ-15-D** | 交互设计增量：侧边滚轮视觉/交互规范 | 交互设计师 | ✅ | ✅ | 无（PRD 就绪） | `docs/02-产品设计/D-02-增量-侧边分类滚轮.md` |
 | RQ-15-UI | 暗色模式适配规范 | 视觉设计师 | 🟡 | ⏳ | RQ-15-D | 设计规范增量（暗色 token） |
 | RQ-15-T | 技术可行性评估（T-03 增量） | 技术负责人 | 🟡 | ✅ **2026-08-05 交付（commit 9a37842）** | RQ-15-D ✅ | 技术方案增量（scroll-snap / 手势隔离）→ `docs/03-技术方案/T-03增量-RQ15-侧边分类滚轮-技术方案.md` |
-| RQ-15-FE | 前端实现：category-wheel 组件 | 前端开发 | 🔴 | ✅ **已实现**（TL-B17 交付）+ **FS 落地 FE-1 边界 bounce + FE-3 暗色 token 收尾（2026-08-05）** | RQ-15-T ✅ + UI-B7 确认 ✅ | `components/category-wheel/` —— 实现含顶部第二行锚定 v5.3-final + FE-1 越界弹性偏移（AC-RQ15-06）+ FE-3 `--wheel-*` CSS 变量引用 · 待 PD 验收 |
+| RQ-15-FE | 前端实现：category-wheel 组件 | 前端开发 | 🔴 | ✅ **已实现**（TL-B17 交付）+ **FS 落地 FE-1 边界 bounce + FE-3 暗色 token 收尾 + D-07 G-03 手动深色文字可见（2026-08-05）** | RQ-15-T ✅ + UI-B7 确认 ✅ | `components/category-wheel/` —— 顶部第二行锚定 v5.3-final + FE-1 越界弹性偏移（AC-RQ15-06）+ FE-3 `--wheel-*` CSS 变量 + D-07 S2 手动深色适配 · 待 PD 验收 |
 | **PM-N1** | 下迭代需求规划（范围/优先级/排期建议） | 产品经理 | ✅ | ✅ | 无 | `docs/01-需求规划/下迭代需求规划.md` |
 | PM-N2 | 固化下迭代范围到需求池 + 激活任务链 | 产品经理 | 🟡 | ✅ | owner 拍板 Q-N1~Q-N3（已拍板） | 需求池更新 + 任务板（下迭代范围=N-01 RQ-15 P0 + N-02 合并分类 P1 + N-03 浮动按钮 P1） |
 
