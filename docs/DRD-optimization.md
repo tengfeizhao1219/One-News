@@ -159,7 +159,45 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 
 ---
 
-## 6. 验收清单（Dev 自测，真机优先）
+## 6. Bug 清单 — 真机验收不合格项（2026-08-05 12:00 截图）
+
+> **严重程度说明**：P0 = 阻断用户体验，必须修复后重新真机预览。
+
+### BUG-FE-001：全站 mask 图标不可见（P0）
+
+| 维度 | 内容 |
+|---|---|
+| **现象** | 首页 ⚙ 设置齿轮、详情页 ♡ 收藏心形、详情页 🏠 返回主页、收藏页 🏠 返回主页——所有使用 SVG mask 的图标在真机上**完全不显示**（空白/透明）。 |
+| **影响页面** | `pages/home`、`pages/detail`、`pages/favorites`、`pages/history` |
+| **根因** | **双重缺陷**：① SVG 文件为 Feather Icons 描边型（`fill="none" stroke="..."`），微信 WebView 的 CSS mask 机制只渲染填充区域，描边被丢弃 → mask 输出为空白；② WXSS 中 `background-color: var(--text-secondary)` 在真机上 token 变量可能不解析 → 无颜色兜底。 |
+| **期望表现** | 所有 mask 图标在浅色/暗色模式下均清晰可见，颜色跟随主题 token。 |
+| **修复方案** | ① 全部 6 个 SVG 替换为 Material Icons 实心填充版（`fill="currentColor"`）；② 所有 WXSS mask 图标的 `background-color` 加上硬编码 fallback：`var(--text-secondary, #6B6B70)`（light）/ 对应暗色值 `#999999` 由媒体查询兜底。 |
+| **已修复文件** | `assets/icons/*.svg`（6 个）、`pages/home/home.wxss`（`.more-icon` / `.more-item-icon` / `.fixed-swipe-hint-icon`）、`pages/detail/detail.wxss`（`.nav-home-icon` / `.fixed-swipe-hint-icon` / `.bottom-bar-icon--favorite`）、`pages/favorites/favorites.wxss`（`.nav-home-icon` / `.empty-icon`）、`pages/history/history.wxss`（`.nav-home-icon`） |
+
+### BUG-FE-002：详情页阅读进度条不可见（P0）
+
+| 维度 | 内容 |
+|---|---|
+| **现象** | 详情页 nav-bar 下方阅读进度条在真机上完全看不到。 |
+| **影响页面** | `pages/detail` |
+| **根因** | ① `--progress` token 变量在真机不解析 → `background: var(--progress)` 无颜色；② 高度仅 3rpx，即使有颜色也极难察觉。 |
+| **期望表现** | 进度条清晰可见，浅蓝半透明，随滚动从 0% 增长到 100%。 |
+| **修复方案** | ① `theme.json` 中 `--progress` 透明度已从 0.38→0.55（light）/ 0.42→0.60（dark）；② WXSS 加硬编码 fallback：`background: var(--progress, rgba(0,122,255,.55))`。 |
+| **已修复文件** | `pages/detail/detail.wxss`（`.reading-progress-bar`）、`theme.json` |
+
+### BUG-FE-003：详情页滑动提示行为不符（P1）
+
+| 维度 | 内容 |
+|---|---|
+| **现象** | 底部「上滑阅读下一条」提示在翻到下一篇后重新出现，而非整页只出现一次。 |
+| **影响页面** | `pages/detail` |
+| **根因** | `_renderDetail` 每次渲染新文章都调用 `_startSwipeHintTimer()`，未检查 `_swipeHintDismissed` 标记（上一轮已加标记但 `_renderDetail` 里未判断）。 |
+| **期望表现** | 进入详情页首次显示 → 3.5s 淡出或首次滑动消失 → 同会话内翻页不重复出现。 |
+| **修复方案** | 已在 `detail.js` 的 `_startSwipeHintTimer` 开头加 `if (this._swipeHintDismissed) return`（上一轮 `a3ac8ce` 已落地）。 |
+
+---
+
+## 7. 验收清单（Dev 自测，真机优先）
 
 - [ ] **收藏页**：无缩略图；计数实时且随筛选联动；横滑胶囊选中态正确；**长按 500ms 出 ActionSheet**；取消收藏乐观更新 + 云端双写；两种空态文案区分；暗色全 token 生效。
 - [ ] **详情页**：顶部 3rpx 进度条用 `--progress`（浅蓝可见，非实色）；宽度随滚动实时；**滑动提示 3.5s 淡出 + 首次滑动消失 + 同会话不重复出现**；收藏态 label/心跳正确；暗色 `--progress` 生效。

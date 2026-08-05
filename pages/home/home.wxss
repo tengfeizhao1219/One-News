@@ -217,7 +217,8 @@
 .fixed-swipe-hint-icon {
   width: 32rpx;
   height: 32rpx;
-  background-color: var(--text-secondary);
+  /* BUG-FE-001: 硬编码 fallback */
+  background-color: var(--text-secondary, #6B6B70);
   opacity: 0.45;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -553,7 +554,8 @@
 .more-icon {
   width: 56rpx;
   height: 56rpx;
-  background-color: var(--text-secondary); /* 与 .more-item-icon 同色；原 --bg-page 与 FAB 浅灰近似导致真机浅色模式图标不可见（空白圆圈）*/
+  /* BUG-FE-001: 硬编码 fallback #6B6B70，真机 theme token 不解析时也能看到图标 */
+  background-color: var(--text-secondary, #6B6B70);
   -webkit-mask: url('/assets/icons/settings.svg') no-repeat center / contain;
   mask: url('/assets/icons/settings.svg') no-repeat center / contain;
 }
@@ -634,7 +636,8 @@
 .more-item-icon {
   width: 40rpx;
   height: 40rpx;
-  background-color: var(--text-secondary); /* v4.1: 图标退让至辅助色 */
+  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
+  background-color: var(--text-secondary, #6B6B70);
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: contain;

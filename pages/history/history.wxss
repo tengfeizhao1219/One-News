@@ -36,7 +36,8 @@
 .nav-home-icon {
   width: 44rpx;
   height: 44rpx;
-  background-color: var(--text-secondary);
+  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
+  background-color: var(--text-secondary, #6B6B70);
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: contain;

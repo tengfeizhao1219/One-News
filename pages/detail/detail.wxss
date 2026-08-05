@@ -38,7 +38,8 @@
 .nav-home-icon {
   width: 44rpx;
   height: 44rpx;
-  background-color: var(--text-secondary); /* v4.1: 图标退让至辅助色 */
+  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
+  background-color: var(--text-secondary, #6B6B70);
   -webkit-mask: url('/assets/icons/home.svg') no-repeat center / contain;
   mask: url('/assets/icons/home.svg') no-repeat center / contain;
 }
@@ -266,14 +267,16 @@
 .reading-progress-bar {
   height: 100%;
   width: 0%;
-  background: var(--progress);
+  /* BUG-FE-002: 硬编码 fallback rgba(0,122,255,.55)，真机 token 不解析时仍可见 */
+  background: var(--progress, rgba(0, 122, 255, 0.55));
   transition: width 0.08s linear;
 }
 
 .fixed-swipe-hint-icon {
   width: 32rpx;
   height: 32rpx;
-  background-color: var(--text-secondary);
+  /* BUG-FE-001: 硬编码 fallback */
+  background-color: var(--text-secondary, #6B6B70);
   opacity: 0.45;
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
@@ -338,11 +341,12 @@
   line-height: 1;
 }
 
-/* UI-B7 图标规范: 收藏图标用 SVG mask（描边式，随主题 token 变色） */
+/* UI-B7 图标规范: 收藏图标用 SVG mask（填充式，随主题 token 变色） */
 .bottom-bar-icon--favorite {
   width: 44rpx;
   height: 44rpx;
-  background-color: var(--text-secondary);
+  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
+  background-color: var(--text-secondary, #6B6B70);
   -webkit-mask-repeat: no-repeat;
   -webkit-mask-position: center;
   -webkit-mask-size: contain;
