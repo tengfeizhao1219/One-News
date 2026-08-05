@@ -764,8 +764,8 @@ Page({
    * TL-B16: 更多功能菜单项点击分发
    *   history   → 浏览记录页
    *   favorites → 我的收藏页
+   *   about     → 关于一页（AB-01，原 ext 扩展位）
    *   settings  → 字体设置面板
-   *   ext       → 扩展位（占位，敬请期待）
    */
   onMoreMenuTap(e) {
     var target = e.currentTarget.dataset.target
@@ -782,13 +782,17 @@ Page({
         url: '/pages/favorites/favorites',
         fail: function (err) { console.error('[home] navigate favorites fail:', err) }
       })
+    } else if (target === 'about') {
+      // AB-01：dock 第 4 项「扩展位」→「关于一页」（owner 2026-08-05 确认）
+      wx.navigateTo({
+        url: '/pages/about/about',
+        fail: function (err) { console.error('[home] navigate about fail:', err) }
+      })
     } else if (target === 'settings') {
       wx.navigateTo({
         url: '/pages/settings/settings',
         fail: function (err) { console.error('[home] navigate settings fail:', err) }
       })
-    } else if (target === 'ext') {
-      wx.showToast({ title: '敬请期待', icon: 'none' })
     }
   },
 

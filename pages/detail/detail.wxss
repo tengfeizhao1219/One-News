@@ -102,33 +102,6 @@
 /* 备用：淡入效果（当前未使用，保留供后续切换） */
 .article.fade-in  { opacity: 0; }
 
-/* ============ 边界提示 Chip ============ */
-
-.boundary-chip {
-  position: fixed;
-  bottom: 180rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 25;
-  background: var(--chip-bg);
-  color: var(--chip-text);
-  font-size: calc(24rpx * var(--font-scale));
-  padding: 20rpx 36rpx;
-  border-radius: 24rpx;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-
-.boundary-chip.show {
-  opacity: 1;
-}
-
-.chip-action {
-  text-decoration: underline;
-  pointer-events: auto;
-}
-
 /* ============ 网络兜底 Toast ============ */
 
 .network-toast {
@@ -474,25 +447,24 @@
   opacity: 0.7;
 }
 
-/* ============ 暗色模式兜底（修复 theme 变量偶发不生效）============ */
-@media (prefers-color-scheme: dark) {
-  .detail-title {
-    color: #FFFFFF;
-  }
-  .detail-meta,
-  .detail-meta text,
-  .source-link,
-  .nav-position,
-  .bottom-bar-btn,
-  .bottom-bar-label,
-  .bottom-bar-icon,
-  .share-btn-reset {
-    color: #999999;
-  }
-  .text-p {
-    color: #D4D4D4;
-  }
-  .state-message {
-    color: #999999;
-  }
+/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
+   修复 theme 变量偶发不生效；跟随系统深色与手动深色均注入 page--dark，统一作用域（G-02） */
+.page--dark .detail-title {
+  color: #FFFFFF;
+}
+.page--dark .detail-meta,
+.page--dark .detail-meta text,
+.page--dark .source-link,
+.page--dark .nav-position,
+.page--dark .bottom-bar-btn,
+.page--dark .bottom-bar-label,
+.page--dark .bottom-bar-icon,
+.page--dark .share-btn-reset {
+  color: #999999;
+}
+.page--dark .text-p {
+  color: #D4D4D4;
+}
+.page--dark .state-message {
+  color: #999999;
 }

@@ -1,0 +1,235 @@
+/* 关于一页 — dock「扩展位」改造（AB-01）· 对齐 settings 独立页模式，全部走 theme token */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+}
+
+.status-bar {
+  flex-shrink: 0;
+}
+
+/* 顶部栏 */
+.nav-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 88rpx;
+  flex-shrink: 0;
+}
+
+.nav-back {
+  position: absolute;
+  left: 8rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.nav-back--hover {
+  background-color: var(--bg-subtle);
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  color: var(--text-primary);
+  line-height: 1;
+  transform: translateY(-2rpx);
+}
+
+.nav-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 滚动容器 */
+.scroller {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 品牌区 */
+.brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 48rpx 40rpx;
+}
+
+.brand-name {
+  font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: calc(72rpx * var(--font-scale, 1));
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 8rpx;
+}
+
+.brand-slogan {
+  margin-top: 18rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* 区块 */
+.section {
+  padding: 0 32rpx 36rpx;
+}
+
+.section-title {
+  font-size: calc(28rpx * var(--font-scale-meta, 1));
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin: 0 8rpx 16rpx;
+  letter-spacing: 2rpx;
+}
+
+.card {
+  background-color: var(--bg-card);
+  border-radius: 20rpx;
+  padding: 28rpx 30rpx;
+  border: 1rpx solid var(--divider);
+}
+
+/* 初衷 */
+.origin-p {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  line-height: 1.8;
+  color: var(--text-body);
+  margin-bottom: 16rpx;
+}
+
+.origin-strong {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  line-height: 1.8;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* 理念列表 */
+.principle {
+  display: flex;
+  padding: 18rpx 0;
+}
+
+.principle + .principle {
+  border-top: 1rpx solid var(--divider);
+}
+
+.principle-index {
+  flex-shrink: 0;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background-color: var(--primary-subtle);
+  color: var(--primary);
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4rpx;
+}
+
+.principle-body {
+  flex: 1;
+  margin-left: 20rpx;
+  min-width: 0;
+}
+
+.principle-title {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.principle-desc {
+  margin-top: 6rpx;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  line-height: 1.6;
+  color: var(--text-body);
+}
+
+/* 坚持的事 */
+.commitment {
+  padding: 14rpx 0;
+}
+
+.commitment + .commitment {
+  border-top: 1rpx solid var(--divider);
+}
+
+.commitment-title {
+  font-size: calc(30rpx * var(--font-scale, 1));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.commitment-desc {
+  margin-top: 6rpx;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  line-height: 1.6;
+  color: var(--text-body);
+}
+
+/* 联系 */
+.contact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 4rpx;
+  border-radius: 12rpx;
+}
+
+.contact-row + .contact-row {
+  border-top: 1rpx solid var(--divider);
+}
+
+.contact-row--hover {
+  background-color: var(--bg-subtle);
+}
+
+.row-label {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--text-primary);
+}
+
+.row-val {
+  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  color: var(--text-secondary);
+}
+
+.contact-key {
+  margin-top: 4rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-secondary);
+}
+
+.contact-copy {
+  flex-shrink: 0;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--primary);
+  background: var(--primary-subtle);
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  font-weight: 500;
+}
+
+/* 页脚 */
+.footer {
+  text-align: center;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  padding: 8rpx 0 48rpx;
+  letter-spacing: 2rpx;
+}

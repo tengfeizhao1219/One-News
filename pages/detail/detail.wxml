@@ -88,12 +88,6 @@
   </scroll-view>
 
 
-  <!-- 边界提示 Chip -->
-  <view class="boundary-chip {{boundaryVisible ? 'show' : ''}}" wx:if="{{boundaryText}}">
-    <text wx:if="{{boundaryAction === 'back'}}" bindtap="goBack" class="chip-action">{{boundaryText}}</text>
-    <text wx:else>{{boundaryText}}</text>
-  </view>
-
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
     <text>🟡 网络开小差，下拉重试</text>

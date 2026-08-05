@@ -1,0 +1,87 @@
+<!-- 关于一页 — dock「扩展位」改造（AB-01） -->
+<view class="page {{themeClass}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+
+  <!-- 状态栏占位 -->
+  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+
+  <!-- 顶部栏：返回 + 标题 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+      <text class="nav-back-icon">‹</text>
+    </view>
+    <view class="nav-title">关于一页</view>
+  </view>
+
+  <scroll-view class="scroller" scroll-y>
+
+    <!-- 品牌区 -->
+    <view class="brand">
+      <view class="brand-name">一页</view>
+      <view class="brand-slogan">极简沉浸式新闻阅读 · 打开即读 · 零干扰</view>
+    </view>
+
+    <!-- 我们的初衷 -->
+    <view class="section">
+      <view class="section-title">我们的初衷</view>
+      <view class="card">
+        <view class="origin-p">新闻本该是「知道今天发生了什么」。</view>
+        <view class="origin-p">可打开任何一个新闻 App，迎接你的往往是：信息流、弹窗、算法推荐、无限下拉、视频、广告……你只是想看几条新闻，却像走进了一个喧闹的集市。</view>
+        <view class="origin-p">所以我们做了「一页」——一个简单到近乎固执的新闻阅读器：</view>
+        <view class="origin-strong">打开就是今天值得读的一条，上下滑动逐页翻看。没有信息流，没有「猜你喜欢」，没有无限刷。</view>
+      </view>
+    </view>
+
+    <!-- 我们的理念 -->
+    <view class="section">
+      <view class="section-title">我们的理念</view>
+      <view class="card">
+        <view class="principle" wx:for="{{principles}}" wx:key="title">
+          <view class="principle-index">{{index + 1}}</view>
+          <view class="principle-body">
+            <view class="principle-title">{{item.title}}</view>
+            <view class="principle-desc">{{item.desc}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 我们坚持的事 -->
+    <view class="section">
+      <view class="section-title">我们坚持的事</view>
+      <view class="card">
+        <view class="commitment" wx:for="{{commitments}}" wx:key="title">
+          <view class="commitment-title">{{item.title}}</view>
+          <view class="commitment-desc">{{item.desc}}</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 联系与反馈 -->
+    <view class="section">
+      <view class="section-title">联系与反馈</view>
+      <view class="card">
+        <view class="contact-row" bindtap="copyEmail" hover-class="contact-row--hover">
+          <view>
+            <view class="row-label">邮箱</view>
+            <view class="contact-key">ztengfei@hotmail.com</view>
+          </view>
+          <view class="contact-copy">复制</view>
+        </view>
+        <view class="contact-row" bindtap="copyWechat" hover-class="contact-row--hover">
+          <view>
+            <view class="row-label">微信</view>
+            <view class="contact-key">jiaowotengfei</view>
+          </view>
+          <view class="contact-copy">复制</view>
+        </view>
+        <view class="contact-row">
+          <view class="row-label">版本</view>
+          <view class="row-val">{{appVersion}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="footer">一页 · 简单到极致</view>
+
+  </scroll-view>
+</view>

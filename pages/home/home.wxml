@@ -99,13 +99,13 @@
       <image class="more-item-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
       <text class="more-item-label">我的收藏</text>
     </view>
+    <view class="more-item" data-target="about" bindtap="onMoreMenuTap">
+      <image class="more-item-icon-img" src="/assets/icons/info.svg" mode="aspectFit"></image>
+      <text class="more-item-label">关于一页</text>
+    </view>
     <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
       <image class="more-item-icon-img" src="/assets/icons/settings.svg" mode="aspectFit"></image>
       <text class="more-item-label">设置</text>
-    </view>
-    <view class="more-item more-item--ext" data-target="ext" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/plus.svg" mode="aspectFit"></image>
-      <text class="more-item-label">扩展位</text>
     </view>
   </view>
 
