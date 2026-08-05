@@ -318,16 +318,24 @@ exports.main = async (event) => {
   }
 
   // 1. 三数据源拉取（v6.5：智谱 AI 搜索优先 → 聚合备选 → 天行兜底）
-  const { searchAllCategories: zhipuSearchAll } = require('./zhipuSearch')
   const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
   const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
+
+  // 智谱模块延迟加载（try-catch 保护：加载失败不影响聚合/天行兜底）
+  let zhipuSearchAll = null
+  try {
+    const zhipuMod = require('./zhipuSearch')
+    zhipuSearchAll = zhipuMod.searchAllCategories
+  } catch (err) {
+    console.error('[refreshNews] 加载 zhipuSearch 模块失败:', err.message, '将跳过智谱搜索')
+  }
 
   let searchResult = null
   let engine = 'zhipu'
   let zhipuQuota = { zhipuCalls: 0, deepseekCalls: 0 }
 
   // 1a. 智谱 AI 搜索（主力，v6.5）
-  if (zhipuKey) {
+  if (zhipuKey && zhipuSearchAll) {
     try {
       const zhipuResult = await zhipuSearchAll(CATEGORIES, db)
       zhipuQuota = zhipuResult.quota || zhipuQuota
