@@ -8,26 +8,8 @@
   color: var(--text-primary);
 }
 
-/* 手动暗色覆盖（当 theme.json 仍跟随系统时，设置页内可独立预览） */
-.page--dark {
-  --bg-page: #000000;
-  --bg-card: #0D0D0D;
-  --bg-subtle: #1A1A1C;
-  --text-primary: #FFFFFF;
-  --text-secondary: #999999;
-  --text-body: #D4D4D4;
-  --text-tertiary: #666666;
-  --divider: #1C1C1E;
-  --tag-bg: #1C1C1E;
-  --tag-text: #999999;
-  --primary: #0A84FF;
-  --primary-subtle: rgba(10, 132, 255, 0.18);
-  --preview-bg: #141416;
-  --seg-bg: #2C2C2E;
-  --seg-on-bg: #636366;
-  --seg-on-text: #FFFFFF;
-  --switch-off: #39393D;
-}
+/* 手动暗色覆盖（已提升至 app.wxss 全局 .page--dark，设置页手动深色模式全小程序生效）
+   BUG-20260805-003：原定义仅作用于设置页自身 → 其他页面不生效，已迁移。 */
 
 /* 顶部栏 */
 .nav-bar {

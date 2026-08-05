@@ -1,5 +1,5 @@
 <!-- 浏览记录页 — TL-B14 / RQ-06 -->
-<view class="page">
+<view class="page {{themeClass}}">
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 

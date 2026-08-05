@@ -1,3 +1,20 @@
+## [2026-08-05 18:55] 📤→✅ FE 已提交 · commit `TBD`（手动深色全局广播）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit `TBD`：BUG-20260805-003 手动深色模式全局生效（13 文件）
+  - **根因**：`.page--dark` CSS 变量定义在 settings.wxss（页面级作用域），其他页面不可见
+  - **修复**：
+    - `app.wxss`：移入 `.page--dark` 变量块（含 settings 特有变量 `--preview-bg`, `--seg-bg` 等）
+    - `app.js`：新增 `_initTheme()` + `applyTheme()` → 读取 Storage → 计算 `themeClass` → 广播到 `getCurrentPages()` 所有活跃页面
+    - `app.globalData`：新增 `followSystem`, `darkMode`, `themeClass` 字段
+    - 全部 5 页（home/detail/favorites/history/settings）WXML 根节点改为 `class="page {{themeClass}}"`，JS onLoad/onShow 注入 `themeClass`
+    - `settings.js`：`toggleFollowSystem()` / `toggleDarkMode()` → `_syncGlobalTheme()` → `app.applyTheme()`
+    - `settings.wxss`：移除旧的 `.page--dark` 变量块
+  - **测试适配**：`v5-regression-touch-architecture.js` 正则从 `/class="page"/` 改为 `/class="page\b/`，适配 `class="page {{themeClass}}"` 多 class 根节点
+  - **验证**：全量测试通过（v5 18/0, v5.11 ✓, v6 ✓, v7 ✓, v7-runtime ✓, v9 ✓, v11 25/0, b06 20/0）
+
+---
+
 ## [2026-08-05 18:50] 📤→✅ FE 已提交 · commit `34626e0`（暗色兜底）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：

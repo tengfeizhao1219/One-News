@@ -13,6 +13,10 @@ App({
     fontScale: 0,
     _fontScaleValue: 1,
     _metaScaleValue: 1,
+    // BUG-20260805-003：全局手动主题（设置页「深色模式」需全小程序生效）
+    followSystem: true,
+    darkMode: false,
+    themeClass: '',
   },
 
   onLaunch() {
@@ -34,6 +38,9 @@ App({
       require('./utils/cloud').flushQueue()
     } catch (e) { /* ignore */ }
 
+    // BUG-20260805-003：读取手动主题偏好并应用到全部页面
+    this._initTheme()
+
     // 获取系统信息
     const sysInfo = wx.getSystemInfoSync()
     this.globalData.statusBarHeight = sysInfo.statusBarHeight
@@ -42,6 +49,46 @@ App({
 
     // 字体初始化：首入跟随系统，后续读取记忆
     this._initFontScale()
+  },
+
+  /**
+   * BUG-20260805-003：初始化主题偏好（设置页手动深色模式全局生效）
+   * 读取 Storage（settings_followSystem / settings_darkMode，与设置页同键），
+   * 手动暗色 → globalData.themeClass = 'page--dark'（各页面根节点绑定）。
+   */
+  _initTheme() {
+    var followSystem = true
+    var darkMode = false
+    try {
+      var sf = wx.getStorageSync('settings_followSystem')
+      var sd = wx.getStorageSync('settings_darkMode')
+      if (sf !== '' && sf !== undefined && sf !== null) {
+        followSystem = !!sf
+        darkMode = !!sd
+      }
+    } catch (e) { /* ignore */ }
+    this.globalData.followSystem = followSystem
+    this.globalData.darkMode = darkMode
+    this.applyTheme()
+  },
+
+  /**
+   * BUG-20260805-003：应用主题到所有已存在页面（getCurrentPages 动态注入 themeClass）
+   * 手动暗色（!followSystem && darkMode）→ 'page--dark'，其余 → ''
+   */
+  applyTheme() {
+    var followSystem = this.globalData.followSystem !== false
+    var darkMode = !!this.globalData.darkMode
+    var themeClass = (!followSystem && darkMode) ? 'page--dark' : ''
+    this.globalData.themeClass = themeClass
+    try {
+      var pages = getCurrentPages()
+      for (var i = 0; i < pages.length; i++) {
+        if (pages[i] && pages[i].setData) {
+          pages[i].setData({ themeClass: themeClass })
+        }
+      }
+    } catch (e) { /* ignore */ }
   },
 
   /**

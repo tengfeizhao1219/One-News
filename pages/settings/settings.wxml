@@ -1,5 +1,5 @@
 <!-- 设置页 — UI-B9 独立全屏页 -->
-<view class="page {{manualDark ? 'page--dark' : ''}}" data-font-scale="{{fontScaleTier}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+<view class="page {{themeClass}}" data-font-scale="{{fontScaleTier}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
 
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>

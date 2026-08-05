@@ -32,6 +32,8 @@ Page({
       fontScaleTier: tier,
       _fontScaleValue: app.globalData._fontScaleValue || scaleMap[tier] || 1,
       _metaScaleValue: app.globalData._metaScaleValue || 1,
+      // BUG-20260805-003: 根节点 class 由全局 themeClass 驱动
+      themeClass: (app && app.globalData && app.globalData.themeClass) || '',
     })
 
     // 读取主题偏好（若无则默认跟随系统）
@@ -66,6 +68,7 @@ Page({
 
   /**
    * UI-B9: 跟随系统开关
+   * BUG-20260805-003：同步 app.globalData 并 applyTheme 让全小程序立即生效
    */
   toggleFollowSystem: function () {
     var next = !this.data.followSystem
@@ -74,11 +77,13 @@ Page({
       darkMode: next ? false : this.data.darkMode,
       manualDark: next ? false : this.data.darkMode,
     })
+    this._syncGlobalTheme()
     this._saveThemePrefs()
   },
 
   /**
    * UI-B9: 深色模式开关（仅在非跟随系统时可用）
+   * BUG-20260805-003：同步 app.globalData 并 applyTheme 让全小程序立即生效
    */
   toggleDarkMode: function () {
     if (this.data.followSystem) return
@@ -87,7 +92,19 @@ Page({
       darkMode: next,
       manualDark: next,
     })
+    this._syncGlobalTheme()
     this._saveThemePrefs()
+  },
+
+  /**
+   * BUG-20260805-003：将手动主题偏好同步到 app.globalData 并广播到所有页面
+   */
+  _syncGlobalTheme: function () {
+    if (app) {
+      app.globalData.followSystem = this.data.followSystem
+      app.globalData.darkMode = this.data.darkMode
+      if (typeof app.applyTheme === 'function') app.applyTheme()
+    }
   },
 
   _saveThemePrefs: function () {

@@ -122,7 +122,9 @@ Page({
       currentIndex: index,
       fontScaleTier: tier,
       _fontScaleValue: scaleVal,
-      _metaScaleValue: metaVal
+      _metaScaleValue: metaVal,
+      // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
+      themeClass: (app && app.globalData && app.globalData.themeClass) || ''
     })
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）

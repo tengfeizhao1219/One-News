@@ -8,6 +8,43 @@ page {
   overflow: hidden;
 }
 
+/* ============ BUG-20260805-003: 全局手动暗色主题 ============
+   设置页「深色模式」开关（非跟随系统时）→ app.applyTheme() 给所有页面根节点
+   注入 class="page--dark"。此处变量定义作用于任意页面根节点（原定义在
+   settings.wxss，仅设置页自身生效——这就是手动夜晚模式只改设置页的根因）。
+   变量值 = theme.json dark 分支，与系统暗色一致。 */
+.page--dark {
+  --bg-page: #000000;
+  --bg-card: #0D0D0D;
+  --bg-subtle: #1A1A1C;
+  --text-primary: #FFFFFF;
+  --text-secondary: #999999;
+  --text-body: #D4D4D4;
+  --text-tertiary: #666666;
+  --text-link: #7FA7D9;
+  --divider: #1C1C1E;
+  --tag-bg: #1C1C1E;
+  --tag-text: #999999;
+  --overlay: rgba(0, 0, 0, 0.7);
+  --primary: #0A84FF;
+  --primary-subtle: rgba(10, 132, 255, 0.18);
+  --progress: rgba(10, 132, 255, 0.60);
+  --highlight-bg: rgba(10, 132, 255, 0.10);
+  --color-favorite: #FF453A;
+  --color-favorite-tint: rgba(255, 69, 58, 0.16);
+  --color-warning: #FBBF24;
+  --bottom-bar-bg: rgba(13, 13, 13, 0.55);
+  --setting-panel-bg: rgba(13, 13, 13, 0.78);
+  --chip-bg: rgba(255, 255, 255, 0.15);
+  --chip-text: #FFFFFF;
+  /* 设置页专属（原 settings.wxss .page--dark 内定义，随全局提升） */
+  --preview-bg: #141416;
+  --seg-bg: #2C2C2E;
+  --seg-on-bg: #636366;
+  --seg-on-text: #FFFFFF;
+  --switch-off: #39393D;
+}
+
 /* 暗色模式统一由 theme.json 的 CSS 变量驱动，此处不再硬编码覆盖 */
 
 /* 状态栏占位 */

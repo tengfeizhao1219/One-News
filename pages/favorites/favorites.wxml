@@ -1,5 +1,5 @@
 <!-- 收藏列表页 — TL-B13 / RQ-03 -->
-<view class="page">
+<view class="page {{themeClass}}">
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 

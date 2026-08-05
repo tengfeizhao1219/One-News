@@ -37,10 +37,16 @@ Page({
 
   onLoad: function () {
     var s = (app && app.globalData && app.globalData.statusBarHeight) || 20
-    this.setData({ statusBarHeight: s })
+    this.setData({
+      statusBarHeight: s,
+      // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
+      themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+    })
   },
 
   onShow: function () {
+    // BUG-20260805-003: onShow 刷新主题（可能从设置页返回）
+    this.setData({ themeClass: (app && app.globalData && app.globalData.themeClass) || '' })
     this._load()
   },
 

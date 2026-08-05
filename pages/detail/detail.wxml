@@ -1,7 +1,7 @@
 <!-- 详情页 - 跨分类阅读模式 + 底部操作栏 -->
 <!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
 <view
-  class="page"
+  class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
   style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
 
