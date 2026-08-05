@@ -28,7 +28,8 @@
   <view class="nav-bar">
     <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <!-- UI-B11: 主页图标使用文本符号，可跟随 --primary 着色（SVG image 无法继承 currentColor） -->
+      <text class="nav-home-icon-text">⌂</text>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -36,8 +37,8 @@
     </view>
   </view>
 
-  <!-- 阅读进度细条（UI-B11：nav 下方 2rpx 浅蓝线） -->
-  <view class="reading-progress" wx:if="{{pageState === 'ready' && total > 1}}">
+  <!-- 阅读进度细条（UI-B11：nav 下方 2rpx 浅蓝线；单篇/多篇均显示阅读进度） -->
+  <view class="reading-progress" wx:if="{{pageState === 'ready'}}">
     <view class="reading-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 

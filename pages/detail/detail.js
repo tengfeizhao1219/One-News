@@ -247,6 +247,19 @@ Page({
   // ============ 详情渲染（v5.8 重构：支持翻页动画暂存） ============
 
   /**
+   * 将分类 id 映射为 theme.json 中对应的 CSS 变量（用于跨分类分类名着色）
+   */
+  _getCategoryColorVar: function (categoryId) {
+    var map = {
+      tech: 'var(--flash-tech)',
+      international: 'var(--flash-world)',
+      sports: 'var(--flash-sports)',
+      life: 'var(--flash-life)',
+    }
+    return map[categoryId] || ''
+  },
+
+  /**
    * 渲染新闻详情（供 onDetailReady / 翻页 in 阶段调用）
    */
   _renderDetail: function (news, paragraphs) {
@@ -258,6 +271,7 @@ Page({
       loading: false,
       pageState: 'ready',
       progressPercent: 0,
+      flashColor: that._getCategoryColorVar(news && news.category),
     }, function () {
       // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
       that._measureScroll()
@@ -324,6 +338,7 @@ Page({
   },
 
   onTouchEnd: function (e) {
+    var that = this
     if (this._animating || !this._engine) return
     var dy = e.changedTouches[0].clientY - this._touchStartY
     var dt = Date.now() - this._touchStartT
@@ -365,10 +380,16 @@ Page({
     var scrollHeight = e.detail.scrollHeight
     var clientHeight = this._clientHeight || 500
     this._lastScrollTop = scrollTop
-    // UI-B11: 实时更新进度条百分比
+    // UI-B11: 实时更新进度条百分比（保留一位小数，进度条连续平滑）
     var progressMax = scrollHeight - clientHeight
-    var pct = progressMax > 0 ? Math.min(100, Math.round(scrollTop / progressMax * 100)) : 0
+    var pct = progressMax > 0 ? Math.min(100, parseFloat((scrollTop / progressMax * 100).toFixed(1))) : 0
     this.setData({ progressPercent: pct })
+    // 首次滚动即让滑动提示消失（demo 规格）
+    if (scrollTop > 10 && !this._swipeHintDismissed) {
+      this._swipeHintDismissed = true
+      clearTimeout(this._swipeHintTimer)
+      this.setData({ showSwipeHint: false })
+    }
     // 触顶阈值 10px，触底阈值 50px（微信 scroll-view 可能无法精确到 0）
     this._isAtTop = scrollTop <= 10
     // BUG-20260802-001: 触底以原生 scrolltolower 为准，此处只负责「明确离开底部」时复位，
@@ -538,9 +559,8 @@ Page({
    */
   _showFlash: function (categoryId) {
     // UX-SIMPLIFY05: 移除闪烁条，仅保留 flashColor 用于进度指示分类名着色
-    // UX-FIX-F1: 分类色仍由 reading-engine 提供（分类色≠主色），无结果时留空让 CSS fallback 到 --primary
-    var color = this._engine ? this._engine.getCategoryFlashColor(categoryId) : ''
-    this.setData({ flashColor: color })
+    // UI-B11: 统一使用 theme.json CSS 变量，避免 hex 与变量混用导致暗色模式失效
+    this.setData({ flashColor: this._getCategoryColorVar(categoryId) })
   },
 
   /**
