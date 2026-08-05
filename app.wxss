@@ -12,7 +12,11 @@ page {
    设置页「深色模式」开关（非跟随系统时）→ app.applyTheme() 给所有页面根节点
    注入 class="page--dark"。此处变量定义作用于任意页面根节点（原定义在
    settings.wxss，仅设置页自身生效——这就是手动夜晚模式只改设置页的根因）。
-   变量值 = theme.json dark 分支，与系统暗色一致。 */
+   变量值 = theme.json dark 分支，与系统暗色一致。
+   D-07 补全（2026-08-05 FE）：补 --flash-★ --wheel-★ --color-favorite-active
+   --setting-panel-blur —— 此前缺失导致「手动深色+系统浅色」时分类轮盘取系统
+   浅色值（G-03 文字不可见）、分类高亮色偏暗（发现 C）、进度条分类名着色错位。
+   注：★ 为全角星号，避免注释内 */ 序列导致 WXSS 解析器提前结束注释（f26b379）。 */
 .page--dark {
   --bg-page: #000000;
   --bg-card: #0D0D0D;
@@ -31,10 +35,12 @@ page {
   --progress: rgba(10, 132, 255, 0.60);
   --highlight-bg: rgba(10, 132, 255, 0.10);
   --color-favorite: #FF453A;
+  --color-favorite-active: #FF453A;
   --color-favorite-tint: rgba(255, 69, 58, 0.16);
   --color-warning: #FBBF24;
   --bottom-bar-bg: rgba(13, 13, 13, 0.55);
   --setting-panel-bg: rgba(13, 13, 13, 0.78);
+  --setting-panel-blur: blur(20px);
   --chip-bg: rgba(255, 255, 255, 0.15);
   --chip-text: #FFFFFF;
   /* 设置页专属（原 settings.wxss .page--dark 内定义，随全局提升） */
@@ -43,6 +49,7 @@ page {
   --seg-on-bg: #636366;
   --seg-on-text: #FFFFFF;
   --switch-off: #39393D;
+  --switch-knob: #FFFFFF;
   /* D-07 S2：category-wheel 滚轮 token（theme.json dark 分支同步，G-03 关闭关键） */
   --wheel-opacity-idle: 0.35;
   --wheel-opacity-active: 0.92;

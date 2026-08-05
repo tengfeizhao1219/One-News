@@ -762,9 +762,9 @@ Page({
 
   /**
    * TL-B16: 更多功能菜单项点击分发
+   *   about     → 关于一页
    *   history   → 浏览记录页
    *   favorites → 我的收藏页
-   *   about     → 关于一页（AB-01，原 ext 扩展位）
    *   settings  → 字体设置面板
    */
   onMoreMenuTap(e) {
