@@ -134,7 +134,6 @@ function generateLocalArchive(files) {
     { path: 'app.wxss', role: '全局样式 + 暗色模式覆盖' },
     { path: 'pages/home/home.js', role: '首页：卡片流渲染 + 手势切换 + 侧边栏 + 刷新' },
     { path: 'pages/home/home.wxml', role: '首页模板：卡片舞台 + 骨架屏 + 侧边栏 + 引导' },
-    { path: 'pages/home/touch.wxs', role: 'WXS 手势：全屏触摸拦截 + 实时渲染' },
     { path: 'pages/detail/detail.js', role: '详情页：按索引加载 + 上下翻页 + 动画' },
     { path: 'pages/detail/detail.wxml', role: '详情页模板：文章渲染 + 翻页按钮 + 位置指示' },
     { path: 'cloudfunctions/getNewsList/index.js', role: 'L1-L4 分层取新闻：缓存→DB→AI→天行API→聚合降级' },

@@ -4,10 +4,17 @@
  * 背景（根因）：
  *   Bug1：此前 touch.wxs 的 handleTouchEnd 在 callMethod('onWxsTouchEnd') 之后才重置
  *         touchState.isDragging；一旦 JS 回调抛错，重置不执行，isDragging 永久卡 true，
- *         卡片停在拖拽偏移位且禁用 transition —— 表现为“滑到某条突然卡死，滑两条又恢复”。
+ *         卡片停在拖拽偏移位且禁用 transition —— 表现为"滑到某条突然卡死，滑两条又恢复"。
  *   Bug2：列表末/首条继续滑动没有反馈，应路由到加载更多 / 刷新。
  *
- * 本测试从“架构不变量”层面锁死修复，防止同类问题复发。
+ * v5.9 更新：touch.wxs 已删除，卡片页改为 JS 线程 flick-only 手势。
+ *   Bug1 防护（WXS isDragging 顺序）已不适用，改为 JS 层防护：
+ *     - onTouchEnd 首行 `if (this._isAnimating) return`（动画锁）
+ *     - loadMoreNews/refreshCurrentCategory 首行 `if (this.data.loadingMore) return`（重入锁）
+ *     - _animateSwipeNext/Prev 内 finally 等效：setTimeout 链最后 `_isAnimating = false`
+ *   Bug2 防护保留：边界路由 -> loadMoreNews/refreshCurrentCategory 断言不变。
+ *
+ * 本测试从"架构不变量"层面锁死修复，防止同类问题复发。
  * 运行：node test/v6-regression-bug1-bug2.js
  */
 
@@ -17,7 +24,6 @@ const { TextDecoder } = require('util')
 
 const ROOT = path.resolve(__dirname, '..')
 const files = {
-  wxs: path.join(ROOT, 'pages/home/touch.wxs'),
   js: path.join(ROOT, 'pages/home/home.js'),
 }
 
@@ -47,65 +53,63 @@ function isStrictUtf8(buf) {
   }
 }
 
-// ===== 静态检查：touch.wxs 异常安全（Bug1 根因防护）=====
-// 架构事实：WXS 仅支持 ES5 子集，禁止 try/catch、let/const、箭头函数、模板字符串、
-//          解构等语法；一旦使用，整模块编译失败，所有触摸回调与样式绑定全部失效
-//          （正是 191ba57 推送后“侧边栏打不开 + 新闻不能滑动”的根因）。
-//          因此 WXS 层无法用 try/catch，Bug1 的异常安全只能靠“先无条件重置再回调”的顺序保证，
-//          真正的异常隔离在 JS 层 onWxsTouchEnd 内部 try/catch 完成。
-console.log('\n【静态】touch.wxs 手势层异常安全（Bug1 根因防护）')
-{
-  const wxs = read(files.wxs)
-  const idxReset = wxs.indexOf('touchState.isDragging = false')
-  const idxCall = wxs.indexOf("callMethod('onWxsTouchEnd'")
-  check('handleTouchEnd 先无条件重置 isDragging 再回调',
-    idxReset > -1 && idxCall > -1 && idxReset < idxCall,
-    'reset@' + idxReset + ' call@' + idxCall)
-
-  // 仅对“代码”做非法语法扫描（剔除 // 行注释，避免误判注释文字）
-  const codeOnly = wxs.split('\n').map(function (l) {
-    return l.replace(/\/\/.*$/, '')
-  }).join('\n')
-  const forbidden = [
-    ['try/catch', /\btry\s*\{|\bcatch\s*\(/],
-    ['let', /\blet\s+/],
-    ['const', /\bconst\s+/],
-    ['箭头函数 =>', /=>/],
-    ['模板字符串 `', /`/],
-  ]
-  let illegal = []
-  forbidden.forEach(function (pair) {
-    if (pair[1].test(codeOnly)) illegal.push(pair[0])
-  })
-  check('touch.wxs 代码为纯 ES5（不含 try/catch/let/const/箭头/模板字符串）',
-    illegal.length === 0, '命中: ' + illegal.join(','))
-  check('touch.wxs 绝不含 try/catch（否则整模块编译失败）',
-    !/\btry\s*\{|\bcatch\s*\(/.test(codeOnly))
-
-  // 三个 handler 均定义并导出
-  const hasStart = /function handleTouchStart\(/.test(wxs) && /handleTouchStart: handleTouchStart/.test(wxs)
-  const hasMove = /function handleTouchMove\(/.test(wxs) && /handleTouchMove: handleTouchMove/.test(wxs)
-  const hasEnd = /function handleTouchEnd\(/.test(wxs) && /handleTouchEnd: handleTouchEnd/.test(wxs)
-  check('三个触摸 handler 均定义并导出', hasStart && hasMove && hasEnd)
-}
-
-// ===== 静态检查：home.js 架构不变量（Bug1 / Bug2 防护）=====
-console.log('\n【静态】home.js 架构不变量')
+// ===== 静态检查：home.js v5.9 JS flick-only 手势架构不变量（Bug1 根因防护）=====
+// v5.9 架构事实：touch.wxs 已删除，卡片页迁移到 JS 线程 flick-only 手势。
+// Bug1 防护不再依赖 WXS isDragging 重置顺序，改为 JS 层防护：
+//   1) onTouchEnd 首行动画锁 `if (this._isAnimating) return` —— 动画期间拒绝新手势
+//   2) loadMoreNews/refreshCurrentCategory 首行 `if (this.data.loadingMore) return` —— 重入锁
+//   3) _animateSwipeNext/Prev 最后 `_isAnimating = false` —— 动画结束解锁
+//   4) 无 WXS callMethod 回调 = 无跨线程异常传播风险
+console.log('\n【静态】home.js v5.9 JS flick-only 手势架构不变量（Bug1 防护）')
 {
   const js = read(files.js)
-  check('含 onWxsTouchStart', js.includes('onWxsTouchStart(data)'))
-  check('含 onWxsTouchMove', js.includes('onWxsTouchMove(data)'))
-  check('含 onWxsTouchEnd', js.includes('onWxsTouchEnd(data)'))
+
+  // Bug1 防护 1: 动画锁 —— 首行拦截
+  check('onTouchEnd 首行动画锁 _isAnimating',
+    /onTouchEnd\(e\)\s*\{[\s\S]*?if\s*\(this\._isAnimating\)\s*return/.test(js),
+    'onTouchEnd 首行必须 if (this._isAnimating) return')
+
+  // Bug1 防护 2: 加载锁 —— loadMoreNews 重入保护
+  check('loadMoreNews 首行加载锁 loadingMore',
+    /async loadMoreNews\(\)\s*\{[\s\S]*?if\s*\(this\.data\.loadingMore\)\s*return/.test(js),
+    'loadMoreNews 首行必须 if (this.data.loadingMore) return')
+
+  // Bug1 防护 3: 加载锁 —— refreshCurrentCategory 重入保护
+  check('refreshCurrentCategory 首行加载锁 loadingMore',
+    /async refreshCurrentCategory\(\)\s*\{[\s\S]*?if\s*\(this\.data\.loadingMore\)\s*return/.test(js),
+    'refreshCurrentCategory 首行必须 if (this.data.loadingMore) return')
+
+  // Bug1 防护 4: 动画结束解锁 _isAnimating = false
+  const animUnlockCount = (js.match(/_isAnimating = false/g) || []).length
+  check('_isAnimating = false 至少出现 3 次（onTouchEnd/Next/Prev 各一次）',
+    animUnlockCount >= 3, '出现 ' + animUnlockCount + ' 次（预期 >=3）')
+
+  // Bug1 防护 5: 无 WXS callMethod（跨线程异常传播已消除）
+  check('home.js 无 callMethod（无 WXS 回调）', !/callMethod/.test(js))
+
+  // v5.9 手势参数不变性
+  check('home.js 手势阈值 70px', js.includes('Math.abs(dy) < 70'))
+  check('home.js 手势时间窗 500ms', js.includes('dt > 500'))
+  check('home.js 含 onTouchStart', /onTouchStart\(e\)\s*\{/.test(js))
+  check('home.js 含 onTouchEnd', /onTouchEnd\(e\)\s*\{/.test(js))
+
+  // 确认旧 WXS 回调已清除
+  check('home.js 无 onWxsTouchStart 死代码', !/onWxsTouchStart/.test(js))
+  check('home.js 无 onWxsTouchMove 死代码', !/onWxsTouchMove/.test(js))
+  check('home.js 无 onWxsTouchEnd 死代码', !/onWxsTouchEnd/.test(js))
+}
+
+// ===== 静态检查：home.js 架构不变量（Bug2 防护）=====
+console.log('\n【静态】home.js 架构不变量（Bug2 边界路由防护）')
+{
+  const js = read(files.js)
   const lm = (js.match(/async loadMoreNews\(/g) || []).length
   const rc = (js.match(/async refreshCurrentCategory\(/g) || []).length
   check('loadMoreNews 唯一定义（无重复）', lm === 1, '出现 ' + lm + ' 次')
   check('refreshCurrentCategory 唯一定义（无重复）', rc === 1, '出现 ' + rc + ' 次')
-  check('onWxsTouchEnd 边界路由 -> loadMoreNews', js.includes('this.loadMoreNews()'))
-  check('onWxsTouchEnd 边界路由 -> refreshCurrentCategory', js.includes('this.refreshCurrentCategory()'))
-  const endTryCatch = /onWxsTouchEnd\(data\)\s*\{[\s\S]*?try\s*\{[\s\S]*?\}\s*catch \(e\)\s*\{\s*console\.error\('onWxsTouchEnd error', e\)/.test(js)
-  check('onWxsTouchEnd 整体被 try/catch 包裹', endTryCatch)
-  const finallyCount = (js.match(/finally\s*\{\s*this\._isAnimating = false/g) || []).length
-  check('动画 setTimeout 用 finally 重置 _isAnimating（3 处）', finallyCount === 3, 'finally 数=' + finallyCount)
+  // v5.9: 边界路由从 onTouchEnd（JS flick-only），不再从 onWxsTouchEnd
+  check('onTouchEnd 边界路由 -> loadMoreNews', js.includes('this.loadMoreNews()'))
+  check('onTouchEnd 边界路由 -> refreshCurrentCategory', js.includes('this.refreshCurrentCategory()'))
   // BUG-20260802-004 后：切分类入口已收敛为 loadCategory -> loadNews，
   // 原「currentPage: 1 出现 >=5 次」的计数启发式随之失效，改为直接校验各入口的不变量本身
   function resetsCurrentPage(fnName) {
@@ -120,7 +124,7 @@ console.log('\n【静态】home.js 架构不变量')
 // ===== 静态检查：编码合规 =====
 console.log('\n【静态】关键文件编码合规（UTF-8，非 GBK）')
 {
-  const targets = [files.wxs, files.js, path.join(ROOT, 'utils/request.js')]
+  const targets = [files.js, path.join(ROOT, 'utils/request.js')]
   let allUtf8 = true
   const bad = []
   for (const p of targets) {
