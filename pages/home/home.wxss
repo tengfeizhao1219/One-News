@@ -214,18 +214,10 @@
   opacity: 0;
 }
 
-.fixed-swipe-hint-icon {
+.fixed-swipe-hint-icon-img {
   width: 32rpx;
   height: 32rpx;
-  /* BUG-FE-001: 硬编码 fallback */
-  background-color: var(--text-secondary, #6B6B70);
   opacity: 0.45;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 
 .fixed-swipe-hint-text {
@@ -551,13 +543,9 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-.more-icon {
+.more-icon-img {
   width: 56rpx;
   height: 56rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70，真机 theme token 不解析时也能看到图标 */
-  background-color: var(--text-secondary, #6B6B70);
-  -webkit-mask: url('/assets/icons/settings.svg') no-repeat center / contain;
-  mask: url('/assets/icons/settings.svg') no-repeat center / contain;
 }
 
 @keyframes floatY {
@@ -633,17 +621,9 @@
   opacity: 0.7;
 }
 
-.more-item-icon {
+.more-item-icon-img {
   width: 40rpx;
   height: 40rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
-  background-color: var(--text-secondary, #6B6B70);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 
 .more-item-label {

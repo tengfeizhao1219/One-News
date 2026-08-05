@@ -35,13 +35,9 @@
 .nav-home--hover {
   opacity: 0.6; /* 点击反馈，跟随 PRD §5.7.4 */
 }
-.nav-home-icon {
+.nav-home-icon-img {
   width: 44rpx;
   height: 44rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
-  background-color: var(--text-secondary, #6B6B70);
-  -webkit-mask: url('/assets/icons/home.svg') no-repeat center / contain;
-  mask: url('/assets/icons/home.svg') no-repeat center / contain;
 }
 
 .nav-back {
@@ -272,18 +268,10 @@
   transition: width 0.08s linear;
 }
 
-.fixed-swipe-hint-icon {
+.fixed-swipe-hint-icon-img {
   width: 32rpx;
   height: 32rpx;
-  /* BUG-FE-001: 硬编码 fallback */
-  background-color: var(--text-secondary, #6B6B70);
   opacity: 0.45;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 
 .fixed-swipe-hint-text {
@@ -341,19 +329,13 @@
   line-height: 1;
 }
 
-/* UI-B7 图标规范: 收藏图标用 SVG mask（填充式，随主题 token 变色） */
-.bottom-bar-icon--favorite {
+/* UI-B7 图标规范: 收藏图标用 image 直接渲染 SVG */
+.bottom-bar-icon-img {
   width: 44rpx;
   height: 44rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
-  background-color: var(--text-secondary, #6B6B70);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
+.bottom-bar-icon--favorite {
+  /* 已收藏态红色通过 .is-favorited 的 background-color 覆写（见下方） */
 
 .bottom-bar-label {
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */

@@ -33,17 +33,9 @@
   justify-content: center;
 }
 .nav-home--hover { opacity: 0.6; }
-.nav-home-icon {
+.nav-home-icon-img {
   width: 44rpx;
   height: 44rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
-  background-color: var(--text-secondary, #6B6B70);
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 .nav-title {
   font-size: 34rpx;
@@ -70,19 +62,11 @@
   align-items: center;
   justify-content: center;
 }
-.empty-icon {
+.empty-icon-img {
   width: 96rpx;
   height: 96rpx;
-  /* BUG-FE-001: 硬编码 fallback #6B6B70 */
-  background-color: var(--text-secondary, #6B6B70);
   opacity: 0.4;
   margin-bottom: 24rpx;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  -webkit-mask-size: contain;
-  mask-repeat: no-repeat;
-  mask-position: center;
-  mask-size: contain;
 }
 .empty-text {
   font-size: 30rpx;

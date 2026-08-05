@@ -28,7 +28,7 @@
   <view class="nav-bar">
     <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <view class="nav-home-icon" style="-webkit-mask-image: url('/assets/icons/home.svg'); mask-image: url('/assets/icons/home.svg');"></view>
+      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -101,14 +101,14 @@
 
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于操作栏上方，不随内容滚动） -->
   <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready'}}">
-    <view class="fixed-swipe-hint-icon" style="-webkit-mask-image: url('/assets/icons/swipe.svg'); mask-image: url('/assets/icons/swipe.svg');"></view>
+    <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe.svg" mode="aspectFit"></image>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>
 
   <!-- 底部操作栏（收藏左 + 分享右） -->
   <view class="detail-bottom-bar" wx:if="{{pageState === 'ready'}}">
     <view class="bottom-bar-btn {{isFavorited ? 'is-favorited' : ''}} {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite">
-      <view class="bottom-bar-icon bottom-bar-icon--favorite" style="-webkit-mask-image: url('/assets/icons/favorite.svg'); mask-image: url('/assets/icons/favorite.svg');"></view>
+      <image class="bottom-bar-icon-img bottom-bar-icon--favorite" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
       <text class="bottom-bar-label">收藏</text>
     </view>
     <button class="bottom-bar-btn share-btn-reset" open-type="share">
