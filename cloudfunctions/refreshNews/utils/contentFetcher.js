@@ -386,11 +386,13 @@ const summarizeWithDashscope = summarizeWithZhipu
 /**
  * 批量 enrich：抓正文 + AI 摘要（并发控制）
  * v6.1：为每条记录标记 summarySource（'ai' | 'desc' | 'title'），供前端判断是否 AI 摘要。
+ * v6.5：新增 skipFetch 参数——智谱 AI 搜索返回的新闻自带 content，跳过网页抓取但仍做 AI 摘要。
  * @param {Array<Object>} newsList - 待处理新闻列表
  * @param {number} [concurrency=8] - 并发数（控制外部 API 压力）
+ * @param {boolean} [skipFetch=false] - 是否跳过网页抓取（智谱已自带正文）
  * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
-async function enrichNewsList(newsList, concurrency = 8) {
+async function enrichNewsList(newsList, concurrency = 8, skipFetch = false) {
   const result = new Array(newsList.length)
   let cursor = 0
 
@@ -399,8 +401,8 @@ async function enrichNewsList(newsList, concurrency = 8) {
       const idx = cursor++
       const item = newsList[idx]
       try {
-        // 1. 抓正文
-        const content = await fetchContentForItem(item)
+        // 1. 抓正文（skipFetch 为 true 时跳过，使用已有的 content）
+        const content = skipFetch ? (item.content || '') : await fetchContentForItem(item)
         const enriched = { ...item, content }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）

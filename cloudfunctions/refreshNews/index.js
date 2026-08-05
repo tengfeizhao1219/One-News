@@ -1,15 +1,19 @@
-// 新闻自动刷新云函数 v5.9 — 聚合+天行双数据源 + 直接抓正文 + AI 摘要
+// 新闻自动刷新云函数 v6.5 — 智谱 AI 搜索主力 + 聚合/天行兜底
 // ============================================================
-// v5.9 改造（2026-08-03）：
-//   1. 双数据源降级：聚合优先，失败/空 → 天行兜底
-//   2. 双数据源均失败 → 保留旧缓存并续期 cacheExpire
-//      （解决：外部 API 配额/故障时历史数据 TTL 过期 → 列表空白）
-//   3. getNewsList 增加 stale 兜底（未过期无数据 → 查历史数据）
+// v6.5 改造（2026-08-05）：
+//   数据源优先级改为：智谱 AI 搜索（主力）→ 聚合 API（备选）→ 天行 API（兜底）
+//   智谱返回的新闻自带 content（300-500 字正文），跳过网页抓取但仍做 AI 摘要。
 //
 // v6.0 改造（2026-08-03）：
 //   owner 将 refreshNews 超时从 3s 调至 60s，因此可在此函数内直接抓取正文：
 //   拉取列表 → 校验 → 安全审核 → enrich（并行抓正文 + AI 摘要）→ 写 news_cache。
 //   详情页 getNewsDetail 命中 content 直接返回，不再每次按需抓取。
+//
+// v5.9 改造（2026-08-03）：
+//   1. 双数据源降级：聚合优先，失败/空 → 天行兜底
+//   2. 双数据源均失败 → 保留旧缓存并续期 cacheExpire
+//      （解决：外部 API 配额/故障时历史数据 TTL 过期 → 列表空白）
+//   3. getNewsList 增加 stale 兜底（未过期无数据 → 查历史数据）
 //
 // v5.7 改造（2026-08-03）：
 //   写入前批量查询已有记录，若已有高质量 summary（AI 摘要/description）则复用。
@@ -21,7 +25,7 @@
 //   背景：微信云函数默认超时 3 秒，智谱/DeepSeek AI 调用需要 45s+，无法完成。
 //   回滚标记：git tag v3-ai-dual-engine / v5-tianxing / v5-juhe
 //
-// 数据源：聚合（主）+ 天行（备）
+// 数据源：智谱 AI 搜索（主）+ 聚合（备）+ 天行（兜底）
 // 写入集合：news_cache（列表 + content + AI 摘要）
 //
 // 触发方式：
@@ -281,7 +285,7 @@ async function batchInsert(newsList) {
 
 exports.main = async (event) => {
   const startTime = Date.now()
-  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v5.1 聚合API) ==========')
+  console.log('[refreshNews] ========== 开始刷新新闻缓存 (v6.5 智谱AI搜索) ==========')
 
   // ── 手动触发冷却 ──
   const isManual = event && (event.source === 'manual' || event.trigger === 'manual')
@@ -307,33 +311,55 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 检查聚合 API Key ──
-  if (!config.juhe.apiKey) {
-    console.error('[refreshNews] JUHE_API_KEY 未配置！请在云函数环境变量中设置')
-    return {
-      code: -1,
-      message: '聚合 API Key 未配置，请设置 JUHE_API_KEY 环境变量',
-      errorCode: 'API_KEY_INVALID',
-    }
+  // ── 检查智谱 API Key（v6.5 主力数据源）──
+  const zhipuKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
+  if (!zhipuKey) {
+    console.warn('[refreshNews] ZHIPU_API_KEY 未配置，将跳过智谱搜索，直接使用聚合兜底')
   }
 
-  // 1. 双数据源拉取（v5.9：聚合优先 → 天行兜底）
+  // 1. 三数据源拉取（v6.5：智谱 AI 搜索优先 → 聚合备选 → 天行兜底）
+  const { searchAllCategories: zhipuSearchAll } = require('./zhipuSearch')
   const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
   const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
 
   let searchResult = null
-  let engine = 'juhe'
+  let engine = 'zhipu'
+  let zhipuQuota = { zhipuCalls: 0, deepseekCalls: 0 }
 
-  // 1a. 聚合优先
-  try {
-    searchResult = await fetchAllJuhe(CATEGORIES, 5)
-    console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
-  } catch (err) {
-    console.error('[refreshNews] 聚合 API 拉取异常:', err.message)
-    searchResult = null
+  // 1a. 智谱 AI 搜索（主力，v6.5）
+  if (zhipuKey) {
+    try {
+      const zhipuResult = await zhipuSearchAll(CATEGORIES, db)
+      zhipuQuota = zhipuResult.quota || zhipuQuota
+      if (zhipuResult.news.length > 0) {
+        searchResult = { news: zhipuResult.news, stats: zhipuResult.stats }
+        engine = 'zhipu'
+        console.log(`[refreshNews] 智谱 AI 搜索完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
+      } else {
+        console.warn('[refreshNews] ⚠️ 智谱 AI 搜索返回 0 条，尝试聚合兜底')
+      }
+    } catch (err) {
+      console.error('[refreshNews] 智谱 AI 搜索异常:', err.message)
+    }
   }
 
-  // 1b. 聚合失败/空 → 天行兜底
+  // 1b. 聚合备选（智谱失败/空/未配置时）
+  if (!searchResult || searchResult.news.length === 0) {
+    if (!config.juhe.apiKey) {
+      console.warn('[refreshNews] JUHE_API_KEY 未配置，跳过聚合')
+    } else {
+      try {
+        searchResult = await fetchAllJuhe(CATEGORIES, 5)
+        engine = 'juhe'
+        console.log(`[refreshNews] 聚合拉取完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
+      } catch (err) {
+        console.error('[refreshNews] 聚合 API 拉取异常:', err.message)
+        searchResult = null
+      }
+    }
+  }
+
+  // 1c. 天行兜底（聚合也失败/空）
   if (!searchResult || searchResult.news.length === 0) {
     console.warn('[refreshNews] ⚠️ 聚合未返回数据，尝试天行兜底')
     try {
@@ -408,9 +434,12 @@ exports.main = async (event) => {
   }
 
   // 4.5 正文抓取 + AI 摘要（v6：60s 超时下直接抓正文写库，详情页免按需抓取）
+  //     v6.5：智谱返回的新闻自带 content（300-500 字），跳过网页抓取但仍做 AI 摘要优化
+  //     聚合/天行返回的新闻无 content，需要网页抓取
   //     并发 8 控制外部 API 压力；单条失败保留原 summary，不影响写入
   const enrichStart = Date.now()
-  const enriched = await enrichNewsList(secPassed, 8)
+  const skipFetch = engine === 'zhipu'  // 智谱已自带正文，跳过网页抓取
+  const enriched = await enrichNewsList(secPassed, 8, skipFetch)
   const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
   const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
   console.log(`[refreshNews] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
@@ -468,11 +497,11 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 写入刷新时间戳失败:', err.message)
   }
 
-  console.log(`[refreshNews] ========== 刷新完成: ${totalInserted} 条, 耗时 ${elapsed}ms ==========`)
+  console.log(`[refreshNews] ========== 刷新完成: ${totalInserted} 条, 耗时 ${elapsed}ms (引擎: ${engine}) ==========`)
 
   return {
     code: 0,
-    message: `刷新完成，共 ${totalInserted} 条新闻`,
+    message: `刷新完成，共 ${totalInserted} 条新闻（${engine}）`,
     data: {
       total: valid.length,
       securityPassed: finalList.length,
@@ -495,6 +524,7 @@ exports.main = async (event) => {
       aiSummaryCount,
       elapsedMs: elapsed,
       engine,
+      zhipuQuota,  // v6.5: 智谱/DeepSeek 当日调用配额
     },
   }
 }
