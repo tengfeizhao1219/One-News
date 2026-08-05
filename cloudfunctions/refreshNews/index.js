@@ -322,22 +322,33 @@ exports.main = async (event) => {
   let skipAiSummary = false
 
   // 1a. 智谱 AI 搜索（主力，v6.6）
+  //     超时安全靠两点：① SEARCH_CONCURRENCY=5 全分类并行→单批~45s 而非两批~90s
+  //     ② 55s 硬预算兜底（正常 45s 完成，不会触发；仅异常时降级天行避免 ret=-3）
   if (zhipuKey) {
     const { searchAllCategories: zhipuSearchAll } = require('./zhipuSearch')
+    const ZHIPU_BUDGET_MS = 55000
     try {
-      const zhipuResult = await zhipuSearchAll(CATEGORIES, db)
+      const zhipuResult = await Promise.race([
+        zhipuSearchAll(CATEGORIES, db),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`智谱搜索超时(>${ZHIPU_BUDGET_MS}ms)，降级天行兜底`)), ZHIPU_BUDGET_MS)
+        ),
+      ])
       zhipuQuota = zhipuResult.quota || zhipuQuota
-      if (zhipuResult.news.length > 0) {
+      const zhipuCats = new Set(zhipuResult.news.map(n => n.category))
+      // 覆盖阈值：≥3 个分类才采用智谱（避免"满屏同一分类"的稀薄结果），否则降级天行保覆盖
+      if (zhipuResult.news.length >= 5 && zhipuCats.size >= 3) {
         searchResult = { news: zhipuResult.news, stats: zhipuResult.stats }
         engine = 'zhipu'
         skipFetch = true       // 智谱已自带 content（300-500 字正文）
         skipAiSummary = true   // 智谱 prompt 已内联 summary（AI 来源）
-        console.log(`[refreshNews] 智谱 AI 搜索完成: ${searchResult.news.length} 条, 分类统计:`, JSON.stringify(searchResult.stats))
+        console.log(`[refreshNews] 智谱 AI 搜索完成: ${searchResult.news.length} 条/${zhipuCats.size}分类, 分类统计:`, JSON.stringify(searchResult.stats))
       } else {
-        console.warn('[refreshNews] ⚠️ 智谱 AI 搜索返回 0 条，尝试聚合兜底')
+        console.warn(`[refreshNews] ⚠️ 智谱覆盖不足（${zhipuResult.news.length}条/${zhipuCats.size}分类），降级聚合/天行保覆盖`)
+        searchResult = null    // 清空 → 走 1b/1c 兜底
       }
     } catch (err) {
-      console.error('[refreshNews] 智谱 AI 搜索异常:', err.message)
+      console.error('[refreshNews] 智谱 AI 搜索异常/超时:', err.message)
     }
   }
 

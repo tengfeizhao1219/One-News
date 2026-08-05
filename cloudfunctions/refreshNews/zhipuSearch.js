@@ -25,6 +25,7 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
+const ZHIPU_TIMEOUT = 50000  // v6.6：单分类调用超时（实测 web_search 慢，需放宽到 50s 让正常调用完成；配合并发=5 单批完成）
 
 // ─── DeepSeek API 配置（降级）──────────────────────
 
@@ -299,7 +300,7 @@ async function searchWithZhipu(category) {
       }
     }],
     temperature: 0.1,
-    max_tokens: 16000,
+    max_tokens: 8000,
   })
 
   let lastErr = null
@@ -315,7 +316,7 @@ async function searchWithZhipu(category) {
           'Content-Type': 'application/json',
         },
         body: requestBody,
-        timeout: 45000,
+        timeout: ZHIPU_TIMEOUT,
       })
 
       const content = result.choices?.[0]?.message?.content || ''
@@ -362,7 +363,7 @@ async function searchWithDeepSeek(category) {
     ],
     enable_search: true,
     temperature: 0.1,
-    max_tokens: 16000,
+    max_tokens: 8000,
   })
 
   let lastErr = null
@@ -378,7 +379,7 @@ async function searchWithDeepSeek(category) {
           'Content-Type': 'application/json',
         },
         body: requestBody,
-        timeout: 45000,
+        timeout: ZHIPU_TIMEOUT,
       })
 
       const content = result.choices?.[0]?.message?.content || ''
@@ -461,7 +462,7 @@ async function searchNewsByCategory(category, db, quotaRef) {
  * @param {string[]} categories - 分类列表（默认全部）
  * @param {object} db - 云数据库实例（用于配额读写）
  */
-const SEARCH_CONCURRENCY = 3  // v6.6：分类搜索并发上限（避免瞬时打满 API 限流）
+const SEARCH_CONCURRENCY = 5  // v6.6：全分类并行（5 路），单批耗时 = 最慢单次调用，最大化利用 60s 预算
 
 async function searchAllCategories(categories = null, db = null) {
   const cats = categories || Object.keys(CATEGORY_PROMPTS)
