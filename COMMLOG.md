@@ -172,6 +172,7 @@
 3. 新提交流程：`git pull --rebase → git add <文件> → git commit（角色前缀）→ git push → 本 log 记 commit hash`。
 4. 文档同步：`ROLE_CARDS.md`（v4.0）、`COLLABORATION.md`（v4.2 §七 全员直连 GitHub）、`任务交接流转机制.md`、`项目初始化指南-新成员必读.md`、各角色初始化话术、`新会话启动指南.md` 均已改写；`gm.ready` 已删除；`test/gm-flow-test.md` 标注废弃。
 5. 历史记录中出现的 GM 流程说明仅作存档，不再执行。
+6. **推送成功**：commit `15ce639`（rebase 合并远程 FE 交付后推送，IP `140.82.113.3`）。
 
 > 🔔 关注人：全栈开发 + 产品设计师 + 产品经理 + 小程序前端开发（候补）
 
