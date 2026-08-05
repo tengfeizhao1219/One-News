@@ -518,7 +518,9 @@
   position: absolute;
   right: 40rpx;
   bottom: calc(48rpx + env(safe-area-inset-bottom));
-  z-index: 26;
+  /* BUG-20260805-001 followup-2：原 26 < 蒙板(27)，菜单打开时 ⚙ 被蒙板盖住发灰；
+     提升到蒙板之上（29，与 panel-overlay 同级；侧栏打开时 ⚙ 已隐藏，无实际冲突） */
+  z-index: 29;
   width: 96rpx;
   height: 96rpx;
   border-radius: 50%;
@@ -554,15 +556,17 @@
 }
 
 /* ============ TL-B16: 更多功能 dock 菜单（点击 ⚙ 向上弹出的毛玻璃栈） ============ */
-/* BUG-20260805-001（owner 直连）：蒙板 + 模糊让背景严重"灰雾"，菜单项 z-index 虽高
-   但视觉上与背景融合。修复：降蒙板不透明度 + 减模糊 + 加深卡片阴影，让菜单项"浮"出。 */
+/* BUG-20260805-001（owner 直连）+ followup-2：蒙板 + 模糊让背景严重"灰雾"，菜单项 z-index 虽高
+   但视觉上与背景融合。修复①：降蒙板不透明度 + 减模糊 + 加深卡片阴影；修复②（19:26 owner 复反馈）：
+   蒙板不透明度 0.22 → 0.26（+20%），暗色下菜单项改用浮层表面色 #1C1C1E（原 #0D0D0D 与纯黑
+   背景几乎同色，即使 z-index 正确也"看着像被蒙板盖住"）。 */
 .more-mask {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.22);
+  background-color: rgba(0, 0, 0, 0.26);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
   z-index: 27;
@@ -722,9 +726,11 @@
   .panel-item:active {
     background-color: #1C1C1E;
   }
-  /* dock 菜单项 */
+  /* dock 菜单项（浮层表面色：比纯黑页面背景亮一档，从蒙板中"浮"出） */
   .more-item {
-    background-color: #0D0D0D;
+    background-color: #1C1C1E;
+    /* 暗色下原阴影在纯黑背景上不可见，加深一档强化悬浮感 */
+    box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
   }
   /* 分类切换提示 */
   .category-hint {
@@ -744,4 +750,11 @@
   .sk-source {
     background: linear-gradient(90deg, #1C1C1E 0%, #0D0D0D 50%, #1C1C1E 100%);
   }
+}
+
+/* BUG-20260805-003 followup：手动深色（.page--dark，非跟随系统）下菜单项同样需浮层表面色。
+   必须放在 @media 外——系统亮色 + 手动深色时 prefers-color-scheme:dark 不匹配，放块内会失效 */
+.page--dark .more-item {
+  background-color: #1C1C1E;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
 }

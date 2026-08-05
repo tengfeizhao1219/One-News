@@ -1,23 +1,10 @@
 {
   "role": "FE",
-  "task": "BUG-20260805-003",
-  "title": "手动深色模式全局生效",
-  "summary": "修复设置页手动切换深色模式后仅设置页生效、其他页面不跟随的问题。根因：.page--dark CSS 变量在 settings.wxss（页面级作用域），移至 app.wxss 实现全局可见；新增 app.applyTheme() 广播机制同步所有活跃页面。",
+  "task": "BUG-20260805-001-followup2",
+  "title": "首页 dock 菜单灰蒙蒙复反馈修复",
+  "summary": "owner 复反馈：dock 菜单选项仍灰蒙蒙 + 蒙板太透明。根因①：⚙ 按钮 z-index 26 < 蒙板 27 被盖住；根因②：暗色下菜单项 #0D0D0D 与纯黑背景几乎同色。修复：蒙板 0.22→0.26(+20%)，⚙ z-index→29，暗色菜单项浮层表面色 #1C1C1E + 阴影加深，.page--dark 手动深色同步覆盖。",
   "files": [
-    "app.js",
-    "app.wxss",
-    "pages/home/home.js",
-    "pages/home/home.wxml",
-    "pages/detail/detail.js",
-    "pages/detail/detail.wxml",
-    "pages/favorites/favorites.js",
-    "pages/favorites/favorites.wxml",
-    "pages/history/history.js",
-    "pages/history/history.wxml",
-    "pages/settings/settings.js",
-    "pages/settings/settings.wxml",
-    "pages/settings/settings.wxss",
-    "test/v5-regression-touch-architecture.js"
+    "pages/home/home.wxss"
   ],
-  "testResults": "v5 18/0, v5.11 OK, v6 OK, v7 OK, v7-runtime OK, v9 OK, v11 25/0, b06 20/0"
+  "testResults": "v5 18/0, v6 20/0, v5.11 40/0, v7-runtime OK, v11 25/0"
 }
