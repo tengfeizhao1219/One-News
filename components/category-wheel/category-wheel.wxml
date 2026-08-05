@@ -1,5 +1,5 @@
 <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
-<!-- 选中项固定滚轮垂直居中；触摸实时切分类 + 松手 snap + 震动 -->
+<!-- v5.3-final：选中项固定顶部第二行锚定；触摸实时切分类 + 松手 snap + 震动 -->
 <view
   class="wheel {{touching ? 'active' : ''}}"
   style="height: {{wheelHeight}}rpx;"
@@ -17,8 +17,4 @@
       <text class="wheel-label {{item.id === activeId ? 'active' : ''}}">{{item.name}}</text>
     </view>
   </view>
-
-  <!-- 选中项上下 1px 指示线（激活态） -->
-  <view class="wheel-indicator-top"></view>
-  <view class="wheel-indicator-bottom"></view>
 </view>

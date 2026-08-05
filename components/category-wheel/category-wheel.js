@@ -14,10 +14,10 @@ Component({
 
   data: {
     itemHeight: 72,      // 每项高度 rpx
-    visibleCount: 7,     // 可视项数（奇数，保证有居中项）
-    centerIndex: 3,      // 居中项索引 = (visibleCount-1)/2
+    visibleCount: 6,     // 可视项数（v5.3-final: 7→6）
+    anchorIndex: 1,      // 锚定第二行（0-based，顶部留 1 个分类名空间）
     touching: false,     // 是否触摸中（激活态）
-    translateY: 0,       // 列表位移（让选中项居中）
+    translateY: 0,       // 列表位移
   },
 
   observers: {
@@ -39,11 +39,13 @@ Component({
   },
 
   methods: {
-    /** 根据当前选中索引计算 translateY（让选中项居中） */
+    /** 根据当前选中索引计算 translateY（顶部第二行锚定，owner v5.3-final 裁定） */
     _updateTranslate: function () {
-      const { itemHeight, centerIndex } = this.data
-      const idx = this._activeIndex || 0
-      const ty = (centerIndex - idx) * itemHeight
+      var itemHeight = this.data.itemHeight
+      var anchorIndex = this.data.anchorIndex   // 1
+      var idx = this._activeIndex || 0
+      // 第二行锚定：选中项之上恒留 1 个分类名空间；首项时不上移
+      var ty = -Math.max(0, idx - anchorIndex) * itemHeight
       this.setData({ translateY: ty })
     },
 

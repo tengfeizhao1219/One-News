@@ -1,4 +1,4 @@
-/* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） */
+/* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2 · v5.3-final） */
 
 .wheel {
   position: relative;
@@ -12,7 +12,7 @@
   opacity: 0.92;               /* active 激活态 */
 }
 
-/* 列表整体（通过 translateY 让选中项居中） */
+/* 列表整体（通过 translateY 让选中项锚定顶部第二行） */
 .wheel-list {
   width: 100%;
   will-change: transform;
@@ -35,49 +35,21 @@
   transition: color 300ms ease-out, background-color 300ms ease-out, border-color 300ms ease-out;
 }
 
-/* 选中项：圆角 chip 高亮（v3.1） */
+/* v5.3-final 选中项：无边框、无 chip、字色/字号/字重与 idle 一致，仅加底色标记 */
 .wheel-label.active {
-  color: var(--primary, #007AFF);
-  font-size: 28rpx;
-  font-weight: 600;
-  border: 1px solid var(--primary, #007AFF);
-  border-radius: var(--radius, 10px);
-  padding: 0 12rpx;
+  color: rgba(0, 0, 0, 0.5);              /* 不加深，owner v5.2 */
+  font-size: 24rpx;                        /* 不增大，owner v5.2 */
+  font-weight: 500;                        /* 不加粗到 600，owner v5.2 */
   background-color: var(--highlight-bg, rgba(0, 122, 255, 0.06));
-  line-height: 1.5;
+  border-radius: 10rpx;
+  /* 已删除：border / padding: 0 12rpx / line-height: 1.5 */
 }
 
-/* 激活态毛玻璃背景 */
-.wheel.active .wheel-item {
-  /* 背景由父级 page 提供毛玻璃；此处保持透明 */
-}
-
-/* 选中项上下 1px 指示线（激活态显示） */
-.wheel-indicator-top,
-.wheel-indicator-bottom {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: rgba(0, 0, 0, 0.2);
-  opacity: 0;
-  transition: opacity 300ms ease-out;
-  pointer-events: none;
-}
-
-.wheel.active .wheel-indicator-top,
-.wheel.active .wheel-indicator-bottom {
-  opacity: 1;
-}
-
-.wheel-indicator-top {
-  top: 50%;
-  margin-top: -40rpx; /* centerIndex(3) * itemHeight(72) - 一半 */
-}
-
-.wheel-indicator-bottom {
-  bottom: 50%;
-  margin-bottom: -40rpx;
+/* v5.3-final 激活态（触摸中）：仅温和放大 1.08，颜色字号均不变 */
+.wheel.active .wheel-label.active {
+  transform: scale(1.08);
+  transform-origin: center center;
+  transition: transform 150ms ease-out;
 }
 
 /* 暗色模式 */
@@ -85,8 +57,7 @@
   .wheel-label {
     color: rgba(255, 255, 255, 0.5);
   }
-  .wheel-indicator-top,
-  .wheel-indicator-bottom {
-    background: rgba(255, 255, 255, 0.2);
+  .wheel-label.active {
+    color: rgba(255, 255, 255, 0.5);
   }
 }

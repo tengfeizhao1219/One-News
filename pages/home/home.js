@@ -350,18 +350,24 @@ Page({
       }
     }
 
-    // v6.2：三档摘要优先级 —— AI 摘要 > 正文摘要 > 标题兜底
+    // v6.2：三档摘要优先级 —— AI 摘要 > 正文摘要 > 标题兜底（摘要区留空）
     var summarySource = item.summarySource || 'desc'
     var displaySummary = item.summary || ''
 
+    // v6.2-fix（PD 裁定 BUG-PD-018）：第三档不复用标题，摘要区留空
+    // 理由：.card-title 已渲染标题，摘要区重复同一段文字无增量价值，
+    // 且 PD 从未定义过 title 档视觉——未定义场景不得自行推断
     if (summarySource === 'title') {
-      displaySummary = item.title || ''
+      displaySummary = ''
     }
 
     return {
       ...item,
       summary: displaySummary,
-      summaryParagraphs: displaySummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3),
+      // 空字符串 → split 产生 [''] → filter(p.trim) 过滤 → [] → wx:for 不产出节点
+      summaryParagraphs: displaySummary
+        ? displaySummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3)
+        : [],
       isAiSummary: summarySource === 'ai',
       summarySource: summarySource,
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
