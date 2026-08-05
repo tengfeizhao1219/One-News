@@ -1,3 +1,23 @@
+## [2026-08-06 07:26] 📤→✅ FE 已提交 · commit `36a82b3`（BUG-FE-20260805-002 关于一页仍无法滚动 + 全局滚动容器排查）| 会话：[小程序前端开发(FE)]
+
+**owner 反馈**：关于一页依然无法往下滑动，要求全局排查同类问题，不能说到哪儿修到哪儿。
+
+**根因（残留）**：about 页 `.page` 用 `min-height:100vh`（其余二级页均为 `height:100vh`）。内容超一屏时 `.page` 被内容撑开，scroll-view 高度跟随内容撑满不产生滚动，超出部分被全局 `page{overflow:hidden}` 裁剪 → 页面无法滑动。上轮对 about 的修复只改了 `.scroller`（min-height:0 + overflow-y:auto），未触及 `.page` 高度，故无效。
+
+**全局排查结果**（所有页面 + 3 组件逐一核对）：
+- settings/history/favorites：`.page height:100vh` + scroll 容器 `min-height:0` + `overflow-y:auto` ✅ 已修复
+- detail：`.page height:100vh` + enhanced 模式正常，补 `min-height:0` 防御性对齐
+- home 侧边栏 panel-list：父级 panel-body 已有 `min-height:0`，补自身 `min-height:0` 防御性对齐
+- font-panel 组件：`max-height:55vh` 约束正常，无需修改（catchtouchmove 在遮罩层不影响滚动）
+- category-wheel / share-card：无 scroll 容器
+
+**修复**：
+1. `about.wxss .page`：`min-height:100vh` → `height:100vh`（核心）
+2. `detail.wxss .content`：补 `min-height:0`（统一规范）
+3. `home.wxss .panel-list`：补 `min-height:0`（统一规范）
+
+---
+
 ## [2026-08-06 07:10] 📤→✅ FS 已提交 · D-07 跟进②③ + BUG-FS-20260805-001 同根因全量收敛 | 会话：[全栈开发(FS)]
 
 **触发**：owner「全部处理吧」——认领 PD 23:10 验收广播中 @FS 的两项跟进 + 上轮 BUG-FS-20260805-001 的已知遗留（home 面板 icon）。
