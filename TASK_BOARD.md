@@ -47,6 +47,42 @@
 > — PM+PJM
 
 ---
+### ✅ 2026-08-05 18:55 【FE 交付 · BUG-20260805-003 手动深色模式全局生效 · commit `d722a39`】
+
+> **FE 已修复并推送**：设置页手动切换深色模式后仅设置页自身生效，其他页面不跟随。
+
+> **根因**：`.page--dark` CSS 变量定义在 `settings.wxss`（页面级作用域），其他页面不可见；toggle 只写 Storage 未通知其他页面。
+
+> **修复方案（全局主题广播机制）**：
+> - `app.wxss`：移入 `.page--dark` 完整变量块（含 settings 特有变量）
+> - `app.js`：新增 `_initTheme()` + `applyTheme()` → 读取 Storage → 计算 `themeClass` → `getCurrentPages()` 广播
+> - `app.globalData`：新增 `followSystem` / `darkMode` / `themeClass`
+> - 5 页面 WXML 根节点 `class="page {{themeClass}}"`，JS onLoad/onShow 注入
+> - `settings.js` toggle → `_syncGlobalTheme()` → `app.applyTheme()`
+> - `settings.wxss` 移除旧的 `.page--dark` 变量块
+> - 测试适配：`v5-regression-touch-architecture.js` 正则适配多 class 根节点
+>
+> **验证**：全量测试通过（v5 18/0, v5.11 ✓, v6 ✓, v7 ✓, v7-runtime ✓, v9 ✓, v11 25/0, b06 20/0）
+
+---
+### ✅ 2026-08-05 18:50 【FE 交付 · BUG-20260805-002 暗色模式首页"蒙版感" · commit `34626e0`】
+
+> **FE 已修复并推送**：手机自动切换暗色模式后，首页内容看起来像被蒙版覆盖（未正确显示高亮），而详情页正常。
+
+> **根因**：仅 `detail.wxss` 有 `@media (prefers-color-scheme: dark)` 兜底块；home / favorites / history / settings 四页全部缺失，微信 `theme.json` CSS 变量在真机上间歇性失效时无后备。
+
+> **修复**：为 home / favorites / history / settings 四页 `.wxss` 文件均添加完整的 `@media (prefers-color-scheme: dark)` 硬编码兜底（页面背景、卡片、标题、摘要、元信息、AI 胶囊、骨架屏、侧边栏、分类提示、dock 菜单、状态按钮、空态等）。
+
+---
+### ✅ 2026-08-05 18:35 【FE 交付 · BUG-20260805-001 暗色模式 dock 菜单"发灰" · commit `847b015`】
+
+> **FE 已修复并推送**：暗色模式下 ⚙ dock 菜单整体发灰，菜单项与蒙版视觉融合。
+
+> **根因**：蒙版透明度过高（`rgba(0,0,0,0.35)`）+ 模糊过大（`blur(4px)`）+ 菜单项阴影过弱，三者叠加造成菜单项像是"被蒙版盖住"的视觉错觉。
+
+> **修复**：蒙版透明度 `0.35→0.22`，模糊 `4px→2px`，菜单项阴影加深为双层阴影。
+
+---
 ### ✅ 2026-08-05 18:20 【FE 交付 · TL-B13 前端展示缺口补齐 · UI-11/UI-13/UI-14（UI-B5 设计稿）】
 
 > **FE（小程序前端开发）已激活并交付 TL-B13 前端展示缺口**（UI-B5 设计稿 owner 2026-08-04 已确认，闸门已开）。
