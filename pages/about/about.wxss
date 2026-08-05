@@ -3,7 +3,10 @@
 .page {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  /* BUG-FE-20260805-002：min-height:100vh → height:100vh（与其他二级页一致）。
+     原 min-height 在内容超一屏时被内容撑开，scroll-view 高度跟随内容撑满
+     不产生滚动，超出部分被全局 page{overflow:hidden} 裁剪 → 页面无法滑动。 */
+  height: 100vh;
   background-color: var(--bg-page);
   color: var(--text-primary);
 }

@@ -74,6 +74,9 @@
 
 .content {
   flex: 1;
+  /* BUG-FE-20260805-002 全局排查：统一滚动容器规范（min-height:0），防止 flex
+     子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
+  min-height: 0;
   overflow-y: auto;
   padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
 }

@@ -313,6 +313,9 @@
 /* ============ 新闻列表 ============ */
 .panel-list {
   flex: 1;
+  /* BUG-FE-20260805-002 全局排查：统一滚动容器规范（min-height:0），防止 flex
+     子项被内容撑开导致滚动失效 */
+  min-height: 0;
   overflow-y: auto;
 }
 
