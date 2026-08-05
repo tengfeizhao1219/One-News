@@ -122,6 +122,39 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
 .legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--slate)}
 .legend span{display:inline-flex;align-items:center;gap:3px}
 .empty{color:var(--muted);font-style:italic}
+
+/* ── Demo 交互原型库（画廊） ── */
+.gal-head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.gal-search input{padding:9px 14px;border:1px solid var(--line);border-radius:9px;font-size:13px;width:260px;background:var(--card);color:var(--ink)}
+.gal-search input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.gal-filters{display:flex;flex-wrap:wrap;gap:7px}
+.gal-chip{padding:5px 13px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:12.5px;cursor:pointer;color:var(--slate);transition:all .12s;user-select:none}
+.gal-chip:hover{border-color:var(--brand)}
+.gal-chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
+.gal-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;transition:transform .15s,box-shadow .15s}
+.gal-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(15,23,42,.10)}
+.gal-card .gc-top{display:flex;align-items:center;gap:8px}
+.gal-card .gc-id{font-family:ui-monospace,Menlo,monospace;font-size:11px;font-weight:700;color:var(--brand-d);background:var(--brand-l);padding:2px 7px;border-radius:6px}
+.gal-card .gc-cat{margin-left:auto;font-size:11px;color:var(--muted);background:#f1f5f9;padding:2px 8px;border-radius:999px}
+.gal-card .gc-title{font-size:14.5px;font-weight:700;color:var(--ink);line-height:1.35}
+.gal-card .gc-desc{font-size:12.5px;color:var(--slate);line-height:1.55;flex:1}
+.gal-card .gc-actions{display:flex;gap:8px;margin-top:4px}
+.gal-card .gc-btn{flex:1;text-align:center;padding:7px 0;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);text-decoration:none;display:flex;align-items:center;justify-content:center}
+.gal-card .gc-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.gal-card .gc-btn:hover{filter:brightness(.97)}
+
+/* ── 预览弹窗 ── */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:200;padding:24px}
+.modal.show{display:flex;align-items:center;justify-content:center}
+.modal-box{background:#fff;border-radius:14px;width:min(960px,100%);height:min(86vh,900px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.30)}
+.modal-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;flex-shrink:0}
+.modal-link{font-size:12.5px;color:var(--brand);text-decoration:none;margin-right:12px}
+.modal-link:hover{text-decoration:underline}
+.modal-close{border:none;background:none;font-size:18px;cursor:pointer;color:var(--slate);line-height:1}
+.modal-frame{width:100%;flex:1;border:none;background:#fff}
+@media(max-width:560px){.gal-search input{width:100%}.gal-head{flex-direction:column;align-items:stretch}.modal{padding:0}.modal-box{height:100vh;border-radius:0}}
+
 @media(max-width:620px){.arr{display:none}.pnode{flex-basis:100%}}
 </style>
 </head>
@@ -137,7 +170,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <button onclick="refresh()">🔄 立即刷新</button>
     <span><span class="dot live"></span>自动刷新 <b id="autoState">开（60s）</b></span>
     <span id="lastUpd">加载中…</span>
-    <a class="ds-entry" href="./showcase/">🎨 设计语言展示页</a>
+    <a class="ds-entry" href="javascript:void(0)" onclick="switchTab('gallery',document.querySelector('[data-tab=gallery]'))">🎨 交互原型库</a>
     <span style="margin-left:auto;opacity:.55;font-size:11px">v3.1 · 修复解析器 + 上下串行</span>
   </div>
 </header>
@@ -145,7 +178,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
 <div class="tab-bar">
   <button class="active" onclick="switchTab('overview',this)">📊 总览</button>
   <button onclick="switchTab('detail',this)">📋 明细</button>
-  <button onclick="switchTab('design',this)">🎨 设计语言</button>
+  <button data-tab="gallery" onclick="switchTab('gallery',this)">🎨 交互原型</button>
 </div>
 
 <main>
@@ -206,12 +239,27 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     </div>
   </div>
 
-  <!-- ═══════════ TAB 3: 设计语言 ═══════════ -->
-  <div class="tab-content" id="tab-design">
-    <iframe src="design-language.html" style="width:100%;height:calc(100vh - 140px);border:none;border-radius:12px;"
-            title="一页 One-News 设计语言系统 v2.0"
-            onload="this.style.opacity='1'" style="opacity:0;transition:opacity .3s;">
-    </iframe>
+  <!-- ═══════════ TAB 3: 交互原型库 ═══════════ -->
+  <div class="tab-content" id="tab-gallery">
+    <div class="gal-head">
+      <div class="gal-search"><input id="galSearch" type="text" placeholder="搜索原型 / UI 编号 / 关键词…" oninput="renderGallery()"></div>
+      <div class="gal-filters" id="galFilters"></div>
+    </div>
+    <div class="gal-grid" id="galGrid"></div>
+  </div>
+
+  <!-- 预览弹窗 -->
+  <div class="modal" id="galModal">
+    <div class="modal-box">
+      <div class="modal-bar">
+        <span id="modalTitle">预览</span>
+        <div>
+          <a id="modalOpen" class="modal-link" target="_blank" rel="noopener">新窗口打开 ↗</a>
+          <button class="modal-close" onclick="closeModal()" aria-label="关闭">✕</button>
+        </div>
+      </div>
+      <iframe id="modalFrame" class="modal-frame" title="原型预览"></iframe>
+    </div>
   </div>
 
 </main>
@@ -423,6 +471,42 @@ async function refresh(){
 }
 function startAuto(){if(timer)clearInterval(timer);timer=setInterval(refresh,REFRESH_MS)}
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
+
+/* ===== Demo 交互原型库 ===== */
+const DEMOS=[
+  {id:"UI-B11",title:"详情页优化",file:"showcase/detail-redesign.html",cat:"详情",desc:"现状 vs 优化：顶部阅读进度条 + 滑动提示可消除 + 收藏态强化（1:1 原型）"},
+  {id:"UI-B10",title:"收藏页优化",file:"showcase/favorites-redesign.html",cat:"收藏",desc:"卡片化列表 + 分类筛选 + 长按取消收藏（现状 vs 优化，1:1 原型）"},
+  {id:"UI-B9",title:"设置页重构",file:"showcase/settings-redesign.html",cat:"设置",desc:"方案 A 独立设置页：分组 / 字号实时预览 / 暗色切换（1:1 原型）"},
+  {id:"UI-B8",title:"AI 摘要胶囊",file:"showcase/ui-b8-ai-summary-chip.html",cat:"AI 组件",desc:"AI 摘要胶囊 1:1 原型，含多种状态与触发交互"},
+  {id:"UI-B7",title:"列表页重新设计",file:"showcase/ui-b7-list-redesign.html",cat:"列表",desc:"v5.3-final：淡蓝高亮 + 去关闭 + 字号 14px 列表方案"},
+  {id:"UI-B6",title:"全局导航框架",file:"showcase/ui-b6-navigation.html",cat:"导航",desc:"RQ-17 + 方案 F 全局导航框架设计稿，含抽屉与返回逻辑"},
+  {id:"UI-B4/B5",title:"浏览记录 & 收藏云同步",file:"showcase/ui-b4-b5-history-favorites.html",cat:"历史",desc:"浏览记录页 & 收藏云同步展示设计稿"},
+  {id:"DL",title:"设计语言系统 v2.0",file:"design-language.html",cat:"设计系统",desc:"一页 One-News 设计语言系统：色板 / 字阶 / 间距 / 组件规范"},
+  {id:"DL-SHOW",title:"设计语言展示",file:"showcase/index.html",cat:"设计系统",desc:"设计语言交互展示页（组件可视化总览）"}
+];
+let galCat="全部";
+function renderGalFilters(){const cats=["全部",...new Set(DEMOS.map(d=>d.cat))];$("galFilters").innerHTML=cats.map(c=>`<span class="gal-chip ${c===galCat?"on":""}" onclick="setGalCat('${c}')">${esc(c)}</span>`).join("")}
+function setGalCat(c){galCat=c;renderGalFilters();renderGallery()}
+function renderGallery(){
+  const q=($("galSearch").value||"").trim().toLowerCase();
+  const list=DEMOS.filter(d=>(galCat==="全部"||d.cat===galCat)&&(!q||(d.title+d.id+d.desc).toLowerCase().includes(q)));
+  const g=$("galGrid");
+  if(!list.length){g.innerHTML='<p class="empty">无匹配原型，试试其他关键词</p>';return}
+  g.innerHTML=list.map(d=>`<div class="gal-card">
+    <div class="gc-top"><span class="gc-id">${esc(d.id)}</span><span class="gc-cat">${esc(d.cat)}</span></div>
+    <div class="gc-title">${esc(d.title)}</div>
+    <div class="gc-desc">${esc(d.desc)}</div>
+    <div class="gc-actions">
+      <button class="gc-btn primary" onclick="openModal('${esc(d.file)}','${esc(d.id+" · "+d.title)}')">预览</button>
+      <a class="gc-btn" href="${esc(d.file)}" target="_blank" rel="noopener">打开 ↗</a>
+    </div></div>`).join("")
+}
+function openModal(file,title){$("modalTitle").textContent=title;$("modalOpen").href=file;$("modalFrame").src=file;$("galModal").classList.add("show")}
+function closeModal(){$("galModal").classList.remove("show");$("modalFrame").src=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeModal()});
+$("galModal").addEventListener("click",e=>{if(e.target===$("galModal"))closeModal()});
+renderGalFilters();renderGallery();
+
 refresh();startAuto();
 </script>
 </body>
