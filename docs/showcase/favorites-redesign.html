@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UI-B10 · 收藏页优化（现状 vs 优化）1:1 原型</title>
+<style>
+  /* ===== 主题 token：1:1 取自 theme.json（同时作用于舞台与手机内） ===== */
+  [data-theme="light"] {
+    --bg-page: #F5F3F0; --bg-card: #FAF9F7; --bg-subtle: #F0EEEA;
+    --text-primary: #1C1C1E; --text-secondary: #6B6B70; --text-body: #5E5E60; --text-tertiary: #8A8A8E;
+    --divider: #E8E6E1; --tag-bg: #EEECE8; --tag-text: #7A7A7A;
+    --primary: #007AFF; --primary-subtle: rgba(0, 122, 255, 0.12);
+    --overlay: rgba(0, 0, 0, 0.25);
+    --color-favorite: #FF3B30;
+    --flash-tech: #007AFF; --flash-world: #5856D6; --flash-sports: #FF9500; --flash-life: #34C759;
+    --flash-tech-bg: rgba(0, 122, 255, 0.08);
+    --stage-bg: #E9E6E1; --panel: #FFFFFF; --panel-text: #1C1C1E; --panel-sub: #6B6B70; --panel-line: #E5E2DC;
+  }
+  [data-theme="dark"] {
+    --bg-page: #000000; --bg-card: #0D0D0D; --bg-subtle: #1A1A1C;
+    --text-primary: #FFFFFF; --text-secondary: #999999; --text-body: #D4D4D4; --text-tertiary: #666666;
+    --divider: #1C1C1E; --tag-bg: #1C1C1E; --tag-text: #999999;
+    --primary: #0A84FF; --primary-subtle: rgba(10, 132, 255, 0.18);
+    --overlay: rgba(0, 0, 0, 0.7);
+    --color-favorite: #FF453A;
+    --flash-tech: #60A5FA; --flash-world: #818CF8; --flash-sports: #FBBF24; --flash-life: #34D399;
+    --flash-tech-bg: rgba(96, 165, 250, 0.12);
+    --stage-bg: #141414; --panel: #1A1A1C; --panel-text: #FFFFFF; --panel-sub: #999999; --panel-line: #2A2A2C;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--stage-bg); color: var(--panel-text); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif; padding: 28px 20px 64px; transition: background .2s; position: relative; }
+
+  .hd { max-width: 1180px; margin: 0 auto 22px; }
+  .hd h1 { font-size: 20px; font-weight: 600; letter-spacing: .2px; }
+  .hd .sub { font-size: 12.5px; color: var(--panel-sub); margin-top: 6px; line-height: 1.75; }
+  .hd .sub b { color: var(--primary); font-weight: 600; }
+
+  .ctrl { display: flex; gap: 14px; flex-wrap: wrap; margin: 16px 0 0; align-items: center; }
+  .ctrl .grp { display: flex; gap: 6px; align-items: center; }
+  .ctrl .lbl { font-size: 11.5px; color: var(--panel-sub); margin-right: 2px; }
+  .ctrl button { font: inherit; font-size: 12.5px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--panel-line); background: var(--panel); color: var(--panel-text); cursor: pointer; transition: all .15s; }
+  .ctrl button:hover { border-color: var(--primary); }
+  .ctrl button.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  .sec { max-width: 1180px; margin: 0 auto 34px; }
+  .sec-t { font-size: 13.5px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .sec-d { font-size: 12px; color: var(--panel-sub); margin-bottom: 14px; line-height: 1.75; }
+  .badge { font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 5px; background: var(--primary-subtle); color: var(--primary); letter-spacing: .3px; }
+  .badge.old { background: rgba(255,59,48,.14); color: #FF453A; }
+
+  .phone { width: 375px; background: var(--bg-page); border-radius: 20px; border: 1px solid var(--panel-line); overflow: hidden; flex-shrink: 0; box-shadow: 0 4px 22px rgba(0,0,0,.10); position: relative; --fs: 1; --fsm: 1; transition: background .25s; }
+  .statusbar { display: flex; justify-content: space-between; align-items: center; padding: 8px 20px 2px; font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .statusbar .icons { display: flex; gap: 5px; align-items: center; font-size: 11px; }
+
+  .compare { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .legend { flex: 1; min-width: 260px; }
+  .legend .li { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--panel-line); }
+  .legend .num { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #FF453A; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .legend .tx { font-size: 12.5px; line-height: 1.7; color: var(--panel-text); }
+  .legend .tx b { color: var(--primary); }
+
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border-radius: 10px; overflow: hidden; }
+  th, td { padding: 8px 13px; text-align: left; font-size: 12px; border-bottom: 1px solid var(--panel-line); vertical-align: top; }
+  th { background: var(--primary-subtle); color: var(--primary); font-weight: 600; font-size: 11.5px; }
+  td { color: var(--panel-text); }
+  td.k { color: var(--panel-sub); width: 24%; white-space: nowrap; }
+  td code, .mono { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: var(--primary-subtle); color: var(--primary); padding: 1px 5px; border-radius: 4px; }
+  tr:last-child td { border-bottom: none; }
+
+  .hint { font-size: 11.5px; color: var(--panel-sub); margin-top: 12px; padding: 10px 13px; background: var(--panel); border-radius: 9px; border-left: 3px solid var(--primary); line-height: 1.75; }
+  .hint b { color: var(--panel-text); }
+
+  /* ===== 收藏页（优化后） ===== */
+  .fav-nav { display: flex; align-items: center; gap: 6px; padding: 6px 14px 10px; position: relative; }
+  .fav-nav .home { color: var(--primary); font-size: 22px; line-height: 1; cursor: pointer; }
+  .fav-nav .title { font-size: 17px; font-weight: 600; color: var(--text-primary); }
+  .fav-nav .count { position: absolute; right: 14px; font-size: 12px; color: var(--text-secondary); }
+  .fav-filters { display: flex; gap: 8px; padding: 0 16px 12px; overflow-x: auto; }
+  .fav-filters .fc { flex-shrink: 0; font-size: 13px; padding: 6px 14px; border-radius: 16px; background: var(--tag-bg); color: var(--tag-text); cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .fav-filters .fc.on { background: var(--primary); color: #fff; }
+  .longpress-hint { font-size: 11px; color: var(--text-tertiary); padding: 0 16px 8px; }
+  .fav-list { padding: 2px 16px 28px; }
+  .fav-card { display: flex; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--divider); cursor: pointer; align-items: flex-start; transition: opacity .2s; }
+  .fav-card .thumb { width: 60px; height: 60px; border-radius: 12px; background: var(--tag-bg); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .fav-card .body { flex: 1; min-width: 0; }
+  .fav-card .ftitle { font-size: calc(16px * var(--fs)); color: var(--text-primary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .fav-card .fmeta { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: calc(12px * var(--fsm)); color: var(--text-secondary); }
+  .fav-card .fchip { padding: 1px 8px; border-radius: 8px; background: var(--tag-bg); font-size: 11px; font-weight: 500; }
+  .c-tech { color: var(--flash-tech); } .c-world { color: var(--flash-world); } .c-sports { color: var(--flash-sports); } .c-life { color: var(--flash-life); }
+  .fav-empty { padding: 78px 24px; text-align: center; }
+  .fav-empty .eico { font-size: 46px; opacity: .4; }
+  .fav-empty .etx { font-size: 15px; color: var(--text-secondary); margin-top: 12px; line-height: 1.6; }
+  .fav-empty .ehint { display: inline-block; margin-top: 14px; font-size: 14px; color: var(--primary); background: var(--primary-subtle); padding: 8px 18px; border-radius: 20px; cursor: pointer; }
+
+  /* ActionSheet（长按取消收藏） */
+  .sheet-mask { position: absolute; inset: 0; background: var(--overlay); display: none; z-index: 50; }
+  .sheet-mask.show { display: block; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--bg-card); border-radius: 16px 16px 0 0; padding: 8px 0 18px; z-index: 51; transform: translateY(100%); transition: transform .25s; }
+  .sheet.show { transform: translateY(0); }
+  .sheet .si { padding: 15px; text-align: center; font-size: 16px; color: var(--text-primary); cursor: pointer; }
+  .sheet .si.danger { color: var(--color-favorite); }
+  .sheet .si.cancel { color: var(--text-secondary); border-top: 8px solid var(--bg-page); }
+
+  /* 现状（旧） */
+  .old-fav-item { padding: 14px 0; border-bottom: 1px solid var(--divider); }
+  .old-fav-item .t { font-size: 16px; color: var(--text-primary); line-height: 1.4; }
+  .old-fav-item .m { margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+  .pin { position: absolute; width: 22px; height: 22px; border-radius: 50%; background: #FF453A; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(255,69,58,.4); z-index: 5; }
+
+  /* Toast（手机内） */
+  .toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(8px); background: rgba(0,0,0,.82); color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 13px; opacity: 0; transition: all .22s; pointer-events: none; z-index: 200; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body data-theme="light">
+
+<div class="hd">
+  <h1>UI-B10 · 收藏页优化（现状 vs 优化） <span class="badge">v1.0 供 owner 裁定</span></h1>
+  <div class="sub">
+    针对收藏页「纯文字行、无图、无分类、无删除、无统计、无筛选」的 5 项短板，提出 <b>卡片化 + 分类筛选 + 长按取消收藏</b> 方案。<br>
+    左侧为可交互优化原型（色值 1:1 取自 <span class="mono">theme.json</span>），右侧为现状还原与问题清单。请重点验证：<b>卡片信息密度</b>、<b>筛选联动计数</b>、<b>长按删除交互</b>。
+  </div>
+  <div class="ctrl">
+    <div class="grp"><span class="lbl">主题</span>
+      <button id="bL" class="on" onclick="setTheme('light')">日间</button>
+      <button id="bD" onclick="setTheme('dark')">暗色</button>
+    </div>
+    <div class="grp"><span class="lbl">字号档位</span>
+      <button data-tier="1" class="on" onclick="setTier(1,this)">标准</button>
+      <button data-tier="1.15" onclick="setTier(1.15,this)">大</button>
+      <button data-tier="1.3" onclick="setTier(1.3,this)">特大</button>
+      <button data-tier="1.5" onclick="setTier(1.5,this)">超大</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 1. 优化后交互原型 ============ -->
+<div class="sec">
+  <div class="sec-t">1 · 优化后原型（可操作） <span class="badge">点击筛选 / 长按列表项取消收藏</span></div>
+  <div class="sec-d">卡片化列表（缩略图 + 标题 + 分类标签 + 来源·时间）｜顶部收藏计数｜分类筛选胶囊（联动计数）｜长按弹出 ActionSheet 取消收藏（微信习惯交互）。</div>
+
+  <div class="phone" id="favPhone" data-theme="light">
+    <div class="statusbar"><span>9:41</span><span class="icons">●●● ▮ 100%</span></div>
+    <div class="fav-nav">
+      <span class="home" onclick="showToast('（demo）返回主页')">⌂</span>
+      <span class="title">我的收藏</span>
+      <span class="count" id="count">共 0 条</span>
+    </div>
+    <div class="fav-filters" id="filters">
+      <span class="fc on" data-cat="all" onclick="setFilter('all',this)">全部</span>
+      <span class="fc" data-cat="tech" onclick="setFilter('tech',this)">科技</span>
+      <span class="fc" data-cat="world" onclick="setFilter('world',this)">世界</span>
+      <span class="fc" data-cat="sports" onclick="setFilter('sports',this)">体育</span>
+      <span class="fc" data-cat="life" onclick="setFilter('life',this)">生活</span>
+    </div>
+    <div class="longpress-hint">提示：长按任意列表项可取消收藏</div>
+    <div class="fav-list" id="favList"></div>
+
+    <!-- ActionSheet -->
+    <div class="sheet-mask" id="sheetMask" onclick="closeSheet()"></div>
+    <div class="sheet" id="sheet">
+      <div class="si danger" onclick="cancelCollect()">取消收藏</div>
+      <div class="si cancel" onclick="closeSheet()">取消</div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+</div>
+
+<!-- ============ 2. 现状对照 ============ -->
+<div class="sec">
+  <div class="sec-t">2 · 现状对照（纯文字列表） <span class="badge old">5 项问题</span></div>
+  <div class="sec-d">现状：<span class="mono">pages/favorites/</span> 仅渲染标题 + 来源·时间两行文字，无缩略图、无分类、无删除入口、无计数、无筛选。下方左为现状还原，右为问题清单。</div>
+  <div class="compare">
+    <div class="phone" data-theme="light" style="--fs:1;--fsm:1">
+      <div class="statusbar"><span>9:41</span><span class="icons">●●● ▮ 100%</span></div>
+      <div class="fav-nav"><span class="home">⌂</span><span class="title">我的收藏</span></div>
+      <div class="fav-list" style="padding-top:8px">
+        <div class="old-fav-item"><div class="t">量子计算机首次实现千比特纠错运算</div><div class="m">科技日报 · 2小时前</div></div>
+        <div class="old-fav-item"><div class="t">联合国气候峰会达成新减排框架</div><div class="m">新华社 · 5小时前</div></div>
+        <div class="old-fav-item"><div class="t">国足世预赛客场逼平强敌</div><div class="m">体坛周报 · 昨天</div></div>
+        <div class="old-fav-item"><div class="t">城市夜经济激发消费新活力</div><div class="m">人民日报 · 3天前</div></div>
+      </div>
+      <div class="pin" style="top: 64px; left: 300px;">①</div>
+      <div class="pin" style="top: 150px; left: 300px;">②</div>
+      <div class="pin" style="top: 230px; left: 300px;">③</div>
+      <div class="pin" style="top: 70px; right: 14px; left:auto;">④</div>
+      <div class="pin" style="top: 110px; left: 300px;">⑤</div>
+    </div>
+
+    <div class="legend">
+      <div class="li"><div class="num">1</div><div class="tx"><b>无缩略图</b>：纯文字行，与首页有图的卡片视觉语言割裂，扫读效率低。</div></div>
+      <div class="li"><div class="num">2</div><div class="tx"><b>无分类标签</b>：看不出条目属于哪个频道，无法快速归类回顾。</div></div>
+      <div class="li"><div class="num">3</div><div class="tx"><b>无删除/管理入口</b>：只能从详情页加收藏，想取消收藏无处下手（反直觉）。</div></div>
+      <div class="li"><div class="num">4</div><div class="tx"><b>无收藏总数统计</b>：用户不清楚自己攒了多少条，缺少「量化成就感」。</div></div>
+      <div class="li"><div class="num">5</div><div class="tx"><b>无分类筛选</b>：收藏多了只能滚动硬找，无快捷过滤。</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. 落地规格 ============ -->
+<div class="sec">
+  <div class="sec-t">3 · 落地规格（FS 照此实现）</div>
+  <table>
+    <tr><th>维度</th><th>现状</th><th>优化后</th></tr>
+    <tr><td class="k">列表项</td><td>标题 + 来源·时间两行</td><td>缩略图(60px) + 标题(2行截断) + 分类标签 + 来源·时间</td></tr>
+    <tr><td class="k">缩略图兜底</td><td colspan="2">有 <code>thumbUrl</code> 用 image；无则分类色块占位（emoji + 分类色），不破版</td></tr>
+    <tr><td class="k">收藏计数</td><td>无</td><td>nav 右侧「共 N 条」；随筛选联动（全部=N / 某类=该类数）</td></tr>
+    <tr><td class="k">分类筛选</td><td>无</td><td>nav 下横滑胶囊（全部+各分类），纯前端 <code>filter</code>，不改数据结构</td></tr>
+    <tr><td class="k">删除交互</td><td>无入口</td><td>长按列表项 → ActionSheet「取消收藏 / 取消」（微信习惯，零破坏）</td></tr>
+    <tr><td class="k">取消收藏写入</td><td colspan="2">本地 <code>localCache.favorites</code> 立即移除 + 云端 <code>setUserFavorite(false)</code> 双写；列表即时重渲染</td></tr>
+    <tr><td class="k">空态</td><td>「还没有收藏任何新闻」</td><td>保留 + 引导「收藏后这里会按分类整理」；筛选无结果变体「该分类下暂无收藏」</td></tr>
+    <tr><td class="k">前置依赖</td><td colspan="2">确认 <code>localCache.favorites</code> 是否存 <code>thumbUrl</code>；若未存，加收藏时补存（轻量）</td></tr>
+    <tr><td class="k">token 来源</td><td colspan="2">全部色值取自 <code>theme.json</code>，缩略图色块用 <code>--flash-*</code> / <code>--tag-bg</code>，零新增</td></tr>
+  </table>
+  <div class="hint">
+    <b>交互边界</b>：① 筛选只改视图、不动底层 <code>list</code> 数组；② 取消收藏走异步双写，列表乐观更新（先移除再回滚失败）；③ 缩略图缺失一律色块兜底。<br>
+    <b>验收点</b>：卡片与首页四要素一致 · 计数实时准确且随筛选联动 · 长按删除有二次确认 · 空态/筛选空态文案区分 · 暗色模式全部 token 生效。
+  </div>
+</div>
+
+<script>
+  var root = document.documentElement;
+  root.setAttribute('data-theme', 'light');
+  function setTheme(t) {
+    root.setAttribute('data-theme', t);
+    document.querySelectorAll('.phone').forEach(function (p) { p.setAttribute('data-theme', t); });
+    document.getElementById('bL').classList.toggle('on', t === 'light');
+    document.getElementById('bD').classList.toggle('on', t === 'dark');
+  }
+  function setTier(t, el) {
+    document.querySelectorAll('.phone').forEach(function (p) { p.style.setProperty('--fs', t); p.style.setProperty('--fsm', Math.min(t, 1.15)); });
+    document.querySelectorAll('[data-tier]').forEach(function (b) { b.classList.toggle('on', parseFloat(b.dataset.tier) === t); });
+  }
+
+  // ===== 数据 =====
+  var DATA = [
+    { id: 'a1', cat: 'tech',   name: '科技', emoji: '💡', title: '量子计算机首次实现千比特纠错运算', source: '科技日报', time: '2小时前' },
+    { id: 'a2', cat: 'world',  name: '世界', emoji: '🌍', title: '联合国气候峰会达成新减排框架', source: '新华社', time: '5小时前' },
+    { id: 'a3', cat: 'sports', name: '体育', emoji: '⚽', title: '国足世预赛客场逼平强敌', source: '体坛周报', time: '昨天' },
+    { id: 'a4', cat: 'life',   name: '生活', emoji: '🍃', title: '城市夜经济激发消费新活力', source: '人民日报', time: '3天前' },
+    { id: 'a5', cat: 'tech',   name: '科技', emoji: '💡', title: '国产大模型推理成本下降七成', source: '36氪', time: '1小时前' },
+    { id: 'a6', cat: 'world',  name: '世界', emoji: '🌍', title: '欧盟通过人工智能监管法案', source: '路透社', time: '昨天' }
+  ];
+  var state = { items: DATA.slice(), activeCat: 'all' };
+  var cls = { tech: 'c-tech', world: 'c-world', sports: 'c-sports', life: 'c-life' };
+
+  var listEl = document.getElementById('favList');
+  function render() {
+    document.getElementById('count').textContent = '共 ' + state.items.length + ' 条';
+    var items = state.activeCat === 'all' ? state.items : state.items.filter(function (i) { return i.cat === state.activeCat; });
+    if (state.items.length === 0) {
+      listEl.innerHTML = '<div class="fav-empty"><div class="eico">📑</div><div class="etx">还没有收藏任何新闻<br>收藏后这里会按分类整理</div><div class="ehint" onclick="showToast(\'（demo）去首页看看\')">去首页看看</div></div>';
+      return;
+    }
+    if (items.length === 0) {
+      listEl.innerHTML = '<div class="fav-empty"><div class="eico">🔍</div><div class="etx">该分类下暂无收藏</div></div>';
+      return;
+    }
+    listEl.innerHTML = items.map(function (i) {
+      return '<div class="fav-card" data-id="' + i.id + '" data-title="' + i.title + '">' +
+        '<div class="thumb ' + cls[i.cat] + '">' + i.emoji + '</div>' +
+        '<div class="body"><div class="ftitle">' + i.title + '</div>' +
+        '<div class="fmeta"><span class="fchip ' + cls[i.cat] + '">' + i.name + '</span><span>' + i.source + '</span><span>·</span><span>' + i.time + '</span></div></div></div>';
+    }).join('');
+  }
+
+  function setFilter(cat, el) {
+    state.activeCat = cat;
+    document.querySelectorAll('#filters .fc').forEach(function (f) { f.classList.toggle('on', f.dataset.cat === cat); });
+    render();
+  }
+
+  // 长按 → ActionSheet
+  var lpTimer = null, lpId = null, suppressClick = false;
+  listEl.addEventListener('pointerdown', function (e) {
+    var card = e.target.closest('.fav-card'); if (!card) return;
+    lpId = card.dataset.id;
+    lpTimer = setTimeout(function () { openSheet(lpId); suppressClick = true; }, 500);
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+    listEl.addEventListener(ev, function () { clearTimeout(lpTimer); });
+  });
+  listEl.addEventListener('click', function (e) {
+    if (suppressClick) { suppressClick = false; return; }
+    var card = e.target.closest('.fav-card'); if (!card) return;
+    showToast('（demo）打开《' + card.dataset.title + '》');
+  });
+
+  var pendingId = null;
+  function openSheet(id) { pendingId = id; document.getElementById('sheetMask').classList.add('show'); document.getElementById('sheet').classList.add('show'); }
+  function closeSheet() { document.getElementById('sheetMask').classList.remove('show'); document.getElementById('sheet').classList.remove('show'); }
+  function cancelCollect() {
+    state.items = state.items.filter(function (i) { return i.id !== pendingId; });
+    closeSheet(); render(); showToast('已取消收藏');
+  }
+
+  var _tt;
+  function showToast(msg) {
+    var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(_tt); _tt = setTimeout(function () { t.classList.remove('show'); }, 1600);
+  }
+
+  render();
+</script>
+</body>
+</html>
