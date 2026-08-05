@@ -1994,7 +1994,7 @@
 | Q-06.2 | 云函数部署确认（getNewsList/getNewsDetail/refreshNews） | 项目经理 | ⏳ | Q-06.1 | 微信云开发控制台检查 |
 | Q-06.3 | 小程序审核准备（版本号/描述/截图） | 项目经理 | ⏳ | Q-06.2 | 如走审核流程 |
 | Q-06.4 | 回滚预案（上一版本 tag + 云函数版本回退步骤） | 项目经理 | ⏳ | Q-06.1 | 记录到 `docs/06-上线复盘/` |
-| **AB-01** | **🆕 dock「关于一页」页面开发** | **小程序前端开发（FE）** | 📋 | PM 方案已确认 | 8 文件：`pages/about/about.{js,wxml,wxss,json}` + `home.{wxml,js}` 改 dock + `info.svg` + `app.json` 注册；详见 `docs/01-需求规划/关于一页-页面需求说明-20260805.md` |
+| **AB-01** | **✅ dock「关于一页」页面开发（FE 已交付 `34d20a5`）** | **小程序前端开发（FE）** | ✅ | PM 方案已确认 | 8 文件全部完成：`pages/about/about.{js,wxml,wxss,json}` + `home.{wxml,js}` dock 改造 + `info.svg` + `app.json` 注册；待 owner 真机验证 |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
