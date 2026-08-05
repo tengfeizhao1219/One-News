@@ -43,6 +43,58 @@ page {
   --seg-on-bg: #636366;
   --seg-on-text: #FFFFFF;
   --switch-off: #39393D;
+  /* D-07 S2：category-wheel 滚轮 token（theme.json dark 分支同步，G-03 关闭关键） */
+  --wheel-opacity-idle: 0.35;
+  --wheel-opacity-active: 0.92;
+  --wheel-text-idle: rgba(255, 255, 255, 0.12);
+  --wheel-text-selected: rgba(255, 255, 255, 0.5);
+  --wheel-text-active: rgba(255, 255, 255, 0.45);
+  --wheel-scale-active: 1.08;
+  --wheel-bg-selected: rgba(10, 132, 255, 0.10);
+}
+
+/* ============ D-07 S1: 全局浅色主题变量块 ============
+   始终注入生效主题 class（page--dark / page--light），浅色显式声明，
+   保证「手动浅色 + 系统深色」下浅色 token 覆盖原生 var()（关闭 G-01）。
+   变量值 = theme.json light 分支，与系统浅色一致，不允许顺手改色值。 */
+.page--light {
+  --bg-page: #F5F3F0;
+  --bg-card: #FAF9F7;
+  --bg-subtle: #F0EEEA;
+  --text-primary: #1C1C1E;
+  --text-secondary: #6B6B70;
+  --text-body: #5E5E60;
+  --text-tertiary: #8A8A8E;
+  --text-link: #576b95;
+  --divider: #E8E6E1;
+  --tag-bg: #EEECE8;
+  --tag-text: #7A7A7A;
+  --overlay: rgba(0, 0, 0, 0.25);
+  --primary: #007AFF;
+  --primary-subtle: rgba(0, 122, 255, 0.12);
+  --progress: rgba(0, 122, 255, 0.55);
+  --highlight-bg: rgba(0, 122, 255, 0.06);
+  --color-favorite: #FF3B30;
+  --color-favorite-tint: rgba(255, 59, 48, 0.10);
+  --color-warning: #F59E0B;
+  --bottom-bar-bg: rgba(250, 249, 247, 0.55);
+  --setting-panel-bg: rgba(250, 249, 247, 0.78);
+  --chip-bg: rgba(28, 28, 30, 0.85);
+  --chip-text: #FFFFFF;
+  /* 设置页专属浅色（对照 .page--dark；值取 settings.wxss 原 fallback，防视觉漂移） */
+  --preview-bg: #F5F3F0;
+  --seg-bg: #E4E4E6;
+  --seg-on-bg: #FFFFFF;
+  --seg-on-text: #1C1C1E;
+  --switch-off: #E9E9EA;
+  /* D-07 S2：category-wheel 滚轮 token（theme.json light 分支同步） */
+  --wheel-opacity-idle: 0.35;
+  --wheel-opacity-active: 0.92;
+  --wheel-text-idle: rgba(0, 0, 0, 0.12);
+  --wheel-text-selected: rgba(0, 0, 0, 0.5);
+  --wheel-text-active: rgba(0, 0, 0, 0.45);
+  --wheel-scale-active: 1.08;
+  --wheel-bg-selected: rgba(0, 122, 255, 0.06);
 }
 
 /* 暗色模式统一由 theme.json 的 CSS 变量驱动，此处不再硬编码覆盖 */

@@ -705,10 +705,15 @@ Page({
   },
 
   /**
-   * 判断系统是否暗色模式（B-05 分享占位图用）
+   * D-07 S4（G-08）：判断当前生效主题是否暗色（B-05 分享占位图用）
+   * 优先取 app.globalData.effectiveTheme（含手动模式），不再只查系统主题。
    */
   _isSystemDark: function () {
     try {
+      var app = getApp()
+      if (app && app.globalData && app.globalData.effectiveTheme) {
+        return app.globalData.effectiveTheme === 'dark'
+      }
       var info = wx.getSystemInfoSync()
       return info.theme === 'dark'
     } catch (e) {

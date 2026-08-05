@@ -1,5 +1,9 @@
 /* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2 · v5.3-final） */
 /* FE-3（2026-08-05）：硬编码 rgba → D-02 §5 Token 表 --wheel-* 变量 */
+/* D-07 S2（G-03）：组件默认 styleIsolation=isolated，页面根节点的 .page--dark .wheel-label
+   选择器无法命中组件内部；改用 CSS 变量继承（var() 穿透样式隔离）——
+   --wheel-* 深色/浅色值定义在 app.wxss 的 .page--dark/.page--light 变量块，
+   手动深色 + 系统浅色时组件文字取深色值，保证可见。勿改回 media query 或前缀选择器。 */
 
 .wheel {
   position: relative;

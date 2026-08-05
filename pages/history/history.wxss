@@ -164,28 +164,27 @@
   color: var(--text-secondary);
 }
 
-/* ============ 暗色模式兜底（BUG-20260805-002 · owner 直连）============
-   微信真机 theme.json CSS 变量偶发失效 → 页面文字/背景退化。与 detail/home 同款兜底。 */
-@media (prefers-color-scheme: dark) {
-  .page {
-    background-color: #000000;
-  }
-  .nav-title,
-  .history-title {
-    color: #FFFFFF;
-  }
-  .history-meta,
-  .empty-text {
-    color: #999999;
-  }
-  .empty-hint {
-    color: #0A84FF;
-    background-color: #1C1C1E;
-  }
-  .skeleton-item .sk-line {
-    background: #1C1C1E;
-  }
-  .history-item:active {
-    background-color: rgba(255, 255, 255, 0.06);
-  }
+/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
+   BUG-20260805-002 引入硬编码兜底（应对真机 theme.json CSS 变量偶发失效）。
+   D-07 治理：删除 @media，迁移为 .page--dark 前缀——跟随系统深色与手动深色统一作用域（G-02） */
+.page--dark {
+  background-color: #000000;
+}
+.page--dark .nav-title,
+.page--dark .history-title {
+  color: #FFFFFF;
+}
+.page--dark .history-meta,
+.page--dark .empty-text {
+  color: #999999;
+}
+.page--dark .empty-hint {
+  color: #0A84FF;
+  background-color: #1C1C1E;
+}
+.page--dark .skeleton-item .sk-line {
+  background: #1C1C1E;
+}
+.page--dark .history-item:active {
+  background-color: rgba(255, 255, 255, 0.06);
 }

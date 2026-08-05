@@ -129,6 +129,10 @@
   box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.18);
   transition: left 0.22s;
 }
+/* D-07 S3（G-07）：knob 白色为深浅色通用（iOS 开关滑块惯例），显式声明防失配 */
+.page--dark .switch-knob {
+  background: #FFFFFF;
+}
 .switch.on .switch-knob {
   left: 42rpx;
 }
@@ -259,42 +263,41 @@
   font-weight: 500;
 }
 
-/* ============ 暗色模式兜底（BUG-20260805-002 · owner 直连）============
-   微信真机 theme.json CSS 变量偶发失效 → 页面文字/背景退化。与 detail/home 同款兜底。 */
-@media (prefers-color-scheme: dark) {
-  .page {
-    background-color: #000000;
-  }
-  .nav-title,
-  .row-label,
-  .seg-item.on,
-  .preview-card {
-    color: #FFFFFF;
-  }
-  .group-label,
-  .row-val,
-  .preview-label,
-  .pv-meta {
-    color: #999999;
-  }
-  .row-sub,
-  .row-chev {
-    color: #666666;
-  }
-  .card,
-  .preview-card {
-    background-color: #0D0D0D;
-  }
-  .row + .row {
-    border-top-color: #1C1C1E;
-  }
-  .seg {
-    background-color: #2C2C2E;
-  }
-  .seg-item.on {
-    background-color: #636366;
-  }
-  .switch {
-    background-color: #39393D;
-  }
+/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
+   BUG-20260805-002 引入硬编码兜底（应对真机 theme.json CSS 变量偶发失效）。
+   D-07 治理：删除 @media，迁移为 .page--dark 前缀——跟随系统深色与手动深色统一作用域（G-02） */
+.page--dark {
+  background-color: #000000;
+}
+.page--dark .nav-title,
+.page--dark .row-label,
+.page--dark .seg-item.on,
+.page--dark .preview-card {
+  color: #FFFFFF;
+}
+.page--dark .group-label,
+.page--dark .row-val,
+.page--dark .preview-label,
+.page--dark .pv-meta {
+  color: #999999;
+}
+.page--dark .row-sub,
+.page--dark .row-chev {
+  color: #666666;
+}
+.page--dark .card,
+.page--dark .preview-card {
+  background-color: #0D0D0D;
+}
+.page--dark .row + .row {
+  border-top-color: #1C1C1E;
+}
+.page--dark .seg {
+  background-color: #2C2C2E;
+}
+.page--dark .seg-item.on {
+  background-color: #636366;
+}
+.page--dark .switch {
+  background-color: #39393D;
 }

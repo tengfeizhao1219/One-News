@@ -17,6 +17,9 @@ App({
     followSystem: true,
     darkMode: false,
     themeClass: '',
+    // D-07 S1：实际生效主题（'light' | 'dark'），单一事实源
+    effectiveTheme: 'light',
+    _systemTheme: 'light',
   },
 
   onLaunch() {
@@ -41,6 +44,9 @@ App({
     // BUG-20260805-003：读取手动主题偏好并应用到全部页面
     this._initTheme()
 
+    // D-07 S1：跟随系统模式下，运行中切换系统主题 → 即时广播（关闭 G-04）
+    this._registerThemeChangeListener()
+
     // 获取系统信息
     const sysInfo = wx.getSystemInfoSync()
     this.globalData.statusBarHeight = sysInfo.statusBarHeight
@@ -52,9 +58,9 @@ App({
   },
 
   /**
-   * BUG-20260805-003：初始化主题偏好（设置页手动深色模式全局生效）
+   * D-07 S1：初始化主题偏好（读取 Storage + 系统主题）
    * 读取 Storage（settings_followSystem / settings_darkMode，与设置页同键），
-   * 手动暗色 → globalData.themeClass = 'page--dark'（各页面根节点绑定）。
+   * 计算 effectiveTheme 并始终注入生效 class（page--dark / page--light）。
    */
   _initTheme() {
     var followSystem = true
@@ -69,17 +75,47 @@ App({
     } catch (e) { /* ignore */ }
     this.globalData.followSystem = followSystem
     this.globalData.darkMode = darkMode
+    // D-07 S1：读取系统主题作为初始值（跟随模式基准）
+    try {
+      var sysInfo = wx.getSystemInfoSync()
+      this.globalData._systemTheme = sysInfo.theme === 'dark' ? 'dark' : 'light'
+    } catch (e) { /* ignore */ }
     this.applyTheme()
   },
 
   /**
-   * BUG-20260805-003：应用主题到所有已存在页面（getCurrentPages 动态注入 themeClass）
-   * 手动暗色（!followSystem && darkMode）→ 'page--dark'，其余 → ''
+   * D-07 S1：跟随系统模式下监听系统主题切换，实时广播（关闭 G-04）
+   * 手动模式（followSystem=false）不监听，主题由设置页开关决定。
+   */
+  _registerThemeChangeListener() {
+    try {
+      if (wx.onThemeChange) {
+        wx.onThemeChange(function (res) {
+          var theme = res && res.theme === 'dark' ? 'dark' : 'light'
+          this.globalData._systemTheme = theme
+          // 仅跟随系统模式下系统切换才影响生效主题
+          if (this.globalData.followSystem !== false) {
+            this.applyTheme()
+          }
+        }.bind(this))
+      }
+    } catch (e) { /* ignore */ }
+  },
+
+  /**
+   * D-07 S1：应用主题到所有已存在页面（getCurrentPages 动态注入 themeClass）
+   * 状态机：followSystem=true → effectiveTheme=系统主题（随 onThemeChange 更新）
+   *         followSystem=false → effectiveTheme=darkMode?'dark':'light'
+   * 始终注入生效 class（page--dark / page--light），不再输出 ''（关闭 G-01）。
    */
   applyTheme() {
     var followSystem = this.globalData.followSystem !== false
     var darkMode = !!this.globalData.darkMode
-    var themeClass = (!followSystem && darkMode) ? 'page--dark' : ''
+    var effectiveTheme = followSystem
+      ? (this.globalData._systemTheme || 'light')
+      : (darkMode ? 'dark' : 'light')
+    this.globalData.effectiveTheme = effectiveTheme
+    var themeClass = effectiveTheme === 'dark' ? 'page--dark' : 'page--light'
     this.globalData.themeClass = themeClass
     try {
       var pages = getCurrentPages()
@@ -87,6 +123,30 @@ App({
         if (pages[i] && pages[i].setData) {
           pages[i].setData({ themeClass: themeClass })
         }
+      }
+    } catch (e) { /* ignore */ }
+    // D-07 S4（G-05）：同步窗口背景/下拉回弹露底与 loading 指示点颜色
+    this._syncWindowStyle(effectiveTheme)
+  },
+
+  /**
+   * D-07 S4（G-05）：窗口背景跟随生效主题（方案 B：运行时 setBackgroundColor）
+   * 微信 window.backgroundColor 静态配置无法跟随手动模式，运行时同步最可控；
+   * 下拉回弹/页面露底处显示与当前主题一致的背景色。
+   */
+  _syncWindowStyle(theme) {
+    try {
+      if (wx.setBackgroundColor) {
+        wx.setBackgroundColor({
+          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+          backgroundColorTop: theme === 'dark' ? '#000000' : '#F5F3F0',
+          backgroundColorBottom: theme === 'dark' ? '#000000' : '#F5F3F0',
+        })
+      }
+      if (wx.setBackgroundTextStyle) {
+        wx.setBackgroundTextStyle({
+          textStyle: theme === 'dark' ? 'light' : 'dark',
+        })
       }
     } catch (e) { /* ignore */ }
   },
