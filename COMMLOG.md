@@ -1,3 +1,22 @@
+## [2026-08-05 20:12] 📤→✅ PD 已提交 · FE `f3bf107` D-07 暗色可见性契约修复验收通过 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：D-07.1 追加 §九 验收记录 + TASK_BOARD 广播
+- 文件：`docs/02-产品设计/D-07-走查底稿确认与现状盘点.md`（§九）、`TASK_BOARD.md`（广播）
+
+**验收结论：✅ 通过**（FE `f3bf107`，owner 截图直报的暗色可见性问题）
+1. **G-03 P0**：`.page--dark` 补 `--wheel-*`（7 个），与 theme.json dark :76-82 逐项一致 ✅
+2. **发现 C**：`--flash-*`（5 个）补入，对齐 :71-75 ✅
+3. **S3 #3**：font-panel `.radio-dot` → `var(--bg-card)`，暗色白圆深点/浅色深圆暖白点，仅选中态渲染 ✅
+4. **S3 #2**：settings `.switch-knob` → `var(--switch-knob, #FFFFFF)`，fallback 兜底无回归 ✅
+5. 连带 `--color-favorite-active` / `--setting-panel-blur` 一致 ✅
+
+**自动化**：v13-fe-dark-visibility 84/0（防漂移契约）；全量回归 v5/v6/v7/v7-runtime/v511/v11/b06/v12 全通过 ✅
+
+**📌 给 FS（非阻断）**：① `--switch-knob` 补入 theme.json token 源；② G-01/G-02/G-04/G-05/S3 剩余 12 处裸色仍待 FS S1-S4 架构治理，D-07 整体未闭环
+
+---
+
 ## [2026-08-05 19:55] 📤→✅ FE 已提交 · commit `f3bf107`（D-07 FE 部分 · 暗色可见性契约修复）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：

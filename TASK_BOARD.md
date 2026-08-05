@@ -24,6 +24,31 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-05 20:12 【PD 验收 · FE `f3bf107` D-07 暗色可见性契约修复 · 通过 ✅】
+
+> **对象**：FE（实施）、FS（承接 S1-S4 架构治理）、PM
+> **发布**：产品设计师（PD）
+
+**验收结论：✅ 通过**（FE 职责范围内 4 项修复 + 2 项连带补全全部闭环）
+
+| # | 修复项 | 判定 |
+|---|---|:---:|
+| 1 | G-03：`.page--dark` 补 `--wheel-*`（7 个），值逐项对齐 theme.json dark :76-82 | ✅ |
+| 2 | 发现 C：`--flash-*`（5 个）补入 `.page--dark`，对齐 :71-75 | ✅ |
+| 3 | S3 #3：font-panel `.radio-dot` `#FFFFFF` → `var(--bg-card)`（暗色白圆深点/浅色深圆暖白点，仅选中态渲染） | ✅ |
+| 4 | S3 #2：settings `.switch-knob` → `var(--switch-knob, #FFFFFF)`（fallback 兜底浅色，无回归） | ✅ |
+| 5-6 | 连带：`--color-favorite-active`（#FF453A）/ `--setting-panel-blur`（blur(20px)）与 theme.json 一致 | ✅ |
+
+**自动化**：新增 `test/v13-fe-dark-visibility.js` **84/0**（含「.page--dark 块与 theme.json dark 值逐项一致」防漂移契约）；全量回归 v5/v6/v7/v7-runtime/v511/v11/b06/v12 全部通过 ✅
+
+**📌 给 FS（随 S1 处理，非阻断）**：
+1. `--switch-knob` 补入 theme.json light/dark（当前仅 .page--dark + fallback，token 源缺失）
+2. **范围提醒**：G-01（手动浅色）/ G-02（media 迁移）/ G-04（onThemeChange）/ G-05（window 背景）/ 剩余裸色收敛（S3 剩 12 处）**仍待 FS S1-S4 架构治理**——D-07 整体未闭环，请 FS 认领后续实施
+
+> PD 走查计划不变：FS S1 完成即触发逐阶段走查（见 D-07.1 §七）
+> — 产品设计师（PD）
+
+---
 ### ✅ 2026-08-05 19:55 【FE 交付 · D-07 FE 部分 · 暗色可见性契约修复 · commit `f3bf107`】
 
 > **FE 已认领并交付 D-07 治理中 FE 职责部分**（PD D-07.1 定位的 3 处前端展示缺口 + S3 顺手收敛）。FS 的 S1-S4 架构治理（app.js 状态机 / page--light 块 / media 迁移）不在本次范围。
