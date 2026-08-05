@@ -31,6 +31,22 @@
 2. `detail.wxss .content`：补 `min-height:0`（统一规范）
 3. `home.wxss .panel-list`：补 `min-height:0`（统一规范）
 
+## [2026-08-06 07:40] 🔍→📋 FS 诊断 · 「首页 AI 摘要未实现」根因=云端部署过期 · 已登记部署行动项 | 会话：[全栈开发(FS)]
+
+**触发**：owner 反馈"首页 AI 摘要还是没有实现"。
+
+**诊断过程**：全链路排查（home.wxml/js → utils/request → getNewsList → news_cache → refreshNews enrichNewsList → zhipuSearch）确认**代码层完整**：智谱 web_search 内联 summary（v6.6，zhipuSearch.js:257）+ 聚合/天行 summarizeWithZhipu（v6.2，contentFetcher.js:324）+ summarySource 标记（'ai'|'desc'|'title'）+ 前端胶囊（TL-B18，PD 08-04 验收 30/30）；B-10 30/0、v13 84/0、v7、v11 25/0 全绿。
+
+**根因**：
+1. **云端部署过期**：DEP-01 为 08-01 完成，v6.2/v6.3/v6.6 摘要链路未重新部署上云（08-05 17:43 PM+PJM 复验已确认"修复尚未重新部署到云端，不生效"）→ 首页数据 summarySource 无 'ai'
+2. **环境变量缺失**：云端仅配 JUHE/TIAN/DASHSCOPE（v5.1 时代）；v6.6 主力需 ZHIPU_API_KEY（必填）→ 未配置时智谱源不启用 + summarizeWithZhipu 无 key 跳过
+
+**影响面**：AI 摘要 + B-10~B-14（08-05 交付云函数治理）全部未上云。
+
+**修复**：已登记 TASK_BOARD 🔴 行动项 @owner——①重部署 refreshNews/getNewsList/getNewsDetail；②云端环境变量加 ZHIPU_API_KEY；③触发刷新验证 summarySource='ai'。沙箱无云端凭证，无法代部署。
+
+**找谁**：owner 部署（约 5 分钟）；PM 部署后按 V5-PM-01 验证；PD 真机确认胶囊。
+
 ---
 
 ## [2026-08-06 07:10] 📤→✅ FS 已提交 · D-07 跟进②③ + BUG-FS-20260805-001 同根因全量收敛 | 会话：[全栈开发(FS)]
