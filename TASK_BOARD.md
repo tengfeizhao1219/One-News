@@ -24,6 +24,31 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-05 22:40 【FS 交付 · B-10~B-14 云函数治理 + RQ-18 技术评估 · 待 PM/owner 确认】
+
+> **对象**：PM（验收）、owner（RQ-18 排期决策）、PD（了解）
+> **发布**：全栈开发（FS）
+
+**FS 已按序认领并完成 6 项任务**：
+
+| 编号 | 任务 | 交付 |
+|------|------|------|
+| BUG-TL17-016 | 分类栏底色与 AI 胶囊混淆 | ✅ 核实已关闭（07:40 PD 验收通过，theme.json `--highlight-bg` 双态值一致，无需改动）|
+| B-10 | 云函数层单元测试补全 | ✅ `test/b10-cloudfunction-unit-test.js` 30/0（adapter/降级链/contentExtractor）|
+| B-11 | tianApi code 类型 bug + HTTP 健壮性 | ✅ 4 处 `Number()` 兼容 + HTTP 非 2xx 降级 + 响应 8MB 上限 |
+| B-12 | 限流/退避（天行/聚合）| ✅ 统一读 config.rateLimit；juhe 新增重试+退避 |
+| B-13 | 百炼 Key 搁置期短路 | ✅ 三源检测短路 `no_source_configured`（遵循历史裁定不误伤双引擎）|
+| B-14 | enrich 并发控制 | ✅ enrichNewsList 并发可配 + 单条 12s 超时兜底 |
+| RQ-18 | AI 搜索更多技术评估 | ✅ `docs/04-开发实现/RQ-18-技术可行性评估-AI搜索更多.md`——**推荐复用智谱 web_search，零新增第三方 API** |
+
+**验证**：node --check 全通过；B-10 30/0 + v11 25/0 + v13 84/0 全绿。
+
+**🔔 分配**：
+- **[PM]** 复核 B-10~B-14 代码 + RQ-18 评估结论（§二 方案 A）
+- **[owner]** RQ-18 排期决策（3-3.5 开发单元）+ web-view 域名是否配置
+- **[PD]** RQ-18 交互设计可启动（基于评估 §六 工作量）
+
+---
 ### ✅ 2026-08-05 21:28 【PD 验收 · FE `f26b379` app.wxss 编译错误修复 · 通过 ✅】
 
 > **对象**：FE（实施）、FS/PJM（红线落档）、PM（测试增强）
@@ -1990,11 +2015,11 @@
 | T-03 | 接口定义（接口文档） | 全栈开发 | ✅ | T-02 |
 | T-04 | 技术评审（技术评审纪要） | 全栈开发 | ✅ | T-03 |
 | T-05 | 任务拆分（任务清单） | 项目经理 + TL | ✅ | T-04 |
-| B-10 | 云函数层单元测试补全（adapter/降级链/contentExtractor） | 全栈开发 | 📋 | 无（自查发现） |
-| B-11 | 修复 tianApi code===200 类型 bug + HTTP 状态码/超时 abort/响应上限 | 全栈开发 | 📋 | 无（自查发现） |
-| B-12 | 接入限流/退避（天行/聚合配额保护） | 全栈开发 | 📋 | 需策略决策 |
-| B-13 | 百炼 Key 搁置期 refreshNews 显式短路 | 全栈开发 | 📋 | 无（自查发现） |
-| B-14 | enrichMissingSummaries 并发控制（避免拖慢首屏） | 全栈开发 | 📋 | 无（自查发现） |
+| B-10 | 云函数层单元测试补全（adapter/降级链/contentExtractor） | 全栈开发 | ✅ | 无（自查发现） | ✅ FS 完成（2026-08-05）：新增 `test/b10-cloudfunction-unit-test.js`，30/0 通过（newsCleaner 7 + validator 6 + tianxing 5 + juhe 5 + contentFetcher 3 + zhipuSearch 3） |
+| B-11 | 修复 tianApi code===200 类型 bug + HTTP 状态码/超时 abort/响应上限 | 全栈开发 | ✅ | 无（自查发现） | ✅ FS 完成（2026-08-05）：tianxing `code !== 200` → `Number()` 兼容字符串；juhe/getNewsDetail/contentFetcher 同类 `error_code` 修复；4 处 HTTP 非 2xx 降级 + 响应体 8MB 上限 |
+| B-12 | 接入限流/退避（天行/聚合配额保护） | 全栈开发 | ✅ | 需策略决策（FS 自裁：统一读 config.rateLimit） | ✅ FS 完成（2026-08-05）：tianxing 重试/退避/分类间隔改读 config.rateLimit；juhe 新增重试+指数退避（原无）；zhipuSearch 已有完整限流策略（429+退避+jitter+熔断），不重复 |
+| B-13 | 百炼 Key 搁置期 refreshNews 显式短路 | 全栈开发 | ✅ | 无（自查发现） | ✅ FS 完成（2026-08-05）：exports.main 入口检测 ZHIPU/JUHE/TIAN 三源，均未配置（仅剩百炼 DASHSCOPE）→ 返回 `no_source_configured` 短路；⚠️ 遵循 2026-08-02 历史裁定：DeepSeek 不单独作源（防误伤双引擎） |
+| B-14 | enrichMissingSummaries 并发控制（避免拖慢首屏） | 全栈开发 | ✅ | 无（自查发现） | ✅ FS 完成（2026-08-05）：对应函数为 v7 架构 `enrichNewsList`（旧名已不存在）——并发数改读 config.rateLimit.enrichConcurrency + 单条 12s 超时兜底 + fetchJuheContent HTTP 状态码/响应上限 |
 | B-15 | 🆕 L1 百炼→智谱+DeepSeek 双引擎改造（ADR-002） | 全栈开发 | ✅ | 用户决策 |
 | DEP-01 | 🆕 云函数部署：ADR-002 双引擎上线 | 全栈开发 | ✅ | 无（代码已合 main `4b11859`；⚠️ 待 PM 云端核对每小时触发器 + news_cache 灌入） |
 

@@ -58,12 +58,34 @@ async function fetchTianNewsList(category, num = 10) {
   return new Promise((resolve, reject) => {
     const https = require('https')
     const req = https.get(url, { timeout: config.tian.timeout || 8000 }, (res) => {
+      // B-11: HTTP 状态码非 2xx 直接降级（防把错误页当 JSON 解析）
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        console.warn(`[tianxing] ${category} HTTP ${res.statusCode}，降级返回空`)
+        res.resume() // 排空响应流，避免连接挂起
+        resolve([])
+        return
+      }
+
       let body = ''
-      res.on('data', chunk => { body += chunk })
+      // B-11: 响应体大小上限（8MB），防止异常大响应拖垮内存
+      const MAX_BODY_BYTES = 8 * 1024 * 1024
+      let bytes = 0
+      res.on('data', chunk => {
+        bytes += chunk.length
+        if (bytes > MAX_BODY_BYTES) {
+          console.warn(`[tianxing] ${category} 响应超过 ${MAX_BODY_BYTES} 字节，截断降级`)
+          req.destroy()
+          resolve([])
+          return
+        }
+        body += chunk
+      })
       res.on('end', () => {
         try {
           const result = JSON.parse(body)
-          if (result.code !== 200) {
+          // B-11: code 兼容字符串/数字两种类型（天行接口偶发返回字符串 "200"）
+          const codeOk = Number(result.code) === 200
+          if (!codeOk) {
             console.warn(`[tianxing] ${category} API 返回错误: code=${result.code} msg=${result.msg}`)
             resolve([])
             return
@@ -126,6 +148,7 @@ function formatTianNewsItem(rawItem, category) {
 
 /**
  * 批量拉取多个分类的新闻列表（v6.3: 增强重试+指数退避，修复国际分类 0 条问题）
+ * B-12: 重试次数/退避/分类间隔统一读 config.rateLimit（配额保护）
  * @param {string[]} categories  分类 ID 列表
  * @param {number} [perCategory=10]  每分类条数
  * @returns {Promise<{ news: Array, stats: Object }>}
@@ -134,23 +157,28 @@ async function fetchAllCategories(categories, perCategory = 10) {
   const results = []
   const stats = {}
 
-  // v6.3(V5-FS-02-①): 分类间延迟增至 500ms，添加重试+指数退避（500ms/1500ms/3000ms）
+  // B-12: 从 config.rateLimit 读取统一策略（默认与旧值一致，防行为漂移）
+  const rl = config.rateLimit || {}
+  const maxRetries = rl.maxRetries || 3
+  const backoffBaseMs = rl.backoffBaseMs || 500
+  const minCallGapMs = rl.minCallGapMs || 500
+
   for (const category of categories) {
     let rawList = []
     let lastErr = null
 
-    for (let attempt = 0; attempt < 3; attempt++) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         rawList = await fetchTianNewsList(category, perCategory)
         if (rawList.length > 0) break // 成功获取数据，跳出重试
         // 空结果也重试（可能是临时限流）
-        console.warn(`[tianxing] ${category} 第 ${attempt + 1} 次返回 0 条，${attempt < 2 ? '重试' : '放弃'}`)
+        console.warn(`[tianxing] ${category} 第 ${attempt + 1} 次返回 0 条，${attempt < maxRetries - 1 ? '重试' : '放弃'}`)
       } catch (err) {
         lastErr = err
         console.warn(`[tianxing] ${category} 第 ${attempt + 1} 次失败: ${err.message}`)
       }
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
+      if (attempt < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, backoffBaseMs * Math.pow(3, attempt)))
       }
     }
 
@@ -160,14 +188,14 @@ async function fetchAllCategories(categories, perCategory = 10) {
       stats[category] = formatted.length
     } else {
       if (lastErr) {
-        console.error(`[tianxing] ${category} 3 次重试均失败:`, lastErr.message)
+        console.error(`[tianxing] ${category} ${maxRetries} 次重试均失败:`, lastErr.message)
       }
       stats[category] = 0
     }
 
-    // 分类间延迟 500ms（最后一个分类后无需等待）
+    // B-12: 分类间延迟（配额保护），最后一个分类后无需等待
     if (category !== categories[categories.length - 1]) {
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, minCallGapMs))
     }
   }
 

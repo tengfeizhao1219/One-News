@@ -107,6 +107,7 @@ module.exports = {
     deepseekDailyCap: 40,             // DeepSeek 每日调用上限（熔断）
     manualCooldownMs: 10 * 60 * 1000, // 手动触发冷却 10 分钟
     zhipuWarnThreshold: 200,          // 智谱单日调用告警阈值
+    enrichConcurrency: 8,             // B-14: enrichNewsList 并发数（抓正文+AI摘要 worker 池）
   },
 
   // 错误码

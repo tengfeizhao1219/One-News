@@ -12,6 +12,26 @@
 
 **涉及文件**：`pages/settings/settings.wxss`、`pages/history/history.wxss`、`pages/favorites/favorites.wxss`、`pages/about/about.wxss`
 
+## [2026-08-05 22:40] 📤→✅ FS 已提交 · B-10~B-14 云函数治理 + RQ-18 技术评估（6 项任务）| 会话：[全栈开发(FS)]
+
+**触发**：owner 指令"按顺序依次领取并完成，无需确认"——按 TASK_BOARD 任务表认领无依赖任务。
+
+### 提交记录
+- **BUG-TL17-016**（核实关闭）：PD 07:40 已验收通过（`8d698a2` theme.json `--highlight-bg` 双态值 light .06 / dark .10 与提单逐字一致），无需改动。
+- **B-10**：新增 `test/b10-cloudfunction-unit-test.js` —— 覆盖 newsCleaner(7) / validator(6) / tianxing(5，含 B-11 字符串 code 兼容) / juhe(5) / contentFetcher(3) / zhipuSearch(3)，**30/0 通过**。
+- **B-11**：4 处 API code 类型兼容修复 —— `tianxing.js:66` `code !== 200` → `Number(result.code) === 200`；`juhe.js` / `getNewsDetail` / `contentFetcher` 的 `error_code !== 0` 同样兼容字符串 "0"；全部 4 处增加 **HTTP 非 2xx 降级 + 响应体 8MB 上限**。
+- **B-12**：tianxing 重试次数/退避/分类间隔从硬编码改读 `config.rateLimit`（统一策略）；juhe 新增重试+指数退避（原无）；zhipuSearch 已有完整限流（429+退避+jitter+DeepSeek 熔断+配额监控）不重复。
+- **B-13**：`exports.main` 入口新增数据源可用性短路 —— ZHIPU/JUHE/TIAN 三源均未配置（仅剩百炼 DASHSCOPE 搁置）→ 返回 `{skipped:true, reason:'no_source_configured'}` + hint。⚠️ 遵循 2026-08-02 历史裁定：**DeepSeek 不单独作为可用源**（仅智谱降级，防旧 B-13 误伤双引擎）。
+- **B-14**：对应 v7 架构 `enrichNewsList`（旧名 `enrichMissingSummaries` 已不存在）——并发数改读 `config.rateLimit.enrichConcurrency`(8) + 单条抓正文/AI 摘要 **12s 超时兜底**（Promise.race）+ `fetchJuheContent` HTTP 状态码/响应上限。
+- **RQ-18 技术评估**：`docs/04-开发实现/RQ-18-技术可行性评估-AI搜索更多.md` —— **推荐方案 A：复用智谱 web_search**（refreshNews 主力数据源已在生产验证），零新增第三方 API，成本近零；web-view 域名需微信公众平台配置 Top 10 高频新闻源 + 复制链接降级；预估 3-3.5 开发单元。
+
+### 验证
+- `node --check` 全量通过；B-10 30/0 + v11 25/0 + v13 84/0 全绿。
+- 注：`v4-regression-data-layer.js` 因 v4.2 架构重构（`cloudfunctions/common` 已删除）历史性失败，与本次改动无关。
+
+### 找谁
+- PM 复核 B-10~B-14 代码 + RQ-18 评估结论；owner 排期 RQ-18 + web-view 域名决策；PD 可启动 RQ-18 交互设计。
+
 ---
 
 ## [2026-08-05 21:30] 📤→✅ FE 已提交 · commit `34d20a5`（AB-01 dock「关于一页」页面开发）| 会话：[小程序前端开发(FE)]

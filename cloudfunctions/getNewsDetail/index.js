@@ -346,7 +346,8 @@ function fetchJuheContent(uniquekey, options = {}) {
       res.on('end', () => {
         try {
           const result = JSON.parse(body)
-          if (result.error_code !== 0 || !result.result || !result.result.content) {
+          // B-11: error_code 兼容字符串/数字（聚合接口偶发返回字符串 "0"）
+          if (Number(result.error_code) !== 0 || !result.result || !result.result.content) {
             console.warn(`[getNewsDetail] 聚合内容接口异常: error_code=${result.error_code} reason=${result.reason}`)
             resolve(null)
             return

@@ -433,6 +433,31 @@ async function runCategoryPipeline(category, quotaBaseline) {
 exports.main = async (event) => {
   const startTime = Date.now()
 
+  // ── B-13: 数据源可用性显式短路（百炼 Key 搁置期保护）──
+  // 检测当前可用数据源：智谱（主力）→ 聚合 → 天行。
+  // 若三者均未配置 Key（仅剩旧版百炼 DASHSCOPE_API_KEY 等搁置配置），
+  // 直接快速返回，避免每次刷新白跑三源检查 + 浪费配额查询与日志。
+  // 覆盖 编排模式 与 工人模式（单分类）两种入口。
+  // ⚠️ 注意（历史裁定 2026-08-02）：DeepSeek 不单独作为可用源——
+  //    它仅作智谱的降级（index.js 298 行 zhipuKey 为空则整个智谱分支跳过），
+  //    单独配置 DEEPSEEK_API_KEY 无法产出数据，故不纳入检测（防旧 B-13 误伤双引擎）。
+  const availableSources = []
+  if (process.env.ZHIPU_API_KEY || config.zhipu?.apiKey) availableSources.push('zhipu')
+  if (config.juhe.apiKey) availableSources.push('juhe')
+  if (config.tian.apiKey) availableSources.push('tianxing')
+  if (availableSources.length === 0) {
+    const hint = process.env.DASHSCOPE_API_KEY
+      ? '（检测到已搁置的百炼 DASHSCOPE_API_KEY，当前数据源已切换智谱，请配置 ZHIPU_API_KEY / JUHE_API_KEY / TIAN_API_KEY）'
+      : ''
+    console.warn(`[refreshNews] 无可用的新闻数据源（ZHIPU/JUHE/TIAN 均未配置）${hint}，显式短路跳过刷新`)
+    return {
+      code: 0,
+      message: '无可用的新闻数据源，跳过刷新',
+      data: { skipped: true, reason: 'no_source_configured', hint },
+    }
+  }
+  console.log(`[refreshNews] 可用数据源: ${availableSources.join(' + ')}（${availableSources.length} 个）`)
+
   // 工人模式：event.category 存在 → 只跑单分类流水线
   if (event && (event.category || event.shard)) {
     const category = event.category

@@ -84,16 +84,37 @@ async function fetchJuheNewsList(category, pageSize = 10) {
     }
 
     const req = https.request(options, (res) => {
+      // B-11: HTTP 状态码非 2xx 直接降级
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        console.warn(`[juhe] ${category} HTTP ${res.statusCode}，降级返回空`)
+        res.resume()
+        resolve([])
+        return
+      }
+
       let body = ''
-      res.on('data', chunk => { body += chunk })
+      // B-11: 响应体大小上限（8MB）
+      const MAX_BODY_BYTES = 8 * 1024 * 1024
+      let bytes = 0
+      res.on('data', chunk => {
+        bytes += chunk.length
+        if (bytes > MAX_BODY_BYTES) {
+          console.warn(`[juhe] ${category} 响应超过 ${MAX_BODY_BYTES} 字节，截断降级`)
+          req.destroy()
+          resolve([])
+          return
+        }
+        body += chunk
+      })
       res.on('end', () => {
         try {
           const result = JSON.parse(body)
           console.log(`[juhe] ${category} 响应: error_code=${result.error_code}, reason=${result.reason}`)
 
-          if (result.error_code !== 0) {
+          // B-11: error_code 兼容字符串/数字（聚合接口偶发返回字符串 "0"）
+          if (Number(result.error_code) !== 0) {
             // 10012 = 超过每日可允许请求次数（免费版配额耗尽）
-            if (result.error_code === 10012) {
+            if (Number(result.error_code) === 10012) {
               console.warn(`[juhe] ⚠️ ${category} 聚合API免费额度已用完（每日请求次数上限），请等待次日重置或升级套餐`)
             }
             resolve([])
@@ -164,6 +185,7 @@ function formatJuheNewsItem(rawItem, category) {
 
 /**
  * 批量拉取多个分类的新闻列表
+ * B-12: 增加重试+指数退避（配额保护，聚合免费版限流 100 次/分钟）
  * @param {string[]} categories  分类 ID 列表
  * @param {number} [perCategory=10]  每分类条数
  * @returns {Promise<{ news: Array, stats: Object }>}
@@ -171,12 +193,35 @@ function formatJuheNewsItem(rawItem, category) {
 async function fetchAllCategories(categories, perCategory = 10) {
   const stats = {}
 
+  // B-12: 从 config.rateLimit 读取统一策略
+  const rl = config.rateLimit || {}
+  const maxRetries = rl.maxRetries || 3
+  const backoffBaseMs = rl.backoffBaseMs || 500
+
   // 并行请求所有分类（微信云函数 3s 超时限制：串行 7 分类约 3.7s 必超时，
   // 并行只需 ~0.5s。聚合免费版限流 100 次/分钟，7 并发远未达上限）
   const settled = await Promise.all(
     categories.map(async (category) => {
       try {
-        const rawList = await fetchJuheNewsList(category, perCategory)
+        let rawList = []
+        let lastErr = null
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+          try {
+            rawList = await fetchJuheNewsList(category, perCategory)
+            if (rawList.length > 0) break
+            // 空结果也重试（可能是临时限流）
+            console.warn(`[juhe] ${category} 第 ${attempt + 1} 次返回 0 条，${attempt < maxRetries - 1 ? '重试' : '放弃'}`)
+          } catch (err) {
+            lastErr = err
+            console.warn(`[juhe] ${category} 第 ${attempt + 1} 次失败: ${err.message}`)
+          }
+          if (attempt < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, backoffBaseMs * Math.pow(3, attempt)))
+          }
+        }
+        if (rawList.length === 0 && lastErr) {
+          console.error(`[juhe] ${category} ${maxRetries} 次重试均失败:`, lastErr.message)
+        }
         const formatted = rawList.map(item => formatJuheNewsItem(item, category))
         return { category, news: formatted }
       } catch (err) {

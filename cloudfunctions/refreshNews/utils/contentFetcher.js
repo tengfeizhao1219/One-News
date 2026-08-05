@@ -16,6 +16,8 @@ const config = require('../config')
 // 抓取超时（refreshNews 有 60s 预算，单条抓取给 6s）
 const FETCH_TIMEOUT_MS = 6000
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
+// B-14: 单条 enrich 总超时兜底（12s）——网页抓取 + AI 摘要合计不超过此值，防拖慢 worker 池/首屏
+const ITEM_TIMEOUT_MS = 12000
 
 // 浏览器 UA（避免反爬）
 const BROWSER_UA =
@@ -212,12 +214,31 @@ function fetchJuheContent(uniquekey, options = {}) {
       },
       timeout: FETCH_TIMEOUT_MS,
     }, (res) => {
+      // B-14: HTTP 状态码非 2xx 直接降级
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        res.resume()
+        resolve(null)
+        return
+      }
+
       let body = ''
-      res.on('data', chunk => { body += chunk })
+      // B-14: 响应体大小上限（8MB），防异常大响应拖垮内存
+      const MAX_BODY_BYTES = 8 * 1024 * 1024
+      let bytes = 0
+      res.on('data', chunk => {
+        bytes += chunk.length
+        if (bytes > MAX_BODY_BYTES) {
+          req.destroy()
+          resolve(null)
+          return
+        }
+        body += chunk
+      })
       res.on('end', () => {
         try {
           const result = JSON.parse(body)
-          if (result.error_code !== 0 || !result.result || !result.result.content) {
+          // B-11: error_code 兼容字符串/数字（聚合接口偶发返回字符串 "0"）
+          if (Number(result.error_code) !== 0 || !result.result || !result.result.content) {
             resolve(null)
             return
           }
@@ -388,13 +409,19 @@ const summarizeWithDashscope = summarizeWithZhipu
  * v6.1：为每条记录标记 summarySource（'ai' | 'desc' | 'title'），供前端判断是否 AI 摘要。
  * v6.5：新增 skipFetch 参数——智谱 AI 搜索返回的新闻自带 content，跳过网页抓取。
  * v6.6：新增 skipAiSummary 参数——智谱 prompt 已内联 summary（AI 来源），跳过二次 AI 摘要。
+ * B-14：并发数从 config.rateLimit 读取（可调），并为单条处理加超时兜底——
+ *        避免单条慢请求（网页抓取/AI 摘要）拖垮整个 worker 池、拖慢首屏。
  * @param {Array<Object>} newsList - 待处理新闻列表
- * @param {number} [concurrency=8] - 并发数（控制外部 API 压力）
+ * @param {number} [concurrency] - 并发数（控制外部 API 压力；缺省读 config.rateLimit.enrichConcurrency，默认 8）
  * @param {boolean} [skipFetch=false] - 是否跳过网页抓取（智谱已自带正文）
  * @param {boolean} [skipAiSummary=false] - 是否跳过 AI 摘要生成（智谱已内联 summary）
  * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
-async function enrichNewsList(newsList, concurrency = 8, skipFetch = false, skipAiSummary = false) {
+async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSummary = false) {
+  // B-14: 并发数可配置（默认 8，防外部 API 压力 + 拖慢首屏）
+  if (!concurrency || concurrency < 1) {
+    concurrency = (config.rateLimit && config.rateLimit.enrichConcurrency) || 8
+  }
   const result = new Array(newsList.length)
   let cursor = 0
 
@@ -404,7 +431,13 @@ async function enrichNewsList(newsList, concurrency = 8, skipFetch = false, skip
       const item = newsList[idx]
       try {
         // 1. 抓正文（skipFetch 为 true 时跳过，使用已有的 content）
-        const content = skipFetch ? (item.content || '') : await fetchContentForItem(item)
+        // B-14: 单条超时兜底（12s）——防止单条慢请求卡死 worker 池
+        const content = skipFetch
+          ? (item.content || '')
+          : await Promise.race([
+              fetchContentForItem(item),
+              new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
+            ])
         const enriched = { ...item, content }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）
@@ -418,7 +451,11 @@ async function enrichNewsList(newsList, concurrency = 8, skipFetch = false, skip
             summarySource = 'ai'
           }
         } else if (content && content.length > 10) {
-          const aiSummary = await summarizeWithZhipu(content, item.title)
+          // B-14: AI 摘要同样加超时兜底（12s）
+          const aiSummary = await Promise.race([
+            summarizeWithZhipu(content, item.title),
+            new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
+          ])
           if (aiSummary && aiSummary.length >= 20) {
             enriched.summary = aiSummary
             summarySource = 'ai'
