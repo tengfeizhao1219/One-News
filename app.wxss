@@ -80,10 +80,12 @@ page {
   --progress: rgba(0, 122, 255, 0.55);
   --highlight-bg: rgba(0, 122, 255, 0.06);
   --color-favorite: #FF3B30;
+  --color-favorite-active: #FF3B30;
   --color-favorite-tint: rgba(255, 59, 48, 0.10);
   --color-warning: #F59E0B;
   --bottom-bar-bg: rgba(250, 249, 247, 0.55);
   --setting-panel-bg: rgba(250, 249, 247, 0.78);
+  --setting-panel-blur: blur(20px);
   --chip-bg: rgba(28, 28, 30, 0.85);
   --chip-text: #FFFFFF;
   --preview-bg: #F5F3F0;

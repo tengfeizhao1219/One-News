@@ -38,6 +38,8 @@ Page({
     _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
     // TL-B16: 更多功能菜单
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
+    // BUG-FS-20260805-001（同根因扩展）: dock 菜单 icon 深色模式切换白色版
+    isDark: false,
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
   },
@@ -71,7 +73,11 @@ Page({
     // 翻页动画偏移：JS 计算的像素高度（= windowHeight），替代 WXSS transform 内的 100vh（部分机型/Webview 下方向异常）
     this.setData({ pageH: PAGE_HEIGHT })
     // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
-    this.setData({ themeClass: (app.globalData && app.globalData.themeClass) || '' })
+    this.setData({
+      themeClass: (app.globalData && app.globalData.themeClass) || '',
+      // BUG-FS-20260805-001: dock 菜单 icon 按主题切换白色版
+      isDark: this._isSystemDark(),
+    })
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
     this.loadNews()
     // 同步字体档位（由 app._initFontScale 初始化）
@@ -82,7 +88,11 @@ Page({
     refreshPageSize()
 
     // BUG-20260805-003: onShow 时刷新主题（可能从设置页返回）
-    this.setData({ themeClass: (app.globalData && app.globalData.themeClass) || '' })
+    this.setData({
+      themeClass: (app.globalData && app.globalData.themeClass) || '',
+      // BUG-FS-20260805-001: onShow 同步刷新（从设置页切换主题返回时更新 icon 颜色）
+      isDark: this._isSystemDark(),
+    })
 
     // B-07: 处理从详情页阅读模式返回的定位
     // 若首页被回收，onLoad 会重新 loadNews；onShow 中需等 loadNews 完成后再定位，
@@ -120,6 +130,22 @@ Page({
         val !== this.data._fontScaleValue ||
         metaVal !== this.data._metaScaleValue) {
       this.setData({ fontScaleTier: tier, _fontScaleValue: val, _metaScaleValue: metaVal })
+    }
+  },
+
+  /**
+   * BUG-FS-20260805-001: 判断当前生效主题是否深色（含手动模式，与 detail/favorites 页同源）
+   */
+  _isSystemDark() {
+    try {
+      var app = getApp()
+      if (app && app.globalData && app.globalData.effectiveTheme) {
+        return app.globalData.effectiveTheme === 'dark'
+      }
+      var info = wx.getSystemInfoSync()
+      return info.theme === 'dark'
+    } catch (e) {
+      return false
     }
   },
 

@@ -6,7 +6,8 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中）+ 计数（右） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">我的收藏</view>
     <view class="nav-count" wx:if="{{!loading}}">共 {{filteredCount}} 条</view>

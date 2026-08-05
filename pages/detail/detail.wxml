@@ -28,7 +28,8 @@
   <view class="nav-bar">
     <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -95,7 +96,7 @@
 
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于操作栏上方，不随内容滚动） -->
   <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready'}}">
-    <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe.svg" mode="aspectFit"></image>
+    <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>
 

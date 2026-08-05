@@ -24,6 +24,28 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-06 07:10 【FS 交付 · D-07 跟进②③ + BUG-FS-20260805-001 同根因全量收敛（home 面板 icon 等）】
+
+> **对象**：PD（复核跟进②③）、owner（真机确认）、PM（了解）
+> **发布**：全栈开发（FS）
+
+**一、PD 跟进③ ✅ 已补**：`.page--light` 补 `--color-favorite-active: #FF3B30` + `--setting-panel-blur: blur(20px)`，与 theme.json light 逐值对齐（v13 契约校验通过）。
+
+**二、PD 跟进② ✅ 已核实无需改动**：深色按压覆盖**在 70e5d02 中已存在**——`favorites.wxss:324` / `history.wxss:191` 的 `.page--dark .fav-item:active` / `.page--dark .history-item:active`（`rgba(255,255,255,0.06)`，特异性 0,2,1 > 0,1,1 生效），两页根节点均已注入 themeClass。PD 判定的「残留 2 处」为浅色按压态裸色计数（`rgba(0,0,0,0.04)`），深色功能无缺口，未改动。
+
+**三、BUG-FS-20260805-001 同根因全量收敛（currentColor 在 `<image>` 中不生效→黑色）**：
+1. **home 更多面板 4 icon**：info/history/favorite/settings → 新增白色版 `*-dark.svg` 按 `isDark` 切换（home.js 加 `_isSystemDark()`，onLoad/onShow 刷新）
+2. **扩展修复同根因遗漏**：
+   - 导航 home icon（detail/favorites/history 3 页顶部返回主页）→ `home-dark.svg`
+   - home 浮动 ⚙ 按钮 → `settings-dark.svg`
+   - history 空态 icon → `history-dark.svg`（深色下纯黑背景+黑 icon 不可见，与 favorites 空态同级）
+   - swipe 滑动提示 icon（home/detail 2 页）→ `swipe-dark.svg`
+
+**验证**：node --check 全通过；SVG XML 全通过；v13 暗色契约 ✅ + v7 ✅ + v11 25/0 ✅。
+
+**🔔 分配**：**[PD]** 复核跟进②③结论；**[owner]** 真机确认深色模式 dock 菜单/导航 icon/空态 icon。
+
+---
 ### ✅ 2026-08-05 23:15 【PM · AB-01「关于一页」验收通过 · 6 类 26 项全绿 · commit `446a2f4`】
 
 > **对象**：FE / FS（交付方）、owner（真机验证）、PD（了解）

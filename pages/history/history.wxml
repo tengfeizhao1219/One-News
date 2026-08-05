@@ -6,7 +6,8 @@
   <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中） -->
   <view class="nav-bar">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">浏览记录</view>
   </view>
@@ -26,7 +27,7 @@
 
   <!-- 空态 -->
   <view class="empty-wrap" wx:if="{{!loading && isEmpty}}">
-    <image class="empty-icon-img" src="/assets/icons/history.svg" mode="aspectFit"></image>
+    <image class="empty-icon-img" src="/assets/icons/history{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     <view class="empty-text">暂无浏览记录</view>
     <view class="empty-hint" bindtap="goHome">去首页看看</view>
   </view>

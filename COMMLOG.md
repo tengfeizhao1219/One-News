@@ -1,3 +1,24 @@
+## [2026-08-06 07:10] 📤→✅ FS 已提交 · D-07 跟进②③ + BUG-FS-20260805-001 同根因全量收敛 | 会话：[全栈开发(FS)]
+
+**触发**：owner「全部处理吧」——认领 PD 23:10 验收广播中 @FS 的两项跟进 + 上轮 BUG-FS-20260805-001 的已知遗留（home 面板 icon）。
+
+**一、跟进③（.page--light 缺 2 变量）✅ 已补**：`--color-favorite-active: #FF3B30` + `--setting-panel-blur: blur(20px)` 补入 app.wxss `.page--light` 块，与 theme.json light 逐值对齐。
+
+**二、跟进②（G-07 残留 2 处按压态）✅ 已核实无需改动**：深色按压覆盖在 70e5d02 已存在（`.page--dark .fav-item:active` / `.history-item:active` = `rgba(255,255,255,0.06)`，特异性 0,2,1 生效，两页均注入 themeClass）。PD 判定的「残留」为浅色按压态裸色计数口径，深色无功能缺口。
+
+**三、BUG-FS-20260805-001 同根因全量收敛**（小程序 `<image>` 渲染 SVG 时 currentColor 不生效→固定黑色）：
+- 新增 5 个白色版 icon：`info-dark.svg` / `history-dark.svg` / `settings-dark.svg` / `home-dark.svg` / `swipe-dark.svg`（favorite-dark 上轮已建）
+- **home 页**：dock 菜单 4 icon + 浮动 ⚙ + swipe 提示，home.js 加 `_isSystemDark()`（onLoad/onShow 刷新）
+- **history 页**：导航 home icon + 空态 icon，history.js 加 `_isSystemDark()`
+- **detail / favorites 页**：导航 home icon + detail swipe 提示（复用已有 isDark）
+- 全仓扫描确认无剩余 currentColor SVG 引用（favorite-fill 红色固定色除外）
+
+**验证**：node --check 全通过；SVG XML 全通过；v13 暗色契约 ✅ + v7 ✅ + v11 25/0 ✅。
+
+**找谁**：PD 复核跟进②③结论；owner 真机确认深色模式 dock 菜单/导航/空态 icon。
+
+---
+
 ## [2026-08-05 23:10] 📤→✅ PD 已提交 · D-07 S1-S4 + AB-01 + 滚动/编译修复综合验收 | 会话：[产品设计师(PD)]
 
 **提交记录**：

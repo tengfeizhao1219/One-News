@@ -75,7 +75,8 @@
 
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于屏幕底部，不随内容滚动，不响应点击） -->
   <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready' && !showPanel}}">
-    <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe.svg" mode="aspectFit"></image>
+    <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
+    <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     <text class="fixed-swipe-hint-text">上滑阅读下一条</text>
   </view>
 
@@ -85,7 +86,7 @@
   <!-- BUG-20260802-005 / TL-B16：⚙ 浮动按钮升级为「更多功能」dock 菜单主入口 -->
   <!-- BUG-FE-001-fix: mask 在真机不可靠，改用 image 直接渲染 SVG -->
   <view class="floating-more {{showPanel ? 'hidden' : ''}}" bindtap="toggleMoreMenu">
-    <image class="more-icon-img" src="/assets/icons/settings.svg" mode="aspectFit"></image>
+    <image class="more-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
   </view>
 
   <!-- 更多功能菜单（dock 栈向上弹出，毛玻璃背景，点击空白或再次点击⚙收起） -->
@@ -93,19 +94,20 @@
   <view class="more-menu {{showMoreMenu ? 'show' : ''}}">
     <!-- AB-01: dock 排列 — 关于一页置顶，设置末位 -->
     <view class="more-item" data-target="about" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/info.svg" mode="aspectFit"></image>
+      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon（image 渲染 SVG 时 currentColor 不生效→黑色） -->
+      <image class="more-item-icon-img" src="/assets/icons/info{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">关于一页</text>
     </view>
     <view class="more-item" data-target="history" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/history.svg" mode="aspectFit"></image>
+      <image class="more-item-icon-img" src="/assets/icons/history{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">浏览记录</text>
     </view>
     <view class="more-item" data-target="favorites" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+      <image class="more-item-icon-img" src="/assets/icons/favorite{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">我的收藏</text>
     </view>
     <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
-      <image class="more-item-icon-img" src="/assets/icons/settings.svg" mode="aspectFit"></image>
+      <image class="more-item-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">设置</text>
     </view>
   </view>

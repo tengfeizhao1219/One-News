@@ -17,6 +17,8 @@ Page({
     isEmpty: false,
     syncing: false,
     _lastHomeTap: 0,
+    // BUG-FS-20260805-001（同根因扩展）: 导航/空态 icon 深色模式切换白色版
+    isDark: false,
   },
 
   onLoad: function () {
@@ -25,13 +27,34 @@ Page({
       statusBarHeight: s,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-FS-20260805-001: 导航/空态 icon 按主题切换白色版
+      isDark: this._isSystemDark(),
     })
   },
 
   onShow: function () {
     // BUG-20260805-003: onShow 刷新主题（可能从设置页返回）
-    this.setData({ themeClass: (app && app.globalData && app.globalData.themeClass) || '' })
+    this.setData({
+      themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-FS-20260805-001: onShow 同步刷新（从设置页切换主题返回时更新 icon 颜色）
+      isDark: this._isSystemDark(),
+    })
     this._load()
+  },
+
+  /**
+   * BUG-FS-20260805-001: 判断当前生效主题是否深色（含手动模式，与 detail/favorites/home 页同源）
+   */
+  _isSystemDark: function () {
+    try {
+      if (app && app.globalData && app.globalData.effectiveTheme) {
+        return app.globalData.effectiveTheme === 'dark'
+      }
+      var info = wx.getSystemInfoSync()
+      return info.theme === 'dark'
+    } catch (e) {
+      return false
+    }
   },
 
   /**
