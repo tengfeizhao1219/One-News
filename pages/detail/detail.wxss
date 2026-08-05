@@ -353,7 +353,8 @@
 }
 
 /* UI-B11 §2.3 收藏态微高亮：已收藏时 label 同步主题红，与图标呼应 */
-.bottom-bar-btn.is-favorited .bottom-bar-label {
+.bottom-bar-btn.is-favorited .bottom-bar-label,
+.bottom-bar-label--favorited {
   color: var(--color-favorite);
 }
 
