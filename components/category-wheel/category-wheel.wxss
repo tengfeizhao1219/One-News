@@ -1,15 +1,16 @@
 /* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2 · v5.3-final） */
+/* FE-3（2026-08-05）：硬编码 rgba → D-02 §5 Token 表 --wheel-* 变量 */
 
 .wheel {
   position: relative;
   overflow: hidden;
   width: 128rpx;
-  opacity: 0.35;               /* idle 默认态 */
+  opacity: var(--wheel-opacity-idle, 0.35);          /* idle 默认态 */
   transition: opacity 300ms ease-out;
 }
 
 .wheel.active {
-  opacity: 0.92;               /* active 激活态 */
+  opacity: var(--wheel-opacity-active, 0.92);        /* active 激活态 */
 }
 
 /* 列表整体（通过 translateY 让选中项锚定顶部第二行） */
@@ -28,36 +29,25 @@
 
 .wheel-label {
   font-size: 24rpx;
-  color: rgba(0, 0, 0, 0.5);
+  color: var(--wheel-text-selected, rgba(0, 0, 0, 0.5));  /* idle 态用选中色（v2.2 颜色不加深） */
   font-weight: 500;
   padding: 0 8rpx;
   border-radius: 10rpx;
-  transition: color 300ms ease-out, background-color 300ms ease-out, border-color 300ms ease-out;
+  transition: color 300ms ease-out, background-color 300ms ease-out;
 }
 
-/* v5.3-final 选中项：无边框、无 chip、字色/字号/字重与 idle 一致，仅加底色标记 */
+/* v5.3-final 选中项：淡蓝底色标记，颜色/字号/字重与 idle 一致 */
 .wheel-label.active {
-  color: rgba(0, 0, 0, 0.5);              /* 不加深，owner v5.2 */
-  font-size: 24rpx;                        /* 不增大，owner v5.2 */
-  font-weight: 500;                        /* 不加粗到 600，owner v5.2 */
-  background-color: var(--highlight-bg, rgba(0, 122, 255, 0.06));
+  color: var(--wheel-text-selected, rgba(0, 0, 0, 0.5));
+  font-size: 24rpx;
+  font-weight: 500;
+  background-color: var(--wheel-bg-selected, rgba(0, 122, 255, 0.06));
   border-radius: 10rpx;
-  /* 已删除：border / padding: 0 12rpx / line-height: 1.5 */
 }
 
-/* v5.3-final 激活态（触摸中）：仅温和放大 1.08，颜色字号均不变 */
+/* v5.3-final 激活态（触摸中）：仅温和放大，颜色字号均不变 */
 .wheel.active .wheel-label.active {
-  transform: scale(1.08);
+  transform: scale(var(--wheel-scale-active, 1.08));
   transform-origin: center center;
   transition: transform 150ms ease-out;
-}
-
-/* 暗色模式 */
-@media (prefers-color-scheme: dark) {
-  .wheel-label {
-    color: rgba(255, 255, 255, 0.5);
-  }
-  .wheel-label.active {
-    color: rgba(255, 255, 255, 0.5);
-  }
 }
