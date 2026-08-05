@@ -89,6 +89,13 @@
 
 /* v5.9: 翻页动画与详情页 .article 完全一致——整屏滑出/滑入 + 350ms ease */
 /* 翻页偏移统一用 JS 注入的 --page-h（= windowHeight px），不用 100vh（WXSS transform 内 100vh 在部分机型/Webview 下失效/方向异常） */
+
+/* 首页多卡片模型修复：renderCards 重建 card 节点后，新卡是全新 WX 节点（transform 起点=0），
+   直接挂 in-up/in-down 会让 transition 从 0→±page-h（先反方向闪再回正）。
+   必须先以 no-transition 瞬间吸附到屏外起点，再移除 class 触发正确方向滑入。 */
+.card.no-transition {
+  transition: none;
+}
 /* 上滑翻下一条：当前卡向上移出 */
 .card.out-up   { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
 /* 下滑翻上一条：当前卡向下移出 */

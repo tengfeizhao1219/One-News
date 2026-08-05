@@ -88,6 +88,15 @@ console.log('\n【静态】home.js _animateSwipeNext/Prev 屏外起始（Bug1 �
   // 确认没有遗留「先渲染中心再补 in-up」的反向写法
   check('_animateSwipeNext 无「先空 animClass 渲染再补 in-up」旧逻辑',
     !/renderCards\(that\.data\.newsList, newIndex\)\s*\n\s*setTimeout[\s\S]*?animClass:\s*'in-up'/.test(js))
+  // 首页多卡片模型 no-transition 吸附修复：新卡先瞬间吸附再 transition（否则新节点从 0→±page-h 反向闪）
+  check('_animateSwipeNext renderCards 后立即加 no-transition 吸附',
+    /renderCards[\s\S]*?no-transition/.test(nextFn))
+  check('_animateSwipePrev renderCards 后立即加 no-transition 吸附',
+    /renderCards[\s\S]*?no-transition/.test(prevFn))
+  check('_animateSwipeNext 30ms 后移除 no-transition 触发 transition',
+    /\.replace\('no-transition'[\s\S]*?30/.test(nextFn))
+  check('_animateSwipePrev 30ms 后移除 no-transition 触发 transition',
+    /\.replace\('no-transition'[\s\S]*?30/.test(prevFn))
 }
 
 // ===== 详情页：单元素模型 no-transition 吸附修复（反向 Bug）=====
@@ -111,6 +120,14 @@ console.log('\n【静态】detail.wxss .article.no-transition 无过渡类')
   const wxss = read(files.detailWxss)
   check('detail.wxss 含 .article.no-transition { transition: none }',
     /\.article\.no-transition\s*\{\s*transition:\s*none/.test(wxss))
+}
+
+// ===== 首页 WXSS：no-transition 类存在（多卡片模型吸附修复） =====
+console.log('\n【静态】home.wxss .card.no-transition 无过渡类')
+{
+  const homeWxss = read(path.join(ROOT, 'pages/home/home.wxss'))
+  check('home.wxss 含 .card.no-transition { transition: none }',
+    /\.card\.no-transition\s*\{\s*transition:\s*none/.test(homeWxss))
 }
 
 // ===== v5.9 回归根因修复：100vh 在 transform 内不可靠 → 改用 JS 注入的 --page-h 像素值 =====

@@ -471,14 +471,21 @@ Page({
     this._lastSwipeTime = Date.now()
 
     // 350ms 后重建 cards（新索引）。
-    // 关键修复：新激活卡直接在 renderCards 里以 in-up（+100vh 屏外）起始渲染，
-    // 移除 animClass 后由 transition 从底部上滑入——避免旧实现「先闪现中央→下滑→上滑」的反向错觉。
+    // 首页多卡片模型：renderCards 重建 card 节点，新卡是全新 WX 节点（transform=0）。
+    // 直接挂 in-up 会让 transition 从 0→+page-h（先反方向闪），
+    // 必须先以 no-transition 瞬间吸附到屏外起点，下一帧再移除触发正确方向滑入。
     var newIndex = currentIndex + 1
     setTimeout(function () {
       that.renderCards(that.data.newsList, newIndex, 'in-up')
+      // 阶段 2a: 无过渡瞬间吸附到 +page-h 屏外位置
+      var snapped = that.data.cards.map(function (card) {
+        return { ...card, animClass: (card.animClass || '') + ' no-transition' }
+      })
+      that.setData({ cards: snapped })
+      // 阶段 2b: 下一帧移除 no-transition，触发 transition 从 +page-h→0（底部上滑入）
       setTimeout(function () {
         var cleared = that.data.cards.map(function (card) {
-          return { ...card, animClass: '' }
+          return { ...card, animClass: (card.animClass || '').replace('no-transition', '').trim() }
         })
         that.setData({ cards: cleared })
         that._isAnimating = false
@@ -509,14 +516,20 @@ Page({
     this.setData({ cards: cards })
     this._lastSwipeTime = Date.now()
 
-    // 350ms 后重建 cards（新索引）。新激活卡以 in-down（-100vh 屏外）起始，
-    // 移除 animClass 后从顶部下滑入，与详情页 .article 行为一致。
+    // 350ms 后重建 cards（新索引）。新卡以 in-down（-page-h 屏外）起始，
+    // 先 no-transition 瞬间吸附到屏外起点，再移除触发 transition 从顶部下滑入。
     var newIndex = currentIndex - 1
     setTimeout(function () {
       that.renderCards(that.data.newsList, newIndex, 'in-down')
+      // 阶段 2a: 无过渡瞬间吸附到 -page-h 屏外位置
+      var snapped = that.data.cards.map(function (card) {
+        return { ...card, animClass: (card.animClass || '') + ' no-transition' }
+      })
+      that.setData({ cards: snapped })
+      // 阶段 2b: 下一帧移除 no-transition，触发 transition 从 -page-h→0（顶部下滑入）
       setTimeout(function () {
         var cleared = that.data.cards.map(function (card) {
-          return { ...card, animClass: '' }
+          return { ...card, animClass: (card.animClass || '').replace('no-transition', '').trim() }
         })
         that.setData({ cards: cleared })
         that._isAnimating = false
