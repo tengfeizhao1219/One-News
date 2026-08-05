@@ -125,7 +125,16 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
   - `home.wxss`：`.fixed-swipe-hint { opacity:1; transition: opacity .5s }` + `.hide { opacity:0 }`
   - `home.js`：`data.showSwipeHint` + `_startSwipeHintTimer()`（3.5s）+ `onTouchEnd` 在有效 flick / 左滑呼出面板时置 `false`。
 
-### 4.3 其余保持不变
+### 4.3 侧边栏面板修复（BUG-PD-019，owner 反馈"侧边列表不对 + 无法滑动返回"）
+- **问题 A：列表显示"暂无新闻"**
+  - 根因：`_syncPanelList()` 被调用时不传 `list` 参数，内部 `src` fallback 到 `this.data.newsList`，但此时 `setData({panelCategory})` 已异步执行，`newsList` 仍是旧分类数据 → filter 全量过滤 → 空列表。
+  - 修复：`onWheelChange` 和 `onCategoryChange` 中同源切换分支，显式传入 `this.data.newsList` 调用 `_syncPanelList(this.data.newsList)`。
+- **问题 B：侧边栏打开后无法右滑关闭**
+  - 根因：`card-stage` 在 `showPanel=true` 时加 `.hidden { display: none }`，导致所有 `onTouchStart/onTouchEnd` 事件消失。
+  - 修复：在 `slide-panel` 自身绑定 `bindtouchstart="onPanelTouchStart"` + `bindtouchend="onPanelTouchEnd"`，右滑 >50px 且横向位移大于纵向时触发 `closePanel()`。
+- **附加修复**：切分类关闭面板时，`_swipeHintDismissed` 复位为 `false`，允许新分类的滑动提示再次出现。
+
+### 4.4 其余保持不变
 卡片流整屏翻页、左侧分类滚轮 + 右侧标题列表侧栏、dock 菜单（浏览记录/收藏/设置/扩展位）逻辑沿用 UI-B7 / TL-B16。
 
 ---
@@ -155,7 +164,7 @@ nav-bar:  「我的收藏」  ............  共 N 条（实时计数）
 - [ ] **收藏页**：无缩略图；计数实时且随筛选联动；横滑胶囊选中态正确；**长按 500ms 出 ActionSheet**；取消收藏乐观更新 + 云端双写；两种空态文案区分；暗色全 token 生效。
 - [ ] **详情页**：顶部 3rpx 进度条用 `--progress`（浅蓝可见，非实色）；宽度随滚动实时；**滑动提示 3.5s 淡出 + 首次滑动消失 + 同会话不重复出现**；收藏态 label/心跳正确；暗色 `--progress` 生效。
 - [ ] **设置页**：实时预览卡明显缩小（padding/字号/2 行摘要）；档位切换预览实时缩放；暗色切换正常。
-- [ ] **首页**：⚙ 按钮**真机浅色 + 暗色均可见齿轮**（无空白圆圈）；滑动提示 3.5s 淡出 + 首次滑动消失，与详情页表现一致；其余交互无回归。
+- [ ] **首页**：⚙ 按钮**真机浅色 + 暗色均可见齿轮**（无空白圆圈）；滑动提示 3.5s 淡出 + 首次滑动消失，与详情页表现一致；**侧边栏列表正确显示（非"暂无新闻"）+ 右滑可关闭面板**；其余交互无回归。
 - [ ] **通用**：所有色值引用 token，无硬编码 HEX；安全区 `env(safe-area-inset-bottom)` 避让；动效时长符合 §0 约定。
 
 ---

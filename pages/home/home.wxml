@@ -115,7 +115,10 @@
   </view>
 
   <!-- 侧边栏面板（UI-B7：左侧分类滚轮 + 右侧仅标题列表，圆角高亮） -->
-  <view class="slide-panel {{showPanel ? 'show' : ''}}">
+  <!-- BUG-PD-019: 面板自身绑定 touch 事件实现右滑关闭，因为 card-stage 在 showPanel 时被 display:none -->
+  <view class="slide-panel {{showPanel ? 'show' : ''}}"
+    bindtouchstart="onPanelTouchStart"
+    bindtouchend="onPanelTouchEnd">
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>

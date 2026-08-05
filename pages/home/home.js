@@ -639,10 +639,32 @@ Page({
 
   // ============ 侧边栏 ============
 
+  /**
+   * BUG-PD-019: 侧边栏面板手势 —— 右滑关闭。
+   * card-stage 在 showPanel 时被 display:none，手势事件丢失，
+   * 因此将 touch 事件直接绑在 slide-panel 上。
+   */
+  onPanelTouchStart(e) {
+    this._panelTouchStartX = e.touches[0].clientX
+    this._panelTouchStartY = e.touches[0].clientY
+  },
+
+  onPanelTouchEnd(e) {
+    if (!this.data.showPanel) return
+    var dx = e.changedTouches[0].clientX - (this._panelTouchStartX || 0)
+    var dy = e.changedTouches[0].clientY - (this._panelTouchStartY || 0)
+    // 右滑且横向位移 > 纵向位移且超过 50px 阈值 → 关闭面板
+    if (dx > 50 && Math.abs(dx) > Math.abs(dy)) {
+      this.closePanel()
+    }
+  },
+
   closePanel() {
     const { panelCategory, currentCategory } = this.data
     // 关闭侧栏时，若侧栏分类与当前首页分类不一致，则切换
     if (panelCategory !== currentCategory) {
+      // 切分类 = 新一批内容，滑动提示允许再次出现
+      this._swipeHintDismissed = false
       this._showCategoryHint(panelCategory)
       this.loadCategory(panelCategory)
     }
@@ -658,7 +680,8 @@ Page({
 
     // BUG-20260802-004: 侧栏与卡片同源 —— 切分类即切唯一数据源 newsList，侧栏由它派生
     if (cat === this.data.currentCategory) {
-      this._syncPanelList()
+      // BUG-PD-019: 必须显式传入 newsList，理由同 onWheelChange
+      this._syncPanelList(this.data.newsList)
       return
     }
     this.loadCategory(cat)
@@ -681,7 +704,10 @@ Page({
 
     // 同源切换：面板分类与首页一致 → 仅刷新列表；否则切换唯一数据源
     if (cat === this.data.currentCategory) {
-      this._syncPanelList()
+      // BUG-PD-019: 必须显式传入 newsList，因为 setData({panelCategory:cat}) 异步，
+      // _syncPanelList 内 fallback this.data.newsList 时 panelCategory 可能还是旧值，
+      // 导致 filter 全量过滤 → 空列表"暂无新闻"
+      this._syncPanelList(this.data.newsList)
       return
     }
     this.loadCategory(cat)
