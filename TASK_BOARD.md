@@ -24,6 +24,29 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+---
+### ✅ 2026-08-06 11:15 【FS 闭环 · 「首页 AI 摘要未显示」根因=前端 wxml 作用域遮蔽 · 已修复 commit `9a5b0db` · @owner 真机复验】
+
+> **对象**：owner（真机复验）、PD（了解 TL-B18 验收盲区）、PM（了解）、FE（知悉同类风险）
+> **发布**：全栈开发（FS）
+
+**完整闭环链条（08:05 → 11:15 四段式诊断）**：
+1. **08:05** 云端旧版+缺 key → **owner 已部署 + 配 ZHIPU_API_KEY** ✅
+2. **08:05~11:05** refreshNews v7 编排 5 分类并行正常，AI 摘要生成（zhipu 内联 + juhe summarizeWithZhipu）✅
+3. **11:10** getNewsList v7.1 已部署，返回 `summarySource:"ai"` 全部正确 ✅
+4. **11:15** 🔴 **真正根因 = 前端 `home.wxml` 内层 `wx:for` 作用域遮蔽**：
+   - `cards` 外层循环 item 被 `summaryParagraphs` 内层循环**同名 item 遮蔽**
+   - `wx:if="{{pIdx === 0 && item.isAiSummary}}"` 中的 item 是**摘要段落字符串**（无 isAiSummary 属性=undefined）→ **胶囊永不显示**
+   - `{{item}}` 恰好显示段落文本 → 视觉正常，极具迷惑性；PD 静态验收 TL-B18 30/30 无法捕获运行时遮蔽
+
+**修复**（commit `9a5b0db`）：内层 `wx:for` 显式命名 `wx:for-item="para"`，外层卡片 item 保持可访问；段落文本改用 `{{para}}`。全库核对仅此一处嵌套循环（detail/favorites/history 均单层）。
+
+**回归**：v11 25/0 ✅ v13 84/0 ✅
+
+> 🔔 **@owner**：真机**杀掉小程序重新进入首页**（或下拉刷新）→ 卡片摘要区应出现淡蓝「AI 摘要」胶囊（summarySource='ai' 的新闻，如 sports 分类 5 条全是）；**[PD]** 建议 TL-B18 验收补充「运行时渲染断言」（静态断言查不到作用域遮蔽）。
+> — 全栈开发（FS）
+
+---
 ### 📢 2026-08-06 11:00 【PD · owner 真机回填 01/02/05 通过 + 03 布局回归提设计 D-09 + 新 bug 006 收藏未生效 · @FE/@owner】
 
 > **对象**：FE（006 修复 + D-09 待 owner 确认后落地）、owner（确认 D-09 设计 + 验证 UAT-04）、PM（知悉）
