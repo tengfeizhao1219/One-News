@@ -1,3 +1,34 @@
+## [2026-08-06 20:05] 🛠️ FE 交付 · BUG-20260806-017 侧边栏新闻列表被截断 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `63fb30b`）：
+- 用户反馈：侧边栏打开后，新闻列表标题在右边缘被截断（如"网信办对派拓公司在华销售产品启动网络"只显示到右边缘就截断）
+- 已定位**两个根因**：
+
+  **根因 1**：滚轮组件几何宽度溢出
+  - `category-wheel .wheel` 用 `box-sizing:content-box` + `width:128rpx` + `padding-right:112rpx`
+  - 实际渲染宽度 = 128 + 112 = **240rpx**（content-box 下 padding 在 width 之外）
+  - `margin-right:-112rpx` 只能平移，**不能减小几何面积**
+  - `.wheel` 240rpx 侵入 `.panel-scroll` (left:128rpx) 区域，列表被覆盖截断
+
+  **根因 2**：scroll-view 内部宽度计算异常
+  - `.panel-scroll` 同时声明 `height:100% + top:0 + bottom:0`，scroll-view 内部宽度计算受干扰
+
+**修复**：
+1. `components/category-wheel/category-wheel.wxss`：
+   - `.wheel` width:128rpx → **width:100%**
+   - box-sizing:content-box → **border-box**
+   - 实际渲染宽度 = 128rpx（=外层 .panel-wheel 宽度）；padding-right 仍保留作为触摸热区扩展（box-sizing 不影响 catch 触摸事件）
+2. `pages/home/home.wxss`：
+   - `.panel-scroll` 移除冗余 `height:100%`
+   - `.panel-list` 显式 `width:100% + box-sizing:border-box`
+   - `.panel-item-title` 加 `max-width:100% + box-sizing:border-box` 兜底
+
+**范围**：仅 `pages/home/home.wxss` + `components/category-wheel/category-wheel.wxss`（2 处样式），其他页面不动。
+
+**交接**：**@owner** 真机体验侧边栏列表是否完整显示（标题应可换行到右边缘内、不再被截断）。
+
+> — 小程序前端开发（FE） 2026-08-06 20:05
+
 ## [2026-08-06 20:00] 🛠️ FE 交付 · 详情页底部操作栏降低高度 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `4914de0`）：
