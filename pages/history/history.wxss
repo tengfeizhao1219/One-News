@@ -124,20 +124,22 @@
 
 /* 列表（BUG-FE-20260805-001：min-height:0 + overflow-y:auto，修复内容超一屏无法滚动，
    与 detail 页 .content 方案对齐）
-   BUG-20260806-020 (FE): 左右 padding 16rpx → 32rpx，文字不再贴屏幕边缘 */
+   BUG-20260806-024 (FE): scroll-view 的 padding-right 在小程序中对其内部子元素不生效
+   （padding-left 生效、padding-right 失效，导致整体内容向右溢出）。修复方案：
+   把左右留白从 scroll-view 移除，移到 .history-item 自身的 margin 上（与 favorites
+   的 .fav-item-wrapper margin:0 32rpx 方案一致），确保左右对称。 */
 .list-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* D-09 v1.2: 内容从导航栏下方 8rpx 开始 */
-  padding: calc(var(--nav-offset, 0px) + 8rpx) 32rpx 40rpx;
+  /* D-09 v1.2: 内容从导航栏下方 8rpx 开始；左右留白由 .history-item margin 承担 */
+  padding: calc(var(--nav-offset, 0px) + 8rpx) 0 40rpx;
 }
 .history-item {
   display: flex;
   gap: 16rpx;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 24rpx 0;  /* BUG-20260806-020: 左右 16rpx → 0（左右间距由 .list-scroll 32rpx 统一管理） */
+  margin: 0 32rpx;  /* BUG-20260806-024: 左右 32rpx 留白（替代原 .list-scroll padding） */
+  padding: 24rpx 0;
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
   align-items: flex-start;
   cursor: pointer;
@@ -145,6 +147,8 @@
   border-radius: 8rpx;
   min-height: 88rpx;
   overflow: hidden;
+  width: auto;
+  box-sizing: border-box;
 }
 .history-item:active {
   background-color: rgba(0, 0, 0, 0.04);
