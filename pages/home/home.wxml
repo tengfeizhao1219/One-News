@@ -5,14 +5,10 @@
   data-font-scale="{{fontScaleTier}}"
   style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
 
-  <!-- 固定顶部栏：设置入口（右），与原生胶囊对齐 · BUG-20260806-004 -->
-  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
-    <view class="top-bar-inner">
-      <view class="top-bar-settings" bindtap="onSettings" hover-class="top-bar-settings--hover">
-        <image class="top-bar-settings-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
-      </view>
-    </view>
-  </view>
+  <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
+  <!-- fixed-top-bar 保留为空占位对齐胶囊（menuTop/menuHeight 注入），避免破坏页面结构 -->
+  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;"></view>
+
 
   <!-- ========== 骨架屏（加载中） ========== -->
   <view class="skeleton-stage" wx:if="{{pageState === 'loading'}}">

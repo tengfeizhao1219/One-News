@@ -7,39 +7,15 @@
   position: relative;
 }
 
-/* ========== 固定顶部栏（与胶囊对齐 · BUG-20260806-004） ========== */
+/* ========== 固定顶部栏（与胶囊对齐 · BUG-20260806-004） ==========
+   原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）；
+   fixed-top-bar 保留为空占位（pointer-events:none 不拦截卡片滑动手势） */
 .fixed-top-bar {
   position: absolute;
   left: 0;
   width: 100%;
   z-index: 15;
   pointer-events: none;
-}
-
-.top-bar-inner {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 40rpx;
-  height: 100%;
-  align-items: center;
-}
-
-.top-bar-settings {
-  width: 64rpx;
-  height: 64rpx;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-  margin-right: -8rpx;
-}
-.top-bar-settings--hover {
-  background-color: var(--bg-subtle);
-}
-.top-bar-settings-icon-img {
-  width: 36rpx;
-  height: 36rpx;
 }
 
 /* ============ 卡片舞台 ============ */
