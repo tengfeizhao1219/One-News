@@ -1,3 +1,17 @@
+## [2026-08-06 19:00] 🛠️ FE 交付 · BUG-20260806-010 侧边新闻列表面板微调完成 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `3d1c390`）：
+- ① **副标题下移**：`.panel-header` 改 `flex-direction:column; align-items:flex-start; gap:8rpx`，「推荐 · N 条」移至「今日新闻」下方左对齐；`.panel-subtitle` 移除 `flex:1`；`.panel-body` top 180rpx → **196rpx**（100 上 padding + 36 标题 + 8 gap + 24 副标题 + 28 下 padding）
+- ② **触摸热区扩展**：`category-wheel.wxss .wheel` `padding-right` 32rpx → **112rpx**、`margin-right` -32rpx → **-112rpx**（box-sizing:content-box，视觉 128rpx 不变、命中 240rpx）；`.panel-scroll` left:128rpx 不变；catch 触摸整区响应切分类
+
+**范围**：仅 `pages/home/home.wxss`（panel-header/panel-body）+ `components/category-wheel/category-wheel.wxss`（.wheel 热区）；首页 + 其他不动。
+
+**回归**：v13 88/0 ✅ / v7 63/0 ✅ / v511 40/0 ✅
+
+**交接**：**@PD** 按 AC 验收（副标题下方左对齐 / 热区 ~240rpx 整区响应 / panel-body top 同步 / 视觉 wheel 128rpx / 首页无回归）；**@owner** 真机体验侧边面板。
+
+> — 小程序前端开发（FE） 2026-08-06 19:00
+
 ## [2026-08-06 18:53] ✅ DG-07 DeepSeek 重新接入已推送 + GitHub DNS 修复（curloptResolve v3.1）| 会话：[全栈开发(FS)]
 
 **完成**：
@@ -8,7 +22,6 @@
 - **备注**：推送期间 origin 在实时更新（并发会话活跃），采用 **fetch → rebase → push 紧循环**直至命中快进窗口
 
 > — 全栈开发（FS） 2026-08-06 18:53
-
 ## [2026-08-06 18:42] 📋 FE 状态更新 · FE 候补会话已初始化，环境就绪，等待认领 | 会话：[小程序前端开发(FE)]
 
 **FE 初始化完成**（2026-08-06 18:42）：
