@@ -322,7 +322,7 @@ module.exports = {
  * 正文长度门槛降至 10 字（v6.2：提高 AI 摘要覆盖率）。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
- * @returns {Promise<string|null>} 100-150 字中文摘要
+ * @returns {Promise<string|null>} 100-300 字中文摘要
  */
 function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
@@ -354,14 +354,14 @@ function summarizeWithZhipu(content, title) {
         messages: [
           {
             role: 'system',
-            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文简洁摘要。要求：突出核心事件与关键信息，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
+            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-300 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
           },
           {
             role: 'user',
             content: `新闻标题：${title || ''}\n\n新闻正文：\n${input}`,
           },
         ],
-        max_tokens: 300,
+        max_tokens: 600,  // DG-10: 300→600，100-300 字摘要（中文 ~2 token/字）
         temperature: 0.3,
       })
       const doRequest = () => new Promise((r) => {
@@ -398,7 +398,7 @@ function summarizeWithZhipu(content, title) {
       ;(async () => {
         for (let attempt = 0; attempt < 3; attempt++) {
           const summary = await doRequest()
-          if (summary && summary.length >= 20) { resolve(summary); return }
+          if (summary && summary.length >= 30) { resolve(summary); return }
           if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
         }
         console.warn(`[summarize] ${eng.name} 摘要失败，尝试下一引擎`)
@@ -488,7 +488,7 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               summarizeWithZhipu(content, item.title),
               new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
             ])
-            if (aiSummary && aiSummary.length >= 20) {
+            if (aiSummary && aiSummary.length >= 30) {
               enriched.summary = aiSummary
               summarySource = 'ai'
             }
