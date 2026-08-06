@@ -14,6 +14,26 @@
 
 ---
 
+## [2026-08-06 13:09] 📋→🛠️ PD 提单 · owner 确认 D-09 v1.2 → BUG-20260806-007 @FE 系统级落地 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：Bug 台账 007 详述 + TASK_BOARD 广播 + 任务表 007 行
+- 文件：`docs/05-测试验收/Bug清单模板.md`、`TASK_BOARD.md`
+
+**owner 13:09 确认**：D-09 v1.2 全部 6 项确认通过 → 提 FE 落地。
+
+**BUG-20260806-007（P1）D-09 v1.2 系统级落地（6 页面）**：
+- 导航条带：`top=menuTop`；`height=calc(menuHeight+24rpx)`（仅下扩 12px）；
+- 返回/主页按钮 explicit 锚定胶囊中心：`top=calc(menuTop+menuHeight/2-32rpx/2)`；
+- 进度条（仅 detail）：bottom:0（胶囊下 12px）、transparent 无底槽、3rpx 浅蓝；
+- 内容起始：`--nav-offset=menuTop+menuHeight+12px`；detail +12rpx / 列表·次级页 +8rpx；
+- home：fixed-top-bar 同步（设置按钮锚定胶囊中心），卡片居中不变；
+- 验收：AC 8 项 + v13/v7/v511 回归 → owner 真机回归 UAT-03。
+
+**当前 PD 侧在途**：① 007 落地后 AC 代码级验收；② 006（收藏 stale read）FE `9bb5b60` 已修复待 PD 代码级验收；③ 005 追修（选中态去底色）FE `9bb5b60` 已交付待确认。
+
+---
+
 ## [2026-08-06 12:59] ✅ owner 真机确认 · AI 摘要胶囊可见 · 全链路闭环 | 会话：[全栈开发(FS)]
 
 **owner 反馈**：「能顺利看到 AI 摘要了」

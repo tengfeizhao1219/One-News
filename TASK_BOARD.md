@@ -51,6 +51,29 @@
 > — 全栈开发（FS）
 
 ---
+### 📢 2026-08-06 13:09 【PD · owner 确认 D-09 v1.2 → 提单 BUG-20260806-007 · @FE 系统级落地】
+
+> **对象**：FE（007 落地 · 系统级 6 页面）、owner（真机回归 UAT-03）、PM（知悉）
+> **发布**：产品设计师（PD）
+
+**owner 13:09 确认**：D-09 v1.2 全部 6 项确认通过（进度条呼吸 12px / 条带仅下扩展 / detail 标题 12rpx / 列表 8rpx / 进度条无底槽 / 正文无分割线）→ **PD 提单 BUG-20260806-007 @FE 落地**。
+
+**BUG-20260806-007 · D-09 v1.2 系统级落地（P1）**：
+- 台账详述：`docs/05-测试验收/Bug清单模板.md`（含落地规范 + AC 8 项）
+- 设计依据：`docs/02-产品设计/D-09-增量-导航栏内容起始位置规范.md`（v1.2）
+- 展示：`docs/showcase/d09-nav-content-spacing.html`（v1.2）
+
+**核心落地（FE 照此实现）**：
+1. 导航条带：`top = menuTop`；`height = calc(menuHeight + 24rpx)`（仅下扩 12px）；
+2. 返回/主页按钮 **explicit 锚定胶囊中心**：`top = calc(menuTop + menuHeight/2 - 32rpx/2)`；
+3. 进度条（仅 detail）：`bottom: 0`（胶囊下 12px）、`background: transparent` 无底槽、3rpx 浅蓝；
+4. 内容起始：根节点 `--nav-offset = menuTop + menuHeight + 12px`；detail `+12rpx` / 列表·次级页 `+8rpx`；
+5. home：fixed-top-bar 同步条带规范（设置按钮锚定胶囊中心），卡片居中不变；
+6. 不改动：正文排版 / 底部操作栏 / 正文无分割线 / 深浅色主题。
+
+**PD 验收**：按 AC 8 项代码级核对 + v13/v7/v511 回归 → owner 真机回归 UAT-03（标题位置 + 胶囊呼吸 + 进度条无底槽）。
+
+---
 ### ✅ 2026-08-06 12:58 【PM · GitHub 网络问题根治 · DNS 修复方案启用 · 全员推送不再卡 TLS】
 
 > **对象**：全员（FS / FE / PD / PJM / PM / owner）
@@ -2613,6 +2636,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | UAT-20260806-05 | 深色模式 icon 视觉确认（dock/导航/空态）| owner | 🟡 | ✅ 通过（11:00 回填）| BUG-FS 修复 ✅ | 深色下 dock/导航/空态图标为白色版，无黑色图标 |
 | BUG-20260806-005 追修 | 滚轮选中态去背景高亮（仅保留淡蓝字体）| FE | 🟡 | ✅ 已交付（`9bb5b60`）| PD `33c4166` ✅ | 选中项淡蓝字体，**无背景高亮**；触摸放大/锚点/项数不变 · 待 owner 真机确认 |
 | BUG-20260806-006 | 收藏后收藏列表不显示新条目（LocalCache 多实例 stale read）| FE | 🔴 | 🔄 修复中（`9bb5b60` 提交中）| — | **方案 1 全局单例**：detail/favorites/history 统一 `localCache` 单例；单例容量 200→500；收藏/取消后列表立即同步 |
+| BUG-20260806-007 | D-09 v1.2 系统级落地：导航条带胶囊呼吸（仅下扩 12px）+ 按钮锚定胶囊中心 + 内容起始位置（detail 12rpx / 列表 8rpx）+ 进度条无底槽 | FE | 🔴 | 📋 新建（PD 13:09 提单，owner 已确认设计）| D-09 v1.2（owner 13:09 确认）| 6 页面统一实施；PD 按 AC 8 项验收 + owner 真机回归 |
 
 > **关联**：001/002/003 关闭 → PD 更新 Bug 台账状态；D-07 三态通过 → D-07 正式闭环（PD 走查底稿 §十二）。
 > **PD 代建说明**：任务表由 PM 维护，本次为 owner 要求即时建行，PM 可复核调整。
