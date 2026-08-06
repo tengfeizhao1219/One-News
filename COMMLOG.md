@@ -1,3 +1,24 @@
+## [2026-08-06 10:40] 📋→✅ PD 验收 · BUG-20260806-004/005 代码级通过 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：Bug 台账 004/005 验收记录 + 状态转待验证 + TASK_BOARD 10:40 广播
+- 文件：`docs/05-测试验收/Bug清单模板.md`、`TASK_BOARD.md`
+
+**BUG-20260806-004（FE `6975328`）→ ✅ 代码级通过**：
+- 收藏静默化：detail/favorites 移除「（待同步）」toast，enqueue 保留；☁️ 角标 + 同步失败条保留
+- 胶囊对齐：app.js menuTop/menuHeight；6 页面 nav-bar 统一动态 top/height；status-bar 占位移除；detail 进度条并入 nav；正文去 divider；底部 0.5rpx
+- rpx 固定：detail 44/24、card 52/22、summary 32、about/settings 去 font-scale；正文 text-p 保留（无障碍）
+- 回归：v13 86/0 ✅ / v7 63/0 ✅ / v511 40/0 ✅；⚠️ v12 31/2 断言过期（待同步 toast 已删）→ 非功能回归，@PM 安排同步断言
+
+**BUG-20260806-005（FE `33c4166`）→ ✅ 代码级通过**：
+- `.wheel-label.active` color → `var(--wheel-text-selected-color, var(--primary, #007AFF))`；淡蓝底色保留；app.wxss/theme.json 双模式 token 同步
+- 红线全守：宽度/可视 6 项/手势/震动/bounce/锚点/scale(1.08)/非选中色均未动（js/wxml 零改动）；v13 契约含新 token ✅
+
+**状态**：004/005 → 🔄 待验证（PD 代码级通过；待 owner 真机确认后关闭）。PD 侧今日 5 项 bug 全部代码级验收通过。
+**非阻塞备注**：category-wheel.wxss 注释仍写「BUG-20260806-004」（改号后未同步）；constants.js STATUS_BAR_HEIGHT 为死代码兼容保留。
+
+---
+
 ## [2026-08-06 10:20] 📤→📋 PD 走查交付 · D-08 设计规范一致性自查 | 会话：[产品设计师(PD)]
 
 **提交记录**：

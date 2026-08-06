@@ -88,8 +88,8 @@
 | BUG-20260806-001 | 详情页收藏/取消收藏无操作反馈提示（应 toast「已收藏/已取消收藏」） | 🟢 P2 | 详情页 | 🔄 待验证 | 前端开发(后端确认) | v1.0 | 用户(产品) | 必现 |
 | BUG-20260806-002 | 收藏/浏览历史点击跳转**非选中新闻**（引擎定位失败静默回退分类首条） | 🟡 P1 | 详情页/收藏/历史 | 🔄 待验证 | 前端开发(后端确认) | v1.0 | 用户(产品) | 必现 |
 | BUG-20260806-003 | 详情页顶部按钮为「主页」而非「返回」，返回层级不符合预期（第3层应返回上一级菜单） | 🟡 P1 | 详情页/导航 | 🔄 待验证 | 前端开发 | v1.0 | 用户(产品) | 必现 |
-| BUG-20260806-004 | 收藏 toast 静默化 + 全页面导航栏与胶囊对齐 + 标题/元信息固定 rpx + 正文去分割线 | 🟡 P1 | 全页面 | ✅ 已交付（`6975328`）| 前端开发 | v1.0 | 用户(产品) | 必现 |
-| BUG-20260806-005 | 侧边栏分类滚轮选中态字体应为淡蓝 `--primary`（原编号 004，owner 09:58 裁决改号） | 🟡 P1 | 首页侧边栏/category-wheel | ✅ 已交付（`e9d8d30`）| 前端开发 | v1.0 | 用户(产品) | 必现 |
+| BUG-20260806-004 | 收藏 toast 静默化 + 全页面导航栏与胶囊对齐 + 标题/元信息固定 rpx + 正文去分割线 | 🟡 P1 | 全页面 | 🔄 待验证 | 前端开发 | v1.0 | 用户(产品) | 必现 |
+| BUG-20260806-005 | 侧边栏分类滚轮选中态字体应为淡蓝 `--primary`（原编号 004，owner 09:58 裁决改号） | 🟡 P1 | 首页侧边栏/category-wheel | 🔄 待验证 | 前端开发 | v1.0 | 用户(产品) | 必现 |
 
 ---
 
@@ -900,3 +900,43 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 **状态**：001/002/003 → 🔄 待验证（PD 代码级通过；待 owner 真机确认后关闭）
 
 > — 产品设计师（PD） 2026-08-06 09:40
+
+---
+
+## 验收记录 · BUG-20260806-004/005（PD 代码级验收 · 2026-08-06 10:40）
+
+> FE 交付 commit `6975328`（004）/ `33c4166`（005，rebase 后 hash，原 `e9d8d30`）→ PD 逐项代码级核对 + 全量回归。
+
+### BUG-20260806-004：收藏静默化 + 导航栏胶囊对齐 + rpx 固定（commit `6975328`）
+
+| 核对项 | 结果 |
+|---|---|
+| 收藏云同步静默化：detail.js `_syncFavoriteCloud` catch 移除「已收藏（待同步）」toast，enqueue 重试保留 | ✅ 通过 |
+| favorites.js 取消收藏云端失败移除「已取消收藏（待同步）」toast，enqueue 保留 | ✅ 通过 |
+| ☁️ 待同步角标（fav-pending）+ 同步失败重试条（sync-fail）+ 云端合并进度条（sync-bar）**保留**（owner 决策：仅静默化 toast，角标/重试条为可见状态入口） | ✅ 通过 |
+| 胶囊对齐：app.js 新增 `menuTop/menuHeight/menuBottom`（`wx.getMenuButtonBoundingClientRect` + try/catch 降级） | ✅ 通过 |
+| 全 5 页面（home/detail/favorites/history/settings/about）nav-bar / fixed-top-bar 统一 `style="top:{{menuTop}}px; height:{{menuHeight}}px;"`，默认降级 32px | ✅ 通过 |
+| status-bar 占位移除；detail 进度条（nav-progress）并入 nav-bar 底部；正文 `.detail-divider` 移除；底部操作栏 border-top 0.5rpx | ✅ 通过 |
+| rpx 固定：detail-title 44 / detail-meta 24 / card-title 52 / card-meta 22 / summary-p 32；about/settings 去 `var(--font-scale)`；正文 `.text-p` 保留 font-scale（无障碍缩放） | ✅ 通过 |
+| 超大字号 `[data-font-scale="3"]` 仅截断保护（line-clamp/ellipsis），不改字号 → 与固定 rpx 不冲突 | ✅ 通过 |
+
+**回归**：v13 86/0 ✅ / v7 63/0 ✅ / v511 40/0 ✅
+**⚠️ v12 31/2**：2 条断言过期——仍期待 detail.js 含「已收藏（待同步）」toast（icon:none），但 004 按 owner 2026-08-06 09:22 决策已移除（云同步为后台行为，静默）→ **非功能回归**，需测试工程师同步 v12 断言（同 v10 先例，@PM 请安排）。
+**备注（非阻塞）**：`utils/constants.js` STATUS_BAR_HEIGHT 与 app.js globalData.statusBarHeight 仍导出，页面已无引用（死代码/兼容保留），可后续清理。
+
+### BUG-20260806-005：侧边栏滚轮选中态淡蓝（commit `33c4166`）
+
+| 核对项 | 结果 |
+|---|---|
+| `category-wheel.wxss` `.wheel-label.active` color → `var(--wheel-text-selected-color, var(--primary, #007AFF))`（浅 #007AFF / 暗 #0A84FF） | ✅ 通过 |
+| 淡蓝底色保留：`background-color: var(--wheel-bg-selected, rgba(0,122,255,0.06))`（浅 .06 / 暗 .10） | ✅ 通过 |
+| app.wxss `.page--dark` 新增 `--wheel-text-selected-color: #0A84FF` / `.page--light` `#007AFF`（var() 穿透样式隔离） | ✅ 通过 |
+| theme.json light/dark 同步新增同名 token（值一致） | ✅ 通过 |
+| **红线全部未动**：`.wheel` 宽度 128rpx / `.panel-wheel` border-right / visibleCount=6 / anchorIndex=1 / 触摸·snap·震动·bounce / active scale(1.08) / 非选中 `--wheel-text-idle`·`--wheel-text-active` | ✅ 通过（js/wxml 零改动）|
+
+**回归**：v13 86/0 ✅（含 `--wheel-text-selected-color` 契约） / v511 40/0 ✅
+**备注（非阻塞）**：`category-wheel.wxss` 顶部注释仍写「BUG-20260806-004」（改号后未同步，L3/L46），不影响功能，FE 可顺手更新注释编号。
+
+**状态**：004/005 → 🔄 待验证（PD 代码级通过；待 owner 真机确认后关闭）
+
+> — 产品设计师（PD） 2026-08-06 10:40
