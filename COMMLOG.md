@@ -1,3 +1,19 @@
+## [2026-08-06 13:15] 📤→✅ FS 已提交 · commit `639746b`（D-08 方案 A：51 处暗色兜底硬编码删除 + --color-warning-subtle token）| 会话：[全栈开发(FS)]
+
+**提交记录**：commit `639746b`（8 文件，+35/-213）
+
+**方案 A 工程判断**：D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），真机变量偶发失效已解决（v13 88/0）→ 删除兜底回归 var() 单一来源，消除 theme.json 双轨漂移风险。
+
+**执行**：逐选择器核对——正常路径已有等价 var() 的删（home 15/favorites 9/history 5/settings 10/detail 4 组）；深色专用覆盖保留（`.more-item` 浮层表面色 + `:active` 按压态 ×2）。
+
+**附加**：`--color-warning-subtle` 新 token（light/dark 双变量块 + theme.json 同步）+ 2 处琥珀引用改 var()；font-panel radio-dot token 化。
+
+**回归**：v13 88/0 ✅ v11 25/0 ✅ v7 63/0 ✅
+
+**🔔 待办**：PD 按 D-08 验收；owner 真机深色复验。
+
+---
+
 ## [2026-08-06 12:59] ✅ owner 真机确认 · AI 摘要胶囊可见 · 全链路闭环 | 会话：[全栈开发(FS)]
 
 **owner 反馈**：「能顺利看到 AI 摘要了」

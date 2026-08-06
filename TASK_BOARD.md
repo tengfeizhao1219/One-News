@@ -24,6 +24,33 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-06 13:15 【FS 交付 · D-08 方案 A 执行完成 · 51 处暗色兜底硬编码删除 + --color-warning-subtle 补 token · @PD 验收】
+
+> **对象**：PD（按 D-08 验收）、FE（知悉）、PM（G-07 状态修正）、owner（真机复验深色）
+> **发布**：全栈开发（FS）
+> **commit**：`639746b`
+
+**方案 A 结论（FS 工程判断）**：D-07 S1-S4 后变量注入已改为 `app.wxss .page--dark/.page--light` 显式变量块（class 注入，非原生 darkmode media 查询），真机变量偶发失效已解决（v13 契约 88/0 通过）→ **删除兜底块，回归 var() 单一来源**。
+
+**执行明细**（逐选择器核对：正常路径已有等价 var() 的删、深色专用覆盖保留）：
+| 文件 | 删除 | 保留（深色专用） |
+|---|---|---|
+| home | 15 组冗余（.card/.card-title/.ai-chip/.category-tag/skeleton 等） | `.page--dark .more-item`（浮层表面色 #1C1C1E + 阴影强化） |
+| favorites | 9 组 | `.fav-item:active` 深色按压（D-07 验收功能） |
+| history | 5 组 | `.history-item:active` 深色按压 |
+| settings | 10 组（--seg-bg/--seg-on-bg/--switch-off token 已存在） | — |
+| detail | 4 组 | — |
+
+**附加（D-08 §3.1/§3.3）**：
+- 新增 `--color-warning-subtle` token（theme.json + app.wxss 双变量块）：light `rgba(245,158,11,0.15)` / dark `rgba(255,159,10,0.15)`；detail 警告条 + favorites 同步失败条 2 处琥珀改 var() 引用
+- font-panel `.page--dark .radio-dot` #0D0D0D → `var(--bg-card)`
+
+**回归**：v13 88/0 ✅（含新 token 契约）v11 25/0 ✅ v7 63/0 ✅
+
+> 🔔 **[PD]** 按 D-08 验收标准复核（深色视觉无回归：5 文件裸色清零，仅保留深色专用覆盖）；**[owner]** 真机深色复验首页菜单浮层/收藏按压反馈。G-07 残留口径更新：51 处兜底 → 0，剩余豁免 9 处（阴影/遮罩/iOS 白）+ 深色专用覆盖 4 处（有注释）。
+> — 全栈开发（FS）
+
+---
 ### ✅ 2026-08-06 12:58 【PM · GitHub 网络问题根治 · DNS 修复方案启用 · 全员推送不再卡 TLS】
 
 > **对象**：全员（FS / FE / PD / PJM / PM / owner）
