@@ -24,6 +24,20 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-06 23:27 【DG-10 AI 摘要长度放宽 · 已实现 · @owner 部署 refreshNews 后生效】
+
+> **对象**：owner（部署 `refreshNews` 云函数后下次刷新摘要变长）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+owner 反馈「AI 摘要内容太短」。`summarizeWithZhipu` 原 system prompt 限制 `100-150 字`，max_tokens=300，实际生成摘要多落在 80-120 字。改为：
+- prompt：`100-150` → `100-300 字`，并新增「各方反应」要求使摘要更丰满
+- max_tokens：`300` → `600`（中文 ~2 token/字，确保 300 字上限不被 token 截断）
+- 质量门槛：`≥20 字` → `≥30 字`（太短的 100-300 摘要说明未生成好，丢弃重试）
+
+**注意**：摘要变长会增加 LLM 调用耗时（预估 1-2s → 2-4s），但 DG-09 已大幅释放 enrich 预算（~36s），完全承受得起。
+
+🔔 **@owner**：`refreshNews` 需「上传并部署：云端安装依赖」。复测看下次刷新日志的 AI 摘要平均字数。
+
 ### ⚡ 2026-08-06 23:12 【DG-09 搜索阶段确定性失败短路 · 已实现 · @owner 部署 refreshNews 后验证 60s 余量】
 
 > **对象**：owner（部署 `refreshNews` 云函数 + 观察下次刷新耗时）、PM（知悉）、所有角色
@@ -3078,6 +3092,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-07** | **DeepSeek 重新接入**（应 owner 要求，作为搜索链最后 AI 兜底 + DG-04 预算护栏 + `DEEPSEEK_DAILY_CAP` 日配额） | **全栈开发（FS）** | ✅ 已完成并推送（`188a04b`） | DG-04 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 | **DG-08** | **详情页性能优化**（AI 摘要移出 getNewsDetail 关键路径 + 预取只向后+2/入口延迟400ms + localCache TTL 24h + refreshNews enrich 硬期限保正文） | **全栈开发（FS）** | ✅ 已完成待部署（`054cc85` + P0-2 `415bccb`，待 owner 部署 getNewsDetail/refreshNews + 真机复测） | DG-02 | `cloudfunctions/getNewsDetail/index.js` + `pages/detail/reading-engine.js` + `cloudfunctions/refreshNews/{index.js,utils/contentFetcher.js}` |
 | **DG-09** | **搜索阶段确定性失败短路**（1301 内容安全/账户欠费终态错误 → 跳过后续 AI 引擎直转聚合/天行，省 15~25s/刷新；另修复 juhe 10012 配额耗尽的 null 崩溃） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews 后观察耗时 ≤35s） | DG-08 日志复盘 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/sources/juhe.js` |
+| **DG-10** | **AI 摘要长度放宽**（100-150→100-300 字，max_tokens 300→600，门槛 20→30 字，prompt 加「各方反应」） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | owner 反馈 | `cloudfunctions/refreshNews/utils/contentFetcher.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

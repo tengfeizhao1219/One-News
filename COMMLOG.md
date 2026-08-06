@@ -1,3 +1,18 @@
+## [2026-08-06 23:27] 🛠️ DG-10 AI 摘要长度放宽（100-150 字 → 100-300 字）| 会话：[全栈开发(FS)]
+
+owner 反馈「AI 摘要内容太短」。`summarizeWithZhipu` 改动：
+- system prompt：`100-150` → `100-300 字`，加「各方反应」要求使摘要更丰满
+- max_tokens：`300` → `600`（中文 ~2 token/字，防 token 截断）
+- 质量门槛：`≥20` → `≥30` 字（太短的说明未生成好，丢重试）
+
+**影响**：LLM 调用耗时从 1-2s → 2-4s，但 DG-09 已将 enrich 预算从 ~13s 释放到 ~36s，完全承受得起。
+
+**范围**：仅 `cloudfunctions/refreshNews/utils/contentFetcher.js`（`summarizeWithZhipu` prompt + tokens + 门槛）。
+
+**待部署**：`refreshNews`（云端安装依赖）。
+
+> — 全栈开发（FS） 2026-08-06 23:27
+
 ## [2026-08-06 23:12] ⚡ DG-09 搜索阶段确定性失败短路（54s → 预期 ~30s）+ juhe null 修复 | 会话：[全栈开发(FS)]
 
 **触发**：两轮 recommend 刷新日志（22:04 / 23:04）均 **54.16s** 逼近 60s 上限，仅 5.8s 余量。逐段拆解后确认瓶颈在**搜索阶段**（40.2s），而非此前关注的 enrich。
