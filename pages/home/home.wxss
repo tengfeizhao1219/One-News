@@ -268,6 +268,21 @@
   padding: var(--menu-top, 44px) 40rpx 28rpx;
 }
 
+/* BUG-20260806-016 (FE): 侧边栏面板状态栏背景层 —— 与详情页 .status-bar-fill 高度/语义一致。
+   详情页结构：status-bar-fill (z-index:21, height=statusBarHeight) + nav-bar (z-index:22)
+   侧边栏面板结构：panel-status-bar (height=statusBarHeight) + panel-header (padding-top=menuTop)
+   两者都明确用 statusBarHeight 高的背景层覆盖状态栏区域，结构对齐。
+   - position: absolute 让它跟随 slide-panel 滑入/滑出（关闭时一起消失）
+   - top: 0 贴在 slide-panel 顶端 0（= 屏幕顶端 0）
+   - z-index: 4 在 panel-header(5) 之下，避免遮挡标题文本 */
+.panel-status-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+}
+
 .panel-title {
   font-size: calc(36rpx * var(--font-scale));
   font-weight: 700;

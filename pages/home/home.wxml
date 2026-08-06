@@ -137,7 +137,15 @@
   <view class="slide-panel {{showPanel ? 'show' : ''}} {{panelAnim ? 'done' : ''}}"
     bindtouchstart="onPanelTouchStart"
     bindtouchend="onPanelTouchEnd">
-    <!-- 面板标题栏：absolute 固定顶部 -->
+    <!-- BUG-20260806-016 (FE): 面板顶部显式状态栏背景层（与详情页 .status-bar-fill 结构一致）。
+         之前 slide-panel 仅靠自身 background-color 给 0~statusBarHeight 区域填色，
+         没有显式 status-bar-fill 元素作为"状态栏区"语义标记。详情页有独立 status-bar-fill
+         (z-index 21) + nav-bar (z-index 22) 两层结构；侧边栏面板缺少这一层，
+         owner 反馈"这个页面没有那个状态栏"。本层用 absolute top:0 贴在 slide-panel 顶端 0
+         （=屏幕顶端 0），高度 = statusBarHeight，背景 var(--bg-card)，与详情页高度一致。 -->
+    <view class="panel-status-bar" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+
+    <!-- 面板标题栏：absolute 固定顶部（padding-top = var(--menu-top) 已对齐胶囊顶部） -->
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>
