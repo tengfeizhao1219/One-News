@@ -160,10 +160,12 @@
   box-sizing: border-box;
 }
 
-/* 翻页动画容器 — 对标首页卡片逻辑 */
+/* 翻页动画容器 — 对标首页卡片逻辑
+   BUG-20260806-026 (FE): 去掉 out/in 阶段的 opacity:0 —— 原实现滑出/滑入时同时透明化，
+   视觉上呈「淡出+淡入」。改为纯 transform 位移的整页滑动，动画更连续自然。 */
 .article {
-  transition: transform 0.35s ease, opacity 0.35s ease;
-  will-change: transform, opacity;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 /* 单元素复用模型修复：out 阶段结束后元素停在 -100vh/+100vh，
    切换 in 阶段时需先「无过渡」瞬间吸附到 in-up/in-down 起点，
@@ -174,13 +176,13 @@
 }
 /* 上滑翻下一条：旧内容向上移出（一屏高度，使用 JS 计算的 --page-h 像素值，避免 100vh 在 transform 内不可靠）
    注意：pre-v5.9 卡片页曾用 PAGE_HEIGHT(px) 偏移，方向正确；v5.9 切换到 100vh 后出现方向随机/反向问题。 */
-.article.out-up   { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
+.article.out-up   { transform: translateY(calc(-1 * var(--page-h, 100vh))); }
 /* 下滑翻上一条：旧内容向下移出（一屏高度） */
-.article.out-down { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
+.article.out-down { transform: translateY(var(--page-h, 100vh)); }
 /* 上滑翻下一条：新内容从下方滑入（+page-h→0，由移除 class 触发 transition） */
-.article.in-up    { transform: translateY(var(--page-h, 100vh));         opacity: 0; }
+.article.in-up    { transform: translateY(var(--page-h, 100vh)); }
 /* 下滑翻上一条：新内容从上方滑入（-page-h→0，整屏滑入，与翻下一页对称） */
-.article.in-down  { transform: translateY(calc(-1 * var(--page-h, 100vh))); opacity: 0; }
+.article.in-down  { transform: translateY(calc(-1 * var(--page-h, 100vh))); }
 /* 备用：淡入效果（当前未使用，保留供后续切换） */
 .article.fade-in  { opacity: 0; }
 
