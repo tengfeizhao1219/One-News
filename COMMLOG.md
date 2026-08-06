@@ -1,3 +1,24 @@
+## [2026-08-06 13:30] 🎨 PD 出 demo · 侧边栏新闻列表最新设计（含 D-02 v2.5 滚轮去底色）| 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：新建 showcase/sidebar-news-list.html + docs/index.html 画廊加 SIDEBAR 入口
+- 文件：`docs/showcase/sidebar-news-list.html`（新增，已上线 Pages）、`docs/index.html`
+
+**owner 13:29 询问**：侧边栏新闻列表的最新设计是什么，给一个 demo。
+
+**Demo 内容**（1:1 取自当前 app wxml/wxss）：
+- 手机框 375×720：首页卡片背景 + 半遮罩 + 右缘滑出侧边栏（宽 90%）
+- panel-header：「今日新闻」+ 副标题「科技 · 5 条」
+- 左侧分类滚轮（D-02 v2.5 最新）：5 项（全部/科技[选中 淡蓝字体无底色 scale 1.08]/国际/科学探索/社会），锚点第二行
+- 右侧仅标题列表：5 条，第一条「正在阅读」主题色高亮（var(--primary)）
+- 浅/深色切换 + 收起/展开侧边栏按钮
+- 时间 + 调整说明：2026-08-06，含 D-02 v2.5 滚轮去底色说明；其余交互与设计以当前为准
+- 头部留白 50px（与 D-09 胶囊呼吸规范同源，007 系统级落地时对齐）
+
+**链接**：[tengfeizhao1219.github.io/One-News/showcase/sidebar-news-list.html](https://tengfeizhao1219.github.io/One-News/showcase/sidebar-news-list.html)
+
+---
+
 ## [2026-08-06 13:22] 🛠️ FE · 移除首页右上角设置死按钮（owner 13:21 裁定）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：
