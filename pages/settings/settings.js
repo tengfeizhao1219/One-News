@@ -45,6 +45,11 @@ Page({
       isDark: this._isSystemDark(),
     })
 
+    // BUG-20260806-009 follow-up: 页面级调用状态栏 API
+    if (app && app.setNavBarColor) {
+      app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')
+    }
+
     // 读取主题偏好（若无则默认跟随系统）
     try {
       var storedFollow = wx.getStorageSync('settings_followSystem')

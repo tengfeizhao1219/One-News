@@ -151,6 +151,11 @@ Page({
       isDark: this._isSystemDark()
     })
 
+    // BUG-20260806-009 follow-up: 页面级调用状态栏 API（页面级调用比 App.onLaunch 更可靠）
+    if (app && app.setNavBarColor) {
+      app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')
+    }
+
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
     this._pregenPlaceholder(category)
 

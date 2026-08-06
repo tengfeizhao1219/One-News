@@ -3,8 +3,9 @@
 
   <!-- 顶部导航栏：主页（左）+ 标题（中）· D-09 v1.2（仅下扩展 12px，按钮锚定胶囊中心） -->
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
-    <!-- BUG-20260806-009: 按钮高 64rpx，中心对齐胶囊中心 → top = menuTop + menuHeight/2 - 64rpx/2 -->
-    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx);">
+    <!-- BUG-20260806-009 follow-up: 按钮是 .nav-bar 子元素 absolute 定位，相对 nav-bar 偏移。
+         正确公式：top = menuHeight/2 - 32rpx（去掉 menuTop，避免双重定位） -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
       <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>

@@ -25,6 +25,31 @@
 
 ---
 
+## [2026-08-06 15:59] 🔄 follow-up · BUG-20260806-009 真机验收失败，按钮定位双重 bug 修正 | 会话：[产品设计师(PD)]
+
+**触发**：owner 真机回归反馈「验收失败，问题依然存在」并附截图。
+
+**真实根因（比首版更深）**：
+
+**① 状态栏 API 调用时机**：`wx.setNavigationBarColor` 是页面级 API，App.onLaunch 调用可能因时序问题不生效，**必须在每个页面 onLoad 中调用**。
+
+**② 按钮定位双重 bug**：nav-back/nav-home 是 `.nav-bar` 的子元素 `position: absolute`，相对 nav-bar 内偏移；nav-bar.top 已是 menuTop（屏幕坐标）。首版修复公式 `calc(menuTop + menuHeight/2 - 32rpx)` **多算了 menuTop**（双重定位），按钮实际位置 = menuTop + (menuTop + menuHeight/2 - 32rpx) ≈ 2*menuTop + menuHeight/2，明显偏下，落在文章正文区。
+
+**修复**：
+- app.js 新增 `setNavBarColor(theme)` 公共方法（页面级 API 兜底）
+- 6 页面 onLoad 末尾调用 `app.setNavBarColor(effectiveTheme)`
+- 5 页面 WXML 按钮公式 `calc(menuTop + menuHeight/2 - 32rpx)` → `calc(menuHeight/2 - 32rpx)`（去掉 menuTop）
+- D-09 规范文档同步勘误（4 处公式引用）
+- Bug 台账 009 描述与 AC 标准同步更新
+
+**AC**：
+- AC-009-01：状态栏浅色 `#F5F3F0` / 深色 `#000000` 不透明（页面级 API 调用保证）
+- AC-009-02：5 页面按钮与胶囊中心对齐（偏差 ≤ 2px）
+- AC-009-03：按钮 top 公式统一 `calc(menuHeight/2 - 32rpx)`（相对 nav-bar 内偏移）
+- AC-009-04：不引入回归
+
+> — 产品设计师（PD） 2026-08-06 15:59
+
 ## [2026-08-06 15:30] 📋 新增 · BUG-20260806-009 状态栏不透明 + 按钮胶囊对齐修正（owner 15:24 反馈）| 会话：[产品设计师(PD)]
 
 **提交记录**：

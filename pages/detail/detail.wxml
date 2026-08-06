@@ -10,8 +10,11 @@
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
     <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
          D-09 v1.2: explicit 锚定胶囊中心（按钮中心 = 胶囊中心，不依赖条带内居中） -->
-    <!-- BUG-20260806-009: 按钮高 64rpx，中心对齐胶囊中心 → top = menuTop + menuHeight/2 - 64rpx/2 -->
-    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx);">
+    <!-- BUG-20260806-009 follow-up: 按钮是 .nav-bar 子元素 absolute 定位，相对 nav-bar 偏移。
+         nav-bar.top = menuTop（屏幕坐标），按钮中心 = 胶囊中心（屏幕坐标 menuTop+menuHeight/2）
+         → 按钮 top（相对 nav-bar）= menuHeight/2 - 32rpx（按钮半高）。
+         之前公式多算了 menuTop（双重定位 bug）。 -->
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
       <text class="nav-back-icon">‹</text>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">

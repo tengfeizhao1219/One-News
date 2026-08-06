@@ -216,12 +216,31 @@ App({
           textStyle: theme === 'dark' ? 'light' : 'dark',
         })
       }
-      // BUG-20260806-009: 状态栏不透明 — 自定义导航栏模式下 wx.setNavigationBarColor
+      // BUG-20260806-009 follow-up: 状态栏不透明 — 自定义导航栏模式下 wx.setNavigationBarColor
       // 控制状态栏背景色，与窗口背景色同步，避免透明状态栏透出杂乱底色
+      // 注意：此 API 是页面级，App.onLaunch 调用可能不生效，需每个页面 onLoad 中也调用一次
+      // （已在各页面 onLoad 顶部加了 setNavBarColor 调用，这里作为兜底）
       if (wx.setNavigationBarColor) {
         wx.setNavigationBarColor({
           frontColor: theme === 'dark' ? '#ffffff' : '#000000',
           backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+        })
+      }
+    } catch (e) { /* ignore */ }
+  },
+
+  /**
+   * BUG-20260806-009 follow-up: 页面级调用状态栏 API — 必须在每个页面 onLoad 调用一次
+   * （App.onLaunch 中调用是全局但有时序问题，页面 onLoad 调用更可靠）
+   * @param {string} theme 'light' | 'dark'
+   */
+  setNavBarColor: function(theme) {
+    try {
+      if (wx.setNavigationBarColor) {
+        wx.setNavigationBarColor({
+          frontColor: theme === 'dark' ? '#ffffff' : '#000000',
+          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+          animation: { duration: 0, timingFunc: 'linear' }
         })
       }
     } catch (e) { /* ignore */ }

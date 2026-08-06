@@ -50,6 +50,11 @@ Page({
       // BUG-FS-20260805-001: 空态星星 icon 按主题切换白色版
       isDark: this._isSystemDark(),
     })
+
+    // BUG-20260806-009 follow-up: 页面级调用状态栏 API
+    if (app && app.setNavBarColor) {
+      app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')
+    }
   },
 
   onShow: function () {

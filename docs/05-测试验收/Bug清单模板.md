@@ -1190,36 +1190,37 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 - `app.js` `_syncWindowStyle` 仅调用了 `wx.setBackgroundColor`（窗口背景色）和 `wx.setBackgroundTextStyle`（下拉 loading 点颜色），**未调用 `wx.setNavigationBarColor`** 来设置状态栏前景/背景色。
 - 微信自定义导航栏模式下，状态栏背景色由 `wx.setNavigationBarColor` 控制。
 
-**按钮对齐偏差**：
+**按钮对齐偏差**（双重定位 bug）：
 - D-09 v1.2 按钮公式 `calc(menuTop + menuHeight/2 - 32rpx/2)` 假定了按钮高度为 **32rpx**，但实际 CSS 中按钮尺寸为 `width: 64rpx; height: 64rpx`。
-- 实际按钮中心 = `top + 32rpx` = `(menuTop + menuHeight/2 - 16rpx) + 32rpx` = `menuTop + menuHeight/2 + 16rpx`，比胶囊中心低了 **16rpx ≈ 8.3px**。
-- 正确公式应为 `calc(menuTop + menuHeight/2 - 32rpx)`（即 `- 64rpx/2`）。
+- 第一版修复（commit `bdf7992`）改为 `calc(menuTop + menuHeight/2 - 32rpx)`，但仍包含 `menuTop`。
+- **真正的根因**：nav-back/nav-home 是 `.nav-bar` 的子元素 `position: absolute`，相对 `.nav-bar` 内的偏移；`.nav-bar` 本身的 `top` 已是 `menuTop`（屏幕坐标）。**公式中再加 menuTop = 双重定位 bug**，导致按钮实际位置 = nav-bar.top + 按钮.top = menuTop + (menuTop + menuHeight/2 - 32rpx) ≈ 2*menuTop + menuHeight/2（屏幕坐标），明显偏下。
+- 真机验证：用户截图显示返回按钮在文章正文区，不在顶部。
+- 正确公式（相对 nav-bar 内的偏移）：`calc(menuHeight/2 - 32rpx)`。
 
 #### 修复方案
 
-**① 状态栏不透明**（`app.js`）：
-在 `_syncWindowStyle` 中增加 `wx.setNavigationBarColor` 调用：
-```js
-wx.setNavigationBarColor({
-  frontColor: theme === 'dark' ? '#ffffff' : '#000000',
-  backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
-})
-```
+**① 状态栏不透明**（`app.js` + 6 页面 `onLoad`）：
+- `app.js` `_syncWindowStyle` 新增 `wx.setNavigationBarColor` 调用；
+- **关键**：API 是页面级，App.onLaunch 调用可能不生效，**必须在每个页面 onLoad 中调用**（新增 `app.setNavBarColor(theme)` 公共方法）；
+- 深浅色同步：浅色 `#F5F3F0` / 深色 `#000000`。
 
 **② 按钮对齐修正**（5 页面 WXML，`detail` / `favorites` / `history` / `settings` / `about`）：
 ```
-// 修正前（错误）
+// 修正前 v1（错误 — 按钮高 64rpx 当 32rpx 算）
 top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2)
 
-// 修正后（正确 — 按钮高 64rpx，半高 32rpx）
+// 修正前 v2（仍错误 — 双重定位 bug）
 top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx)
+
+// 修正后（正确 — 相对 nav-bar 内的偏移）
+top: calc({{menuHeight}}px / 2 - 32rpx)
 ```
 
 #### 验收标准（AC）
 
 - **AC-009-01**：浅色/深色模式下状态栏均不透明，背景色与页面主题一致（浅色 `#F5F3F0` / 深色 `#000000`）；
 - **AC-009-02**：5 页面（detail/favorites/history/settings/about）返回/Home 按钮与右上角原生胶囊按钮垂直中心对齐（偏差 ≤ 2px）；
-- **AC-009-03**：按钮 top 公式统一为 `calc(menuTop + menuHeight/2 - 32rpx)`，按钮高 64rpx，中心 = 胶囊中心；
+- **AC-009-03**：按钮 top 公式统一为 `calc(menuHeight/2 - 32rpx)`（相对 nav-bar 内的偏移，**不包含 menuTop**），按钮高 64rpx，中心 = 胶囊中心；
 - **AC-009-04**：修复不引入回归（各页面滚动、点击、翻页行为不变）。
 
 #### 影响范围

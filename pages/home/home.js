@@ -83,6 +83,11 @@ Page({
       // BUG-FS-20260805-001: dock 菜单 icon 按主题切换白色版
       isDark: this._isSystemDark(),
     })
+
+    // BUG-20260806-009 follow-up: 页面级调用状态栏 API
+    if (app && app.setNavBarColor) {
+      app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')
+    }
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
     this.loadNews()
     // 同步字体档位（由 app._initFontScale 初始化）
