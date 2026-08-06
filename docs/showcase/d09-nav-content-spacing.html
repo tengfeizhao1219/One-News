@@ -69,19 +69,23 @@
   .sb .bar { display: inline-block; width: 17px; height: 10px; border: 1px solid currentColor; border-radius: 3px; position: relative; }
   .sb .bar::after { content: ""; position: absolute; left: 1px; top: 1px; bottom: 1px; width: 60%; background: currentColor; border-radius: 1px; }
 
-  /* ---- 导航栏（与胶囊对齐；v1.1：条带与胶囊保持 6px 上下呼吸，按钮仍锚定胶囊中心） ---- */
+  /* ---- 导航栏（v1.2：条带仅下扩展 12px，按钮 explicit 锚定胶囊中心） ---- */
   .nav { position: absolute; left: 0; right: 0; z-index: 20; display: flex; align-items: center; justify-content: center; }
-  /* 调整前：条带贴合胶囊（top=胶囊top 44px，高=胶囊高 32px） */
+  /* 调整前：条带贴合胶囊 */
   .before .nav { top: 44px; height: 32px; }
-  /* 调整后：条带与胶囊 6px 上下呼吸（top=38px，高=44px）；条带内按钮 top:50% 中心仍=胶囊中心 */
-  .after .nav { top: 38px; height: 44px; }
-  .nav-back { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 22px; font-weight: 400; color: var(--text-primary); }
+  /* 调整后：条带仅向下扩展 12px（上无呼吸），进度条距胶囊 12px；按钮 explicit 锚定胶囊中心 */
+  .after .nav { top: 44px; height: 44px; }
+  .nav-back { position: absolute; left: 6px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 22px; font-weight: 400; color: var(--text-primary); }
+  /* 调整前：条带内 top:50% 居中（条带中心 = 胶囊中心） */
+  .before .nav-back { top: 50%; transform: translateY(-50%); }
+  /* 调整后：explicit 锚定胶囊中心 = 44+15=59px → 按钮 top = 59-16=43px */
+  .after .nav-back { top: 43px; transform: none; }
   .nav-pos { display: flex; align-items: center; gap: 2px; font-size: 10px; color: var(--text-secondary); background-color: var(--tag-bg); padding: 2px 8px; border-radius: 6px; letter-spacing: 1px; }
-  /* 原生胶囊示意（右上） */
-  .capsule { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); height: 30px; border-radius: 15px; border: 1px solid var(--divider); background: transparent; display: flex; align-items: center; padding: 0 8px; gap: 6px; }
+  /* 原生胶囊示意（右上）— 独立 fixed 在 page 顶部 44px，不随条带变化 */
+  .capsule { position: absolute; right: 8px; top: 44px; transform: none; height: 30px; border-radius: 15px; border: 1px solid var(--divider); background: transparent; display: flex; align-items: center; padding: 0 8px; gap: 6px; }
   .capsule::before { content: "⋯"; font-size: 14px; color: var(--text-secondary); }
   .capsule::after { content: "◉"; font-size: 12px; color: var(--text-secondary); }
-  /* 阅读进度条（v1.1：无底槽，与页面同色，仅浅蓝进度线） */
+  /* 阅读进度条（v1.2：距胶囊下缘 12px，无底槽） */
   .nav-prog { position: absolute; left: 0; right: 0; bottom: 0; height: 1.5px; }
   .before .nav-prog { background: var(--divider); }      /* 调整前：有底槽 */
   .after .nav-prog { background: transparent; }          /* 调整后：与页面同色 */
@@ -89,15 +93,15 @@
 
   /* ---- 内容区 ---- */
   .content { position: absolute; left: 0; right: 0; bottom: 0; overflow: hidden; }
-  /* 调整前：content 从 nav 底部起（76px = 胶囊 44+32，无呼吸） */
+  /* 调整前：content 从 nav 底部起（76px） */
   .before .content { top: 76px; }
-  /* 调整后：content 从 nav 底部起（82px = 胶囊 44+32+6px 下呼吸） */
-  .after .content { top: 82px; }
+  /* 调整后：content 从 nav 底部起（88px = 胶囊 44+ 条带 44） */
+  .after .content { top: 88px; }
 
   .detail-body { padding: 0 32px 40px; }
-  /* D-09 核心差异：内容顶部预留 */
-  .before .detail-body { padding-top: 0; }        /* 调整前：标题紧贴/被 nav 盖住 */
-  .after .detail-body { padding-top: 16px; }       /* 调整后：标题距 nav 底部 16px（32rpx 呼吸） */
+  /* v1.2 内容顶部预留（紧凑） */
+  .before .detail-body { padding-top: 0; }
+  .after .detail-body { padding-top: 6px; }       /* 调整后：标题距 nav 底部 6px（12rpx，紧凑） */
 
   .detail-title { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.45; margin-bottom: 14px; letter-spacing: -0.25px; }
   .detail-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; letter-spacing: 0.25px; flex-wrap: wrap; }
@@ -125,10 +129,9 @@
 <body data-theme="light">
 
 <div class="hd">
-  <h1>D-09 · 导航栏与内容起始位置调整 <span class="badge">2026-08-06 · v1.1</span></h1>
+  <h1>D-09 · 导航栏与内容起始位置调整 <span class="badge">2026-08-06 · v1.2</span></h1>
   <div class="sub">
-    <b>调整说明（v1.1 · 2026-08-06）</b>：BUG-20260806-004 将导航栏改为固定定位（与原生胶囊对齐）后，内容区未同步预留导航栏高度，导致新闻标题顶到屏幕最上方。
-    本调整共 3 项：<b>① 内容展示起始位置</b>（标题/列表与导航栏之间增加呼吸间距）；<b>② 导航条带与胶囊保持 6px 呼吸空间</b>（返回/主页按钮仍锚定胶囊中心）；<b>③ 进度条去底色</b>（与当前页面同色，仅保留浅蓝进度线）。<b>其余交互与设计完全不变，以当前设计为准</b>（系统级规范见 D-09 v1.1）。
+    <b>调整说明（v1.2 · 2026-08-06 11:58）</b>：BUG-20260806-004 导航栏 fixed 后内容未预留高度导致标题顶置。<b>v1.1 三项调整：① 内容起始位置 ② 导航条带与胶囊呼吸 ③ 进度条同色</b>。owner 11:58 反馈「进度条与胶囊紧贴 + 标题距 nav 偏大」→ <b>v1.2 收紧：进度条与胶囊呼吸 6→12px；标题距 nav 32rpx→12rpx；条带改为仅向下扩展（按钮 explicit 锚定胶囊中心）</b>。<b>其余交互与设计完全不变，以当前设计为准</b>（系统级规范见 D-09 v1.2）。
   </div>
   <div class="ctrl">
     <span class="lbl">主题：</span>
@@ -200,17 +203,17 @@
 
     <!-- 图例 -->
     <div class="legend">
-      <div class="li"><span class="num">1</span><div class="tx"><b>内容展示起始位置</b>：<br>· <b>调整前</b>：内容区无顶部预留，标题紧贴/被导航栏遮挡 → 顶到屏幕最上方；<br>· <b>调整后</b>：内容起始 = 导航栏底部 + <b>32rpx（16px）呼吸间距</b>，标题清晰位于导航栏下方。</div></div>
-      <div class="li"><span class="num">2</span><div class="tx"><b>导航条带与胶囊呼吸空间</b>（v1.1）：<br>· <b>调整前</b>：条带完全贴合胶囊（top/高度与胶囊一致）；<br>· <b>调整后</b>：条带上下各扩 <b>6px（12rpx）</b>，与胶囊形成呼吸感；<b>返回/主页按钮垂直中心仍锚定胶囊中心</b>（条带对称扩展 → 条带中心=胶囊中心，按钮 top:50% 不变）。</div></div>
-      <div class="li"><span class="num">3</span><div class="tx"><b>进度条同色化</b>（v1.1）：<br>· <b>调整前</b>：有底槽（divider 色长条）+ 浅蓝进度线；<br>· <b>调整后</b>：<b>无底槽</b>，与当前页面同色，仅保留 3rpx 浅蓝进度线（位于条带底部 = 胶囊下缘下 6px）。</div></div>
+      <div class="li"><span class="num">1</span><div class="tx"><b>内容展示起始位置</b>（v1.2 收紧）：<br>· <b>调整前</b>：内容区无顶部预留，标题紧贴/被导航栏遮挡 → 顶到屏幕最上方；<br>· <b>调整后</b>：内容起始 = 导航栏底部 + <b>12rpx（6px）呼吸间距</b>（v1.2 紧凑），标题清晰位于导航栏下方。</div></div>
+      <div class="li"><span class="num">2</span><div class="tx"><b>导航条带与胶囊呼吸空间</b>（v1.2：仅向下扩展）：<br>· <b>调整前</b>：条带完全贴合胶囊（top/高度与胶囊一致）；<br>· <b>调整后</b>：条带 <b>仅向下扩展 12px（24rpx）</b>，进度条位于胶囊下 <b>12px</b> 呼吸空间；<b>返回/主页按钮 explicit 锚定胶囊中心</b>（top = menuTop + menuHeight/2 - 16px，不依赖条带中心）。</div></div>
+      <div class="li"><span class="num">3</span><div class="tx"><b>进度条同色化</b>（v1.2 与胶囊呼吸 12px）：<br>· <b>调整前</b>：有底槽（divider 色长条）+ 浅蓝进度线；<br>· <b>调整后</b>：<b>无底槽</b>，与当前页面同色，仅保留 3rpx 浅蓝进度线（位于条带底部 = 胶囊下缘下 <b>12px</b>）。</div></div>
       <div class="li"><span class="num ok">✓</span><div class="tx"><b>正文无分割线</b>（owner 2026-08-06 确认保留）：标题 → 元信息 → 正文直接衔接，元信息下方间距承担过渡。</div></div>
-      <div class="li"><span class="num ok">✓</span><div class="tx"><b>其余不变</b>：位置指示「2/15」、卡片流 / 侧边栏分类滚轮 / 触摸手势 / 底部操作栏（收藏·分享）/ 深浅色主题，均以当前设计为准（系统级落地见 D-09 v1.1 §四）。</div></div>
+      <div class="li"><span class="num ok">✓</span><div class="tx"><b>其余不变</b>：位置指示「2/15」、卡片流 / 侧边栏分类滚轮 / 触摸手势 / 底部操作栏（收藏·分享）/ 深浅色主题，均以当前设计为准（系统级落地见 D-09 v1.2 §四）。</div></div>
     </div>
   </div>
 </div>
 
 <div class="note">
-  <b>页面说明</b>：本页为 D-09 调整的专属展示（2026-08-06 更新 · v1.1）。呈现「内容展示起始位置」「导航条带与胶囊呼吸」「进度条同色」3 处调整（系统级规范详见 D-09 v1.1 设计文档）；完整交互 Demo 见 <a href="../demo/yiyue-demo.html" style="color:var(--primary)">demo/yiyue-demo.html</a>（历史原型，不代表当前设计）。
+  <b>页面说明</b>：本页为 D-09 调整的专属展示（2026-08-06 · v1.2 收紧）。呈现「内容展示起始位置」「导航条带与胶囊呼吸」「进度条同色」3 处调整（系统级规范详见 D-09 v1.2 设计文档）；完整交互 Demo 见 <a href="../demo/yiyue-demo.html" style="color:var(--primary)">demo/yiyue-demo.html</a>（历史原型，不代表当前设计）。
 </div>
 
 <script>
