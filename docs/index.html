@@ -345,6 +345,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     点击任意卡片可高亮它在「需求→设计→评审→开发→测试→验收」中的完整关联链。
   </div>
 
+  <script src="showcase/kanban/changelog.js"></script>
   <script src="showcase/kanban/data.js"></script>
   <script>
   (function(){
@@ -355,14 +356,15 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     const links=[...new Set(D.map(d=>d.link))], lC={};
     links.forEach((l,i)=>{ lC[l]=`hsl(${(i*67+200)%360} 62% 52%)` });
     $("kb-subtitle").textContent=M.subtitle+" · 更新 "+M.updated;
-    // 项目背景 + 最近变更（取最新 3 条）
+    // 项目背景 + 最近变更（changelog 由 changelog.js 自动生成，取最新 3 条）
+    const CL=window.KANBAN_CHANGELOG||[];
     const introEl=document.getElementById("kb-intro");
-    if(M.background||(M.changelog&&M.changelog.length)){
+    if(M.background||CL.length){
       let h="";
       if(M.background) h+=`<div class="box"><h3>📖 项目背景</h3><div class="kb-bg">${M.background}</div></div>`;
-      if(M.changelog&&M.changelog.length){
-        h+=`<div class="box"><h3>🕘 最近变更（最新 3 条）</h3><div class="kb-cl">`;
-        M.changelog.slice(0,3).forEach(e=>{
+      if(CL.length){
+        h+=`<div class="box"><h3>🕘 最近变更（COMMLOG 最新 3 条）</h3><div class="kb-cl">`;
+        CL.slice(0,3).forEach(e=>{
           h+=`<div class="kb-cl-i"><div class="t">${e.time}<span class="who">${e.who}</span></div><div class="c">${e.content}</div></div>`;
         });
         h+=`</div></div>`;

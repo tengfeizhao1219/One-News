@@ -105,6 +105,7 @@
   点击任意卡片可高亮它在「需求→设计→评审→开发→测试→验收」中的完整关联链。
 </footer>
 
+<script src="changelog.js"></script>
 <script src="data.js"></script>
 <script>
 (function(){
@@ -120,14 +121,15 @@
   document.getElementById("title").textContent = META.title;
   document.getElementById("subtitle").textContent = META.subtitle + " · 更新 " + META.updated;
 
-  // 项目背景 + 最近变更（取最新 3 条）
+  // 项目背景 + 最近变更（changelog 由 changelog.js 自动生成，取最新 3 条）
+  const CL = window.KANBAN_CHANGELOG || [];
   const introEl = document.getElementById("intro");
-  if(META.background || (META.changelog && META.changelog.length)){
+  if(META.background || CL.length){
     let h = "";
     if(META.background) h += `<div class="box"><h3>📖 项目背景</h3><div class="bg">${META.background}</div></div>`;
-    if(META.changelog && META.changelog.length){
-      h += `<div class="box"><h3>🕘 最近变更（最新 3 条）</h3><div class="cl">`;
-      META.changelog.slice(0,3).forEach(e=>{
+    if(CL.length){
+      h += `<div class="box"><h3>🕘 最近变更（COMMLOG 最新 3 条）</h3><div class="cl">`;
+      CL.slice(0,3).forEach(e=>{
         h += `<div class="cl-item"><div class="t">${e.time}<span class="who">${e.who}</span></div><div class="c">${e.content}</div></div>`;
       });
       h += `</div></div>`;
