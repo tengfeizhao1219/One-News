@@ -3,7 +3,7 @@
 > **用途**：记录测试过程中发现的所有缺陷，跟踪修复状态。
 > **状态**：🔴 激活中 — Q-02 功能测试 🔄，Bug 随测随录。
 > **关联**：TASK_BOARD Q-04.1 ✅ / Q-04.2 ✅（4 Bug 录入完成）/ Q-04.3 ✅（4 Bug 全修复闭环）
-> **最新**：🆕 2026-08-06 PD 代录入 owner 直报 5 项缺陷（BUG-20260806-001~006，其中 004/005 已验收转待验证）+ **BUG-20260806-007（D-09 v1.2 系统级落地，owner 13:09 确认设计后提单）** + **BUG-20260806-008（滚轮交互三优化：锚点修正+全条带触摸+连续跟手，owner 15:12 反馈）**：收藏/取消收藏无反馈提示 / 收藏·历史点击跳错新闻 / 详情页顶部按钮应为返回而非主页 / 侧边栏分类滚轮选中态应为淡蓝字体 / 收藏后收藏列表不显示新条目（多实例本地缓存 stale read）/ **导航条带与内容起始位置系统级调整（6 页面）**。全部指派 前端开发（FE），后端（FS）配合确认。
+> **最新**：🆕 2026-08-06 PD 代录入 owner 直报 5 项缺陷（BUG-20260806-001~006，其中 004/005 已验收转待验证）+ **BUG-20260806-007（D-09 v1.2 系统级落地，owner 13:09 确认设计后提单）** + **BUG-20260806-008（滚轮交互三优化：锚点修正+全条带触摸+连续跟手，owner 15:12 反馈）** + **BUG-20260806-009（状态栏不透明 + 按钮胶囊对齐修正，owner 15:24 反馈）**：收藏/取消收藏无反馈提示 / 收藏·历史点击跳错新闻 / 详情页顶部按钮应为返回而非主页 / 侧边栏分类滚轮选中态应为淡蓝字体 / 收藏后收藏列表不显示新条目（多实例本地缓存 stale read）/ **导航条带与内容起始位置系统级调整（6 页面）** / **滚轮交互优化（3 点）** / **状态栏透明+按钮对齐偏差**。全部指派 前端开发（FE），后端（FS）配合确认。
 
 ---
 
@@ -11,13 +11,13 @@
 
 | 指标 | 值 |
 |------|----|
-| 总计 | 22 |
+| 总计 | 23 |
 | 🔴 P0 阻断 | 1 |
-| 🟡 P1 严重 | 11 |
+| 🟡 P1 严重 | 12 |
 | 🟢 P2 一般 | 6 |
 | ⚪ P3 轻微 | 4 |
 | ✅ 已关闭 | 6 |
-| 📋 新建 | 8 |
+| 📋 新建 | 9 |
 | 🔄 待验证 | 3 |
 | 🔴 重开 | 5 |
 | 🆕 QA 已提交补丁（待前端确认） | 2 |
@@ -958,7 +958,7 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
    - `top: {{menuTop}}px`（无上呼吸，与胶囊顶部对齐）；
    - `height: calc({{menuHeight}}px + 24rpx)`（**仅向下扩展 24rpx = 12px**）；
 2. **返回/主页按钮（左）explicit 锚定胶囊中心**：
-   - `top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2)` → 按钮垂直中心 = 胶囊中心（不再依赖条带内 top:50%）；
+   - `top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx)` → 按钮高 64rpx，垂直中心 = 胶囊中心（不再依赖条带内 top:50%）；
    - 按钮尺寸 64rpx、`left: 12rpx`（现状不变）；
 3. **进度条（仅 detail）**：
    - `bottom: 0`（条带底部）= **胶囊下缘下 12px**；
@@ -1151,7 +1151,7 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 | AC | 核对项 | 结果 |
 |---|---|---|
 | AC-D09-01 | 5 页面（detail/favorites/history/settings/about）nav-bar + home fixed-top-bar 统一 `top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx)`（仅下扩 12px，上无呼吸）| ✅ 通过 |
-| AC-D09-02 | 返回/主页按钮 **explicit 锚定胶囊中心**：`top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2)`（detail nav-back / settings nav-home 已落地，移除 wxss top:50% 依赖）| ✅ 通过 |
+| AC-D09-02 | 返回/主页按钮 **explicit 锚定胶囊中心**：`top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx)`（按钮高 64rpx，中心 = 胶囊中心；detail nav-back / favorites+history+settings+about nav-home 已落地）| ✅ 通过（v1.2）+ 🆕 BUG-009 修正 |
 | AC-D09-03 | detail `.detail-body` + 骨架屏 `padding: calc(var(--nav-offset) + 12rpx)`；`--nav-offset = menuTop + menuHeight + 12` 根节点注入（detail.js L147）| ✅ 通过 |
 | AC-D09-04 | favorites `.filter-bar` +8rpx / history `.list-scroll` +8rpx / settings·about `.scroller` +8rpx（各页 js 注入 navOffset，wxss calc 生效）| ✅ 通过 |
 | AC-D09-05 | 进度条 `.nav-progress` `background: transparent`（去底槽，D-09 v1.2），bottom:0 胶囊下 12px | ✅ 通过 |
@@ -1164,3 +1164,75 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 **状态**：007 → 🔄 待验证（PD 代码级通过；待 owner 真机回归 UAT-03：标题位置 + 胶囊呼吸 12px + 进度条无底槽 + 列表/次级页首元素不被遮挡）
 
 > — 产品设计师（PD） 2026-08-06 15:25
+
+
+### BUG-20260806-009：状态栏不透明 + 按钮垂直对齐胶囊（owner 15:24）
+
+| 字段 | 内容 |
+|------|------|
+| **Bug ID** | BUG-20260806-009 |
+| **标题** | 状态栏透明体验差 + 各页面返回/Home 按钮与原生胶囊垂直不对齐 |
+| **优先级** | 🟡 P1 严重 |
+| **模块** | 全局（app.js + 5 页面 WXML）|
+| **状态** | 🔄 待验证 |
+| **指派给** | 前端开发（FE）|
+| **发现人** | owner（2026-08-06 15:24 真机反馈）|
+| **发现版本** | v6.3.0 |
+
+#### 现象
+
+1. **状态栏透明**：所有页面状态栏区域（时间、电量等）透明，透出页面底色，体验差。在自定义导航栏模式下（`"navigationStyle": "custom"`），微信不会自动渲染状态栏背景色。
+2. **按钮垂直不对齐**：各页面返回/Home 按钮与右上角小程序原生胶囊按钮不在同一水平线上。
+
+#### 根因分析
+
+**状态栏透明**：
+- `app.js` `_syncWindowStyle` 仅调用了 `wx.setBackgroundColor`（窗口背景色）和 `wx.setBackgroundTextStyle`（下拉 loading 点颜色），**未调用 `wx.setNavigationBarColor`** 来设置状态栏前景/背景色。
+- 微信自定义导航栏模式下，状态栏背景色由 `wx.setNavigationBarColor` 控制。
+
+**按钮对齐偏差**：
+- D-09 v1.2 按钮公式 `calc(menuTop + menuHeight/2 - 32rpx/2)` 假定了按钮高度为 **32rpx**，但实际 CSS 中按钮尺寸为 `width: 64rpx; height: 64rpx`。
+- 实际按钮中心 = `top + 32rpx` = `(menuTop + menuHeight/2 - 16rpx) + 32rpx` = `menuTop + menuHeight/2 + 16rpx`，比胶囊中心低了 **16rpx ≈ 8.3px**。
+- 正确公式应为 `calc(menuTop + menuHeight/2 - 32rpx)`（即 `- 64rpx/2`）。
+
+#### 修复方案
+
+**① 状态栏不透明**（`app.js`）：
+在 `_syncWindowStyle` 中增加 `wx.setNavigationBarColor` 调用：
+```js
+wx.setNavigationBarColor({
+  frontColor: theme === 'dark' ? '#ffffff' : '#000000',
+  backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+})
+```
+
+**② 按钮对齐修正**（5 页面 WXML，`detail` / `favorites` / `history` / `settings` / `about`）：
+```
+// 修正前（错误）
+top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2)
+
+// 修正后（正确 — 按钮高 64rpx，半高 32rpx）
+top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx)
+```
+
+#### 验收标准（AC）
+
+- **AC-009-01**：浅色/深色模式下状态栏均不透明，背景色与页面主题一致（浅色 `#F5F3F0` / 深色 `#000000`）；
+- **AC-009-02**：5 页面（detail/favorites/history/settings/about）返回/Home 按钮与右上角原生胶囊按钮垂直中心对齐（偏差 ≤ 2px）；
+- **AC-009-03**：按钮 top 公式统一为 `calc(menuTop + menuHeight/2 - 32rpx)`，按钮高 64rpx，中心 = 胶囊中心；
+- **AC-009-04**：修复不引入回归（各页面滚动、点击、翻页行为不变）。
+
+#### 影响范围
+
+| 文件 | 修改内容 |
+|---|---|
+| `app.js` | `_syncWindowStyle` 新增 `wx.setNavigationBarColor` |
+| `pages/detail/detail.wxml` | 按钮 top 公式修正 |
+| `pages/favorites/favorites.wxml` | 按钮 top 公式修正 |
+| `pages/history/history.wxml` | 按钮 top 公式修正 |
+| `pages/settings/settings.wxml` | 按钮 top 公式修正 |
+| `pages/about/about.wxml` | 按钮 top 公式修正 |
+| `docs/02-产品设计/D-09-…规范.md` | 按钮公式同步修正 |
+| `docs/05-测试验收/Bug清单模板.md` | 007 验收表公式修正 + 新增 009 |
+
+> — 产品设计师（PD） 2026-08-06 15:30

@@ -1,3 +1,26 @@
+## [2026-08-06 15:30] 📋 新增 · BUG-20260806-009 状态栏不透明 + 按钮胶囊对齐修正（owner 15:24 反馈）| 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：009 提单（台账 + TASK_BOARD + D-09 公式勘误）+ `app.js` + 5 页面 WXML 代码修复
+- 文件：`app.js`、`pages/detail/detail.wxml`、`pages/favorites/favorites.wxml`、`pages/history/history.wxml`、`pages/settings/settings.wxml`、`pages/about/about.wxml`、`docs/02-产品设计/D-09-增量-导航栏内容起始位置规范.md`、`docs/05-测试验收/Bug清单模板.md`、`TASK_BOARD.md`
+
+**问题 ①：状态栏透明**（owner：「当前状态栏是透明的，这样体验很差，应该不透明」）
+- 根因：`app.js` `_syncWindowStyle` 仅调用 `wx.setBackgroundColor`，未调用 `wx.setNavigationBarColor`
+- 修复：新增 `wx.setNavigationBarColor({ frontColor, backgroundColor })`，浅色 `#F5F3F0` / 深色 `#000000`
+- AC-009-01：深浅色模式状态栏均不透明
+
+**问题 ②：按钮胶囊不对齐**（owner：「当前各个页面的返回/home按钮的位置都不对，应该和右上角小程序原生胶囊垂直对齐」）
+- 根因：D-09 v1.2 公式 `calc(menuTop+menuHeight/2-32rpx/2)` 假定按钮高 32rpx，实际 CSS 按钮 `width:64rpx; height:64rpx` → 中心偏差 **16rpx ≈ 8.3px**
+- 修复：公式改为 `calc(menuTop+menuHeight/2-32rpx)`（= `-64rpx/2`）
+- 涉及 5 页面：detail（nav-back）/ favorites+history+settings+about（nav-home）
+- D-09 设计文档同步勘误（3 处公式引用）
+- 007 验收表 AC-D09-02 公式同步修正
+- AC-009-02~04
+
+**影响范围**：`app.js` 1 处 + 5 页面 WXML 各 1 处 = 6 文件代码改动
+
+> — 产品设计师（PD） 2026-08-06 15:30
+
 ## [2026-08-06 15:25] 📋→✅ PD 验收 · BUG-20260806-007 D-09 v1.2 系统级落地 AC 8 项全部通过 | 会话：[产品设计师(PD)]
 
 **提交记录**：

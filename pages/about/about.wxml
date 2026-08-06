@@ -6,7 +6,8 @@
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
     <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch）
          D-09 v1.2: explicit 锚定胶囊中心 -->
-    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2);">
+    <!-- BUG-20260806-009: 按钮高 64rpx，中心对齐胶囊中心 → top = menuTop + menuHeight/2 - 64rpx/2 -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx);">
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">关于一页</view>

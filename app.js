@@ -216,6 +216,14 @@ App({
           textStyle: theme === 'dark' ? 'light' : 'dark',
         })
       }
+      // BUG-20260806-009: 状态栏不透明 — 自定义导航栏模式下 wx.setNavigationBarColor
+      // 控制状态栏背景色，与窗口背景色同步，避免透明状态栏透出杂乱底色
+      if (wx.setNavigationBarColor) {
+        wx.setNavigationBarColor({
+          frontColor: theme === 'dark' ? '#ffffff' : '#000000',
+          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+        })
+      }
     } catch (e) { /* ignore */ }
   },
 
