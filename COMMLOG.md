@@ -1,3 +1,31 @@
+## [2026-08-07 07:40] ⚡ FS-01 拉取数量 5→8 + 定时刷新可观测性增强 | 会话：[全栈开发(FS)]
+
+**触发**：owner 反馈 ① 每次拉取新闻 5 条太少、② 每小时自动触发的新闻刷新似乎不生效。
+
+**改动一：拉取数量 5→8**
+| 文件 | 改动 |
+|------|------|
+| `refreshNews/zhipuSearch.js` | `PER_CATEGORY_COUNT` 5→8（全分类 AI 搜索统一 8 条；健康态 web_search ~5s，DG-11 30s 预算余量充足） |
+| `refreshNews/index.js` | 聚合/天行兜底 `fetchAllJuhe/fetchAllTian` 5→8 |
+| `utils/constants.js` | `MORE_PAGE_SIZE` 5→8（翻底/翻顶每次追加 8 条；MORE_PAGE_LIMIT=3 不变，单次连续拉取总追加 24 条） |
+| `test/v10-regression-fe-c1-bugfix.js` | mock `MORE_PAGE_SIZE` 同步 8 |
+
+**改动二：定时刷新"不生效"排查**
+- **格式确认**：`refreshNews/config.json` 触发器 `0 0 * * * * *`（7 字段 cron：秒 分 时 日 月 周 年）= 每小时整点，格式正确（官方文档确认）。
+- **可观测性增强**（`index.js`）：
+  1. 编排模式入口打印 `getWXContext().SOURCE`（`wx_trigger`=定时器 / `wx_client`=小程序 / `wx_server`=云函数间）——部署后看日志一眼可辨定时器是否触发。
+  2. 定时器健康自检：`system_kv` `ratelimit:lastRefresh` 距今 >2h → 日志警告（正常 ≤1h）。
+  3. worker 模式入口也打印 `SOURCE`。
+
+**排查结论（按概率）**：
+1. **【最可能】定时器在跑，但数据源全故障 → 每轮 0 条新数据 → 列表不变**。证据：此前 22:04/23:04/23:31/23:41 日志全是 AI 引擎全故障（智谱 1301、Qwen 欠费 Arrearage、DeepSeek 超时、聚合 10012 配额耗尽）→ worker 走「三源全失败 → 保留旧缓存」→ 用户看到新闻不更新。**处理：Qwen 充值 + 聚合等配额重置（非代码）**。
+2. **【可能】云端触发器未创建/被删**（部署时未上传触发器是微信云开发常见坑）→ owner 到云开发控制台核对：云函数 → refreshNews → 触发器 → hourlyRefresh。
+3. 【低概率】fire-and-forget worker 未跑（DG-12 手动模式已验证 worker 独立运行写库）。
+
+**待部署**：`refreshNews`（云端安装依赖，含触发器）+ `utils/constants.js` 随小程序发布。
+
+> — 全栈开发（FS） 2026-08-07 07:40
+
 ## [2026-08-06 23:54] ✅ DG-11/DG-12 生产验证通过（23:53 编排器 + tech worker 日志）| 会话：[全栈开发(FS)]
 
 23:53 生产日志确认**异步编排 + 预算收紧全部生效**：

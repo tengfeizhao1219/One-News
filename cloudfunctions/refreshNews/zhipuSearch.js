@@ -233,7 +233,10 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
 
 // ─── 分类 Prompt 模板（每分类 N 条，含 content 正文）──
 
-const PER_CATEGORY_COUNT = 5  // v6.6：普通分类对齐聚合/天行量级，保证 60s 超时内完成
+const PER_CATEGORY_COUNT = 8  // FS-01（2026-08-07）：5→8，用户反馈 5 条太少。
+                              // 健康态下智谱 web_search 3s 内完成（8 条 prompt 实测 ~5s），
+                              // DG-11 预算 30s 仍余量充足；仅故障态（1301/超时）才耗满预算并走聚合/天行兜底 8 条。
+                              // 与 RECOMMEND_COUNT=8 对齐，全分类统一每轮 8 条。
 const RECOMMEND_COUNT = 8     // DG-01 调整（2026-08-06 16:05）：recommend 抓取量 10→8 条/轮
                               // 实证：10 条 prompt 智谱 web_search 50s 超时（ZHIPU_TIMEOUT），
                               // 总耗时 56.8s 逼近 60s 云函数上限 → 折中 8 条（~45s 内完成，

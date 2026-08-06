@@ -324,7 +324,7 @@ async function runCategoryPipeline(category, quotaBaseline) {
       console.warn(`[refreshNews][${category}] JUHE_API_KEY 未配置，跳过聚合`)
     } else {
       try {
-        const r = await fetchAllJuhe([category], 5)
+        const r = await fetchAllJuhe([category], 8)
         if (r.news && r.news.length > 0) {
           news = r.news
           engine = 'juhe'
@@ -345,7 +345,7 @@ async function runCategoryPipeline(category, quotaBaseline) {
       console.warn(`[refreshNews][${category}] TIAN_API_KEY 未配置，跳过天行`)
     } else {
       try {
-        const r = await fetchAllTian([category], 5)
+        const r = await fetchAllTian([category], 8)
         if (r.news && r.news.length > 0) {
           news = r.news
           engine = 'tianxing'
@@ -466,7 +466,8 @@ exports.main = async (event) => {
   // 工人模式：event.category 存在 → 只跑单分类流水线
   if (event && (event.category || event.shard)) {
     const category = event.category
-    console.log(`[refreshNews] ===== 单分类工作模式: ${category} =====`)
+    const wxCtxW = cloud.getWXContext() || {}
+    console.log(`[refreshNews] ===== 单分类工作模式: ${category} =====（SOURCE=${wxCtxW.SOURCE || 'unknown'}）`)
     try {
       const result = await runCategoryPipeline(category, event.quotaBaseline || { zhipuCalls: 0, deepseekCalls: 0 })
       // DG-12：异步编排下 worker 自报当日配额（编排器不再同步等待聚合，
@@ -495,6 +496,11 @@ exports.main = async (event) => {
 
   // ── 编排模式（前端/定时器触发，event 无 category）──
   console.log('[refreshNews] ========== 开始刷新新闻缓存 (v7 拆分架构: 5 分类并行) ==========')
+
+  // FS-01（2026-08-07）：可观测性——打印调用来源，区分「定时器触发」与「小程序手动调用」。
+  // 排查「每小时自动刷新不生效」时，只需看云函数日志里 SOURCE=wx_trigger 的编排记录是否每小时出现。
+  const wxCtx = cloud.getWXContext() || {}
+  console.log(`[refreshNews] 触发来源: SOURCE=${wxCtx.SOURCE || 'unknown'}（wx_trigger=定时器 / wx_client=小程序调用 / wx_server=其他云函数）`)
 
   // ── 手动触发冷却 ──
   const isManual = event && (event.source === 'manual' || event.trigger === 'manual')
@@ -528,6 +534,25 @@ exports.main = async (event) => {
     console.log(`[refreshNews] 当日配额基线: 智谱=${quotaBaseline.zhipuCalls}, DeepSeek=${quotaBaseline.deepseekCalls}`)
   } catch (err) {
     console.warn('[refreshNews] 读取当日配额失败，从 0 计:', err.message)
+  }
+
+  // ── FS-01 定时器健康自检：距上次刷新 > 2h → 每小时定时触发器疑似未生效 ──
+  // 正常情况：定时器每小时触发一次 → lastRefresh 距今 ≤ 1h。
+  // 若 > 2h：触发器可能未在云端创建/被删（部署时未上传触发器是常见坑），
+  // 或定时器触发后数据源全故障导致未更新（后者 worker 日志会有 skipped 标记）。
+  try {
+    const kvRes = await db.collection('system_kv').where({ key: 'ratelimit:lastRefresh' }).get()
+    const lastRefreshAt = (kvRes.data && kvRes.data.length > 0 && kvRes.data[0].value)
+      ? kvRes.data[0].value.lastRefreshAt || 0
+      : 0
+    const sinceH = lastRefreshAt ? ((Date.now() - lastRefreshAt) / 3600000).toFixed(1) : 'N/A'
+    if (!lastRefreshAt || (Date.now() - lastRefreshAt) > 2 * 3600000) {
+      console.warn(`[refreshNews] ⚠️ 定时器健康自检：距上次刷新 ${sinceH} 小时（>2h）。每小时定时触发器疑似未生效 → 请到云开发控制台核对：云函数 → refreshNews → 触发器 → hourlyRefresh 是否存在且启用（部署时未上传触发器是常见坑）`)
+    } else {
+      console.log(`[refreshNews] 定时器健康自检：距上次刷新 ${sinceH} 小时，正常`)
+    }
+  } catch (err) {
+    console.warn('[refreshNews] 定时器健康自检失败（非阻塞）:', err.message)
   }
 
   // ── 异步自扇出（DG-12）：fire-and-forget 触发每分类独立云函数调用 ──

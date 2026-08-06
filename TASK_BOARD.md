@@ -24,6 +24,31 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-07 07:40 【FS-01 拉取数量 5→8 + 定时刷新可观测性增强 · 已实现 · @owner 部署 refreshNews + 前端发布】
+
+> **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布 `utils/constants.js`）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+**一、拉取数量 5→8**（owner 反馈 5 条太少）：
+- `zhipuSearch.js` `PER_CATEGORY_COUNT` 5→8（全分类 AI 搜索统一 8 条，与 recommend 对齐；健康态 web_search ~5s，DG-11 30s 预算余量充足）
+- `index.js` 聚合/天行兜底 `fetchAllJuhe/fetchAllTian` 5→8
+- `utils/constants.js` `MORE_PAGE_SIZE` 5→8（翻底/翻顶每次追加 8 条；MORE_PAGE_LIMIT=3 不变，单次连续拉取总追加 24 条）
+- `test/v10-regression-fe-c1-bugfix.js` mock 同步 8
+
+**二、定时刷新"不生效"排查 + 可观测性增强**（`index.js`）：
+- 编排模式入口打印 `SOURCE`（`wx_trigger`=定时器 / `wx_client`=小程序调用 / `wx_server`=云函数间）——**部署后看日志一眼可辨定时器是否触发**
+- 定时器健康自检：距上次刷新 >2h → 日志警告（正常应 ≤1h）
+- worker 模式入口也打印 `SOURCE`
+- `config.json` 触发器 `0 0 * * * * *`（7 字段 cron，每小时整点）格式已确认正确
+
+**🔍 排查结论（按概率）**：
+1. **【最可能】定时器在跑，但数据源全故障 → 每轮 0 条新数据 → 列表不变**：用户此前 22:04/23:04/23:31/23:41 日志全是 AI 引擎全故障（智谱 1301、Qwen 欠费、DeepSeek 超时、聚合 10012 配额耗尽）。需 **Qwen 充值** + **聚合等配额重置**。
+2. **【可能】云端触发器未创建/被删**（部署未上传触发器是常见坑）→ @owner 到云开发控制台核对：云函数 → refreshNews → 触发器 → hourlyRefresh 是否存在且启用。
+3. 【低概率】fire-and-forget worker 未跑（DG-12 手动模式已验证 worker 独立运行）。
+
+**@owner 核对步骤**：① 部署 refreshNews（含触发器）→ ② 观察 1-2 小时日志：是否有 `SOURCE=wx_trigger` 的编排记录 + 健康自检是否正常 → ③ 云控制台核对触发器 → ④ 若确认数据源故障，Qwen 充值 / 聚合升级。
+
+---
 ### ⚡ 2026-08-06 23:50 【DG-12 刷新改为异步编排 · 已实现 · @owner 部署 refreshNews + 前端发布】
 
 > **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布）、PM（知悉）、所有角色
@@ -3133,6 +3158,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-10** | **AI 摘要长度放宽**（100-150→100-300 字，max_tokens 300→600，门槛 20→30 字，prompt 加「各方反应」） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | owner 反馈 | `cloudfunctions/refreshNews/utils/contentFetcher.js` |
 | **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 tech worker 35.86s，−14.6s） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 | **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 编排器 445ms 返回 async=true；前端发布待 owner 真机） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
+| **FS-01** | **拉取数量 5→8 + 定时刷新可观测性增强**（PER_CATEGORY_COUNT 5→8、聚合/天行 5→8、MORE_PAGE_SIZE 5→8；编排/worker 打印触发 SOURCE + 定时器健康自检 >2h 警告；排查定时刷新不生效：最大嫌疑=数据源全故障，次=云端触发器缺失） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；观察日志 SOURCE=wx_trigger 是否每小时出现） | owner 反馈「5 条太少」+「定时刷新不生效」 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/index.js` + `utils/constants.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
