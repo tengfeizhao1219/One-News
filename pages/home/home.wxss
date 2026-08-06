@@ -329,17 +329,26 @@
 /* ============ 新闻列表 ============ */
 /* 滚动容器：absolute 固定在 body 右侧（left:128rpx 避开滚轮），
    高度由 top:0 / bottom:0 确定（= body 高），不依赖 flex/百分比/height:0，
-   官方文档要求 scroll-view 固定高度 → 此写法高度完全确定。 */
+   官方文档要求 scroll-view 固定高度 → 此写法高度完全确定。
+
+   BUG-20260806-017 (FE): 移除冗余 height:100%。top:0 + bottom:0 已完整锚定高度，
+   同时声明 height:100% 在 scroll-view（微信原生组件）上会干扰其内部宽度计算，
+   导致子节点内容按内容宽度撑开、超出容器右边缘被截断。
+   同步给 .panel-list 显式 width:100%，确保列表占据 panel-scroll 正确宽度。 */
 .panel-scroll {
   position: absolute;
   top: 0;
   left: 128rpx;
   right: 0;
   bottom: 0;
-  height: 100%;
+  box-sizing: border-box;
+  width: auto;
 }
 
 .panel-list {
+  /* BUG-20260806-017 (FE): 显式 width:100% 防止 scroll-view 内部按子内容宽度撑开 */
+  width: 100%;
+  box-sizing: border-box;
   /* 不设 min-height：内容多时自然超高可滚，内容少时完整显示（owner 17:20 裁定） */
 }
 
@@ -366,7 +375,10 @@
    (某些安卓/微信版本仍按 inline 渲染, 不触发自动换行),
    实际表现: 文字一直延伸到容器右边缘被截断, 但不是截到 2 行省略号。
    修复: 改为块级 + word-break 自然换行, 默认不限行数 (owner 接受多行换行
-   而不是被截断), 视觉上更安全。 */
+   而不是被截断), 视觉上更安全。
+
+   BUG-20260806-017 (FE): 同步加 max-width:100% 兜底，确保即使父容器宽度异常，
+   标题也不会按内文宽度溢出 panel-scroll 容器右边缘。 */
 .panel-item-title {
   font-size: 28rpx;
   font-weight: 600;
@@ -375,6 +387,8 @@
   display: block;
   word-break: break-word;
   overflow-wrap: break-word;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* UI-B7 §3.1 v5.3-final: 当前阅读项标题仅主题色高亮 */
