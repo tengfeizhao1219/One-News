@@ -479,8 +479,9 @@ Page({
     var atFirst = this.data.currentIndex <= 0
 
     if (dy < 0 && atLast) {
-      // 已到末尾上滑 → 加载更多
-      this.loadMoreNews()
+      // 已到末尾上滑 → 优先跨分类切到下一分类第一条（BUG-20260806-022）
+      // 若已是最后一个分类 → 回退加载更多（原行为）
+      this._tryNextCategoryOrLoadMore()
     } else if (dy > 0 && atFirst) {
       // 已到开头下滑 → 刷新
       this.refreshCurrentCategory()
@@ -584,6 +585,140 @@ Page({
   },
 
   // ============ 边界加载更多 / 刷新 ============
+
+  /**
+   * BUG-20260806-022 (FE): 当前分类最后一条上滑 → 优先跨分类切到下一分类第一条。
+   * 若已是最后一个分类 → 回退 loadMoreNews()（原加载更多行为）。
+   * 与详情页 reading-engine.loadNextCategory 的顺序保持一致（CATEGORIES 固定顺序）。
+   */
+  _tryNextCategoryOrLoadMore() {
+    const { currentCategory, loadingMore } = this.data
+    if (loadingMore) return
+
+    // 找当前分类在 CATEGORIES 中的顺序位置
+    const curIdx = CATEGORIES.findIndex(c => c.id === currentCategory)
+    const nextCat = curIdx >= 0 && curIdx < CATEGORIES.length - 1 ? CATEGORIES[curIdx + 1] : null
+
+    if (!nextCat) {
+      // 已是最后一个分类 → 回退加载更多
+      this.loadMoreNews()
+      return
+    }
+
+    // 跨分类切换：展示切换 toast（与详情页 _tryNextCategory 一致）
+    this.setData({ loadingMore: true })
+    wx.showToast({ title: '正在阅读：' + nextCat.name, icon: 'none' })
+
+    // 拉取下一分类首页
+    getNewsList({ category: nextCat.id, pageNum: 1, pageSize: PAGE_SIZE })
+      .then(res => {
+        const list = res.list || []
+        if (this._destroyed) return
+        if (list.length === 0) {
+          // 下一分类无数据 → 继续跳过（与详情页 owner 决策②③一致：无数据跳下下分类）
+          this.setData({ loadingMore: false })
+          this._tryNextCategoryFrom(nextCat.id)
+          return
+        }
+        // 更新当前分类 + 列表 + 索引，沿用翻页动画 out-up → in-up
+        this._isAnimating = true
+        this.setData({
+          currentCategory: nextCat.id,
+          panelCategory: nextCat.id,
+          currentPage: 1,
+          loadMoreCount: 0,
+          newsList: list,
+        })
+        // 阶段 1: out-up 旧卡片移出
+        const cards = this.data.cards.map(card => {
+          const next = { ...card }
+          if (card.state === 'active' || card.state === 'below') next.animClass = 'out-up'
+          return next
+        })
+        this.setData({ cards })
+        setTimeout(() => {
+          this.renderCards(list, 0, 'in-up')
+          // 阶段 2a: no-transition 瞬间吸附到 +page-h 屏外
+          const snapped = this.data.cards.map(card => ({ ...card, animClass: (card.animClass || '') + ' no-transition' }))
+          this.setData({ cards: snapped })
+          // 阶段 2b: 下一帧移除，触发从底部上滑入
+          setTimeout(() => {
+            const cleared = this.data.cards.map(card => ({ ...card, animClass: '' }))
+            this.setData({ cards: cleared })
+            this._isAnimating = false
+            this.setData({ loadingMore: false })
+            // 侧栏同步
+            this._syncPanelList(list, 0)
+          }, 30)
+        }, 350)
+      })
+      .catch(err => {
+        if (this._destroyed) return
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
+      })
+  },
+
+  /**
+   * BUG-20260806-022: 跨分类跳过无数据分类后的递归入口（从指定分类继续向后找）
+   * @param {string} fromCatId - 已确认无数据的分类 id（跳过它，从下一分类继续）
+   */
+  _tryNextCategoryFrom(fromCatId) {
+    const fromIdx = CATEGORIES.findIndex(c => c.id === fromCatId)
+    const nextCat = fromIdx >= 0 && fromIdx < CATEGORIES.length - 1 ? CATEGORIES[fromIdx + 1] : null
+    if (!nextCat) {
+      wx.showToast({ title: '已经到底啦', icon: 'none' })
+      return
+    }
+    // 递归：直接以目标分类再走一次跨分类流程
+    this._switchToCategory(nextCat.id, nextCat.name)
+  },
+
+  /**
+   * BUG-20260806-022: 切换到指定分类（供无数据跳过递归复用）
+   */
+  _switchToCategory(catId, catName) {
+    getNewsList({ category: catId, pageNum: 1, pageSize: PAGE_SIZE })
+      .then(res => {
+        const list = res.list || []
+        if (this._destroyed) return
+        if (list.length === 0) {
+          this._tryNextCategoryFrom(catId)
+          return
+        }
+        this._isAnimating = true
+        this.setData({
+          currentCategory: catId,
+          panelCategory: catId,
+          currentPage: 1,
+          loadMoreCount: 0,
+          newsList: list,
+        })
+        const cards = this.data.cards.map(card => {
+          const next = { ...card }
+          if (card.state === 'active' || card.state === 'below') next.animClass = 'out-up'
+          return next
+        })
+        this.setData({ cards })
+        setTimeout(() => {
+          this.renderCards(list, 0, 'in-up')
+          const snapped = this.data.cards.map(card => ({ ...card, animClass: (card.animClass || '') + ' no-transition' }))
+          this.setData({ cards: snapped })
+          setTimeout(() => {
+            const cleared = this.data.cards.map(card => ({ ...card, animClass: '' }))
+            this.setData({ cards: cleared })
+            this._isAnimating = false
+            this.setData({ loadingMore: false })
+            this._syncPanelList(list, 0)
+          }, 30)
+        }, 350)
+      })
+      .catch(err => {
+        if (this._destroyed) return
+        this.setData({ loadingMore: false })
+        wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
+      })
+  },
 
   /**
    * DG-03（方案 5 改动 B）：到达列表末尾继续上滑 -> 加载更多（每次 5 条，最多 3 次）
