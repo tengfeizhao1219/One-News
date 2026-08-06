@@ -128,7 +128,7 @@
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom) + 48rpx);
   box-sizing: border-box;
 }
 
@@ -252,7 +252,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  height: calc(128rpx + env(safe-area-inset-bottom));
+  height: calc(100rpx + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
@@ -266,7 +266,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(128rpx + env(safe-area-inset-bottom));
+  bottom: calc(100rpx + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -304,7 +304,7 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
-  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
+  padding: 14rpx 0;  /* BUG-010: 原 22rpx 过高，降为 14rpx 让底部栏更紧凑；热区 44+14+14=72rpx 仍充足 */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
@@ -325,7 +325,7 @@
 
 .share-btn-reset {
   margin: 0;
-  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
+  padding: 14rpx 0;  /* BUG-010: 与 .bottom-bar-btn 同步降为 14rpx */
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
