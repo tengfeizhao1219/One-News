@@ -296,9 +296,7 @@
   .detail-nav {
     display: flex;
     align-items: center;
-    /* D-09：导航栏与胶囊对齐——顶部 56px 为状态栏+胶囊间隙，导航行高 32px 与胶囊同高 */
-    padding: 56px 28px 0;
-    height: 32px;
+    padding: 56px 28px 16px;
     font-size: 15px;
     font-weight: 600;
     color: var(--text-secondary);
@@ -309,8 +307,7 @@
   }
   .detail-nav:hover { color: var(--text-primary); }
 
-  /* D-09：标题位于导航栏下方 16px（32rpx）呼吸间距（不再紧贴导航栏） */
-  .detail-content { padding: 16px 36px 40px; }
+  .detail-content { padding: 8px 36px 40px; }
 
   .detail-title {
     font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -328,13 +325,15 @@
     gap: 10px;
     font-size: 13px;
     color: var(--text-secondary);
-    /* D-09：正文不再做分割线（owner 2026-08-06 确认），元信息与正文间距承担衔接 */
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     letter-spacing: 0.3px;
   }
 
-  /* D-09：正文区不再渲染分割线（标题/元信息与正文直接衔接） */
-  /* .detail-divider 已移除 */
+  .detail-divider {
+    height: 0.5px;
+    background: var(--divider);
+    margin-bottom: 28px;
+  }
 
   .detail-text {
     font-family: "PingFang SC", "Noto Serif SC", "Songti SC", serif;
@@ -513,7 +512,7 @@ function openDetail(index) {
   const news = newsData[index];
   const page = document.getElementById('detailPage');
   const summaryHTML = news.summary.split('\n').map(p => `<p>${p}</p>`).join('');
-  page.innerHTML = `<div class="detail-nav" id="detailBack">← 返回</div><div class="detail-content"><div class="detail-title">${news.title}</div><div class="detail-meta-row"><span class="category-tag">${news.category}</span><span>${news.source}</span><span>·</span><span>${news.time}</span></div><div class="detail-text">${summaryHTML}</div><div class="detail-back-bottom" id="detailBackBottom">← 返回</div></div>`;
+  page.innerHTML = `<div class="detail-nav" id="detailBack">← 返回</div><div class="detail-content"><div class="detail-title">${news.title}</div><div class="detail-meta-row"><span class="category-tag">${news.category}</span><span>${news.source}</span><span>·</span><span>${news.time}</span></div><div class="detail-divider"></div><div class="detail-text">${summaryHTML}</div><div class="detail-back-bottom" id="detailBackBottom">← 返回</div></div>`;
   page.classList.add('open');
   document.getElementById('detailBack').addEventListener('click', () => page.classList.remove('open'));
   document.getElementById('detailBackBottom').addEventListener('click', () => page.classList.remove('open'));
