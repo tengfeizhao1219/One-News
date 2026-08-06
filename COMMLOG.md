@@ -1,3 +1,25 @@
+## [2026-08-06 22:35] 🛠️ FE 交付 · BUG-20260806-021 详情页底部操作栏再次压缩 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `2821c03`）：
+- owner 反馈：详情页底部操作栏（收藏/分享）位置太高、占用空间大
+- **背景**：此前 FE 两次压缩（128→100→80rpx，commit 7ce391c/4914de0），但另一会话 b7de8be（BUG-20260806-018 修复标题上方空白）基于旧代码把 bar 回退到 128rpx + padding 22rpx，导致压缩丢失
+- **本次修复**（恢复紧凑尺寸 + 同步缩小内部元素）：
+  - `.detail-bottom-bar` height: `128rpx` → **`80rpx`**（-37.5%）
+  - `.bottom-bar-btn` / `.share-btn-reset` padding: `22rpx` → **`8rpx`**
+  - 图标 font-size/尺寸: `44rpx` → **`40rpx`**
+  - label 字号: `22rpx` → **`20rpx`**
+  - `.fixed-swipe-hint` bottom: `128rpx` → `80rpx`
+  - `.content` padding-bottom: `128rpx` → `80rpx`
+  - 内容(40+4+20+16=80rpx)恰好放满 bar，不溢出
+
+**范围**：仅 `pages/detail/detail.wxss`，其他页面不动。
+
+**回归**：v7 架构全绿 ✅；v13 唯一失败项为 c621794 wheel-scale-active（另一会话改动，与本次无关）。
+
+**交接**：**@owner** 真机体验详情页底部操作栏是否紧凑合适。
+
+> — 小程序前端开发（FE） 2026-08-06 22:35
+
 ## [2026-08-06 21:05] 🛠️ FE 交付 · BUG-20260806-020 收藏/历史页三合一优化 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `5344f72`）：
