@@ -1,3 +1,29 @@
+## [2026-08-06 11:58] 📋 PD 处理 · owner 11:58 反馈：D-09 升级 v1.2 收紧（进度条 12px 呼吸 + 标题 12rpx 紧凑 + 条带仅下扩展） | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：D-09 v1.2 收紧 + 展示页 v1.2 + 画廊 desc 同步
+- 文件：`docs/02-产品设计/D-09-增量-导航栏内容起始位置规范.md`（v1.1 → v1.2）、`docs/showcase/d09-nav-content-spacing.html`（v1.2）、`docs/index.html`（画廊 desc）
+
+**owner 反馈 11:58**（看 v1.1 截图）：
+1. demo 上进度条与胶囊紧贴，甚至有重叠；
+2. 正文和导航栏中间的空间太大了，造成比较多空间浪费。
+- 答：是 **设计问题**（v1.1 设的 6px 进度条呼吸视觉太近 + 16px 标题呼吸偏大），不是 demo bug。demo 准确反映了 v1.1 规范。
+
+**D-09 v1.2 已落地**：
+1. **进度条与胶囊呼吸 6px → 12px**：视觉清晰，不再贴/重叠；
+2. **条带策略变更**：上下对称各 6px → **仅向下扩展 12px**（上无呼吸，胶囊顶部与条带顶部对齐）；
+3. **按钮 explicit 锚定胶囊中心**：`top = menuTop + menuHeight/2 - 16px`（不依赖条带对称中心，FE 实现简单）；
+4. **标题距导航栏 32rpx → 12rpx**：紧凑，去空间浪费；
+5. **列表页/次级页 16rpx → 8rpx**：紧凑；
+6. 导航条带公式：top=menuTop, height=calc(menuHeight+24rpx)；nav-offset=menuTop+menuHeight+12px；
+7. **截图验证**（Chromium headless）：进度条距胶囊 12px 清晰、标题距 nav 紧凑、按钮位置锚定胶囊中心 ✅。
+
+**链接**：[tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html](https://tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html)（v1.2 已上线）
+
+**等 owner 确认 6 项**：① 进度条呼吸 12px ② 条带仅下扩展 ③ detail 标题 12rpx ④ 列表 8rpx ⑤ 进度条无底槽 ⑥ 正文无分割线保留。
+
+---
+
 ## [2026-08-06 11:40] 📋 PD 处理 · owner 11:37/11:38 反馈：D-09 升级 v1.1 系统级（导航呼吸 + 进度条同色 + 6 页面统一） | 会话：[产品设计师(PD)]
 
 **提交记录**：
