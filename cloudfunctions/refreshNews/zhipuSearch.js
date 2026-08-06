@@ -202,7 +202,7 @@ function buildPrompt(categoryName, sources, count) {
 2. 每条新闻输出为 JSON 对象，包含以下字段：
    - title: 新闻标题（字符串，不超过50字）
    - summary: 新闻摘要（字符串，80-150字，概括核心）
-   - content: 新闻正文（字符串，300-500字，完整叙述事件背景、经过、影响，分段用\\n分隔）
+   - content: 新闻正文（字符串，500-800字，尽量完整叙述事件背景、经过、影响、各方反应，分段用\\n分隔）
    - source: 来源（必须是上述新闻源之一）
    - url: 原文链接（真实网页 URL，以 http/https 开头）
 3. 所有${n}条放在一个 JSON 数组中返回
@@ -299,7 +299,7 @@ async function searchWithZhipu(category) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用 web_search 工具从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（300-500字完整正文）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻搜索助手。使用 web_search 工具从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
       },
       { role: 'user', content: prompt }
     ],
@@ -311,7 +311,7 @@ async function searchWithZhipu(category) {
       }
     }],
     temperature: 0.1,
-    max_tokens: 8000,
+    max_tokens: 12000,
   })
 
   let lastErr = null
@@ -368,13 +368,13 @@ async function searchWithDeepSeek(category) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（300-500字完整正文）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
       },
       { role: 'user', content: prompt }
     ],
     enable_search: true,
     temperature: 0.1,
-    max_tokens: 8000,
+    max_tokens: 12000,
   })
 
   let lastErr = null

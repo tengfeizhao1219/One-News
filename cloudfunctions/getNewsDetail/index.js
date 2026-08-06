@@ -499,8 +499,10 @@ exports.main = async (event) => {
   const { doc, collection } = found
   console.log(`[getNewsDetail] 命中集合: ${collection}, id=${doc._id}`)
 
-  // ── 第 2 步：如果已有 content（已抓取过），直接返回 ──
-  if (doc.content && doc.content.trim().length > 30) {
+  // ── 第 2 步：如果已有足够长的 content，直接返回 ──
+  // DG-03（owner 16:24 诉求「尽量返回原文」）：阈值 30 → 200 字——
+  // content 过短（如旧数据/抓取失败回退的摘要）时继续第 3 步尝试抓 sourceUrl 原文
+  if (doc.content && doc.content.trim().length > 200) {
     console.log(`[getNewsDetail] 命中缓存 content (${doc.content.length} 字符)`)
 
     // 阅读数+1（非阻塞）

@@ -18,6 +18,9 @@ const FETCH_TIMEOUT_MS = 6000
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 // B-14: 单条 enrich 总超时兜底（12s）——网页抓取 + AI 摘要合计不超过此值，防拖慢 worker 池/首屏
 const ITEM_TIMEOUT_MS = 12000
+// DG-03（owner 16:24 诉求「尽量返回原文」）：智谱源原文优先尝试参数
+const FETCH_TRY_MS = 6000          // 原文抓取短超时（6s，防拖慢智谱源刷新）
+const FETCH_TRY_THRESHOLD = 800    // AI 生成正文 < 800 字才尝试抓原文（长的已够用，省时）
 
 // 浏览器 UA（避免反爬）
 const BROWSER_UA =
@@ -430,14 +433,30 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
       const idx = cursor++
       const item = newsList[idx]
       try {
-        // 1. 抓正文（skipFetch 为 true 时跳过，使用已有的 content）
-        // B-14: 单条超时兜底（12s）——防止单条慢请求卡死 worker 池
-        const content = skipFetch
-          ? (item.content || '')
-          : await Promise.race([
+        // 1. 抓正文
+        // DG-03 增强（owner 16:24 诉求「尽量返回原文」）：
+        //   - skipFetch=true（智谱源）：AI 生成正文 < 800 字时，并行尝试抓 sourceUrl 原文
+        //     （短超时 FETCH_TRY_MS=6s）；抓到更长原文（≥200 字）→ 覆盖；失败/超时/更短 → 保留 AI 正文（零损失）
+        //   - skipFetch=false（聚合/天行源）：原有网页抓取（12s 超时）
+        let content
+        if (skipFetch) {
+          const aiContent = item.content || ''
+          content = aiContent
+          if (item.sourceUrl && aiContent.length < FETCH_TRY_THRESHOLD) {
+            const fetched = await Promise.race([
               fetchContentForItem(item),
-              new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
+              new Promise(resolve => setTimeout(() => resolve(''), FETCH_TRY_MS)),
             ])
+            if (fetched && fetched.length >= 200 && fetched.length > aiContent.length) {
+              content = fetched
+            }
+          }
+        } else {
+          content = await Promise.race([
+            fetchContentForItem(item),
+            new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
+          ])
+        }
         const enriched = { ...item, content }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）
