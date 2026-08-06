@@ -25,13 +25,16 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
-const ZHIPU_TIMEOUT = 20000  // DG-04（2026-08-06 22:5x）：50s→40s→20s。智谱 web_search 成功多在 3s 内，
-                             // 40s 多为无效超时（浪费预算）；20s 既保覆盖又给降级链留余量
-const QWEN_SEARCH_TIMEOUT = 15000   // DG-04：Qwen 降级搜索超时（账户欠费会 <1s 快速 400，正常联网 ~10s）
-const DEEPSEEK_SEARCH_TIMEOUT = 15000 // DG-04：DeepSeek 降级搜索超时（当前 402/超时基本不可用，短超时避免拖垮预算）
-// DG-04：单分类 AI 搜索阶段「硬预算」——无论几级引擎，搜索总耗时不得超过此值，
-// 超出立即转聚合/天行兜底，确保整函数 60s 内必有写入（根治 17:03 life 整函数 60s 超时 0 写入）
-const SEARCH_PHASE_BUDGET_MS = 40000
+const ZHIPU_TIMEOUT = 15000  // DG-11（2026-08-06 23:3x）：20s→15s。智谱 web_search 成功多在 3s 内，
+                             // 三连日志（22:04/23:04/23:31）均为 1301 或 20s 超时——15s 仍远超健康耗时，
+                             // 全引擎故障时少白耗 5s/分类
+const QWEN_SEARCH_TIMEOUT = 12000   // DG-11：15s→12s。正常联网 ~10s，故障超时（23:31 实测 15s 白耗）压缩到 12s
+const DEEPSEEK_SEARCH_TIMEOUT = 10000 // DG-11：15s→10s。DeepSeek 当前 402/超时基本不可用，短超时避免拖垮预算
+// DG-04+DG-11：单分类 AI 搜索阶段「硬预算」——无论几级引擎，搜索总耗时不得超过此值，
+// 超出立即转聚合/天行兜底，确保整函数 60s 内必有写入（根治 17:03 life 整函数 60s 超时 0 写入）。
+// DG-11：40s→30s。三连日志实证全引擎故障时串行耗满 40s，enrich 仅剩 ~13s（距 55s 硬期限 1.15s）；
+// 30s 上限 + 单引擎收紧后最坏 30s 搜索 → enrich 窗口 ~23s，总耗时 ~46s，余量 14s。
+const SEARCH_PHASE_BUDGET_MS = 30000
 
 // ─── DeepSeek API 配置（降级）──────────────────────
 
