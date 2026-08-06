@@ -3131,8 +3131,8 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-08** | **详情页性能优化**（AI 摘要移出 getNewsDetail 关键路径 + 预取只向后+2/入口延迟400ms + localCache TTL 24h + refreshNews enrich 硬期限保正文） | **全栈开发（FS）** | ✅ 已完成待部署（`054cc85` + P0-2 `415bccb`，待 owner 部署 getNewsDetail/refreshNews + 真机复测） | DG-02 | `cloudfunctions/getNewsDetail/index.js` + `pages/detail/reading-engine.js` + `cloudfunctions/refreshNews/{index.js,utils/contentFetcher.js}` |
 | **DG-09** | **搜索阶段确定性失败短路**（1301 内容安全/账户欠费终态错误 → 跳过后续 AI 引擎直转聚合/天行，省 15~25s/刷新；另修复 juhe 10012 配额耗尽的 null 崩溃） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews 后观察耗时 ≤35s） | DG-08 日志复盘 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/sources/juhe.js` |
 | **DG-10** | **AI 摘要长度放宽**（100-150→100-300 字，max_tokens 300→600，门槛 20→30 字，prompt 加「各方反应」） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | owner 反馈 | `cloudfunctions/refreshNews/utils/contentFetcher.js` |
-| **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
-| **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews + 小程序发布） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
+| **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 tech worker 35.86s，−14.6s） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
+| **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 编排器 445ms 返回 async=true；前端发布待 owner 真机） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
