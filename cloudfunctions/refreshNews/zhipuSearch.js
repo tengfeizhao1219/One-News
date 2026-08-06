@@ -25,7 +25,10 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
-const ZHIPU_TIMEOUT = 50000  // v7：单分类隔离后可独占 60s 预算；50s 上限留出写库/清理余量，超时才降级聚合/天行
+const ZHIPU_TIMEOUT = 40000  // DG-01 调整（2026-08-06 16:18）：50s→40s
+                             // 实证：50s 超时 + 60s 云函数上限 = 降级链无余量（16:14 life 60s 强杀）
+                             // 40s：5 条 prompt 实测 35-38s 可完成；超时后降级链（juhe/tianxing+摘要）~20s 内兜住
+                             // 代价：recommend 8 条可能超时降级（聚合 5 条兜底，不断供），可接受
 
 // ─── DeepSeek API 配置（降级）──────────────────────
 

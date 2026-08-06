@@ -116,6 +116,10 @@ async function fetchJuheNewsList(category, pageSize = 10) {
             // 10012 = 超过每日可允许请求次数（免费版配额耗尽）
             if (Number(result.error_code) === 10012) {
               console.warn(`[juhe] ⚠️ ${category} 聚合API免费额度已用完（每日请求次数上限），请等待次日重置或升级套餐`)
+              // DG-01（2026-08-06 16:18）：配额耗尽重试无意义（10012 当日不可恢复），
+              // 返回 null 标记「配额耗尽不重试」→ fetchAllCategories 直接放弃，省降级链时间
+              resolve(null)
+              return
             }
             resolve([])
             return
@@ -208,6 +212,8 @@ async function fetchAllCategories(categories, perCategory = 10) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
           try {
             rawList = await fetchJuheNewsList(category, perCategory)
+            // DG-01（2026-08-06 16:18）：null = 配额耗尽（10012 当日不可恢复），放弃不重试
+            if (rawList === null) break
             if (rawList.length > 0) break
             // 空结果也重试（可能是临时限流）
             console.warn(`[juhe] ${category} 第 ${attempt + 1} 次返回 0 条，${attempt < maxRetries - 1 ? '重试' : '放弃'}`)

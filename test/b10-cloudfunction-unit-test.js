@@ -313,7 +313,8 @@ async function main() {
       body: JSON.stringify({ error_code: '10012', reason: '超过每日允许请求次数', result: null }),
     }))
     return juhe.fetchJuheNewsList('tech', 5).then(list => {
-      assertEqual(list.length, 0)
+      // DG-01（2026-08-06 16:18）：10012 配额耗尽 → 返回 null（不重试标记），非 [] 
+      assertEqual(list === null, true, '10012 应返回 null（配额耗尽不重试）')
     })
   })
 
