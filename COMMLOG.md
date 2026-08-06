@@ -1,3 +1,24 @@
+## [2026-08-06 16:59] ✅→🔄 PD 验收 · 009 v3 + 008 基于 origin/main(bfc78ad) 代码级通过，待 owner 真机复验 | 会话：[产品设计师(PD)]
+
+**验收范围**：owner 16:59「验收」——对 009 状态栏+按钮、008 侧边栏上移执行代码级验收（非真机）。基准为远端 `origin/main`（`bfc78ad`；owner 16:24 后已推进「侧边栏面板整体滑动 v3 / 通义千问 / 正文返回原文」，已含 009 v3 并系统性重写 008）。
+
+**BUG-20260806-009 v3 · 已被 origin/main 完整吸收 · 代码级通过**
+- AC-009-01 ✅：6 页面 WXML 顶部均含 `.status-bar-fill`（height={{statusBarHeight}}px，主题背景色）覆盖状态栏，滚动内容不透出。
+- AC-009-02 ✅：6 页面 `.nav-bar`/`.fixed-top-bar` 均补 `background-color`（detail/favorites/history=`--bg-card`；settings/about/home=`--bg-page`）。
+- AC-009-03 ✅：6 页面按钮 top 公式均为 `calc({{menuHeight}}px / 2 - 32rpx)`，去 menuTop，数学对齐胶囊中心（按钮高 64rpx，半高 32rpx）。
+- AC-009-04 ✅：无回归——6 页面 JS 均注入 `statusBarHeight`；app.js 兜底 `setNavBarColor` 保留；层级 `.status-bar-fill` z-index:21 低于 nav-bar:22、高于内容 1~20，合理。
+
+**BUG-20260806-008 · 侧边栏上移 · origin/main「面板整体滑动 v3」系统性达成 · 代码级通过**
+- owner 16:09 诉求：侧边分类上移、选中固定位（第2行）上方仅留 1 个分类名空间。
+- main 实现：`.panel-wheel` `position:absolute; top:180rpx`（≈ header 下缘，header padding 100rpx+文字+28rpx）；整个 `panel-list` 可滚动（min-height:100vh+400rpx）；选中项由 `category-wheel` 锚定视觉第2行。
+- 验证：wheel 顶部=header 下缘 → 第1个分类名紧邻 header 下方，选中项（第2行）上方仅第1行 → 达成诉求。
+- 保留 008② 触摸热区优化（`.wheel-item` padding-right:32rpx）与选中锚定逻辑；无回归。
+- 注：PD 本地 v2.7（`d199fd2` flex-start+padding8rpx）已被 main 的 absolute 重写取代，语义一致且更彻底。
+
+**结论**：PD 代码级验收通过（基准 origin/main `bfc78ad`）。⚠️ 因 v1/v2 真机均失败，本次**仍不判定最终关闭**，状态置「PD 代码级通过，待 owner 真机复验」。请 owner `git pull`（main=`bfc78ad`）重新编译，真机复验 009/008，并一并回归 007（D-09 系统级）与 008 三优化。
+
+> — 产品设计师（PD） 2026-08-06 16:59
+
 ## [2026-08-06 16:20] 🔄 BUG-20260806-009 v3 · 状态栏背景层方案（owner 16:16 复验「状态栏还是透明」）| 会话：[产品设计师(PD)]
 
 **关键认知修正**：`wx.setNavigationBarColor` 在 `navigationStyle: custom` 模式下**无效**——该 API 控制的是原生导航栏，custom 模式已隐藏原生导航栏，API 被忽略。v1/v2 方案（app.js + 页面 onLoad 调用）全部失效，owner 真机复验证实。

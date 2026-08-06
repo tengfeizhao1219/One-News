@@ -2863,8 +2863,8 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | BUG-20260806-005 追修 | 滚轮选中态去背景高亮（仅保留淡蓝字体）| FE | 🟡 | ✅ 已交付（`9bb5b60`）| PD `33c4166` ✅ | 选中项淡蓝字体，**无背景高亮**；触摸放大/锚点/项数不变 · 待 owner 真机确认 |
 | BUG-20260806-006 | 收藏后收藏列表不显示新条目（LocalCache 多实例 stale read）| FE | 🔴 | ✅ **关闭（owner 真机验收通过 · 13:22）**| FE `5b87b1d` ✅ + PD 代码级 ✅ | **方案 1 全局单例**：detail/favorites/history 统一 `localCache` 单例；单例容量 200→500；收藏→列表立即出现 / 取消→立即消失 / 浏览历史同源生效，均真机验证通过 |
 | BUG-20260806-007 | D-09 v1.2 系统级落地：导航条带胶囊呼吸（仅下扩 12px）+ 按钮锚定胶囊中心 + 内容起始位置（detail 12rpx / 列表 8rpx）+ 进度条无底槽 | FE | 🔴 | 🔄 待验证（PD AC 8 项通过 15:25）| D-09 v1.2（owner 13:09 确认）| 6 页面统一实施；PD 代码级通过，待 owner 真机回归 UAT-03 |
-| BUG-20260806-008 | 滚轮交互三优化（owner 15:12）：①选中锚点修正恒第2行不贴顶 ②触摸热区全条带 ③拖动连续跟手+snap；**v2.7 追修（16:09）：wheel 面板内顶部对齐，选中固定位上方仅 1 个分类名空间** | FE | 🔴 | 🔄 待验证（FE 16:00 交付三优化；v2.7 PD 16:15 已修，待 owner 真机复验）| D-02 v2.6（AC-RQ15-18/19/20）+ v2.7（AC-v2.7）| PD 按 AC 验收 + owner 真机 |
-| BUG-20260806-009 | 状态栏不透明 + 按钮胶囊对齐修正（owner 15:24）：①app.js `_syncWindowStyle` 加 `wx.setNavigationBarColor` ②5 页面按钮 top 公式 `-32rpx/2`→`-32rpx` | FE | 🟡 | 📋 新建（PD 15:30 提单）| D-09 v1.2 按钮公式勘误 | PD 按 AC 4 项验收 + owner 真机 |
+| BUG-20260806-008 | 滚轮交互三优化（owner 15:12）：①选中锚点修正恒第2行不贴顶 ②触摸热区全条带 ③拖动连续跟手+snap；**16:09 诉求：侧边分类上移、选中固定位上方仅 1 个分类名空间 → main「侧边栏面板整体滑动 v3」`.panel-wheel` absolute(top:180rpx=header 下缘) 系统性达成**（取代 v2.7 flex 顶部对齐，语义一致更彻底，保留 008② 热区 padding-right:32rpx）| FE | 🔴 | ✅ **PD 代码级验收通过（origin/main `bfc78ad`），待 owner 真机复验** | D-02 v2.6（AC-RQ15-18/19/20）+ v3 面板滑动 | PD 按 AC 验收通过 + owner 真机 |
+| BUG-20260806-009 | 状态栏不透明 + 按钮胶囊对齐（owner 15:24）：v1 `setNavigationBarColor` 无效→v2 页面级调用仍无效→**v3 状态栏背景层方案**（`.status-bar-fill` 固定层 + nav-bar 补背景色 + 按钮公式 `menuHeight/2-32rpx` 去 menuTop）；**已被 origin/main 完整吸收（6 页面全含）** | FE | 🟡 | ✅ **PD 代码级验收通过（origin/main `bfc78ad`，AC-009-01~04 全过），待 owner 真机复验** | D-09 v1.2 按钮公式勘误 + v3 背景层 | PD 按 AC-009-01~04 验收通过 + owner 真机 |
 
 > **关联**：001/002/003 关闭 → PD 更新 Bug 台账状态；D-07 三态通过 → D-07 正式闭环（PD 走查底稿 §十二）。
 > **PD 代建说明**：任务表由 PM 维护，本次为 owner 要求即时建行，PM 可复核调整。
