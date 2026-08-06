@@ -228,11 +228,18 @@
   transform: translateX(0);
 }
 
-/* owner 2026-08-06 16:33: 面板整体滚动容器 —— 包裹 panel-header + panel-body，
-   面板内任意位置滑动均可驱动列表滚动（除滚轮区域由 catchtouchmove 独立接管） */
+/* owner 2026-08-06 16:33 + 16:59 追修：面板整体滚动容器。
+   滚动区 = panel-header + panel-list 整体，任意位置滑动均可驱动列表滚动。
+   position:absolute 铺满（高度确定，规避 flex 子项 scroll-view 高度不可靠问题） */
 .panel-scroll {
-  flex: 1;
-  min-height: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* 内容避开左侧滚轮区域（128rpx 滚轮 + 32rpx 触摸热区） */
+  padding-left: 160rpx;
+  box-sizing: border-box;
   height: 100%;
 }
 
@@ -261,28 +268,24 @@
   text-overflow: ellipsis;
 }
 
-/* UI-B7: 面板主体 = 左侧滚轮 + 右侧列表
-   在 scroll-view 内，panel-body 不限制高度（由内容撑开），保证列表完整渲染 */
-.panel-body {
-  display: flex;
-}
-
+/* 左侧滚轮：absolute 固定在面板左侧（header 下缘），不随列表滚动。
+   z-index 高于滚动内容，catch 触摸独立接管，不与外层滚动冲突 */
 .panel-wheel {
-  flex-shrink: 0;
+  position: absolute;
+  top: 180rpx;   /* header 高度 ≈ 100rpx padding + 文字 + 28rpx padding */
+  left: 0;
   width: 128rpx;
-  /* BUG-20260806-009 追修（owner 16:09）：wheel 从垂直居中改为顶部对齐——
-     选中固定位（第 2 行）上方只保留第 1 行一个分类名空间，不再留大片空白 */
-  padding: 8rpx 0;
+  z-index: 5;
   border-right: 1rpx solid var(--divider);
   display: flex;
-  align-items: flex-start;
   justify-content: center;
 }
 
 /* ============ 新闻列表 ============ */
 .panel-list {
-  flex: 1;
-  /* 外层 panel-scroll 已提供滚动能力，panel-list 作为普通 view 不再需要 overflow/min-height */
+  /* 撑满视口：保证内容恒超滚动视口 → 列表短时也可滚动
+     （滚动距离 ≥ header 高度，滑动有明确反馈）；长列表自然超出 */
+  min-height: 100vh;
 }
 
 /* UI-B7 §3.1 v5.3-final: 行距收窄，padding 8px 16px */
