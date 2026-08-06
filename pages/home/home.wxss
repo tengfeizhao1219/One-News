@@ -11,11 +11,23 @@
 /* ========== 固定顶部栏（与胶囊对齐 · BUG-20260806-004） ==========
    原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）；
    fixed-top-bar 保留为空占位（pointer-events:none 不拦截卡片滑动手势） */
+/* BUG-20260806-011 (FE): 状态栏填充层用 position:fixed 真正贴顶（之前 inline 只有 background-color，
+   没有 position，会被 .page 文档流推下来，导致顶部 0~statusBarHeight 区域出现"空隙"
+   看起来是状态栏与下方条带分离）。z-index:16 在 .fixed-top-bar(15) 之上无关紧要，
+   但保持递增清晰递增 */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 16;
+}
 .fixed-top-bar {
-  position: absolute;
+  position: fixed;
   left: 0;
   width: 100%;
-  z-index: 15;
+  z-index: 17;
   pointer-events: none;
 }
 

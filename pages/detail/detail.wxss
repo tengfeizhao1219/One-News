@@ -10,10 +10,25 @@
 
 /* ============ 顶部导航栏（D-09 v1.2 · BUG-20260806-007） ============ */
 
+/* BUG-20260806-011 (FE): 详情页状态栏填充层用 position:fixed 真正贴顶。
+   之前 inline 只有 background-color + height，没有 position 声明，
+   → 被 .page (display:flex/column) 当成 flex item 推下来，导致
+   顶部 0~statusBarHeight 区域出现"空隙"（绿色标记区域显示下层内容）。
+   z-index:21 在 .nav-bar(22) 之下无关紧要，但本层只覆盖状态栏，draw order 正确即可 */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 21;
+}
+
 .nav-bar {
   position: fixed;
   left: 0;
   right: 0;
+  top: 0;  /* BUG-20260806-011 v2: 显式 top:0 由 wxml inline 覆盖为 menuTop，补齐完整定位 */
   z-index: 22;
   display: flex;
   align-items: center;
