@@ -9,26 +9,26 @@
 .wheel {
   position: relative;
   overflow: hidden;
-  /* BUG-20260806-017 (FE): 由 width:128rpx + box-sizing:content-box 改为 width:100% + box-sizing:border-box。
-     之前 content-box + width:128rpx + padding-right:112rpx 实际渲染宽度 = 240rpx（128 内容 + 112 padding），
-     配合负 margin-right:-112rpx 仍是 240rpx 几何面积，侵入 .panel-scroll 区域被截断。
-     改为 box-sizing:border-box + width:100% 后，width 包含 padding，总宽度 = 128rpx（=外层 .panel-wheel 宽度），
-     padding-right 仍保留作为触摸热区扩展（可点击）但不增加视觉/几何宽度。 */
-  width: 100%;
-  /* BUG-20260806-013 v2 (FE): 撑满父容器（父 .panel-wheel 高度=panel-body 高度），
-     触摸热区覆盖整个面板左侧，分类下方空白也能上下滑动切换分类。
-     013 v1 曾用 align-items:center 垂直居中，owner 裁定分类列应贴顶对齐
-     （侧边栏从头部开始，不要悬浮中间）→ v2 改 align-items:flex-start。
-     height:100% 保留 = 触摸热区仍覆盖全部空白。 */
+  width: 128rpx;
+  /* BUG-20260806-018 (FE): 真正的修复方案。
+     - 视觉宽度 128rpx（content-box 下 width=128rpx 是不含 padding 的内容宽度）
+     - 触摸热区扩展到 240rpx（=128rpx 内容 + 112rpx padding-right）
+     - box-sizing:content-box 让 padding 在 width 之外 → 几何宽度 = 240rpx
+     - 父 .panel-wheel overflow:hidden 裁掉 128rpx 之外的视觉外溢
+     - .wheel-list / .wheel-item 显式 width:128rpx 防止按父 .wheel 几何宽度 240rpx 撑开
+     - .wheel-list margin-right:-112rpx + .panel-wheel overflow:hidden 配合下，
+       文字内容 128rpx 严格显示在视觉 128rpx 内，"推荐"两个字完整可见
+     - 触摸热区在 .wheel 元素边界 240rpx 处仍生效（catch 事件触发在元素几何边界） */
   height: 100%;
   display: flex;
   align-items: flex-start;
   /* BUG-20260806-008②（AC-RQ15-19）+ BUG-20260806-010②（owner 18:34）: 触摸热区外扩 ——
-     视觉宽度不变（box-sizing:border-box + padding 在 width 内），但触摸命中区域向右扩展 112rpx（128+112=240rpx，
-     覆盖面板左 ~64%），空白/行间隙均可滚动；.panel-scroll left:128rpx 不变（视觉滚轮仍 128rpx） */
+     视觉宽度 128rpx（box-sizing:content-box 下 width 不含 padding），
+     但触摸命中区域向右扩展 112rpx（128+112=240rpx，覆盖面板左 ~64%），
+     空白/行间隙均可滚动；.panel-scroll left:128rpx 不变（视觉滚轮仍 128rpx） */
   padding-right: 112rpx;
   margin-right: -112rpx;
-  box-sizing: border-box;
+  box-sizing: content-box;
   opacity: var(--wheel-opacity-idle, 0.35);          /* idle 默认态 */
   transition: opacity 300ms ease-out;
 }
@@ -37,18 +37,24 @@
   opacity: var(--wheel-opacity-active, 0.92);        /* active 激活态 */
 }
 
-/* 列表整体（高度由内部 item 自然撑开；flex-start 贴顶，与标题/侧边栏头部对齐） */
+/* 列表整体（高度由内部 item 自然撑开；flex-start 贴顶，与标题/侧边栏头部对齐）
+   BUG-20260806-018 (FE): 显式 width:128rpx + flex-shrink:0 防止被 .wheel 几何宽度 240rpx 撑开
+   （content-box + padding-right 扩展），确保文字内容在视觉 128rpx 内不被拉伸。 */
 .wheel-list {
-  width: 100%;
+  width: 128rpx;
+  flex-shrink: 0;
+  margin-right: -112rpx;  /* 与 .wheel margin-right 一致，配合父 overflow:hidden */
   will-change: transform;
 }
 
-/* 单项 */
+/* 单项
+   BUG-20260806-018 (FE): 显式 width:128rpx 同上 */
 .wheel-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: 128rpx;
+  flex-shrink: 0;
 }
 
 .wheel-label {

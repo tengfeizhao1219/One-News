@@ -313,6 +313,11 @@
 }
 
 /* 左侧滚轮：absolute 固定在 body 左侧，高度铺满 body，catch 触摸独立接管 */
+/* BUG-20260806-018 (FE): 加 overflow:hidden 裁掉 .wheel 内部 112rpx padding-right 视觉外溢。
+   .wheel 用 box-sizing:content-box + width:128rpx + padding-right:112rpx 实际几何宽度 = 240rpx，
+   触摸热区扩展到 240rpx；父 .panel-wheel width:128rpx + overflow:hidden 让视觉仍只显示 128rpx。
+   .wheel-list / .wheel-item 在组件 wxss 中显式 width:128rpx（见 category-wheel.wxss），
+   防止被 .wheel 几何宽度 240rpx 撑开，文字仍显示在 128rpx 视觉区域内。 */
 .panel-wheel {
   position: absolute;
   top: 0;
@@ -324,6 +329,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
+  overflow: hidden;
 }
 
 /* ============ 新闻列表 ============ */
