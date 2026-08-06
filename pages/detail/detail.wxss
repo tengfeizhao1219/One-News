@@ -110,18 +110,24 @@
    脱离了文档流（不占空间），导致 .content 用 flex:1 占据从 top:0 开始的全部高度；
    而 scroll-view 内部没有 padding-top，所以正文从屏幕顶端 0px 开始渲染，
    与 status-bar-fill 和 nav-bar 视觉重叠——这就是用户看到的"状态栏区域显示正文内容"。
-   修复：使用已有的 CSS 变量 --nav-offset（= menuTop + menuHeight + 12）
-   给 .content 加 padding-top，把内部内容推到 nav-bar 下方。
-   padding-top 在 scroll-view 内生效（enhanced 模式也支持），作为不破坏
-   position:fixed 状态栏/nav-bar 的最小风险修复。 */
+
+   修复方案选择 absolute 定位（不用 padding-top）：
+   - padding-top 方案：scroll-view 滚到最顶时内容上沿停在 nav-offset 处，
+     但 scroll-view 容器仍然从屏幕 0px 开始，**幕布感仍有"错位"**，且不同平台
+     enhanced 模式对 padding 行为不一致。
+   - absolute 定位方案：scroll-view 容器本身就在 nav-bar 下方，**任何滚动
+     状态都不会与 nav-bar 视觉重叠**，最稳。 */
 .content {
-  flex: 1;
+  /* BUG-20260806-012: 绝对定位占据 nav-bar 下方全部区域 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--nav-offset, 88px);
+  bottom: 0;
   /* BUG-FE-20260805-002 全局排查：统一滚动容器规范（min-height:0），防止 flex
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  /* BUG-20260806-012: scroll-view 起跳位置 = nav-bar 底部 + 12rpx 下呼吸 */
-  padding-top: var(--nav-offset, 0px);
   padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
   box-sizing: border-box;
 }
