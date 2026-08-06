@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>侧边新闻列表页面 · 详细设计 Demo（D-10）</title>
+<title>侧边新闻列表页面 · 详细设计 Demo（D-10）· 首页保持现状</title>
 <style>
   :root { --bg-page:#F5F3F0; --bg-card:#FAF9F7; --text-primary:#1C1C1E; --text-secondary:#6B6B70;
-    --text-tertiary:#8A8A8E; --divider:#E8E6E1; --tag-bg:#EEECE8; --overlay:rgba(0,0,0,.25);
+    --text-body:#5E5E60; --text-tertiary:#8A8A8E; --divider:#E8E6E1; --tag-bg:#EEECE8; --overlay:rgba(0,0,0,.25);
     --primary:#007AFF; --font-scale:1; --wheel-idle:.35; --wheel-active:.92;
     --wheel-text-idle:rgba(0,0,0,.12); --wheel-text-sel:rgba(0,0,0,.5); --wheel-text-selcolor:#007AFF;
     --wheel-text-act:rgba(0,0,0,.45); --wheel-scale:1.08; --chip-bg:rgba(28,28,30,.85); --chip-text:#fff; }
   body.dark { --bg-page:#000; --bg-card:#0D0D0D; --text-primary:#fff; --text-secondary:#999;
-    --text-tertiary:#666; --divider:#1C1C1E; --tag-bg:#1C1C1E; --overlay:rgba(0,0,0,.7);
+    --text-body:#D4D4D4; --text-tertiary:#666; --divider:#1C1C1E; --tag-bg:#1C1C1E; --overlay:rgba(0,0,0,.7);
     --primary:#0A84FF; --wheel-text-idle:rgba(255,255,255,.12); --wheel-text-sel:rgba(255,255,255,.5);
     --wheel-text-selcolor:#0A84FF; --wheel-text-act:rgba(255,255,255,.45); --chip-bg:rgba(255,255,255,.15); }
 
@@ -20,7 +20,6 @@
     background:#2A2A2E; display:flex; justify-content:center; align-items:flex-start; min-height:100vh;
     padding:24px 16px 60px; -webkit-font-smoothing:antialiased; }
   .wrap { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
-  /* 控制条 */
   .toolbar { width:100%; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:6px; }
   .toolbar button { padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.2);
     background:rgba(255,255,255,.08); color:#fff; font-size:13px; cursor:pointer; }
@@ -38,40 +37,65 @@
   .capsule i { width:10px; height:10px; border-radius:50%; background:var(--chip-text); opacity:.9; }
   .capsule b { width:8px; height:8px; border:1.5px solid var(--chip-text); border-radius:2px; opacity:.9; }
 
-  /* 首页导航 */
-  .navbar { position:absolute; top:44px; left:0; right:0; height:38px; display:flex; align-items:center;
-    padding:0 8px; background:var(--bg-page); z-index:22; }
-  .nav-back, .nav-home { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
-    justify-content:center; color:var(--primary); font-size:22px; cursor:pointer; }
-  .nav-title { flex:1; text-align:center; font-size:17px; font-weight:700; color:var(--text-primary); }
-  .nav-right { width:32px; height:32px; display:flex; align-items:center; justify-content:center;
-    color:var(--text-secondary); font-size:18px; cursor:pointer; }
+  /* 首页顶部条带（D-09：占位对齐胶囊，首页无按钮） */
+  .fixed-top-bar { position:absolute; top:44px; left:0; right:0; height:38px; background:var(--bg-page); z-index:22; }
 
-  /* 首页卡片 */
-  .home { position:absolute; top:0; left:0; right:0; bottom:0; z-index:1; padding:0; }
-  .card { position:absolute; left:24px; right:24px; top:120px; bottom:90px; background:var(--bg-card);
-    border-radius:24px; padding:24px; box-shadow:0 8px 32px rgba(0,0,0,.08); display:flex; flex-direction:column; }
-  .card .cat { color:var(--primary); font-size:13px; font-weight:600; margin-bottom:8px; }
-  .card h2 { font-size:20px; font-weight:700; color:var(--text-primary); line-height:1.4; margin-bottom:10px; }
-  .card p { font-size:13px; color:var(--text-secondary); line-height:1.6; flex:1; }
-  .card .meta { font-size:11px; color:var(--text-tertiary); }
-  .card .open-panel { position:absolute; top:50%; right:-26px; transform:translateY(-50%);
-    width:34px; height:88px; background:var(--primary); color:#fff; border-radius:18px 0 0 18px;
-    display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer;
-    box-shadow:0 6px 16px rgba(0,122,255,.35); user-select:none; }
+  /* ============ 首页卡片流（保持现状 · 非本次范围） ============ */
+  .card-stage { position:absolute; top:0; left:0; right:0; bottom:0; z-index:1; }
+  .card { position:absolute; inset:0; background:var(--bg-card); display:flex; flex-direction:column; }
+  .card-body { flex:1; padding:50px 32px 24px; display:flex; flex-direction:column; justify-content:center; }
+  .card-title { font-size:26px; font-weight:700; color:var(--text-primary); line-height:1.35;
+    margin-bottom:14px; letter-spacing:-.5px; word-break:break-word; overflow-wrap:anywhere;
+    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .card-meta { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-tertiary); }
+  .category-tag { font-size:11px; color:var(--primary); border:1px solid var(--primary);
+    border-radius:6px; padding:1px 7px; font-weight:500; }
+  .card-summary { margin-bottom:24px; margin-top:14px; }
+  .summary-p { font-family:"PingFang SC","Noto Serif SC","Songti SC",Georgia,serif; font-size:16px;
+    color:var(--text-body); line-height:1.85; margin-bottom:12px; letter-spacing:.5px; }
+  .ai-chip { display:inline-block; font-family:-apple-system,sans-serif; font-size:11px; color:var(--primary);
+    background:var(--primary); color:#fff; border-radius:5px; padding:1px 6px; margin-right:6px; vertical-align:2px; }
+
+  /* 底部滑动提示条（保持现状） */
+  .fixed-swipe-hint { position:absolute; left:0; right:0; bottom:26px; z-index:3; display:flex;
+    align-items:center; justify-content:center; gap:6px; font-size:12px; color:var(--text-secondary);
+    letter-spacing:4rpx; opacity:.55; }
+  .fixed-swipe-hint .swipe-ico { width:14px; height:14px; border-radius:50%; border:1.5px solid var(--text-secondary); opacity:.7; }
+
+  /* ⚙ 浮动按钮（dock 入口 · 保持现状） */
+  .floating-more { position:absolute; right:24px; bottom:80px; z-index:4; width:44px; height:44px;
+    border-radius:50%; background:var(--bg-card); display:flex; align-items:center; justify-content:center;
+    color:var(--text-secondary); font-size:19px; box-shadow:0 4px 14px rgba(0,0,0,.15); cursor:pointer; }
+  .more-mask { position:absolute; inset:0; background:var(--overlay); z-index:39; opacity:0; pointer-events:none; transition:opacity .25s; }
+  .more-mask.show { opacity:1; pointer-events:auto; }
+  .more-menu { position:absolute; right:16px; bottom:140px; z-index:40; background:var(--bg-card);
+    border-radius:14px; box-shadow:0 10px 30px var(--overlay); padding:6px; opacity:0; transform:translateY(8px);
+    pointer-events:none; transition:all .25s ease; }
+  .more-menu.show { opacity:1; transform:none; pointer-events:auto; }
+  .more-item { display:flex; align-items:center; gap:10px; padding:10px 16px; font-size:14px;
+    color:var(--text-primary); border-radius:9px; cursor:pointer; }
+  .more-item:hover { background:var(--tag-bg); }
+  .more-item .mi { width:18px; height:18px; display:flex; align-items:center; justify-content:center;
+    font-size:15px; color:var(--text-secondary); }
+
+  /* 范围角标 */
+  .scope-tag { position:absolute; top:88px; left:10px; z-index:23; font-size:10px; padding:3px 8px;
+    border-radius:8px; background:rgba(255,255,255,.75); color:#555; border:1px dashed #bbb; pointer-events:none; }
+  body.dark .scope-tag { background:rgba(0,0,0,.6); color:#aaa; border-color:#555; }
 
   /* ============ 遮罩 ============ */
   .overlay { position:absolute; inset:0; background:var(--overlay); z-index:29; opacity:0;
     pointer-events:none; transition:opacity .3s ease; }
   .overlay.show { opacity:1; pointer-events:auto; }
 
-  /* ============ 侧边面板 ============ */
+  /* ============ 侧边面板（本次设计范围） ============ */
   .slide-panel { position:absolute; top:0; right:0; width:90%; height:100%; background:var(--bg-card);
     z-index:30; transform:translateX(102%); transition:transform .3s cubic-bezier(.4,0,.2,1);
     display:flex; flex-direction:column; box-shadow:-4px 0 24px var(--overlay); }
   .slide-panel.show { transform:translateX(0); }
   .slide-panel.done { transform:none; }
 
+  /* v5 稳定架构：absolute 定位 */
   .panel-header { position:absolute; top:0; left:0; right:0; z-index:5; display:flex; align-items:center; gap:8px; padding:50px 20px 14px; }
   .panel-title { font-size:18px; font-weight:700; color:var(--text-primary); letter-spacing:.5px; }
   .panel-subtitle { flex:1; font-size:12px; color:var(--text-secondary); overflow:hidden;
@@ -109,6 +133,7 @@
   .phone.annotate .panel-header { outline:1px dashed var(--primary); outline-offset:-1px; }
   .phone.annotate .panel-wheel { outline:1px dashed var(--primary); outline-offset:-1px; }
   .phone.annotate .panel-item { outline:1px dashed var(--primary); outline-offset:-1px; }
+  .phone.annotate .panel-body { outline:1px dashed #999; outline-offset:-1px; }
 
   /* 参数面板 */
   .spec { width:340px; background:#1c1c1e; border-radius:16px; padding:18px; color:#ddd;
@@ -119,6 +144,7 @@
   .spec .t { color:var(--primary,#0A84FF); }
   .spec small { color:#888; }
   .spec ul { padding-left:16px; }
+  .spec .note { border:1px dashed rgba(255,255,255,.25); border-radius:8px; padding:8px 10px; margin-top:8px; color:#bbb; }
 </style>
 </head>
 <body class="light">
@@ -128,29 +154,44 @@
         <button onclick="toggleTheme()">🌗 切换深浅色</button>
         <button onclick="toggleAnnotate()">📐 显示/隐藏结构标注</button>
         <button onclick="togglePanel(true)">👉 打开侧边面板</button>
-        <div class="hint">拖拽左侧分类滚轮 → 切换分类；点击列表项 → 选中当前阅读项；点遮罩关闭面板</div>
+        <div class="hint">首页 UI/UX 保持现状不变（仅示意入口）；本次设计范围 = 侧边新闻列表页（右侧面板）</div>
       </div>
 
       <div class="phone" id="phone">
         <div class="statusbar"><span>9:41</span><div class="capsule"><i></i><b></b></div></div>
-        <div class="navbar">
-          <div class="nav-back">‹</div>
-          <div class="nav-title" id="navTitle">推荐</div>
-          <div class="nav-right">⚙</div>
+        <div class="fixed-top-bar"></div>
+        <div class="scope-tag">首页 · 保持现状（非本次范围）</div>
+
+        <!-- 首页卡片流（保持现状 · 仅示意） -->
+        <div class="card-stage">
+          <div class="card">
+            <div class="card-body">
+              <div class="card-title">工信部等四部门联合印发实施方案，推动人工智能赋能新型工业化</div>
+              <div class="card-meta"><span class="category-tag">推荐</span><span>新华网</span><span>·</span><span>10 分钟前</span></div>
+              <div class="card-summary">
+                <div class="summary-p"><span class="ai-chip">AI 摘要</span>方案提出到2027年，新一代人工智能与制造业深度融合发展格局基本形成，智能工厂建设成效显著，重点行业智能化水平大幅提升。</div>
+                <div class="summary-p">工信部相关负责人表示，将统筹推进智能装备、工业软件等重点领域突破，加快构建现代化产业体系。</div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="home">
-          <div class="card">
-            <div class="cat" id="cardCat">推荐</div>
-            <h2 id="cardTitle">工信部等四部门联合印发实施方案，推动人工智能赋能新型工业化</h2>
-            <p id="cardBody">方案提出到2027年，新一代人工智能与制造业深度融合发展格局基本形成，智能工厂建设成效显著……</p>
-            <div class="meta">新华网 · 10 分钟前</div>
-            <div class="open-panel" onclick="togglePanel(true)">☰</div>
-          </div>
+        <!-- 底部滑动提示（保持现状） -->
+        <div class="fixed-swipe-hint"><span class="swipe-ico"></span><span>上滑阅读下一条</span></div>
+
+        <!-- ⚙ 浮动按钮 + dock（保持现状 · 仅示意） -->
+        <div class="floating-more" onclick="toggleMore()">⚙</div>
+        <div class="more-mask" id="moreMask" onclick="toggleMore()"></div>
+        <div class="more-menu" id="moreMenu">
+          <div class="more-item"><span class="mi">ℹ</span>关于一页</div>
+          <div class="more-item"><span class="mi">🕘</span>浏览记录</div>
+          <div class="more-item"><span class="mi">★</span>我的收藏</div>
+          <div class="more-item"><span class="mi">⚙</span>设置</div>
         </div>
 
         <div class="overlay" id="overlay" onclick="togglePanel(false)"></div>
 
+        <!-- 本次设计范围：侧边新闻列表页 -->
         <div class="slide-panel" id="panel">
           <div class="panel-header">
             <text class="panel-title">今日新闻</text>
@@ -166,6 +207,7 @@
               <div class="panel-list" id="panelList"></div>
             </div>
           </div>
+          <div class="scope-tag" style="top:auto; bottom:10px; left:10px;">本次设计：侧边新闻列表页</div>
         </div>
       </div>
     </div>
@@ -173,6 +215,7 @@
     <div class="spec" id="spec">
       <h3>📐 侧边新闻列表 · 参数速查（D-10）</h3>
       <small>rpx 值（750 设计稿）· 完整规范见 docs/02-产品设计/D-10-增量-侧边新闻列表页面-详细设计.md</small>
+      <div class="note">⚠️ <b>首页 UI/UX 保持现状不变</b>，本次仅设计「侧边新闻列表页」（slide-panel）。</div>
 
       <h3>面板容器</h3>
       <ul>
@@ -181,23 +224,26 @@
         <li>滑入 300ms <code>cubic-bezier(.4,0,.2,1)</code></li>
       </ul>
 
-      <h3>标题栏（固定顶部）</h3>
+      <h3>标题栏（固定顶部 · v5 absolute）</h3>
       <ul>
-        <li>padding <code>100rpx 40rpx 28rpx</code>（顶部 100rpx 避让状态栏/胶囊）</li>
+        <li>absolute：<code>top:0 left:0 right:0</code> · z-index 5</li>
+        <li>padding <code>100rpx 40rpx 28rpx</code>（顶部避让状态栏/胶囊）</li>
         <li>标题 <code>36rpx/700</code> 字距 1rpx · 副标题 <code>24rpx</code> 单行省略</li>
       </ul>
 
       <h3>分类滚轮（v5.3-final）</h3>
       <ul>
-        <li>宽 <code>128rpx</code> · 项高 <code>72rpx</code> · 可视 <code>6</code> 项（432rpx）</li>
+        <li>absolute：<code>top:0 left:0 width:128rpx height:100%</code> · z-index 2</li>
+        <li>项高 <code>72rpx</code> · 可视 <code>6</code> 项（432rpx）</li>
         <li>选中恒<span class="t"> 第 2 行</span>：<code>translateY=(1−idx)×72</code>（首类顶部留空行）</li>
         <li>热区右扩 <code>32rpx</code> · idle 透明度 .35 → active .92</li>
         <li>选中文字淡蓝 <code class="t">--primary</code>（浅 #007AFF / 暗 #0A84FF）无底色</li>
-        <li>active 仅 <code>scale(1.08)</code> 温和放大 · 拖动连续跟手 · 松手 300ms snap + 轻震</li>
+        <li>active 仅 <code>scale(1.08)</code> 温和放大 · 连续跟手 · 松手 300ms snap + 轻震</li>
       </ul>
 
       <h3>新闻列表</h3>
       <ul>
+        <li>absolute：<code>top:0 left:128rpx right:0 bottom:0</code></li>
         <li>项 padding <code>16rpx 32rpx</code> · margin <code>0 24rpx</code> · 无分隔线</li>
         <li>标题 <code>28rpx/600</code> 行高 1.45 · <span class="t">2 行截断</span></li>
         <li>当前阅读项：标题<span class="t">主题色高亮</span>，无底色无边框</li>
@@ -207,7 +253,7 @@
       <h3>Icon 规范</h3>
       <ul>
         <li>侧边列表页<span class="t">本身无 icon</span>（纯文字）</li>
-        <li>导航 icon <code>44rpx</code> · 返回 ‹ <code>40rpx</code> · dock <code>40rpx</code></li>
+        <li>全局导航 icon <code>44rpx</code> · 返回 ‹ <code>40rpx</code> · dock <code>40rpx</code></li>
         <li>未来加分类/附属 icon：<code>32rpx / 28rpx</code>（预留）</li>
       </ul>
 
@@ -277,9 +323,6 @@ function renderList() {
   if (!items.length) html = '<div class="panel-empty">暂无新闻</div>';
   panelList.innerHTML = html;
   panelSub.textContent = CATS[activeIdx].name + ' · ' + items.length + ' 条';
-  document.getElementById('navTitle').textContent = CATS[activeIdx].name;
-  document.getElementById('cardCat').textContent = CATS[activeIdx].name;
-  document.getElementById('cardTitle').textContent = items[0] || '暂无新闻';
 }
 renderWheel(); renderList();
 
@@ -287,15 +330,12 @@ renderWheel(); renderList();
 function togglePanel(open) {
   panel.classList.toggle('show', open);
   overlay.classList.toggle('show', open);
-  if (open) {
-    setTimeout(function(){ panel.classList.add('done'); }, 320);
-  } else {
-    panel.classList.remove('done');
-  }
+  if (open) { setTimeout(function(){ panel.classList.add('done'); }, 320); }
+  else { panel.classList.remove('done'); }
 }
 overlay.addEventListener('click', function(){ togglePanel(false); });
 
-/* ============ 滚轮交互（pointer events，统一鼠标/触摸） ============ */
+/* ============ 滚轮交互（pointer events） ============ */
 wheel.addEventListener('pointerdown', function(e){
   touching = true;
   wheel.classList.add('active','touching');
@@ -318,9 +358,7 @@ wheel.addEventListener('pointermove', function(e){
   wheelList.style.transform = 'translateY(' + ty + 'px)';
   if (clamped !== activeIdx) { activeIdx = clamped; renderWheel(); renderList(); vibrate(); }
 });
-function vibrate(){
-  try { if (navigator.vibrate) navigator.vibrate(10); } catch(e){}
-}
+function vibrate(){ try { if (navigator.vibrate) navigator.vibrate(10); } catch(e){} }
 wheel.addEventListener('pointerup', function(){
   touching = false;
   wheel.classList.remove('touching');
@@ -330,16 +368,20 @@ wheel.addEventListener('pointerup', function(){
 });
 wheel.addEventListener('pointercancel', function(){ touching = false; wheel.classList.remove('touching','active'); setTranslate(); startY = null; });
 
-/* ============ 列表点击 → 选中当前项 ============ */
+/* ============ 列表点击 ============ */
 panelList.addEventListener('click', function(e){
   var item = e.target.closest('.panel-item');
   if (!item) return;
   var cur = panelList.querySelector('.panel-item.current');
   if (cur) cur.classList.remove('current');
   item.classList.add('current');
-  var t = item.querySelector('.panel-item-title');
-  if (t) document.getElementById('cardTitle').textContent = t.textContent;
 });
+
+/* ============ dock（保持现状 · 仅示意） ============ */
+function toggleMore(){
+  document.getElementById('moreMenu').classList.toggle('show');
+  document.getElementById('moreMask').classList.toggle('show');
+}
 
 /* ============ 工具 ============ */
 function toggleTheme(){ document.body.classList.toggle('dark'); }
