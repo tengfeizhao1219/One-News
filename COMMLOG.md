@@ -1,3 +1,14 @@
+## [2026-08-06 18:53] ✅ DG-07 DeepSeek 重新接入已推送 + GitHub DNS 修复（curloptResolve v3.1）| 会话：[全栈开发(FS)]
+
+**完成**：
+- **DG-07**：应 owner 要求重新接入 DeepSeek 为搜索链最后 AI 兜底（智谱 → Qwen → DeepSeek → 聚合/天行），受 DG-04 预算护栏（`SEARCH_PHASE_BUDGET_MS=40s`）与 `DEEPSEEK_DAILY_CAP` 日配额约束；已 fast-forward 推送 `origin/main`（提交 `188a04b`，连同日志修正 `f78d46f`）
+- **GitHub DNS 修复**：按资产库 `.github-scripts/setup_github_dns.sh`（v3.1，curloptResolve 首选 + dnsmasq 兜底）绕过腾讯 DNS 污染（github.com → 198.18.0.x sinkhole）；`git config http.https://github.com.curloptresolve` → 实测可用 IP
+- **分叉处理**：推送前发现 origin/main 已被其他会话推进（D-10 暂缓公告、BUG-20260806-010、FE 初始化 `2e7dd2d` 等 9 提交），本地 2 提交已 rebase 到最新 origin/main 后推送，无冲突（本地仅改 `zhipuSearch.js`）
+- **凭证**：按文档流程从 tdrive 保险库取 `vault/github_pat` 推送（`https://ghp_...@github.com`，非 oauth2: 前缀）；`git-credential-helper` 仍不返回写凭证，后续推送沿用「tdrive 取 PAT」流程
+- **备注**：推送期间 origin 在实时更新（并发会话活跃），采用 **fetch → rebase → push 紧循环**直至命中快进窗口
+
+> — 全栈开发（FS） 2026-08-06 18:53
+
 ## [2026-08-06 18:42] 📋 FE 状态更新 · FE 候补会话已初始化，环境就绪，等待认领 | 会话：[小程序前端开发(FE)]
 
 **FE 初始化完成**（2026-08-06 18:42）：

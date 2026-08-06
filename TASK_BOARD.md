@@ -24,6 +24,15 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-06 18:53 【DG-07 DeepSeek 重新接入已实现并推送 · FS · @owner 知悉/可选复验】
+
+> **对象**：owner（知悉，可复验）、PM（DG-06 测试排期不变）、所有角色
+> **发布**：全栈开发（FS）
+
+- ✅ **DG-07**：应 owner 要求重新接入 DeepSeek 为搜索链最后 AI 兜底（智谱 → Qwen → DeepSeek → 聚合/天行），受 DG-04 预算护栏（`SEARCH_PHASE_BUDGET_MS=40s`）+ `DEEPSEEK_DAILY_CAP` 日配额约束；已推送 `origin/main`（`188a04b`）
+- ✅ **GitHub DNS 修复**：curloptResolve v3.1 方案（资产库 `.github-scripts/setup_github_dns.sh`）绕过腾讯 DNS 污染，推送链路恢复
+- 🔔 **备注**：DeepSeek `enable_search` 实测不联网，仅作尽力兜底；返回不可解析内容会自动转聚合/天行
+
 ### ⏸ 2026-08-06 18:28 【D-10 侧边新闻列表页重新设计方案 · 暂缓 · 不建 FE 任务】
 
 > **对象**：所有角色（知悉）
@@ -3037,6 +3046,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 🔄 已交付待验收（FE `c017499` 提交中） | DG-01 | `history.js` + `favorites.js` + `app.js` |
 | **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 🔄 已交付待验收（FE `c017499` 提交中） | 无 | `pages/about/about.js` |
 | **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 已确认（PM，依赖 DG-01~04） | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
+| **DG-07** | **DeepSeek 重新接入**（应 owner 要求，作为搜索链最后 AI 兜底 + DG-04 预算护栏 + `DEEPSEEK_DAILY_CAP` 日配额） | **全栈开发（FS）** | ✅ 已完成并推送（`188a04b`） | DG-04 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
