@@ -19,7 +19,7 @@
   padding: 6rpx 14rpx 10rpx;
   flex-shrink: 0;
 }
-/* BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） */
+/* BUG-20260806-003（owner 07:44 裁定）: nav-back → nav-home（第 2 层统一主页按钮） */
 .nav-home {
   display: flex;
   align-items: center;

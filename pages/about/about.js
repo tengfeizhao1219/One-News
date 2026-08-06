@@ -11,6 +11,8 @@ Page({
     _fontScaleValue: 1,
     _metaScaleValue: 1,
     appVersion: 'v6.3.0',
+    // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
+    isDark: false,
     // 五条设计理念
     principles: [
       { title: '一眼即得', desc: '打开即读，不做信息流，不设推荐算法' },
@@ -36,12 +38,33 @@ Page({
       _fontScaleValue: app.globalData._fontScaleValue || scaleMap[tier] || 1,
       _metaScaleValue: app.globalData._metaScaleValue || 1,
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-20260806-003: 主页 icon 按主题切换白色版
+      isDark: this._isSystemDark(),
     })
   },
 
   onShow: function () {
     // BUG-20260805-003: onShow 刷新主题（可能从设置页返回）
-    this.setData({ themeClass: (app && app.globalData && app.globalData.themeClass) || '' })
+    this.setData({
+      themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-20260806-003: onShow 同步 isDark（从设置页切换主题返回时刷新 icon）
+      isDark: this._isSystemDark(),
+    })
+  },
+
+  /**
+   * BUG-20260806-003: 判断当前生效主题是否深色（与 favorites/detail 页同源）
+   */
+  _isSystemDark: function () {
+    try {
+      if (app && app.globalData && app.globalData.effectiveTheme) {
+        return app.globalData.effectiveTheme === 'dark'
+      }
+      var info = wx.getSystemInfoSync()
+      return info.theme === 'dark'
+    } catch (e) {
+      return false
+    }
   },
 
   /**
@@ -69,6 +92,25 @@ Page({
     } else {
       wx.reLaunch({ url: '/pages/home/home' })
     }
+  },
+
+  /**
+   * BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮
+   * TL-B15 / RQ-17：reLaunch 回首页并清栈（防抖 300ms，失败降级逐层回退）
+   */
+  goHome: function () {
+    var now = Date.now()
+    if (this._lastHomeTap && now - this._lastHomeTap < 300) return
+    this._lastHomeTap = now
+    wx.reLaunch({
+      url: '/pages/home/home',
+      fail: function () {
+        try {
+          var pages = getCurrentPages()
+          wx.navigateBack({ delta: Math.max(1, pages.length - 1) })
+        } catch (e) { wx.reLaunch({ url: '/pages/home/home' }) }
+      },
+    })
   },
 
   copyEmail: function () {

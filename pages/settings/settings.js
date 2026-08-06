@@ -16,6 +16,8 @@ Page({
     manualDark: false,
     contactOpen: false,
     appVersion: 'v6.2.0',
+    // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
+    isDark: false,
     tiers: [
       { value: 0, label: '标准' },
       { value: 1, label: '大' },
@@ -34,6 +36,8 @@ Page({
       _metaScaleValue: app.globalData._metaScaleValue || 1,
       // BUG-20260805-003: 根节点 class 由全局 themeClass 驱动
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
+      // BUG-20260806-003: 主页 icon 按主题切换白色版
+      isDark: this._isSystemDark(),
     })
 
     // 读取主题偏好（若无则默认跟随系统）
@@ -104,6 +108,23 @@ Page({
       app.globalData.followSystem = this.data.followSystem
       app.globalData.darkMode = this.data.darkMode
       if (typeof app.applyTheme === 'function') app.applyTheme()
+      // BUG-20260806-003: 主题切换后立即刷新主页 icon（applyTheme 同步更新 effectiveTheme）
+      this.setData({ isDark: this._isSystemDark() })
+    }
+  },
+
+  /**
+   * BUG-20260806-003: 判断当前生效主题是否深色（与 favorites/detail 页同源）
+   */
+  _isSystemDark: function () {
+    try {
+      if (app && app.globalData && app.globalData.effectiveTheme) {
+        return app.globalData.effectiveTheme === 'dark'
+      }
+      var info = wx.getSystemInfoSync()
+      return info.theme === 'dark'
+    } catch (e) {
+      return false
     }
   },
 
@@ -161,6 +182,7 @@ Page({
 
   /**
    * BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch）
+   * TL-B15 / RQ-17：reLaunch 回首页并清栈（防抖 300ms，失败降级逐层回退）
    */
   goHome: function () {
     var now = Date.now()
@@ -178,7 +200,7 @@ Page({
   },
 
   /**
-   * 返回上一页
+   * 返回上一页（保留：页面内无其他入口，原 nav-back 已改主页按钮）
    */
   goBack: function () {
     wx.navigateBack()
