@@ -64,9 +64,11 @@
           </view>
         <!-- 摘要 -->
         <view class="card-summary">
-          <block wx:for="{{item.summaryParagraphs}}" wx:key="*this" wx:for-index="pIdx">
+          <!-- BUG-FIX-20260806: 内层 wx:for 显式命名 para，避免遮蔽外层卡片 item
+               （遮蔽时 item.isAiSummary 取字符串属性=undefined → AI 胶囊永不显示） -->
+          <block wx:for="{{item.summaryParagraphs}}" wx:for-item="para" wx:key="*this" wx:for-index="pIdx">
             <view class="summary-p">
-              <text wx:if="{{pIdx === 0 && item.isAiSummary}}" class="ai-chip">AI 摘要</text>{{item}}
+              <text wx:if="{{pIdx === 0 && item.isAiSummary}}" class="ai-chip">AI 摘要</text>{{para}}
             </view>
           </block>
         </view>
