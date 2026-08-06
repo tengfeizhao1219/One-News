@@ -46,6 +46,8 @@ Page({
     flashColor: '',            // 跨分类进度分类名着色；空串触发 CSS fallback 到 var(--primary)
     // 网络兜底
     networkToastVisible: false,
+    // BUG-20260806-025: 浏览完毕居中 toast 显示状态
+    finishToastVisible: false,
     // 收藏
     isFavorited: false,
     heartAnim: false,
@@ -175,6 +177,11 @@ Page({
   // BUG-004: 页面销毁标记，防止回调中 setData
   onUnload: function () {
     this._destroyed = true
+    // BUG-20260806-025: 清理浏览完毕 toast 计时器，防止异步 setData 在已销毁页面执行
+    if (this._finishToastTimer) {
+      clearTimeout(this._finishToastTimer)
+      this._finishToastTimer = null
+    }
     // BUG-20260806-023 (FE): onUnload 时回写阅读位置 —— 覆盖「系统返回手势/物理返回键」场景。
     // 原仅 goBack()（顶部返回按钮）回写 _detailReturnState，系统返回手势走 onUnload 不回写，
     // 导致首页从详情返回后仍显示初始新闻。此处与 goBack 同逻辑回写，无论哪种返回方式首页都能恢复。
@@ -596,8 +603,8 @@ Page({
     that._engine.loadNextCategory().then(function (res) {
       if (that._destroyed) return
       if (!res.hasNext) {
-        // BUG-20260806-023: 改用状态栏小胶囊（替换 wx.showToast）
-        that._showStatusPill('已阅读完，回到首页获取更多新闻')
+        // BUG-20260806-025: 浏览完毕提示改为自定义居中 toast（半透明黑底白字胶囊）
+        that._showFinishToast()
         return
       }
       // 跨分类跳转成功：小胶囊提示切换分类 + 更新总数 + 立即翻页
@@ -608,7 +615,7 @@ Page({
   },
 
   /**
-   * BUG-20260806-023 (FE): 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
+   * BUG-20260806-023 (FE): 状态栏小胶囊提示（跨分类切换「正在阅读：」提示）
    * 定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出。
    * @param {string} text 显示文本
    */
@@ -620,6 +627,27 @@ Page({
     this._statusPillTimer = setTimeout(function () {
       if (!that._destroyed) that.setData({ statusPillShow: false })
     }, 1500)
+  },
+
+  /**
+   * BUG-20260806-025: 浏览完毕居中 toast（替代原 wx.showToast）
+   * - 半透明黑底白字胶囊 + 完美居中 + 淡入淡出
+   * - 持续 2 秒后自动隐藏
+   * - 页面销毁时清理 timer，避免异步 setData 在已销毁页面执行
+   */
+  _showFinishToast: function () {
+    var that = this
+    if (that._finishToastTimer) {
+      clearTimeout(that._finishToastTimer)
+      that._finishToastTimer = null
+    }
+    that.setData({ finishToastVisible: true })
+    that._finishToastTimer = setTimeout(function () {
+      that._finishToastTimer = null
+      if (!that._destroyed) {
+        that.setData({ finishToastVisible: false })
+      }
+    }, 2000)
   },
 
   /**

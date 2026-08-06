@@ -205,6 +205,36 @@
   opacity: 1;
 }
 
+/* ============ 浏览完毕居中 Toast（BUG-20260806-025） ============
+   微信原生 wx.showToast 默认顶部显示且不可自定义位置，
+   此处改为自定义居中 toast：垂直水平居中、半透明黑底白字、胶囊圆角。 */
+.finish-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  /* 同时平移 X/Y 实现完美居中 */
+  transform: translate(-50%, -50%) scale(0.92);
+  z-index: 26;
+  max-width: 560rpx;
+  background: rgba(0, 0, 0, 0.78);
+  color: #ffffff;
+  font-size: calc(28rpx * var(--font-scale));
+  line-height: 1.5;
+  padding: 28rpx 40rpx;
+  border-radius: 24rpx;
+  text-align: center;
+  letter-spacing: 1rpx;
+  box-shadow: 0 8rpx 32rpx rgba(0, 0, 0, 0.24);
+  opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none;
+}
+
+.finish-toast.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
 /* ============ 正文排版 ============ */
 
 .detail-body {

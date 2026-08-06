@@ -100,6 +100,11 @@
     <text>🟡 网络开小差，下拉重试</text>
   </view>
 
+  <!-- BUG-20260806-025: 浏览完毕居中 toast（替代原顶部 wx.showToast） -->
+  <view class="finish-toast {{finishToastVisible ? 'show' : ''}}" wx:if="{{finishToastVisible}}">
+    <text>当前新闻已浏览完毕，稍等会儿再来看吧</text>
+  </view>
+
   <!-- 底部固定滑动提示条（UI-B7 §3.5，固定于操作栏上方，不随内容滚动） -->
   <view class="fixed-swipe-hint {{showSwipeHint ? '' : 'hide'}}" wx:if="{{pageState === 'ready'}}">
     <image class="fixed-swipe-hint-icon-img" src="/assets/icons/swipe{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
