@@ -1,3 +1,18 @@
+## [2026-08-06 16:00] 🛠️ FE 交付 · BUG-20260806-008 滚轮交互三优化（锚点/热区/跟手）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit（FE 前缀）：BUG-20260806-008 组件修复
+- 文件：`components/category-wheel/category-wheel.js` + `category-wheel.wxss` + `TASK_BOARD.md`（16:00 广播）
+
+**① 选中锚点修正（AC-RQ15-18）**：`_updateTranslate` 去掉 Math.max clamp → `ty = (anchorIndex - idx) * itemHeight`；首类 idx=0 列表下移 1 行顶部留空；选中恒第 2 行
+**② 触摸热区（AC-RQ15-19）**：`.wheel` 容器全量覆盖 + `padding-right:32rpx/margin-right:-32rpx` 热区外扩（视觉不变）
+**③ 连续跟手（AC-RQ15-20）**：位移 = startTranslate + deltaY 连续；rawIdx 浮点仅驱动高亮/change/震动；越界弹性 bounce 保留；松手 300ms 缓动 snap
+
+**回归**：v511 40/0 / v7 63/0 / v13 88/0 全通过
+**@PD**：AC-RQ15-18/19/20 代码级验收；**@owner**：真机体验滚轮。
+
+---
+
 ## [2026-08-06 15:30] 📋 新增 · BUG-20260806-009 状态栏不透明 + 按钮胶囊对齐修正（owner 15:24 反馈）| 会话：[产品设计师(PD)]
 
 **提交记录**：

@@ -10,6 +10,11 @@
   position: relative;
   overflow: hidden;
   width: 128rpx;
+  /* BUG-20260806-008②（AC-RQ15-19）: 触摸热区外扩 —— 视觉宽度不变（box-sizing + padding），
+     但触摸命中区域向右扩展 32rpx（覆盖列表侧空白），空白/行间隙均可滚动 */
+  padding-right: 32rpx;
+  margin-right: -32rpx;
+  box-sizing: content-box;
   opacity: var(--wheel-opacity-idle, 0.35);          /* idle 默认态 */
   transition: opacity 300ms ease-out;
 }

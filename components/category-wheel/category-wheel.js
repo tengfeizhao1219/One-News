@@ -40,14 +40,21 @@ Component({
   },
 
   methods: {
-    /** 根据当前选中索引计算 translateY（顶部第二行锚定，owner v5.3-final 裁定） */
+    /**
+     * BUG-20260806-008（D-02 v2.6 AC-RQ15-18）：根据当前选中索引计算 translateY
+     * 修正：去掉 Math.max(0,·) clamp → ty = (anchorIndex - idx) * itemHeight
+     *   - idx=0（全部）：ty = 1*itemHeight（列表下移 1 行，顶部留 1 个空行空间，不贴顶）
+     *   - idx=1（科技）：ty = 0（选中项在第 2 行，顶部显示「全部」）
+     *   - idx=2+：ty < 0（上移，选中项恒在第 2 行）
+     * 越界弹性 bounce 叠加保留（AC-RQ15-06）
+     */
     _updateTranslate: function () {
       var itemHeight = this.data.itemHeight
       var anchorIndex = this.data.anchorIndex   // 1
       var idx = this._activeIndex || 0
-      var bounce = this.data.bounceOffset || 0  // FE-1：越界弹性偏移叠加
-      // 第二行锚定：选中项之上恒留 1 个分类名空间；首项时不上移
-      var ty = -Math.max(0, idx - anchorIndex) * itemHeight + bounce
+      var bounce = this.data.bounceOffset || 0
+      // BUG-008①: 不 clamp，首类时列表下移顶部留空（AC-RQ15-18）
+      var ty = (anchorIndex - idx) * itemHeight + bounce
       this.setData({ translateY: ty })
     },
 
@@ -58,11 +65,24 @@ Component({
       }
     },
 
+    /** 当前列表基础位移（无 bounce）：anchor 锚定位置 */
+    _baseTranslate: function (idx) {
+      return (this.data.anchorIndex - idx) * this.data.itemHeight
+    },
+
+    /** 边界 clamp 计算（用于高亮/change，不用于位移） */
+    _clampIndex: function (idx) {
+      var len = (this.data.categories || []).length
+      return Math.max(0, Math.min(len - 1, idx))
+    },
+
     onTouchStart: function (e) {
       const touch = e.touches && e.touches[0]
       if (!touch) return
       this._startY = touch.clientY
       this._startIndex = this._activeIndex || 0
+      // BUG-008③: 记录起始基础位移（含当前 bounce），拖动时连续跟手
+      this._startTranslate = this._baseTranslate(this._startIndex) + (this.data.bounceOffset || 0)
       this._lastVibrateIndex = this._startIndex
       this.setData({ touching: true })
     },
@@ -73,38 +93,44 @@ Component({
       const deltaY = touch.clientY - this._startY
       const { itemHeight } = this.data
       const len = (this.data.categories || []).length
-      // 手指下移 → 列表下移 → 选中项索引减小；反之增大
-      const deltaIndex = Math.round(deltaY / itemHeight)
-      let idx = this._startIndex - deltaIndex
-      const clamped = Math.max(0, Math.min(len - 1, idx))
 
-      // FE-1（AC-RQ15-06）：首/末项继续滑 → 轻微弹性偏移（bounce），不切换分类
-      var bounce = 0
-      if (idx !== clamped) {
-        // overscroll>0 = 越过末项（请求索引更大）；overscroll<0 = 越过首项
-        var overscroll = idx - clamped
-        var maxBounce = itemHeight * 0.25   // 视觉位移上限（72rpx 项高 → 18rpx）
-        // 越界方向与列表位移相反：首项越界（idx<0）列表下移（bounce>0），末项越界列表上移（bounce<0）
-        bounce = -overscroll * itemHeight * 0.2
-        if (bounce > maxBounce) bounce = maxBounce
-        if (bounce < -maxBounce) bounce = -maxBounce
-      }
-      var bounceChanged = bounce !== this.data.bounceOffset
-      if (bounceChanged) {
-        this.setData({ bounceOffset: bounce })
+      // BUG-008③（AC-RQ15-20）: 连续跟手位移 —— rawTranslate 直接跟随手指（无按格跳变）
+      var rawTranslate = this._startTranslate + deltaY
+      // 浮点请求索引（仅用于高亮/change/震动 + 边界弹性判定）
+      var rawIdx = this._startIndex - deltaY / itemHeight
+      var clamped = Math.max(0, Math.min(len - 1, Math.round(rawIdx)))
+
+      // 位移：正常范围连续跟手；越界叠加弹性（FE-1 / AC-RQ15-06）
+      var ty, bounce = 0
+      if (rawIdx < 0) {
+        // 首项越界：列表下移（弹性正偏移）
+        bounce = -rawIdx * itemHeight * 0.2
+        if (bounce > itemHeight * 0.25) bounce = itemHeight * 0.25
+        ty = this._baseTranslate(0) + bounce
+      } else if (rawIdx > len - 1) {
+        // 末项越界：列表上移（弹性负偏移）
+        bounce = -(rawIdx - (len - 1)) * itemHeight * 0.2
+        if (bounce < -itemHeight * 0.25) bounce = -itemHeight * 0.25
+        ty = this._baseTranslate(len - 1) + bounce
+      } else {
+        // 正常范围：连续跟随手指（AC-RQ15-20 核心）
+        ty = rawTranslate
       }
 
       if (clamped !== this._activeIndex) {
         this._activeIndex = clamped
-        this._updateTranslate()
         this.triggerEvent('change', { category: this.data.categories[clamped].id, index: clamped })
         if (clamped !== this._lastVibrateIndex) {
           this._lastVibrateIndex = clamped
           this._vibrate()
         }
-      } else if (bounceChanged) {
-        // 仅越界偏移变化时刷新位移（含 bounce 归零场景）
-        this._updateTranslate()
+      }
+
+      // 统一 setData：位移连续 + 弹性状态同步（一次 setData 减少渲染）
+      if (bounce !== this.data.bounceOffset) {
+        this.setData({ bounceOffset: bounce, translateY: ty })
+      } else {
+        this.setData({ translateY: ty })
       }
     },
 
@@ -115,7 +141,8 @@ Component({
       if (this.data.bounceOffset !== 0) {
         this.setData({ bounceOffset: 0 })
       }
-      // snap：已实时对齐，无需额外处理；300ms 过渡回弹
+      // BUG-008③（AC-RQ15-20）: 松手 snap 到最近分类（300ms 缓动，wxml transition 恢复）
+      // _activeIndex 已在 move 中实时对齐，_updateTranslate 计算最终位置
       this._updateTranslate()
     },
   },
