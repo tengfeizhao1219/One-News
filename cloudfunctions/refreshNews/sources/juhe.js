@@ -225,10 +225,13 @@ async function fetchAllCategories(categories, perCategory = 10) {
             await new Promise(r => setTimeout(r, backoffBaseMs * Math.pow(3, attempt)))
           }
         }
-        if (rawList.length === 0 && lastErr) {
+        if ((!rawList || rawList.length === 0) && lastErr) {
           console.error(`[juhe] ${category} ${maxRetries} 次重试均失败:`, lastErr.message)
         }
-        const formatted = rawList.map(item => formatJuheNewsItem(item, category))
+        // DG-09（2026-08-06 23:1x）：修复 10012 配额耗尽（rawList===null）时 null 解引用崩溃——
+        // 此前 DG-01 的 resolve(null) 会漏到此处触发 "Cannot read properties of null (reading 'length')"
+        // （日志见 23:04:53.044），虽被外层 catch 兜住返回空，但错误信息误导排查。
+        const formatted = (rawList || []).map(item => formatJuheNewsItem(item, category))
         return { category, news: formatted }
       } catch (err) {
         console.error(`[juhe] ${category} 失败:`, err.message)

@@ -70,6 +70,17 @@ function isAccountBlocked(err) {
   return /Arrearage|overdue-payment|欠费|Access denied|account is in good standing/i.test(m)
 }
 
+// DG-09（2026-08-06 23:1x）：确定性失败识别 —— 这类错误本次刷新无法恢复，
+// 继续尝试后续 AI 引擎大概率同样失败/超时（同 prompt 换引擎无意义），应短路直转聚合/天行。
+// 典型：智谱 1301 内容安全拦截（recommend 连续两轮命中，每次白耗 ~17s 后才降级）、账户欠费/封禁。
+// 实测依据（2026-08-06 22:04 与 23:04 两轮 recommend 日志）：
+//   zhipu 16.7s → 400 code=1301 → qwen 15.1s 超时 → deepseek 8.4s 超时（40s 预算截断）
+//   三个引擎共白耗 40.2s，剩余给 enrich 仅 ~13s（距 55s 硬期限只剩 1.15s 余量）
+function isFatalSearchError(err) {
+  const m = (err && err.message) || ''
+  return /1301|内容安全|不安全或敏感/i.test(m) || isAccountBlocked(err)
+}
+
 // ─── system_kv 配额读写（策略4 + 策略6）─────────────
 
 /**
@@ -530,6 +541,12 @@ async function searchNewsByCategory(category, db, quotaRef) {
     return { news, engine: 'zhipu' }
   } catch (zhipuErr) {
     console.warn(`[zhipuSearch] 智谱 ${category} 失败: ${zhipuErr.message}`)
+    // DG-09：确定性失败短路 —— 1301 内容安全 / 账户欠费等本次无法恢复，
+    // 同 prompt 换引擎大概率同样失败或产出被拦内容 → 跳过 Qwen/DeepSeek 直转聚合/天行
+    if (isFatalSearchError(zhipuErr)) {
+      console.error(`[zhipuSearch] ⚠️ ${category} 智谱确定性失败（${String(zhipuErr.message).slice(0, 60)}）→ 跳过 Qwen/DeepSeek，直接聚合/天行兜底`)
+      return { news: [], engine: 'none' }
+    }
     // 预算不足，放弃后续 AI 引擎，直接聚合/天行兜底
     if (budgetLeft() < 3000) {
       console.warn(`[zhipuSearch] ${category} 搜索预算耗尽，转聚合/天行兜底`)
@@ -546,6 +563,11 @@ async function searchNewsByCategory(category, db, quotaRef) {
       console.warn(`[zhipuSearch] Qwen ${category} 失败: ${qwenErr.message}`)
       if (isAccountBlocked(qwenErr)) {
         console.error(`[zhipuSearch] ⚠️ Qwen 账户欠费/封禁(Arrearage) — 请到阿里云百炼缴清欠费后重试（免费额度需账户状态正常）`)
+      }
+      // DG-09：Qwen 确定性失败同样短路（欠费/1301），不再尝试 DeepSeek 白耗预算
+      if (isFatalSearchError(qwenErr)) {
+        console.error(`[zhipuSearch] ⚠️ ${category} Qwen 确定性失败 → 跳过 DeepSeek，直接聚合/天行兜底`)
+        return { news: [], engine: 'none' }
       }
       // 不在此 return —— 继续降级到 DeepSeek（DG-07 应 owner 要求重新接入）
       if (budgetLeft() < 3000) {
