@@ -135,6 +135,35 @@ async function writeDailyQuota(db, value) {
   }
 }
 
+// DG-12（2026-08-06 23:4x）：异步编排下 worker 自报配额 —— 原子自增（db.command.inc）。
+// 背景：云函数间 cloud.callFunction RPC 硬超时 ~15s（官方文档确认 config 仅支持 env），
+// v7 编排器无法同步等待 30-50s 的 worker → 改为 fire-and-forget，配额改由各 worker 完成后自报，
+// 避免并发覆盖（writeDailyQuota 的"读-改-写"会互相 clobber）。
+async function incDailyQuota(db, delta) {
+  if (!db || !delta) return
+  const z = delta.zhipuCalls || 0
+  const d = delta.deepseekCalls || 0
+  if (z === 0 && d === 0) return
+  try {
+    const key = getTodayKey()
+    const now = Date.now()
+    const _ = db.command
+    const exist = await db.collection('system_kv').where({ key }).get()
+    if (exist.data && exist.data.length > 0) {
+      const data = { updatedAt: now }
+      if (z) data['value.zhipuCalls'] = _.inc(z)
+      if (d) data['value.deepseekCalls'] = _.inc(d)
+      await db.collection('system_kv').doc(exist.data[0]._id).update({ data })
+    } else {
+      await db.collection('system_kv').add({
+        data: { key, value: { deepseekCalls: d, zhipuCalls: z }, createdAt: now, updatedAt: now }
+      })
+    }
+  } catch (err) {
+    console.warn('[quota] 自增当日配额失败:', err.message)
+  }
+}
+
 // ─── HTTP 请求工具 ─────────────────────────────────
 
 /**
@@ -684,4 +713,5 @@ module.exports = {
   CATEGORY_PROMPTS,
   readDailyQuota,
   writeDailyQuota,
+  incDailyQuota,
 }

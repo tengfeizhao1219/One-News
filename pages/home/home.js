@@ -346,6 +346,8 @@ Page({
 
   /**
    * 云函数强制拉新（S4 取消 R 按钮后改为私有方法，仅由下拉刷新调用）
+   * DG-12：refreshNews 编排器改为异步触发（云函数间 RPC 15s 硬超时，worker 需 30-50s 后台写库），
+   * 响应 data.async=true。前端不再等完整结果——toast 提示后台刷新中，随后错峰重拉列表。
    */
   async _refreshNewsCloud() {
     if (this.data.isRefreshing) return
@@ -359,11 +361,17 @@ Page({
       })
 
       if (res.result.code === 0) {
+        const isAsync = res.result.data?.async === true
+        const inserted = res.result.data?.inserted || 0
         wx.showToast({
-          title: `已更新 ${res.result.data.inserted || 0} 条新闻`,
+          title: isAsync
+            ? (inserted > 0 ? `已更新 ${inserted} 条，其余后台刷新中` : '已触发后台刷新')
+            : `已更新 ${inserted} 条新闻`,
           icon: 'success',
           duration: 2000,
         })
+        // 异步模式：worker 需 30-50s 写库，错峰重拉几次，让用户无需再次下拉即可看到新数据
+        if (isAsync) this._schedulePostRefreshReload()
       } else {
         wx.showToast({
           title: res.result.message || '刷新失败',
@@ -377,6 +385,20 @@ Page({
 
     await this.loadNews()
     this.setData({ isRefreshing: false })
+  },
+
+  /**
+   * DG-12：异步刷新后错峰重拉列表（后台 worker 完成写库后能看到新数据）
+   * 清掉上一次的定时器，避免连续下拉导致堆叠
+   */
+  _schedulePostRefreshReload() {
+    (this._refreshReloadTimers || []).forEach(t => clearTimeout(t))
+    const delays = [8000, 20000, 40000]
+    this._refreshReloadTimers = delays.map(ms =>
+      setTimeout(() => {
+        if (!this.data.isRefreshing) this.loadNews()
+      }, ms)
+    )
   },
 
   // ============ 卡片渲染 ============

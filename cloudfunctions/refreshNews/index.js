@@ -469,6 +469,14 @@ exports.main = async (event) => {
     console.log(`[refreshNews] ===== 单分类工作模式: ${category} =====`)
     try {
       const result = await runCategoryPipeline(category, event.quotaBaseline || { zhipuCalls: 0, deepseekCalls: 0 })
+      // DG-12：异步编排下 worker 自报当日配额（编排器不再同步等待聚合，
+      // 改由 worker 完成后原子自增，避免并发覆盖导致 DeepSeek 日配额熔断失效）
+      try {
+        const { incDailyQuota } = require('./zhipuSearch')
+        await incDailyQuota(db, result.quotaDelta || { zhipuCalls: 0, deepseekCalls: 0 })
+      } catch (err) {
+        console.warn(`[refreshNews][${category}] worker 写回当日配额失败:`, err.message)
+      }
       return { code: 0, category, ...result }
     } catch (err) {
       console.error(`[refreshNews][${category}] 流水线异常:`, err.message)
@@ -522,77 +530,34 @@ exports.main = async (event) => {
     console.warn('[refreshNews] 读取当日配额失败，从 0 计:', err.message)
   }
 
-  // ── 并行自扇出：每分类一次独立云函数调用 ──
-  console.log(`[refreshNews] 并行拉取 ${CATEGORIES.length} 个分类（各自独立 60s 预算）...`)
-  const shards = await Promise.all(
-    CATEGORIES.map(category =>
-      cloud.callFunction({
-        name: 'refreshNews',
-        data: { category, shard: true, quotaBaseline },
-      })
-        .then(res => res.result || {})
-        .catch(err => ({
-          category,
-          inserted: 0,
-          skipped: true,
-          engine: 'shard_error',
-          error: err.message,
-          quotaDelta: { zhipuCalls: 0, deepseekCalls: 0 },
-          elapsedMs: 0,
-        }))
-    )
-  )
-
-  // ── 汇总各分类结果 ──
-  const categories = {}
-  let totalInserted = 0
-  let totalFailed = 0
-  let totalZhipu = 0
-  let totalDeepseek = 0
-  let allEmpty = true
-  const engineCounts = {}
-  const shardDetails = []
-  for (const r of shards) {
-    const cat = r.category || 'unknown'
-    const ins = r.inserted || 0
-    categories[cat] = ins
-    totalInserted += ins
-    totalFailed += (r.failed || 0)
-    if (ins > 0) allEmpty = false
-    totalZhipu += (r.quotaDelta?.zhipuCalls || 0)
-    totalDeepseek += (r.quotaDelta?.deepseekCalls || 0)
-    if (r.engine) engineCounts[r.engine] = (engineCounts[r.engine] || 0) + 1
-    shardDetails.push({
-      category: cat,
-      inserted: ins,
-      engine: r.engine,
-      elapsedMs: r.elapsedMs || 0,
-      skipped: !!r.skipped,
-      error: r.error || null,
+  // ── 异步自扇出（DG-12）：fire-and-forget 触发每分类独立云函数调用 ──
+  // 背景：云函数间 cloud.callFunction RPC 硬超时 ~15s（官方文档确认服务端 config 仅支持 env，
+  // 无法调长 timeout）。worker 在 AI 引擎全故障时需 30-50s（DG-11 已压到 ~36s），
+  // 同步等待必然全部 callFunction:fail request timeout（23:41 实测 5 分片全 shard_error，
+  // 但 life 分片实际运行 36.3s 成功写入 5 条 → 编排器误报 0 且前端 15s 超时）。
+  // 改为：编排器立即触发 5 个 worker（独立实例继续运行并写 news_cache + backup），
+  // 随后做全局清理/时间戳后立即返回「已触发」。worker 结果由 getNewsList 自然读到。
+  console.log(`[refreshNews] 异步触发 ${CATEGORIES.length} 个分类（各自独立 60s 预算，后台执行）...`)
+  CATEGORIES.forEach(category => {
+    cloud.callFunction({
+      name: 'refreshNews',
+      data: { category, shard: true, quotaBaseline },
     })
-  }
-  console.log(`[refreshNews] 各分类结果:`, JSON.stringify(shardDetails))
+      .then(res => {
+        const r = res.result || {}
+        console.log(`[refreshNews][${category}] worker 完成: inserted=${r.inserted || 0} engine=${r.engine || 'none'} elapsedMs=${r.elapsedMs || 0}`)
+      })
+      .catch(err => {
+        // 注：worker 实例会继续跑完并写库，这里仅记录 RPC 层超时，不影响数据
+        console.warn(`[refreshNews][${category}] worker RPC 超时（实例仍在后台运行）: ${err.message}`)
+      })
+  })
 
-  // ── 全局分级清理（过期普通/retained 记录）──
+  // ── 全局分级清理（过期普通/retained 记录；不依赖 worker 结果）──
   const cleanup = await gradedCleanup()
 
-  // ── 全分类均无新数据 → 续期旧缓存（避免 TTL 过期后列表空白）──
-  let renewed = 0
-  if (allEmpty) {
-    console.warn('[refreshNews] ⚠️ 全部分类均无新数据，保留旧缓存并续期 cacheExpire')
-    renewed = await renewCacheExpire()
-  }
-
-  // ── 写回当日配额（仅一次，避免并发写竞争）──
-  try {
-    const { writeDailyQuota } = require('./zhipuSearch')
-    await writeDailyQuota(db, {
-      zhipuCalls: (quotaBaseline.zhipuCalls || 0) + totalZhipu,
-      deepseekCalls: (quotaBaseline.deepseekCalls || 0) + totalDeepseek,
-    })
-  } catch (err) {
-    console.warn('[refreshNews] 写回当日配额失败:', err.message)
-  }
+  // DG-12：不再做「全空→续期」——getNewsList 已有三层兜底（news_cache → cache_backup → 内置精选），
+  // 且每个 worker 自带 per-category 清理 + backup 快照，全源失败也不会白屏。
 
   // ── 写入刷新时间戳 ──
   try {
@@ -613,26 +578,27 @@ exports.main = async (event) => {
   }
 
   const elapsed = Date.now() - startTime
-  console.log(`[refreshNews] ========== 刷新完成(编排): 总计 ${totalInserted} 条, 耗时 ${elapsed}ms ==========`)
+  console.log(`[refreshNews] ========== 刷新已触发(编排/异步): 后台更新中, 编排耗时 ${elapsed}ms ==========`)
 
   return {
     code: 0,
-    message: `刷新完成，共 ${totalInserted} 条新闻`,
+    message: '刷新已触发，正在后台更新',
     data: {
-      total: totalInserted,
-      inserted: totalInserted,
-      failed: totalFailed,
-      categories,
+      async: true,
+      total: 0,
+      inserted: 0,
+      failed: 0,
+      categories: {},
       cleanup: {
         removedNormal: cleanup.removedNormal,
         removedRetained: cleanup.removedRetained,
         durationMs: cleanup.durationMs,
       },
-      renewed,
-      engineCounts,
-      zhipuQuota: { zhipuCalls: totalZhipu, deepseekCalls: totalDeepseek },
+      renewed: 0,
+      engineCounts: {},
+      zhipuQuota: { zhipuCalls: quotaBaseline.zhipuCalls || 0, deepseekCalls: quotaBaseline.deepseekCalls || 0 },
       elapsedMs: elapsed,
-      shards: shardDetails,
+      shards: [],
     },
   }
 }

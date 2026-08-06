@@ -43,7 +43,7 @@ module.exports = {
     apiKey: process.env.DASHSCOPE_API_KEY || '',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     model: 'qwen3.7-flash',
-    timeout: 15000,
+    timeout: 12000,  // DG-11: 15000→12000，与 zhipuSearch.QWEN_SEARCH_TIMEOUT 对齐（此前 config 遮蔽常量导致 15s 未生效）
   },
 
   // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
