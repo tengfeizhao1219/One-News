@@ -1,3 +1,25 @@
+## [2026-08-06 20:10] 🛠️ FE 交付 · BUG-20260806-018 侧边栏分类文字被截断修复 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `8cd14b4`）：
+- 用户反馈：017 修复后，分类列每行只显示一个字（"推/科/国/科/社"），而不是完整的"推荐/科技/国际/科学探索/社会"
+- 这是 017 修复的**回归问题**：把 `.wheel` 改为 `width:100% + box-sizing:border-box` 让几何宽度 = 128rpx，但内含 `padding-right:112rpx`，内容区只剩 16rpx
+
+**正确方案**：
+- 恢复 `box-sizing:content-box + width:128rpx + padding-right:112rpx`（几何宽度 240rpx 触摸热区）
+- 给 `.wheel-list / .wheel-item` 显式 `width:128rpx + flex-shrink:0`，防止被父 .wheel 几何宽度撑开
+- `.panel-wheel` 加 `overflow:hidden` 裁掉 128rpx 之外的视觉外溢
+
+**效果**：
+- 视觉：滚轮 128rpx（不变），分类文字"推荐"等完整显示
+- 触摸：滚轮可点击/滑动区域 240rpx（保持 BUG-010 owner 扩展效果）
+- 列表：`.panel-scroll left:128rpx` 不变，列表宽度不变，017 截断问题不回归
+
+**范围**：仅 `components/category-wheel/category-wheel.wxss` + `pages/home/home.wxss`（2 处样式）。
+
+**交接**：**@owner** 真机体验侧边栏：分类文字"推荐/科技/国际/科学探索/社会"完整可见，列表标题不截断。
+
+> — 小程序前端开发（FE） 2026-08-06 20:10
+
 ## [2026-08-06 20:05] 🛠️ FE 交付 · BUG-20260806-017 侧边栏新闻列表被截断 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `63fb30b`）：
