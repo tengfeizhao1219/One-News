@@ -24,6 +24,22 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-06 23:12 【DG-09 搜索阶段确定性失败短路 · 已实现 · @owner 部署 refreshNews 后验证 60s 余量】
+
+> **对象**：owner（部署 `refreshNews` 云函数 + 观察下次刷新耗时）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+两轮 recommend 刷新日志（22:04 / 23:04）均 54.16s，逼近 60s 上限，根因已锁定在**搜索阶段**而非 enrich：
+
+- **搜索阶段白耗 40.2s**：智谱 16.7s → 400 `code=1301` 内容安全拦截（**确定性失败，连续两轮命中**）→ Qwen 15.1s 超时（账户欠费）→ DeepSeek 8.4s 超时（40s 预算截断）。三个 AI 引擎全失败后才轮到聚合/天行。
+- **enrich 距硬期限仅 1.15s**：P0-2 硬期限（catStart+55s）生效并保住 5/5 正文，但搜索吃掉 41s 后 enrich 只剩 ~13s 窗口，本轮 12.27s 勉强挤进——任何抖动都会 60s 超时 0 写入。
+
+已实施两项修复：
+1. **P0-3 确定性失败短路**（`zhipuSearch.js`）：新增 `isFatalSearchError`（1301 内容安全 / 账户欠费 / 封禁）——智谱或 Qwen 命中终态错误时**跳过后续 AI 引擎**，直转聚合/天行。预期 recommend 刷新从 54s → **~30s**（省 23.5s），enrich 窗口从 ~13s → ~36s。
+2. **P0-4 juhe null 崩溃修复**（`sources/juhe.js`）：10012 配额耗尽（`resolve(null)`）漏到重试循环后触发 `Cannot read properties of null (reading 'length')`，加 `(rawList || [])` 防护，错误信息不再误导。
+
+🔔 **@owner**：`refreshNews` 需「上传并部署：云端安装依赖」。复测看日志：下次 recommend 刷新若智谱 1301，应出现「确定性失败 → 跳过 Qwen/DeepSeek，直接聚合/天行兜底」且总耗时 ≤35s。
+
 ### ⚡ 2026-08-06 22:42 【DG-08 详情页性能优化 · 已实现提交 `054cc85` + P0-2 `415bccb` · @owner 部署 getNewsDetail/refreshNews + 真机复测】
 
 > **对象**：owner（部署 `getNewsDetail` + `refreshNews` 云函数 + 真机复测进入详情/翻页耗时）、PM（知悉）、所有角色
@@ -3061,6 +3077,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 已确认（PM，依赖 DG-01~04） | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
 | **DG-07** | **DeepSeek 重新接入**（应 owner 要求，作为搜索链最后 AI 兜底 + DG-04 预算护栏 + `DEEPSEEK_DAILY_CAP` 日配额） | **全栈开发（FS）** | ✅ 已完成并推送（`188a04b`） | DG-04 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 | **DG-08** | **详情页性能优化**（AI 摘要移出 getNewsDetail 关键路径 + 预取只向后+2/入口延迟400ms + localCache TTL 24h + refreshNews enrich 硬期限保正文） | **全栈开发（FS）** | ✅ 已完成待部署（`054cc85` + P0-2 `415bccb`，待 owner 部署 getNewsDetail/refreshNews + 真机复测） | DG-02 | `cloudfunctions/getNewsDetail/index.js` + `pages/detail/reading-engine.js` + `cloudfunctions/refreshNews/{index.js,utils/contentFetcher.js}` |
+| **DG-09** | **搜索阶段确定性失败短路**（1301 内容安全/账户欠费终态错误 → 跳过后续 AI 引擎直转聚合/天行，省 15~25s/刷新；另修复 juhe 10012 配额耗尽的 null 崩溃） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews 后观察耗时 ≤35s） | DG-08 日志复盘 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/sources/juhe.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
