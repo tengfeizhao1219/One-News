@@ -17,8 +17,8 @@
 | 🟢 P2 一般 | 6 |
 | ⚪ P3 轻微 | 4 |
 | ✅ 已关闭 | 6 |
-| 📋 新建 | 9 |
-| 🔄 待验证 | 2 |
+| 📋 新建 | 8 |
+| 🔄 待验证 | 3 |
 | 🔴 重开 | 5 |
 | 🆕 QA 已提交补丁（待前端确认） | 2 |
 
@@ -1140,3 +1140,27 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 - 真机验证覆盖：收藏→收藏页立即出现 / 取消→立即消失 / 浏览历史同源生效
 
 > — 小程序前端开发（FE）代 owner 回填 2026-08-06 13:22
+
+
+---
+
+## 验收记录 · BUG-20260806-007 D-09 v1.2 系统级落地（PD 代码级验收 · 2026-08-06 15:25）
+
+> FE commit `7693b0d`（2026-08-06 15:20 交付）→ PD 按 §五 AC-D09-01~08 逐项代码级核对 + 回归。
+
+| AC | 核对项 | 结果 |
+|---|---|---|
+| AC-D09-01 | 5 页面（detail/favorites/history/settings/about）nav-bar + home fixed-top-bar 统一 `top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx)`（仅下扩 12px，上无呼吸）| ✅ 通过 |
+| AC-D09-02 | 返回/主页按钮 **explicit 锚定胶囊中心**：`top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2)`（detail nav-back / settings nav-home 已落地，移除 wxss top:50% 依赖）| ✅ 通过 |
+| AC-D09-03 | detail `.detail-body` + 骨架屏 `padding: calc(var(--nav-offset) + 12rpx)`；`--nav-offset = menuTop + menuHeight + 12` 根节点注入（detail.js L147）| ✅ 通过 |
+| AC-D09-04 | favorites `.filter-bar` +8rpx / history `.list-scroll` +8rpx / settings·about `.scroller` +8rpx（各页 js 注入 navOffset，wxss calc 生效）| ✅ 通过 |
+| AC-D09-05 | 进度条 `.nav-progress` `background: transparent`（去底槽，D-09 v1.2），bottom:0 胶囊下 12px | ✅ 通过 |
+| AC-D09-06 | 正文无分割线（004 保留，detail-divider 无残留）| ✅ 通过 |
+| AC-D09-07 | 底部操作栏/滑动提示/安全区未改动 | ✅ 通过 |
+| AC-D09-08 | navOffset 为 JS 计算注入，与主题无关；深浅色一致 | ✅ 通过 |
+
+**回归**：v13 ✅ / v7 63/0 ✅ / v511 40/0 ✅
+
+**状态**：007 → 🔄 待验证（PD 代码级通过；待 owner 真机回归 UAT-03：标题位置 + 胶囊呼吸 12px + 进度条无底槽 + 列表/次级页首元素不被遮挡）
+
+> — 产品设计师（PD） 2026-08-06 15:25

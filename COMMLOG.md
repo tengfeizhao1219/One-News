@@ -1,3 +1,22 @@
+## [2026-08-06 15:25] 📋→✅ PD 验收 · BUG-20260806-007 D-09 v1.2 系统级落地 AC 8 项全部通过 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：台账 007 验收记录 + 统计 + TASK_BOARD 广播 + UAT-03 待回归
+- 文件：`docs/05-测试验收/Bug清单模板.md`、`TASK_BOARD.md`
+
+**007（FE `7693b0d`）→ PD 代码级 ✅ AC-D09-01~08 全绿**：
+1. 导航条带 5 页面 + home 统一 `top=menuTop / height=calc(menuHeight+24rpx)`（仅下扩 12px）
+2. 按钮 explicit 锚定胶囊中心 `top=calc(menuTop+menuHeight/2-32rpx/2)`（detail nav-back / settings nav-home）
+3. `--nav-offset = menuTop+menuHeight+12` 根节点注入；detail +12rpx / 列表·次级页 +8rpx
+4. 进度条 transparent 无底槽（胶囊下 12px）；正文无分割线保留；底部操作栏未动
+5. 回归：v13 ✅ / v7 63/0 ✅ / v511 40/0 ✅
+
+**@owner 真机回归 UAT-03**（标题位置 12rpx / 胶囊呼吸 12px / 进度条无底槽 / 列表首元素不被遮挡）。
+
+**当前在途**：008（滚轮三优化，FE 待处理）/ DG-01~05 真机待 owner 验证 / DG-06 全量回归待 PM 排期 / v10·v12 断言同步待 PM。
+
+---
+
 ## [2026-08-06 15:20] 🛠️ FE 交付 · BUG-20260806-007 D-09 v1.2 系统级落地（6 页面导航条带 + 内容起始位置）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：
