@@ -45,6 +45,9 @@ Page({
     isDark: false,
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
+    // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
+    statusPillShow: false,
+    statusPillText: '',
   },
 
   // 触摸状态（v5.9: 与详情页完全对齐——JS 线程处理、70px/500ms flick-only）
@@ -296,6 +299,21 @@ Page({
     this._categoryHintTimer = setTimeout(function () {
       if (!that._destroyed) that.setData({ categoryHint: '' })
     }, 600)
+  },
+
+  /**
+   * BUG-20260806-023 (FE): 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
+   * 定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出。
+   * @param {string} text 显示文本（如「正在阅读：科技」）
+   */
+  _showStatusPill(text) {
+    if (!text) return
+    clearTimeout(this._statusPillTimer)
+    this.setData({ statusPillShow: true, statusPillText: text })
+    var that = this
+    this._statusPillTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ statusPillShow: false })
+    }, 1500)
   },
 
   // ============ 数据加载 ============
@@ -627,9 +645,9 @@ Page({
       return
     }
 
-    // 跨分类切换：展示切换 toast（与详情页 _tryNextCategory 一致）
+    // 跨分类切换：状态栏小胶囊提示（BUG-20260806-023 替换 wx.showToast，与详情页 _tryNextCategory 一致）
     this.setData({ loadingMore: true })
-    wx.showToast({ title: '正在阅读：' + nextCat.name, icon: 'none' })
+    this._showStatusPill('正在阅读：' + nextCat.name)
 
     // 拉取下一分类首页
     getNewsList({ category: nextCat.id, pageNum: 1, pageSize: PAGE_SIZE })
@@ -689,7 +707,8 @@ Page({
     const fromIdx = CATEGORIES.findIndex(c => c.id === fromCatId)
     const nextCat = fromIdx >= 0 && fromIdx < CATEGORIES.length - 1 ? CATEGORIES[fromIdx + 1] : null
     if (!nextCat) {
-      wx.showToast({ title: '已经到底啦', icon: 'none' })
+      // BUG-20260806-023: 状态栏小胶囊提示（替换 wx.showToast）
+      this._showStatusPill('已经到底啦')
       return
     }
     // 递归：直接以目标分类再走一次跨分类流程

@@ -3,13 +3,18 @@
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px; --status-bar-height: {{statusBarHeight}}px;">
 
   <!-- 顶部导航栏：返回（左）+ 进度指示（右）· D-09 v1.2（BUG-20260806-007）
        top=menuTop（无上呼吸）；height=menuHeight+24rpx（仅下扩展 12px） -->
   <!-- BUG-20260806-009 v3: 状态栏不透明背景层（custom 模式下 setNavigationBarColor 无效，
        用 fixed 等高背景层覆盖状态栏区域，背景色与页面一致） -->
   <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+
+  <!-- BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊 — 替换 wx.showToast，
+       定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出 -->
+  <view class="status-pill {{statusPillShow ? 'show' : ''}}">{{statusPillText}}</view>
+
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
     <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
          D-09 v1.2: explicit 锚定胶囊中心（按钮中心 = 胶囊中心，不依赖条带内居中） -->

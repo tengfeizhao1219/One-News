@@ -31,6 +31,33 @@
   pointer-events: none;
 }
 
+/* BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊（与详情页一致）
+   定位：top = 状态栏区域垂直居中（status-bar-height/2 - 半高），
+   水平居中于屏幕；z-index 高于 status-bar-fill(16)/fixed-top-bar(17) */
+.status-pill {
+  position: fixed;
+  top: calc(var(--status-bar-height, 44px) / 2 - 28rpx);
+  left: 50%;
+  transform: translateX(-50%) translateY(-10rpx);
+  z-index: 50;
+  padding: 10rpx 36rpx;
+  border-radius: 999rpx;
+  background-color: var(--text-primary);
+  color: var(--bg-card);
+  font-size: 24rpx;
+  font-weight: 500;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.status-pill.show {
+  opacity: 0.92;
+  transform: translateX(-50%) translateY(0);
+}
+
 /* ============ 卡片舞台 ============ */
 .card-stage {
   position: absolute;

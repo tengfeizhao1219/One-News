@@ -65,6 +65,9 @@ Page({
     source: '',
     // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
     showSwipeHint: true,
+    // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
+    statusPillShow: false,
+    statusPillText: '',
   },
 
   // 引擎实例
@@ -432,6 +435,21 @@ Page({
       if (this._isAtTop) {
         this._swipeToPrev()
       }
+    } else if (dy < 0 && this.data.isLast) {
+      // BUG-20260806-022 追修 (FE): 合并列表最后一条上滑 → 跨分类自动跳转。
+      // 原实现 `dy < 0 && !this.data.isLast` 在 isLast=true 时直接拦截整个分支，
+      // _swipeToNext 永不执行 → _tryNextCategory 永不触发 → 详情页末条无法跨分类。
+      // 修复: 末条时单独走 _tryNextCategory()（引擎内部判断是否还有下一分类）。
+      if (this._isAtBottom) {
+        // 短内容保护：末条内容不足一屏时，第一次上滑仅确认"已到底"，第二次才跨分类
+        if (this._needsSecondSwipe) {
+          this._needsSecondSwipe = false
+          this.setData({ scrollTop: 1 })
+          setTimeout(function () { that.setData({ scrollTop: 0 }) }, 150)
+          return
+        }
+        this._tryNextCategory()
+      }
     } else if (dy < 0 && !this.data.isLast) {
       if (this._isAtBottom) {
         // 短内容保护：内容不足一屏时，第一次上滑仅确认"已到底"，第二次才翻页
@@ -578,14 +596,30 @@ Page({
     that._engine.loadNextCategory().then(function (res) {
       if (that._destroyed) return
       if (!res.hasNext) {
-        wx.showToast({ title: '已阅读完，回到首页获取更多新闻', icon: 'none' })
+        // BUG-20260806-023: 改用状态栏小胶囊（替换 wx.showToast）
+        that._showStatusPill('已阅读完，回到首页获取更多新闻')
         return
       }
-      // 跨分类跳转成功：提示切换分类 + 更新总数 + 立即翻页
-      wx.showToast({ title: '正在阅读：' + res.categoryName, icon: 'none' })
+      // 跨分类跳转成功：小胶囊提示切换分类 + 更新总数 + 立即翻页
+      that._showStatusPill('正在阅读：' + res.categoryName)
       that.setData({ total: that._engine.getProgress().total })
       that._swipeToNext()
     })
+  },
+
+  /**
+   * BUG-20260806-023 (FE): 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
+   * 定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出。
+   * @param {string} text 显示文本
+   */
+  _showStatusPill: function (text) {
+    if (!text) return
+    clearTimeout(this._statusPillTimer)
+    this.setData({ statusPillShow: true, statusPillText: text })
+    var that = this
+    this._statusPillTimer = setTimeout(function () {
+      if (!that._destroyed) that.setData({ statusPillShow: false })
+    }, 1500)
   },
 
   /**

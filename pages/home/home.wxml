@@ -20,6 +20,9 @@
   <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-card);"></view>
   <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);"></view>
 
+  <!-- BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊 — 替换 wx.showToast，
+       定位在状态栏区域（胶囊下方），自动 1.5s 淡出，类似 iOS Dynamic Island 风格 -->
+  <view class="status-pill {{statusPillShow ? 'show' : ''}}">{{statusPillText}}</view>
 
   <!-- ========== 骨架屏（加载中） ========== -->
   <view class="skeleton-stage" wx:if="{{pageState === 'loading'}}">
