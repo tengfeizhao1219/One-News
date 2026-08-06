@@ -228,7 +228,7 @@
   transform: translateX(0);
 }
 
-/* 17:08 系统性修复③：动画完成后附加 .done（定义在 .show 之后 → 同特异性下优先）——
+/* 17:08 系统性修复③（保留）：动画完成后附加 .done（定义在 .show 之后 → 同特异性下优先）——
    transform:none 与 translateX(0) 视觉完全一致，但移除 transform 祖先，
    使面板内的 scroll-view 原生滚动不受 iOS 合成层/包含块干扰。
    仅在面板稳定显示（滑入动画结束）后存在；滑出动画前由 JS 先移除。 */
@@ -236,23 +236,9 @@
   transform: none;
 }
 
-/* 17:08 系统性修复①：滚动容器高度改确定性单位 height:100vh。
-   官方文档：竖向滚动必须给 scroll-view 固定高度，百分比（height:100%）解析不可靠——
-   v1 flex:1 与 v2 height:100% 两次失效的共同根因：视口被内容撑开 → 滚动距离恒为 0。
-   absolute 四边定位保留（不依赖 flex），height:100vh 直接锁定视口高度。 */
-.panel-scroll {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  /* 内容避开左侧滚轮区域（128rpx 滚轮 + 32rpx 触摸热区） */
-  padding-left: 160rpx;
-  box-sizing: border-box;
-  height: 100vh;
-}
-
+/* 面板标题栏：固定顶部（flex-shrink:0），不随列表滚动（owner 17:20 裁定） */
 .panel-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16rpx;
@@ -277,25 +263,36 @@
   text-overflow: ellipsis;
 }
 
-/* 左侧滚轮：absolute 固定在面板左侧（header 下缘），不随列表滚动。
-   z-index 高于滚动内容，catch 触摸独立接管，不与外层滚动冲突 */
+/* 面板主体：占 header 之外的剩余高度，内部 = 滚轮（固定）+ 列表（滚动） */
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+/* 左侧滚轮：flex 流内固定（flex-shrink:0），顶部对齐，catch 触摸独立接管 */
 .panel-wheel {
-  position: absolute;
-  top: 180rpx;   /* header 高度 ≈ 100rpx padding + 文字 + 28rpx padding */
-  left: 0;
+  flex-shrink: 0;
   width: 128rpx;
-  z-index: 5;
   border-right: 1rpx solid var(--divider);
   display: flex;
+  align-items: flex-start;
   justify-content: center;
 }
 
 /* ============ 新闻列表 ============ */
+/* 17:20 系统性修复④：滚动容器用 flex:1 + height:0（社区验证可靠高度写法，等价固定高度）。
+   官方文档要求 scroll-view 必须固定高度；flex:1 单独用不可靠（v1 失败），
+   height:0 + flex-grow 分配 = 确定高度（panel-body 剩余空间）。
+   仅列表区域滚动；内容多时可滑，内容少时完整显示（不撑高，owner 17:20 裁定）。 */
+.panel-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+}
+
 .panel-list {
-  /* 17:08 系统性修复②：内容明确超高 → 滚动距离 ≥ 400rpx，滑动反馈清晰。
-     官方文档：内容总高度必须 > 容器高度才会触发滚动；
-     min-height:100vh 只有 header(~178rpx) 的滚动余量偏小，+400rpx 保证明显可滚。 */
-  min-height: calc(100vh + 400rpx);
+  /* 不设 min-height：内容多时自然超高可滚，内容少时完整显示（owner 17:20 裁定） */
 }
 
 /* UI-B7 §3.1 v5.3-final: 行距收窄，padding 8px 16px */
