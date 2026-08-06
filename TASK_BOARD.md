@@ -24,6 +24,26 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-06 23:35 【DG-11 搜索阶段预算与超时收紧 · 已实现 · @owner 部署 refreshNews 后验证】
+
+> **对象**：owner（部署 `refreshNews` 云函数后观察耗时）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+23:31 双分类日志（recommend 54.05s / tech 50.44s）出现**新模式**：三个 AI 引擎全部「请求超时」（不再是 1301）——
+- 智谱 20.06s 超时 → Qwen 15.09s 超时 → DeepSeek 5.03s（40s 预算截断），搜索阶段仍耗满 40s
+- enrich 健康：5/5 正文、4-5/5 AI 摘要（P0-2 硬期限生效，距 55s 期限仅 ~1.3s 余量）
+- 关键：**部署版仍是 DG-09 之前的旧代码**（无「确定性失败短路」日志），且 DG-09 只治 1301 型失败，治不了「全引擎超时」型
+
+已实施 **P0-5**（`zhipuSearch.js`）：
+- `SEARCH_PHASE_BUDGET_MS`：40s → **30s**
+- `ZHIPU_TIMEOUT`：20s → **15s**（健康 ~3s，仍留 5 倍余量）
+- `QWEN_SEARCH_TIMEOUT`：15s → **12s**（健康 ~10s）
+- `DEEPSEEK_SEARCH_TIMEOUT`：15s → **10s**（当前基本不可用）
+
+预期：全引擎故障时搜索 40s → 30s，enrich 窗口 ~13s → ~23s，总耗时 ~54s → **~46s**（余量 14s）。
+
+🔔 **@owner**：`refreshNews` 需「上传并部署：云端安装依赖」（DG-09+DG-10+DG-11 一并生效）。
+
 ### ⚡ 2026-08-06 23:27 【DG-10 AI 摘要长度放宽 · 已实现 · @owner 部署 refreshNews 后生效】
 
 > **对象**：owner（部署 `refreshNews` 云函数后下次刷新摘要变长）、PM（知悉）、所有角色
@@ -3093,6 +3113,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-08** | **详情页性能优化**（AI 摘要移出 getNewsDetail 关键路径 + 预取只向后+2/入口延迟400ms + localCache TTL 24h + refreshNews enrich 硬期限保正文） | **全栈开发（FS）** | ✅ 已完成待部署（`054cc85` + P0-2 `415bccb`，待 owner 部署 getNewsDetail/refreshNews + 真机复测） | DG-02 | `cloudfunctions/getNewsDetail/index.js` + `pages/detail/reading-engine.js` + `cloudfunctions/refreshNews/{index.js,utils/contentFetcher.js}` |
 | **DG-09** | **搜索阶段确定性失败短路**（1301 内容安全/账户欠费终态错误 → 跳过后续 AI 引擎直转聚合/天行，省 15~25s/刷新；另修复 juhe 10012 配额耗尽的 null 崩溃） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews 后观察耗时 ≤35s） | DG-08 日志复盘 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/sources/juhe.js` |
 | **DG-10** | **AI 摘要长度放宽**（100-150→100-300 字，max_tokens 300→600，门槛 20→30 字，prompt 加「各方反应」） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | owner 反馈 | `cloudfunctions/refreshNews/utils/contentFetcher.js` |
+| **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
