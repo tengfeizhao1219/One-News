@@ -367,12 +367,12 @@ async function searchWithZhipu(category, maxTimeout = ZHIPU_TIMEOUT) {
 const QWEN_API_KEY = process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
 const QWEN_BASE_HOST = 'dashscope.aliyuncs.com'
 const QWEN_PATH = '/compatible-mode/v1/chat/completions'
-const QWEN_MODEL = config.qwen?.model || 'qwen-turbo'
+const QWEN_MODEL = config.qwen?.model || 'qwen3.7-flash'
 const QWEN_TIMEOUT = config.qwen?.timeout || QWEN_SEARCH_TIMEOUT
 
 /**
  * 通义千问 API 作为智谱失败时的降级搜索（OpenAI 兼容模式 + enable_search 联网）
- * qwen-turbo 免费额度（阿里云百炼新人 7000 万+ token / qwen-turbo 永久免费）
+ * 使用 qwen3.7-flash：免费额度 100 万 token/模型（截图所示），支持 enable_search 联网搜索
  * @param {string} category 分类名
  * @returns {Promise<Array>} 新闻列表
  */

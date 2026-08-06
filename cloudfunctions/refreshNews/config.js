@@ -36,13 +36,14 @@ module.exports = {
   },
 
   // 通义千问 Qwen API（refreshNews 智谱降级兜底数据源 · DG-03 接入 2026-08-06）
-  // 优先读环境变量 DASHSCOPE_API_KEY（阿里云百炼申请，qwen-turbo 免费额度）；
-  // OpenAI 兼容模式 + enable_search 联网搜索。降级链：智谱 → Qwen → DeepSeek → 聚合/天行
+  // 优先读环境变量 DASHSCOPE_API_KEY（阿里云百炼申请）；
+  // 选用 qwen3.7-flash：免费额度 100 万 token（2026/10/23 过期），支持 enable_search 联网搜索，
+  // 速度快、成本低，作为智谱失败后的免费二级兜底足够。降级链：智谱 → Qwen → 聚合/天行
   qwen: {
     apiKey: process.env.DASHSCOPE_API_KEY || '',
     baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'qwen-turbo',
-    timeout: 40000,
+    model: 'qwen3.7-flash',
+    timeout: 15000,
   },
 
   // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
