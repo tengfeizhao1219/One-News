@@ -253,19 +253,23 @@
    panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
 
 /* 面板标题栏：absolute 固定顶部 */
+/* BUG-20260806-019 (FE): "今日新闻"与右上角胶囊垂直对齐。
+   之前 v2 用 padding-top:var(--menu-top) 让文字顶部对齐胶囊顶部，
+   但文字(36rpx≈18px)比胶囊(menuHeight≈32px)矮，视觉偏上。
+   改为 flex 垂直居中：header 高度 = 胶囊高度，top = 胶囊顶部，
+   内部 align-items:center 让"今日新闻"文字中心与胶囊中心垂直对齐。
+   下方 28rpx 间距由 .panel-body top 承担（见 panel-body 注释）。 */
 .panel-header {
   position: absolute;
-  top: 0;
+  top: var(--menu-top, 44px);
   left: 0;
   right: 0;
+  height: var(--menu-height, 32px);
   z-index: 5;
   display: flex;
   align-items: center;
   gap: 16rpx;
-  /* BUG-20260806-014 v2 (FE): padding-top = 胶囊顶部 menuTop（而非 statusBarHeight + 24rpx）。
-     上一版用 statusBarHeight+24rpx 太靠下（≈胶囊底部下方），与胶囊不齐。
-     现在 "今日新闻" 文字顶部与右上角胶囊顶部对齐，视觉平衡。 */
-  padding: var(--menu-top, 44px) 40rpx 28rpx;
+  padding: 0 40rpx;
 }
 
 /* BUG-20260806-016 (FE): 侧边栏面板状态栏背景层 —— 与详情页 .status-bar-fill 高度/语义一致。
@@ -302,11 +306,12 @@
 }
 
 /* 面板主体：absolute 铺满 header 下方区域
-   BUG-20260806-014 v2 (FE): top = 胶囊顶部 + 64rpx（36rpx 标题行高 + 28rpx 底部 padding），
-   与 .panel-header 底部对齐 */
+   BUG-20260806-019 (FE): top = 胶囊底部(menuTop + menuHeight)。
+   原方案 top=menuTop+64rpx(=menuTop+32px@2x) 恰为胶囊底部，现等价于
+   menuTop+menuHeight（header 高度=胶囊高度，底部即胶囊底部），保持 body 起始位置不变 */
 .panel-body {
   position: absolute;
-  top: calc(var(--menu-top, 44px) + 64rpx);
+  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px));
   left: 0;
   right: 0;
   bottom: 0;
