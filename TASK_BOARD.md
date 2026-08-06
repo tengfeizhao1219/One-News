@@ -110,12 +110,34 @@
 > **@PM**：任务表建行（004→FE，P1）；**@FE**：修复后 PD 按台账验收标准代码级验收 + owner 真机确认。
 > — 产品设计师（PD）
 
-### 🔴 2026-08-06 07:40 【PD 提单 · owner 直报 3 项缺陷 · BUG-20260806-001~003 · @FE 主修 @FS 确认】
+---
+### ✅ 2026-08-06 08:16 【FS 交付 · BUG-20260806-001~003 修复（FE 主修 `0946047` 单篇模式方案 + FS 同步确认/补充） · PD 复核 + owner 真机验收】
+
+> **对象**：PD（代码级复核）、owner（真机验证）、PM（了解）
+> **发布**：全栈开发（FS）
+> **说明**：FE 已于 `0946047` 提交 001/002/003 主修复（与 FS 并行方案合并，采用 FE 更优的单篇模式方案）；FS 补充落实 owner 07:44 裁定（settings/about 主页按钮）并登记本广播。
+
+**最终修复内容（合并后）**：
+
+| Bug | 修复方案 | 改动文件 |
+|---|---|---|
+| **BUG-20260806-001** P2 | `onToggleFavorite` 收藏→toast「已收藏」，取消→toast「已取消收藏」（icon:none） | `detail.js` |
+| **BUG-20260806-002** P1 | **方案 A 单篇模式**：引擎新增 `_entryNotFound` + `hasEntryNewsId()`/`isEntryFound()`；入口新闻未命中 → `_loadFallback(newsId, true)` 单篇拉取真实详情（成功正常展示，失败提示「该新闻已失效」），`_singleMode` 禁止跨分类翻页 | `reading-engine.js` + `detail.js` |
+| **BUG-20260806-003** P1 | detail（第 3 层）→ 返回按钮（‹ navigateBack）；settings/about（第 2 层）→ 主页按钮（home.svg + reLaunch，落实 owner 07:44 裁定）；favorites/history 已是主页按钮不变 | `detail.wxml` + `settings/about.{wxml,js,wxss}` |
+
+**验证**：node --check 通过；v7 63/0 ✅ v13 84/0 ✅ v11 25/0 ✅。
+
+> 🔔 **[PD]** 代码级复核 3 项修复；**[owner]** 真机验证：①收藏/取消收藏 toast 出现 ②从收藏/历史点已失效新闻→单篇拉取或提示「该新闻已失效」（不展示他条） ③detail 返回按钮、settings/about 主页按钮。
+> — 全栈开发（FS）
+
+---
+### ✅ 2026-08-06 07:40 【PD 提单 · owner 直报 3 项缺陷 · BUG-20260806-001~003 · @FE 主修 @FS 确认】
 
 > **对象**：FE（主修 3 项）、FS（后端确认 001/002）、PM（建任务行 + 验收排期）、owner（知悉）
 > **发布**：产品设计师（PD）
 > **台账**：`docs/05-测试验收/Bug清单模板.md`（含根因定位、修复建议、验收标准）
 > **🆕 07:44 owner 追加裁定**：bug 3 中 settings/about 也统一改为主页按钮（@FE 实施范围扩大）
+> **[已处理] — 2026-08-06 08:16 FE 主修 + FS 确认交付完成（FE commit `0946047` 单篇模式方案），见上方交付广播**
 
 **owner 真机发现 3 项缺陷（均代码级定位）**：
 
