@@ -171,8 +171,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <span><span class="dot live"></span>自动刷新 <b id="autoState">开（60s）</b></span>
     <span id="lastUpd">加载中…</span>
     <a class="ds-entry" href="javascript:void(0)" onclick="switchTab('gallery',document.querySelector('[data-tab=gallery]'))">🎨 交互原型库</a>
-    <a class="ds-entry" href="showcase/kanban/" target="_blank" rel="noopener">📌 全局状态看板</a>
-    <span style="margin-left:auto;opacity:.55;font-size:11px">v3.2 · 新增状态看板入口</span>
+    <span style="margin-left:auto;opacity:.55;font-size:11px">v3.1 · 修复解析器 + 上下串行</span>
   </div>
 </header>
 
@@ -180,6 +179,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   <button class="active" onclick="switchTab('overview',this)">📊 总览</button>
   <button onclick="switchTab('detail',this)">📋 明细</button>
   <button data-tab="gallery" onclick="switchTab('gallery',this)">🎨 交互原型</button>
+  <button onclick="switchTab('kanban',this)">📌 全局状态看板</button>
 </div>
 
 <main>
@@ -248,6 +248,153 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     </div>
     <div class="gal-grid" id="galGrid"></div>
   </div>
+
+  <!-- ═══════════ TAB 4: 全局状态看板 ═══════════ -->
+  <div class="tab-content" id="tab-kanban">
+  <div class="kanban-wrap">
+  <style>
+  .kanban-wrap{--kb-bg:#f5f3ee;--kb-panel:#fffdf9;--kb-ink:#1c1b19;--kb-sub:#6b6862;
+    --kb-line:#e7e2d8;--kb-accent:#007aff;--kb-chip:#eeece8;
+    --kb-done:#2e9e5b;--kb-doing:#e0a106;--kb-wait:#9a958c;--kb-block:#d6453d}
+  [data-theme="dark"] .kanban-wrap{--kb-bg:#0f0f10;--kb-panel:#1a1a1c;--kb-ink:#ececec;
+    --kb-sub:#9a978f;--kb-line:#2c2c2f;--kb-accent:#4ea1ff;--kb-chip:#262629;
+    --kb-done:#3fbf73;--kb-doing:#e6b23a;--kb-wait:#7d7970;--kb-block:#ef5b52}
+  .kanban-wrap *{box-sizing:border-box}
+  .kanban-wrap{background:var(--kb-bg);color:var(--kb-ink);font-size:14px;
+    border-radius:12px;padding:16px 20px 28px;margin:-2px -22px -16px;min-height:calc(100vh - 200px)}
+  .kb-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;
+    padding-bottom:10px;border-bottom:1px solid var(--kb-line)}
+  .kb-head h2{font-size:17px;margin:0;font-weight:700}
+  .kb-head .sub{color:var(--kb-sub);font-size:12px}
+  .kb-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
+  .kb-stats{display:flex;gap:5px;flex-wrap:wrap}
+  .kb-stat{font-size:11px;color:var(--kb-sub);background:var(--kb-chip);
+    border-radius:20px;padding:2px 9px}
+  .kb-stat b{color:var(--kb-ink)}
+  .kb-spacer{flex:1}
+  .kb-btn{font-family:inherit;font-size:11px;border:1px solid var(--kb-line);
+    background:var(--kb-panel);color:var(--kb-ink);border-radius:7px;
+    padding:5px 10px;cursor:pointer;transition:.15s}
+  .kb-btn:hover{border-color:var(--kb-accent)}
+  #kb-chain{margin-top:8px;display:none;align-items:center;gap:7px;flex-wrap:wrap;
+    background:var(--kb-chip);border:1px dashed var(--kb-accent);border-radius:9px;padding:7px 11px;font-size:11px}
+  #kb-chain.show{display:flex}
+  #kb-chain .ck{display:inline-flex;align-items:center;gap:4px;
+    padding:2px 7px;border-radius:13px;background:var(--kb-panel);border:1px solid var(--kb-line)}
+  #kb-chain .ck .dot{width:7px;height:7px;border-radius:50%}
+  .kb-board{display:flex;gap:12px;padding:10px 0 24px;overflow-x:auto;align-items:flex-start}
+  .kb-col{flex:0 0 255px;background:var(--kb-panel);border:1px solid var(--kb-line);
+    border-radius:12px;display:flex;flex-direction:column;max-height:calc(100vh - 280px)}
+  .kb-col-h{padding:10px 12px;border-bottom:1px solid var(--kb-line)}
+  .kb-col-h .cn{font-weight:700;font-size:13px}
+  .kb-col-h .ch{color:var(--kb-sub);font-size:10.5px;margin-top:1px}
+  .kb-col-b{padding:8px;display:flex;flex-direction:column;gap:8px;overflow-y:auto}
+  .kb-card{background:var(--kb-bg);border:1px solid var(--kb-line);border-radius:9px;
+    padding:9px 10px;cursor:pointer;transition:.15s;position:relative}
+  .kb-card:hover{transform:translateY(-1px);border-color:var(--kb-accent)}
+  .kb-card .top{display:flex;align-items:center;gap:5px;margin-bottom:4px}
+  .kb-id{font-size:10.5px;font-weight:700;color:var(--kb-accent);font-family:ui-monospace,monospace}
+  .kb-prio{font-size:9.5px;padding:1px 5px;border-radius:9px;font-weight:700}
+  .kp0{background:#fde8e6;color:#c43c33}.kp1{background:#fdf3e0;color:#a9791a}.kp2{background:#eef2f7;color:#3a6ea5}.kpn{background:var(--kb-chip);color:var(--kb-sub)}
+  .kb-st{margin-left:auto;font-size:12.5px}
+  .kb-tt{font-size:12.5px;line-height:1.38;font-weight:600}
+  .kb-meta{margin-top:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .kb-role{font-size:10.5px;color:var(--kb-sub)}
+  .kb-link{font-size:9.5px;padding:2px 7px;border-radius:9px;font-weight:600;color:#fff;opacity:.92}
+  .kb-note{font-size:10.5px;color:var(--kb-sub);margin-top:4px;line-height:1.33}
+  .kb-board.linked .kb-card{opacity:.32;filter:saturate(.4)}
+  .kb-board.linked .kb-card.lkd{opacity:1;filter:none;border-color:var(--kb-accent);box-shadow:0 0 0 2px var(--kb-accent)}
+  .kb-board.linked .kb-col-h{opacity:.5}
+  .kb-board.linked .kb-col.has-lkd .kb-col-h{opacity:1}
+  .kb-leg{display:flex;gap:9px;flex-wrap:wrap;font-size:10.5px;color:var(--kb-sub);padding:6px 0 2px}
+  .kb-leg span{display:inline-flex;align-items:center;gap:4px}
+  .kb-leg i{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .kb-foot{padding:10px 0 2px;color:var(--kb-sub);font-size:10.5px;
+    border-top:1px solid var(--kb-line);margin-top:4px;line-height:1.35}
+  </style>
+
+  <div class="kb-head">
+    <h2>📌 全局状态看板</h2>
+    <span class="sub" id="kb-subtitle"></span>
+    <div class="kb-bar">
+      <div class="kb-stats" id="kb-stats"></div>
+      <div class="kb-spacer"></div>
+      <button class="kb-btn" id="kb-resetBtn" style="display:none">退出关联</button>
+      <button class="kb-btn" id="kb-themeBtn">🌙 暗色</button>
+    </div>
+    <div id="kb-chain"></div>
+  </div>
+
+  <div class="kb-board" id="kb-board"></div>
+  <div class="kb-leg" id="kb-leg"></div>
+  <div class="kb-foot">
+    数据源：<code>TASK_BOARD.md</code>（全局各角色任务）+ <code>COMMLOG.md</code> + <code>CONTEXT.md</code> ·
+    点击任意卡片可高亮它在「需求→设计→评审→开发→测试→验收」中的完整关联链。
+  </div>
+
+  <script src="showcase/kanban/data.js"></script>
+  <script>
+  (function(){
+    if(!window.KANBAN_META){ document.querySelector('.kanban-wrap').innerHTML='<p style="padding:30px;color:var(--kb-sub)">⚠️ 看板数据未加载（data.js 缺失）</p>'; return }
+    const M=window.KANBAN_META, D=window.KANBAN_DATA;
+    const sM={done:"✅",doing:"🔄",wait:"⏳",block:"🚫",cancel:"❌"};
+    const sC={done:"var(--kb-done)",doing:"var(--kb-doing)",wait:"var(--kb-wait)",block:"var(--kb-block)",cancel:"var(--kb-cancel)"};
+    const links=[...new Set(D.map(d=>d.link))], lC={};
+    links.forEach((l,i)=>{ lC[l]=`hsl(${(i*67+200)%360} 62% 52%)` });
+    $("kb-subtitle").textContent=M.subtitle+" · 更新 "+M.updated;
+    const stEl=$("kb-stats"); M.columns.forEach(c=>{
+      const n=D.filter(d=>d.col===c.key).length, s=document.createElement("span");
+      s.className="kb-stat"; s.innerHTML=c.name+" <b>"+n+"</b>"; stEl.appendChild(s);
+    });
+    const board=$("kb-board"); M.columns.forEach(c=>{
+      const col=document.createElement("div"); col.className="kb-col"; col.dataset.col=c.key;
+      const h=document.createElement("div"); h.className="kb-col-h";
+      h.innerHTML=`<div class="cn">${c.name}</div><div class="ch">${c.hint}</div>`;
+      col.appendChild(h); const b=document.createElement("div"); b.className="kb-col-b";
+      D.filter(d=>d.col===c.key).forEach(d=>b.appendChild(mkCard(d)));
+      col.appendChild(b); board.appendChild(col);
+    });
+    function mkCard(d){
+      const el=document.createElement("div"); el.className="kb-card";
+      el.dataset.link=d.link; el.dataset.id=d.id;
+      const pc=d.prio==="P0"?"kp0":d.prio==="P1"?"kp1":d.prio==="P2"?"kp2":"kpn";
+      el.innerHTML=`<div class="top"><span class="kb-id">${d.id}</span><span class="kb-prio ${pc}">${d.prio}</span><span class="kb-st" style="color:${sC[d.status]}">${sM[d.status]}</span></div>
+        <div class="kb-tt">${d.title}</div><div class="kb-meta"><span class="kb-role">${d.role}</span><span class="kb-link" style="background:${lC[d.link]}">🔗 ${d.link}</span></div>
+        ${d.note?`<div class="kb-note">${d.note}</div>`:""}`;
+      el.addEventListener("click",()=>focusLink(d.link)); return el;
+    }
+    const chEl=$("kb-chain"), rBtn=$("kb-resetBtn");
+    function focusLink(link){
+      board.classList.add("linked"); rBtn.style.display="";
+      document.querySelectorAll(".kb-card").forEach(c=>c.classList.toggle("lkd",c.dataset.link===link));
+      document.querySelectorAll(".kb-col").forEach(c=>c.classList.toggle("has-lkd",[...c.querySelectorAll(".kb-card.lkd")].length>0));
+      const order={}; M.columns.forEach((c,i)=>order[c.key]=i);
+      const items=D.filter(d=>d.link===link).sort((a,b)=>order[a.col]-order[b.col]);
+      let h=`<b style="color:${lC[link]}">🔗 ${link}</b> 关联链：`;
+      M.columns.forEach(c=>{
+        const t=items.find(x=>x.col===c.key);
+        h+=`<span class="ck"><span class="dot" style="background:${t?sC[t.status]:'var(--kb-line)'}"></span>${c.name.slice(0,2)} ${t?sM[t.status]:'—'}</span>`;
+      }); chEl.innerHTML=h; chEl.classList.add("show");
+    }
+    function resetF(){ board.classList.remove("linked");
+      document.querySelectorAll(".kb-card").forEach(c=>c.classList.remove("lkd"));
+      document.querySelectorAll(".kb-col").forEach(c=>c.classList.remove("has-lkd"));
+      chEl.classList.remove("show"); rBtn.style.display="none";
+    }
+    rBtn.addEventListener("click",resetF); board.addEventListener("click",e=>{if(e.target===board)resetF()});
+    const leg=$("kb-leg"); links.forEach(l=>{
+      const s=document.createElement("span"); s.innerHTML=`<i style="background:${lC[l]}"></i>${l}`; leg.appendChild(s);
+    });
+    const tBtn=$("kb-themeBtn");
+    tBtn.addEventListener("click",()=>{
+      const d=document.documentElement.getAttribute("data-theme")==="dark";
+      document.documentElement.setAttribute("data-theme",d?"light":"dark");
+      tBtn.textContent=d?"🌙 暗色":"☀️ 亮色";
+    });
+  })();
+  </script>
+  </div><!-- /kanban-wrap -->
+  </div><!-- /tab-kanban -->
 
   <!-- 预览弹窗 -->
   <div class="modal" id="galModal">
