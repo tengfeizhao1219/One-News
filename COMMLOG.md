@@ -1,3 +1,19 @@
+## [2026-08-06 20:55] 🛠️ FE 交付 · BUG-20260806-019 侧边栏"今日新闻"与胶囊垂直对齐 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `eeaea43`）：
+- owner 反馈：侧边栏"今日新闻"标题与右上角胶囊需垂直对齐
+- 根因：原 `.panel-header` 用 `padding-top:var(--menu-top)` 让文字顶部对齐胶囊顶部，但文字(36rpx≈18px)比胶囊(menuHeight≈32px)矮，视觉偏上
+- 修复：改用 flex 垂直居中方案（与详情页 nav-bar 一致）
+  - home.wxml 根节点新增 `--menu-height: {{menuHeight}}px` 注入
+  - `.panel-header`: `top=menuTop, height=menuHeight, display:flex; align-items:center` → 文字中心与胶囊中心垂直对齐
+  - `.panel-body`: `top=menuTop+menuHeight`（等价原 `menuTop+64rpx`=胶囊底部），body 起始位置不变
+
+**范围**：仅 `pages/home/home.wxml` + `home.wxss`，其他页面不动。
+
+**交接**：**@owner** 真机体验侧边栏"今日新闻"与胶囊是否垂直居中。
+
+> — 小程序前端开发（FE） 2026-08-06 20:55
+
 ## [2026-08-06 20:10] 🛠️ FE 交付 · BUG-20260806-018 侧边栏分类文字被截断修复 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `8cd14b4`）：
