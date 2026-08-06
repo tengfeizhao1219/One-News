@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>一页 - Demo</title>
+<style>
+  :root {
+    --bg-page: #F5F3F0;
+    --bg-card: #FAF9F7;
+    --text-primary: #1C1C1E;
+    --text-secondary: #A0A0A0;
+    --text-body: #3A3A3C;
+    --divider: #E8E6E1;
+    --accent: #6B6B6B;
+    --tag-bg: #EEECE8;
+    --tag-text: #7A7A7A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Serif SC", serif;
+    background: #1A1A1A;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg-page);
+    border-radius: 40px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+
+  .status-bar {
+    height: 47px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    position: relative;
+    z-index: 10;
+    letter-spacing: 0.5px;
+  }
+
+  /* ============ CARD FLOW ============ */
+  .card-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-card);
+    transition: transform 0.38s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.38s ease;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .card.active { transform: translateY(0); opacity: 1; z-index: 2; }
+  .card.above { transform: translateY(-100%); opacity: 0.2; z-index: 1; }
+  .card.below { transform: translateY(100%); opacity: 0; z-index: 0; }
+
+  .card-body {
+    padding: 80px 36px 48px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .card-title {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.4;
+    margin-bottom: 24px;
+    letter-spacing: -0.3px;
+  }
+
+  .card-summary {
+    font-family: "PingFang SC", "Noto Serif SC", "Songti SC", serif;
+    font-size: 16px;
+    color: var(--text-body);
+    line-height: 1.95;
+    margin-bottom: 28px;
+    letter-spacing: 0.2px;
+  }
+  .card-summary p { margin-bottom: 14px; }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+  }
+
+  .category-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+  }
+
+  .swipe-hint {
+    text-align: center;
+    padding: 20px 0 48px;
+    font-size: 11px;
+    color: #C4C1BB;
+    flex-shrink: 0;
+    letter-spacing: 2px;
+    font-weight: 300;
+  }
+
+  /* ============ GUIDE OVERLAY ============ */
+  .guide-overlay {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(28,28,30,0.85);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    color: #FFF;
+    padding: 16px 28px;
+    border-radius: 14px;
+    font-size: 13px;
+    z-index: 20;
+    text-align: center;
+    line-height: 1.7;
+    animation: fadeInOut 4s ease forwards;
+    pointer-events: none;
+    font-weight: 400;
+    letter-spacing: 0.3px;
+  }
+
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    12% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    78% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* ============ SIDE PANEL ============ */
+  .side-panel {
+    position: absolute;
+    top: 0; right: 0;
+    width: 82%; height: 100%;
+    background: var(--bg-card);
+    z-index: 30;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    box-shadow: -4px 0 28px rgba(0,0,0,0.08);
+    overflow-y: auto;
+  }
+  .side-panel.open { transform: translateX(0); }
+
+  .side-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.25);
+    z-index: 29;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .side-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .side-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 60px 24px 20px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+  }
+
+  .side-close {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.2s;
+  }
+  .side-close:hover { background: var(--divider); }
+
+  .side-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 0 20px 16px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .side-tabs::-webkit-scrollbar { display: none; }
+
+  .side-tab {
+    padding: 7px 16px;
+    border-radius: 18px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+  }
+  .side-tab.active {
+    color: var(--text-primary);
+    background: var(--tag-bg);
+    font-weight: 600;
+  }
+
+  .side-list { flex: 1; overflow-y: auto; }
+
+  .side-item {
+    display: flex;
+    padding: 14px 24px;
+    border-bottom: 0.5px solid var(--divider);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .side-item:active { background: var(--tag-bg); }
+
+  .side-item-info { flex: 1; min-width: 0; }
+
+  .side-item-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* ============ DETAIL PAGE ============ */
+  .detail-page {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--bg-card);
+    z-index: 40;
+    transform: translateX(100%);
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .detail-page.open { transform: translateX(0); }
+
+  .detail-nav {
+    display: flex;
+    align-items: center;
+    /* D-09：导航栏与胶囊对齐——顶部 56px 为状态栏+胶囊间隙，导航行高 32px 与胶囊同高 */
+    padding: 56px 28px 0;
+    height: 32px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+    transition: color 0.2s;
+  }
+  .detail-nav:hover { color: var(--text-primary); }
+
+  /* D-09：标题位于导航栏下方 16px（32rpx）呼吸间距（不再紧贴导航栏） */
+  .detail-content { padding: 16px 36px 40px; }
+
+  .detail-title {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.45;
+    margin-bottom: 14px;
+    letter-spacing: -0.2px;
+  }
+
+  .detail-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    /* D-09：正文不再做分割线（owner 2026-08-06 确认），元信息与正文间距承担衔接 */
+    margin-bottom: 28px;
+    letter-spacing: 0.3px;
+  }
+
+  /* D-09：正文区不再渲染分割线（标题/元信息与正文直接衔接） */
+  /* .detail-divider 已移除 */
+
+  .detail-text {
+    font-family: "PingFang SC", "Noto Serif SC", "Songti SC", serif;
+    font-size: 17px;
+    color: var(--text-body);
+    line-height: 2.2;
+    letter-spacing: 0.3px;
+  }
+  .detail-text p { margin-bottom: 22px; }
+
+  .detail-back-bottom {
+    text-align: center;
+    padding: 44px 0 60px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+  }
+  .detail-back-bottom:hover { color: var(--text-primary); }
+
+  /* ============ NAV DOTS ============ */
+  .nav-dots {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 5;
+  }
+  .nav-dot {
+    width: 3px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(0,0,0,0.12);
+    transition: all 0.35s;
+  }
+  .nav-dot.active {
+    height: 22px;
+    background: var(--text-secondary);
+    border-radius: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="status-bar">9:41</div>
+  <div class="guide-overlay" id="guide">
+    ↑ 上滑阅读下一条<br>← 左滑查看今日列表<br>· 点击卡片阅读全文
+  </div>
+  <div class="nav-dots" id="navDots"></div>
+  <div class="card-container" id="cardContainer"></div>
+  <div class="side-overlay" id="sideOverlay"></div>
+  <div class="side-panel" id="sidePanel">
+    <div class="side-header">
+      <span>今日新闻</span>
+      <span class="side-close" id="sideClose">✕</span>
+    </div>
+    <div class="side-tabs" id="sideTabs"></div>
+    <div class="side-list" id="sideList"></div>
+  </div>
+  <div class="detail-page" id="detailPage"></div>
+</div>
+
+<script>
+const newsData = [
+  {
+    id: 1,
+    title: 'AI大模型进入"应用落地"下半场：教育医疗金融率先突破',
+    summary: '随着国内AI大模型数量突破200个，行业竞争焦点已从参数规模转向实际应用场景。教育、医疗、金融成为落地最快的三大领域。\n\n据最新统计，AI辅助教学已覆盖超过5000所学校，个性化学习方案让学生效率提升40%。医疗领域的AI辅助诊断准确率已达95%以上。\n\n"真正的竞争不在于谁的模型参数更多，而在于谁能更好地解决实际问题。"',
+    category: '科技', source: '科技日报', time: '3小时前'
+  },
+  {
+    id: 2,
+    title: '联合国通过全球AI治理框架协议，193国签署',
+    summary: '联合国大会以压倒性多数通过了首个全球性AI治理框架协议，193个成员国签署。该协议确立了AI发展的五大原则：安全可控、公平包容、透明可解释、隐私保护、人类监督。\n\n中国代表在发言中强调，AI治理需要发达国家和发展中国家共同参与，避免形成新的数字鸿沟。协议将于2027年1月正式生效。',
+    category: '国际', source: '新华社', time: '5小时前'
+  },
+  {
+    id: 3,
+    title: '中国女足亚洲杯夺冠！决赛3-1逆转日本队',
+    summary: '中国女足在亚洲杯决赛中上演惊天逆转，在0-1落后的情况下连进三球，最终3-1战胜日本队夺得冠军。这是中国女足时隔16年再次捧起亚洲杯。\n\n队长王霜在赛后表示："这支队伍展现了中国女足永不言弃的精神。我们配得上这个冠军。"',
+    category: '体育', source: '央视体育', time: '8小时前'
+  },
+  {
+    id: 4,
+    title: '夏季健康饮食指南：营养师推荐5种超级食物',
+    summary: '炎炎夏日，如何在享受美食的同时保持健康？营养师为你推荐5种夏季超级食物。\n\n蓝莓富含花青素，抗氧化能力是维C的20倍；牛油果含有健康单不饱和脂肪，有助于心血管健康；藜麦是少数含全部9种必需氨基酸的植物性食物。\n\n建议每天摄入3-5种不同颜色的蔬果，确保营养均衡。',
+    category: '生活', source: '丁香医生', time: '6小时前'
+  },
+  {
+    id: 5,
+    title: '人民币汇率创年内新高，跨境贸易人民币结算占比突破30%',
+    summary: '受多重因素影响，在岸人民币对美元汇率突破7.0关口，创下年内新高。跨境贸易中人民币结算占比首次突破30%，反映出人民币国际化的持续深化。\n\n分析人士指出，这一趋势得益于中国与"一带一路"沿线国家贸易的快速增长，以及人民币跨境支付系统（CIPS）的不断完善。',
+    category: '推荐', source: '经济观察报', time: '2小时前'
+  }
+];
+
+const categories = [
+  { id: 'all', name: '全部' }, { id: 'recommend', name: '推荐' },
+  { id: 'tech', name: '科技' }, { id: 'international', name: '国际' },
+  { id: 'sports', name: '体育' }, { id: 'life', name: '生活' }
+];
+
+let currentIndex = 0;
+let touchStartY = 0, touchStartX = 0;
+let isAnimating = false;
+
+function renderCards() {
+  const container = document.getElementById('cardContainer');
+  container.innerHTML = '';
+  newsData.forEach((news, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    if (i === currentIndex) card.classList.add('active');
+    else if (i < currentIndex) card.classList.add('above');
+    else card.classList.add('below');
+
+    const summaryHTML = news.summary.split('\n').map(p => `<p>${p}</p>`).join('');
+
+    card.innerHTML = `<div class="card-body"><div class="card-title">${news.title}</div><div class="card-summary">${summaryHTML}</div><div class="card-meta"><span class="category-tag">${news.category}</span><span>${news.source}</span><span>·</span><span>${news.time}</span></div></div><div class="swipe-hint">↑ 上滑阅读下一条</div>`;
+
+    card.addEventListener('click', (e) => {
+      if (Math.abs(touchStartY - (e.clientY || 0)) > 10) return;
+      openDetail(i);
+    });
+    container.appendChild(card);
+  });
+  renderNavDots();
+}
+
+function renderNavDots() {
+  document.getElementById('navDots').innerHTML = newsData.map((_, i) =>
+    `<div class="nav-dot ${i === currentIndex ? 'active' : ''}"></div>`).join('');
+}
+
+function renderSideList() {
+  const list = document.getElementById('sideList');
+  list.innerHTML = newsData.map(news =>
+    `<div class="side-item" data-index="${news.id - 1}"><div class="side-item-info"><div class="side-item-title">${news.title}</div></div></div>`
+  ).join('');
+  list.querySelectorAll('.side-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const idx = parseInt(item.dataset.index);
+      closePanel();
+      setTimeout(() => openDetail(idx), 350);
+    });
+  });
+}
+
+function renderSideTabs() {
+  const tabs = document.getElementById('sideTabs');
+  tabs.innerHTML = categories.map(cat =>
+    `<button class="side-tab ${cat.id === 'all' ? 'active' : ''}" data-cat="${cat.id}">${cat.name}</button>`).join('');
+  tabs.querySelectorAll('.side-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.querySelectorAll('.side-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+function openPanel() {
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('sideOverlay').classList.add('open');
+}
+function closePanel() {
+  document.getElementById('sidePanel').classList.remove('open');
+  document.getElementById('sideOverlay').classList.remove('open');
+}
+
+function openDetail(index) {
+  const news = newsData[index];
+  const page = document.getElementById('detailPage');
+  const summaryHTML = news.summary.split('\n').map(p => `<p>${p}</p>`).join('');
+  page.innerHTML = `<div class="detail-nav" id="detailBack">← 返回</div><div class="detail-content"><div class="detail-title">${news.title}</div><div class="detail-meta-row"><span class="category-tag">${news.category}</span><span>${news.source}</span><span>·</span><span>${news.time}</span></div><div class="detail-text">${summaryHTML}</div><div class="detail-back-bottom" id="detailBackBottom">← 返回</div></div>`;
+  page.classList.add('open');
+  document.getElementById('detailBack').addEventListener('click', () => page.classList.remove('open'));
+  document.getElementById('detailBackBottom').addEventListener('click', () => page.classList.remove('open'));
+}
+
+const phone = document.getElementById('phone');
+phone.addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+  touchStartX = e.touches[0].clientX;
+}, { passive: true });
+
+phone.addEventListener('touchend', (e) => {
+  if (isAnimating) return;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (dx < -60 && Math.abs(dx) > Math.abs(dy)) { openPanel(); return; }
+  if (Math.abs(dy) > 50 && Math.abs(dy) > Math.abs(dx)) {
+    isAnimating = true;
+    if (dy < 0 && currentIndex < newsData.length - 1) currentIndex++;
+    else if (dy > 0 && currentIndex > 0) currentIndex--;
+    renderCards();
+    setTimeout(() => { isAnimating = false; }, 420);
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowDown' && currentIndex < newsData.length - 1) { currentIndex++; renderCards(); }
+  else if (e.key === 'ArrowUp' && currentIndex > 0) { currentIndex--; renderCards(); }
+  else if (e.key === 'ArrowLeft') openPanel();
+});
+
+document.getElementById('sideClose').addEventListener('click', closePanel);
+document.getElementById('sideOverlay').addEventListener('click', closePanel);
+
+renderCards();
+renderSideList();
+renderSideTabs();
+setTimeout(() => { const g = document.getElementById('guide'); if (g) g.style.display = 'none'; }, 4000);
+</script>
+</body>
+</html>
