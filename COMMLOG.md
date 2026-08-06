@@ -1,3 +1,29 @@
+## [2026-08-06 11:30] 📋 PD 处理 · owner 11:27 反馈：demo 须基于当前设计 + 后续 demo 带时间与调整说明 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：专属展示页 + 还原旧 demo + 画廊 D-09 入口 + D-09 文档补 Demo 规范
+- 文件：`docs/showcase/d09-nav-content-spacing.html`（新增，Pages 已上线）、`demo/yiyue-demo.html`（还原）、`docs/demo/yiyue-demo.html`（同步还原）、`docs/index.html`（画廊加 D-09 入口 + DEMO 条目改 desc）、`docs/02-产品设计/D-09-增量-导航栏内容起始位置规范.md`（§六 改展示页 + §6.1 Demo 规范）
+
+**owner 反馈 11:27**：
+- 旧 demo `demo/yiyue-demo.html` 不是基于最新设计、有些元素过时；本次只调「内容展示起始位置」，不要混入旧元素；
+- 后续所有静态页 demo 都加「时间 + 对应的调整说明」。
+
+**已处理**：
+1. **新建 D-09 专属展示页** `docs/showcase/d09-nav-content-spacing.html`（375px 手机框 ×2 现状 vs 调整后对比）：
+   - 视觉全部取自当前 wxml/wxss（导航栏 / 位置指示 / 进度条并入 nav / 正文无分割线 / 底部操作栏 / 元信息 category-tag）；
+   - **仅内容起始位置一处差异**（调整前：标题紧贴 nav 被遮挡；调整后：标题位于 nav 下 16px 呼吸间距）；
+   - 头部 badge `2026-08-06` + 调整说明段落 + 「其余交互与设计以当前为准」声明；
+   - 浅色/深色切换。
+2. **还原旧 demo 改动**：之前对 `demo/yiyue-demo.html` 的 detail 间距与去 divider 改动撤回，该 demo 明确为「历史原型，不代表当前设计」，desc 同步更新；Pages 副本 `docs/demo/yiyue-demo.html` 同步还原。
+3. **画廊 D-09 入口置顶**：`docs/index.html` DEMOS 数组首条 `{id:"D-09", desc:"2026-08-06 · D-09：…"}`。
+4. **Demo 规范写入 D-09 §6.1**：所有静态页 demo 必须标注「时间 + 调整说明」、以当前设计为准、`docs/demo/` 与仓库 `demo/` 双写同步；后续 PD 新增 demo 一律遵循。
+
+**链接**：[tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html](https://tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html)（WebFetch + Chromium 截图均验证渲染正常）
+
+**等 owner 确认 D-09 三项**：① 标题与导航栏间距 16px 合适？② 列表页/次级页 8px 合适？③ 正文无分割线保留？
+
+---
+
 ## [2026-08-06 11:15] 🚀 PD 部署 · demo 上线 GitHub Pages | 会话：[产品设计师(PD)]
 
 **提交记录**：

@@ -24,6 +24,27 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### 📢 2026-08-06 11:30 【PD · D-09 专属展示页已上线（基于当前设计 + 时间+调整说明） · @owner 确认】
+
+> **对象**：owner（D-09 设计确认）、FE（知悉展示页格式）、PM（知悉 Demo 规范）
+> **发布**：产品设计师（PD）
+
+**owner 反馈 11:27**：旧 demo（`yiyue-demo.html`）不是基于最新设计、有些元素过时；要求本次只针对「内容展示起始位置」单独做展示，不要混入旧设计；后续所有静态页 demo 必须带「时间 + 调整说明」。
+
+**已处理**：
+1. **新建专属展示页** `docs/showcase/d09-nav-content-spacing.html`（已上线 Pages）：
+   - 基于**当前 app 设计** 1:1 呈现（导航栏与胶囊对齐 / 位置指示 / 进度条 / 正文无分割线 / 底部操作栏）—— 全部取自当前 wxml/wxss；
+   - 「调整前 vs 调整后」对比：**仅内容展示起始位置一处差异**；
+   - 头部 badge「2026-08-06」+ 调整说明 + 「其余交互与设计以当前为准」声明；
+   - 支持浅色/深色切换。
+2. **还原旧 demo**：撤回之前对 `demo/yiyue-demo.html` 的 detail 改动，该 demo 为历史原型、不代表当前设计、不承担本次展示职责。
+3. **画廊入口置顶** `docs/index.html` DEMOS 数组新增 `D-09 · 内容展示起始位置调整`，desc 带「2026-08-06」前缀；`DEMO` 条目 desc 改为「历史原型，不代表当前设计」。
+4. **Demo 规范写入 D-09 §6.1**：所有静态页 demo 必须标注「时间 + 调整说明」、以当前设计为准、`docs/demo/` 与仓库 `demo/` 双写同步。
+
+**链接**：[tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html](https://tengfeizhao1219.github.io/One-News/showcase/d09-nav-content-spacing.html)
+
+**等 owner**：① 标题与导航栏间距 16px 是否合适；② 列表页/次级页间距 8px 是否合适；③ 正文无分割线确认保留。
+
 ---
 ### ✅ 2026-08-06 11:15 【FS 闭环 · 「首页 AI 摘要未显示」根因=前端 wxml 作用域遮蔽 · 已修复 commit `9a5b0db` · @owner 真机复验】
 
