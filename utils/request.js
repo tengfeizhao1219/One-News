@@ -12,12 +12,12 @@ const { formatRelativeTime } = require('./util')
 /**
  * 获取新闻列表
  * @param {Object} params
- * @param {string} params.category 分类ID，默认'all'
+ * @param {string} params.category 分类ID，默认'recommend'（DG-03: all → recommend）
  * @param {number} params.pageNum   页码，默认1
- * @param {number} params.pageSize  每页条数，默认10
+ * @param {number} params.pageSize  每页条数，默认10（PAGE_SIZE）
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
-function getNewsList({ category = 'all', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
+function getNewsList({ category = 'recommend', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
   return wx.cloud.callFunction({
     name: 'getNewsList',
     data: { category, pageNum, pageSize }

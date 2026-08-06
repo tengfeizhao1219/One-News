@@ -41,6 +41,11 @@ App({
       require('./utils/cloud').flushQueue()
     } catch (e) { /* ignore */ }
 
+    // DG-04（数据治理 3.4）：每日首次打开异步清理过期收藏/浏览（延迟 2s，不阻塞启动）
+    try {
+      this._dailyCleanup()
+    } catch (e) { /* ignore */ }
+
     // BUG-20260805-003：读取手动主题偏好并应用到全部页面
     this._initTheme()
 
@@ -63,6 +68,61 @@ App({
 
     // 字体初始化：首入跟随系统，后续读取记忆
     this._initFontScale()
+  },
+
+  /**
+   * DG-04（数据治理 3.4 · 方案 3 改动 C）：每日首次打开异步清理过期收藏/浏览
+   * 主防线是读取时惰性过滤；此兜底每日一次遍历本地 lc:browseHistory / lc:favorites，
+   * 删除 expireAt < now 的记录（浏览 7 天 / 收藏 30 天），更新 lastCleanupDate。
+   * 延迟 2s 执行，实际耗时 <10ms，对启动零影响。
+   */
+  _dailyCleanup() {
+    var that = this
+    setTimeout(function () {
+      try {
+        var today = new Date()
+        var todayStr = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate()
+        var last = wx.getStorageSync('lc:lastCleanupDate')
+        if (last === todayStr) return // 今日已清理
+
+        var now = Date.now()
+        // 浏览历史：7 天过期（值结构 lc:browseHistory = [{...}]）
+        try {
+          var hist = wx.getStorageSync('lc:browseHistory')
+          if (hist) {
+            var histArr = JSON.parse(hist)
+            var hv = histArr._v || histArr
+            var hList = Array.isArray(hv) ? hv : []
+            var hFiltered = hList.filter(function (it) {
+              if (!it || !it.viewedAt) return true
+              return now - it.viewedAt < 7 * 24 * 60 * 60 * 1000
+            })
+            if (hFiltered.length !== hList.length) {
+              wx.setStorageSync('lc:browseHistory', JSON.stringify({ _v: hFiltered, _e: 0 }))
+            }
+          }
+        } catch (e) { /* ignore */ }
+
+        // 收藏：30 天过期（值结构 lc:favorites = [{...}]）
+        try {
+          var fav = wx.getStorageSync('lc:favorites')
+          if (fav) {
+            var favArr = JSON.parse(fav)
+            var fv = favArr._v || favArr
+            var fList = Array.isArray(fv) ? fv : []
+            var fFiltered = fList.filter(function (it) {
+              if (!it || !it.addedAt) return true
+              return now - it.addedAt < 30 * 24 * 60 * 60 * 1000
+            })
+            if (fFiltered.length !== fList.length) {
+              wx.setStorageSync('lc:favorites', JSON.stringify({ _v: fFiltered, _e: 0 }))
+            }
+          }
+        } catch (e) { /* ignore */ }
+
+        wx.setStorageSync('lc:lastCleanupDate', todayStr)
+      } catch (e) { /* ignore */ }
+    }, 2000)
   },
 
   /**

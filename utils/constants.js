@@ -1,12 +1,13 @@
 // 常量定义
-// S6: owner 2026-08-02 决策，「全部」与「推荐」合并为一个分类，保留 all ID 与「全部」名称
+// DG-03（2026-08-06 数据治理 · owner 决策）：all → 推荐分类（独立数据源，recommend 置顶）
 const CATEGORIES = [
-  { id: 'all', name: '全部' },
+  { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
   { id: 'sports', name: '科学探索' },
   { id: 'life', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
+  // 注：getNewsList 的 all 分支保留不删（旧分享链接兼容），但前端不再请求
 ]
 
 const CATEGORY_MAP = {}
@@ -43,7 +44,15 @@ const SWIPE_ANIMATION_MS = 350   // 翻页动画时长（与详情页 setTimeout
 const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长（v5.9 已废弃：卡片页不再使用回弹逻辑）
 
 // 请求配置
-const PAGE_SIZE = 15  // UX-BUG05: 从 10 提升至 15（精选场景上限）
+// DG-03（2026-08-06 数据治理 · owner 决策）：首页首次 10 条；翻底/翻顶每次 5 条；
+// 连续拉取 3 次（总 15 追加，上限 25）后提示「已阅读了 x 条新闻，建议稍后再读」
+const PAGE_SIZE = 10       // 首次加载（方案 5 改动 A：15 → 10）
+const MORE_PAGE_SIZE = 5   // 翻底/翻顶每次追加量（方案 5 改动 B）
+const MORE_PAGE_LIMIT = 3  // 连续拉取上限次数（方案 5 改动 B）
+// DG-03（数据治理 3.3）：纯本地存储上限（历史 500 / 收藏 200，常量统一）
+const HISTORY_LIMIT = 500
+const FAVORITES_LIMIT = 200
+
 // 2026-08-03 owner 裁定：全链路真实数据，所有 mock 数据已清除（data/news.json、cloud-import-data.json 已删）
 
 module.exports = {
@@ -58,4 +67,8 @@ module.exports = {
   SWIPE_ANIMATION_MS,
   BOUNCE_ANIMATION_MS,
   PAGE_SIZE,
+  MORE_PAGE_SIZE,
+  MORE_PAGE_LIMIT,
+  HISTORY_LIMIT,
+  FAVORITES_LIMIT,
 }

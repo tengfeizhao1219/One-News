@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
@@ -19,8 +19,8 @@ Page({
     showPanel: false,       // 侧边栏是否显示
     categories: CATEGORIES,
     panelCategories: PANEL_CATEGORIES,  // 侧边栏分类（仅新闻分类）
-    currentCategory: 'all', // 首页当前分类
-    panelCategory: 'all',   // 侧边栏当前分类（独立于首页分类）
+    currentCategory: 'recommend', // DG-03: 首页默认分类（all → 推荐）
+    panelCategory: 'recommend',   // 侧边栏当前分类（独立于首页分类）
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: [],   // 侧边栏过滤后的列表
     panelSubtitle: '',      // UI-B7：面板头部副标题「当前分类 · N 条」
@@ -32,6 +32,7 @@ Page({
     isRefreshing: false,    // 手动刷新中
     currentPage: 1,         // 当前分页（用于边界加载更多）
     loadingMore: false,    // 边界加载更多/刷新中
+    loadMoreCount: 0,      // DG-03: 翻底连续拉取次数（上限 MORE_PAGE_LIMIT=3）
     categoryHint: '',      // BUG-20260802-006: 分类切换 0.5s 提示文案
     // UI-B9: 字体设置已迁移到独立设置页；首页仅保留当前档位同步
     fontScaleTier: 0,       // 当前字体档位 0-3
@@ -238,8 +239,9 @@ Page({
     const mapped = src.map(function (item, i) {
       return Object.assign({}, item, { _originalIndex: i })
     })
-    // newsList 已按 currentCategory 拉取，'all' 不过滤，其余按 category 过滤（同源保证）
-    const filtered = (!cat || cat === 'all')
+    // newsList 已按 currentCategory 拉取（同源保证）；'recommend'/'all' 不过滤（推荐为聚合数据，
+    // 单条 category 字段可能非 recommend，直接全量展示当前分类列表），其余按 category 过滤
+    const filtered = (!cat || cat === 'recommend' || cat === 'all')
       ? mapped
       : mapped.filter(function (it) { return it.category === cat })
     this.setData({
@@ -253,7 +255,7 @@ Page({
    * UI-B7：更新面板头部副标题「当前分类 · N 条」
    */
   _updatePanelSubtitle(cat, count) {
-    var name = '全部'
+    var name = '推荐'
     var cats = this.data.categories
     for (var i = 0; i < cats.length; i++) {
       if (cats[i].id === cat) { name = cats[i].name; break }
@@ -305,7 +307,8 @@ Page({
 
       // resolveIndex 由详情页返回定位使用；未传则沿用当前位置（renderCards 内会做边界钳制）
       const idx = typeof resolveIndex === 'function' ? resolveIndex(list) : undefined
-      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false })
+      // DG-03: 首次加载/切分类重置 loadMoreCount（方案 5 改动 B：每次 loadCategory 重置为 0）
+      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
       this._startSwipeHintTimer()
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
@@ -574,22 +577,21 @@ Page({
   // ============ 边界加载更多 / 刷新 ============
 
   /**
-   * 到达列表末尾继续上滑 -> 加载更多新闻并给出反馈
+   * DG-03（方案 5 改动 B）：到达列表末尾继续上滑 -> 加载更多（每次 5 条，最多 3 次）
    */
   async loadMoreNews() {
     if (this.data.loadingMore) return
-    const { currentCategory, currentPage, newsList } = this.data
+    const { currentCategory, currentPage, newsList, loadMoreCount } = this.data
 
-    // UX-BUG05: 每分类上限 15 条，达到上限不加载更多
-    const MAX_NEWS = 15
-    if (newsList.length >= MAX_NEWS) {
-      wx.showToast({ title: '已展示全部精选新闻', icon: 'none' })
+    // DG-03: 连续拉取 3 次上限 → 提示「已阅读了 x 条新闻，建议稍后再读」
+    if (loadMoreCount >= MORE_PAGE_LIMIT) {
+      wx.showToast({ title: '已阅读了 ' + newsList.length + ' 条新闻，建议稍后再读', icon: 'none' })
       return
     }
     this.setData({ loadingMore: true })
-    wx.showToast({ title: '加载更多…', icon: 'loading', duration: 800 })
+    wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
     try {
-      const res = await getNewsList({ category: currentCategory, pageNum: currentPage + 1, pageSize: PAGE_SIZE })
+      const res = await getNewsList({ category: currentCategory, pageNum: currentPage + 1, pageSize: MORE_PAGE_SIZE })
       const newItems = res.list || []
       if (newItems.length === 0) {
         wx.showToast({ title: '已经到底啦', icon: 'none' })
@@ -597,7 +599,7 @@ Page({
       }
       const oldLen = newsList.length
       const merged = newsList.concat(newItems)
-      this.setData({ newsList: merged, currentPage: currentPage + 1, currentIndex: oldLen })
+      this.setData({ newsList: merged, currentPage: currentPage + 1, currentIndex: oldLen, loadMoreCount: loadMoreCount + 1 })
       this.renderCards(merged, oldLen)
       // BUG-20260802-004: 新增页也要进侧栏，否则又出现卡片有、侧栏没有
       this._syncPanelList(merged, oldLen)
@@ -612,19 +614,24 @@ Page({
   },
 
   /**
-   * 到达列表开头继续下滑 -> 刷新当前分类并给出反馈
+   * DG-03（方案 5 改动 C）：到达列表开头继续下滑 -> 刷新当前分类（toast 统一）
    */
   async refreshCurrentCategory() {
     if (this.data.loadingMore) return
     this.setData({ loadingMore: true })
-    wx.showToast({ title: '刷新中…', icon: 'loading', duration: 800 })
+    wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
     try {
       const res = await getNewsList({ category: this.data.currentCategory, pageNum: 1, pageSize: PAGE_SIZE })
       const list = res.list || []
-      this.setData({ newsList: list, currentPage: 1, currentIndex: 0 })
+      this.setData({ newsList: list, currentPage: 1, currentIndex: 0, loadMoreCount: 0 })
       this.renderCards(list, 0)
       // BUG-20260802-004: 刷新后侧栏随卡片一起更新
       this._syncPanelList(list, 0)
+      if (list.length > 0) {
+        setTimeout(() => {
+          wx.showToast({ title: '已更新 ' + list.length + ' 条', icon: 'none' })
+        }, 400)
+      }
     } catch (err) {
       wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
     } finally {

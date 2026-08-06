@@ -94,7 +94,7 @@ Page({
   onLoad: function (options) {
     var id = options.id
     var index = parseInt(options.index, 10) || 0
-    var category = options.category || 'all'
+    var category = options.category || 'recommend'  // DG-03: 默认分类 all → recommend
     // DG-02（需求方案 4）：来源识别 — history/favorites 进入时透传 source，
     // 详情滑动范围 = 来源列表顺序，禁止跨分类补拉/跳转
     var source = options.source || ''
@@ -695,7 +695,7 @@ Page({
    */
   _pregenPlaceholder: function (category) {
     var that = this
-    var cat = category || this.data.category || 'all'
+    var cat = category || this.data.category || 'recommend'  // DG-03: 默认 all → recommend
     var isDark = this._isSystemDark()
 
     // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）

@@ -24,6 +24,32 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### 📢 2026-08-06 14:10 【FE 交付 · DG-03/04/05 数据治理 FE 侧全部完成 · @PM 可排 DG-06 测试 / @FS 复核】
+
+> **对象**：PM（DG-06 测试排期）、FS（复核）、PD（了解）、owner（真机验证）
+> **发布**：小程序前端开发（FE）
+
+**DG-03 首页改造**（`utils/constants.js` + `home.js` + 兼容兜底）：
+- `constants.js`：CATEGORIES 首项 all→recommend（名称「推荐」，置顶）；PAGE_SIZE 15→10；新增 `MORE_PAGE_SIZE=5` / `MORE_PAGE_LIMIT=3` / `FAVORITES_LIMIT=200` / `HISTORY_LIMIT=500`
+- `home.js`：默认分类 all→recommend（data + loadCategory）；loadMoreNews 改造（5 条/次 + `loadMoreCount` 上限 3 次 + toast「抓取更多新闻中/已加载 N 条/已经到底啦/已阅读了 x 条新闻，建议稍后再读」）；refreshCurrentCategory toast 统一「抓取更多新闻中/已更新 N 条」+ 重置计数
+- 兼容：`request.js` 默认 category all→recommend；`detail.js`/`reading-engine.js` 默认 entryCategory all→recommend；`_syncPanelList` recommend 不过滤（推荐为聚合数据）；`_updatePanelSubtitle` 默认名「推荐」
+- 侧边栏：PANEL_CATEGORIES=CATEGORIES 自动含「推荐」置顶，wxml 零改动
+
+**DG-04 历史/收藏纯本地化**（`history.js` + `favorites.js` + `app.js`）：
+- `history.js`：移除 getBrowseHistory 云端调用（纯本地读取 + 7 天过滤）；onItemTap 透传来源列表 + `source=history`
+- `favorites.js`：移除 getUserFavorites/setUserFavorite 云端调用 + ☁️ 待同步角标逻辑；纯本地读取 + 30 天过滤；onItemTap 透传来源列表 + `source=favorites`；取消收藏纯本地写
+- `app.js`：`_dailyCleanup()` 每日首次打开延迟 2s 清理过期浏览（7 天）/收藏（30 天），更新 lastCleanupDate
+- wxml：移除 sync-fail 提示条（纯本地无同步失败概念）
+
+**DG-05 about 文案勘误**：`about.js`「五层降级链」→「多层降级保障」（1 行）
+
+**回归**：v7 63/0 ✅ / v11 28/0 ✅ / v13 88/0 ✅
+**⚠️ v10 52/2**：① 500ms 提示断言过期（PD 已批准 600ms，已知）；② `MAX_NEWS=15` 断言过期——DG-03 已改为 10+5×3（**@PM 请同步 v10 断言**）
+
+**🔔 @PM**：DG-06 测试可排期；**@owner**：云函数部署后真机验证（首页默认「推荐」+ 10 条首屏 + 翻底 5 条×3 次 + 收藏纯本地 30 天）。
+> — 小程序前端开发（FE）
+
+---
 ### ✅ 2026-08-06 13:45 【FS 交付 · DG-01 云函数改造 + DG-02 详情引擎重构 完成 · 数据治理 FS 侧全部落地 · @FE 可启动 DG-03/04】
 
 > **对象**：FE（DG-03/04/05 可认领）、PM（DG-06 测试）、owner（部署云函数 + 真机验证）、PD（了解）
@@ -2873,9 +2899,9 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 |----|------|--------|:---:|------|------|
 | **DG-01** | **云函数改造**（stale 仅空时兜底 + recommend 10 条/轮 + 停用 4 云函数） | **全栈开发（FS）**（后端，唯一可做） | ✅ 完成（`3394d8e`） | FS 评估完成 | `getNewsList/index.js` + `refreshNews/zhipuSearch.js`；停用 `recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites` |
 | **DG-02** | **详情引擎重构**（砍跨分类补拉 + 跨分类跳转 + 来源识别 + 总数锁定 + 边界 toast + detail 去云端化） | **全栈开发（FS）**（引擎核心，FS 评估已定方案） | ✅ 完成（`362f1ff`） | DG-01 | `reading-engine.js` + `detail.js` |
-| **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **小程序前端开发（FE）**（纯前端） | 📋 已确认（FE，依赖 DG-01） | DG-01 | `home.js` + `home.wxml` + `utils/constants.js` |
-| **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 📋 已确认（FE，依赖 DG-01） | DG-01 | `history.js` + `favorites.js` + `app.js` |
-| **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 📋 已确认（FE） | 无 | `pages/about/about.js` |
+| **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **小程序前端开发（FE）**（纯前端） | 🔄 已交付待验收（FE `c017499` 提交中） | DG-01 | `home.js` + `home.wxml` + `utils/constants.js` |
+| **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 🔄 已交付待验收（FE `c017499` 提交中） | DG-01 | `history.js` + `favorites.js` + `app.js` |
+| **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 🔄 已交付待验收（FE `c017499` 提交中） | 无 | `pages/about/about.js` |
 | **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 已确认（PM，依赖 DG-01~04） | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）

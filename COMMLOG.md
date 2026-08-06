@@ -1,3 +1,29 @@
+## [2026-08-06 14:10] 🛠️ FE 交付 · DG-03/04/05 数据治理 FE 侧全部落地（首页改造 + 纯本地化 + 文案勘误）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit（FE 前缀）：DG-03/04/05 全部改动
+- 文件：`utils/constants.js`、`pages/home/home.js`、`pages/history/history.js`、`pages/favorites/favorites.js`（含 wxml）、`app.js`、`pages/about/about.js`、`pages/detail/detail.js`、`pages/detail/reading-engine.js`、`utils/request.js`、`TASK_BOARD.md`（14:10 广播）
+
+**DG-03 首页改造**：
+- CATEGORIES all→recommend（推荐置顶）；PAGE_SIZE 15→10；新增 MORE_PAGE_SIZE=5 / MORE_PAGE_LIMIT=3 / FAVORITES_LIMIT=200 / HISTORY_LIMIT=500
+- home.js 默认分类 recommend；loadMoreNews 5 条/次 + 3 次上限 + toast 统一；refreshCurrentCategory toast 统一 + 重置计数
+- 兼容：request.js / detail.js / reading-engine.js 默认 all→recommend；_syncPanelList recommend 不过滤
+
+**DG-04 历史/收藏纯本地化**：
+- history.js / favorites.js 移除 4 个停用云函数调用，纯本地读取 + 7/30 天过滤
+- 收藏取消纯本地写；移除 ☁️ 待同步角标逻辑（onPendingTap 简化）；wxml 移除 sync-fail
+- onItemTap 透传来源列表 + source 参数（方案 4 改动 A）
+- app.js 新增 _dailyCleanup（每日首次打开延迟 2s 清理过期数据）
+
+**DG-05**：about 文案「五层降级链」→「多层降级保障」
+
+**回归**：v7 63/0 ✅ / v11 28/0 ✅ / v13 88/0 ✅
+**⚠️ v10 52/2**：① 500ms 提示断言过期（PD 已批准 600ms）；② MAX_NEWS=15 断言过期（DG-03 改 10+5×3）→ **@PM 同步 v10 断言**
+
+**🔔 @PM**：DG-06 测试可排期；**@owner**：云函数部署后真机验证。
+
+---
+
 ## [2026-08-06 13:45] 📤→✅ FS 已提交 · DG-01 `3394d8e` + DG-02 `362f1ff`（数据治理 FS 侧全部落地）| 会话：[全栈开发(FS)]
 
 **提交记录**：

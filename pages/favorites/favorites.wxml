@@ -11,11 +11,8 @@
     <view class="nav-count" wx:if="{{!loading}}">共 {{filteredCount}} 条</view>
   </view>
 
-  <!-- UI-11: 云端合并中顶部细进度条（UI-B5 设计稿，合并完成静默收起） -->
+  <!-- UI-11: 云端合并中顶部细进度条（DG-04 纯本地后不再触发，保留结构） -->
   <view class="sync-bar {{syncing ? 'show' : ''}}"></view>
-
-  <!-- UI-14: 云端同步失败轻提示条（非阻断式，点击重试） -->
-  <view class="sync-fail {{syncFailed ? 'show' : ''}}" bindtap="onSyncRetry">收藏同步失败，点击重试</view>
 
   <!-- UI-B10: 分类筛选胶囊（无「全部」，默认展示全部） -->
   <view class="filter-bar" wx:if="{{!loading && !isEmpty}}">

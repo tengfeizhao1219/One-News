@@ -14,7 +14,7 @@ var getNewsList = require('../../utils/request').getNewsList
 var getNewsDetail = require('../../utils/request').getNewsDetail
 var PAGE_SIZE = require('../../utils/constants').PAGE_SIZE
 
-// 参与跨分类串联的分类（排除 'all'）
+// 参与跨分类串联的分类（CATEGORIES 已无 all，DG-03 后 recommend 在列）
 var READING_CATEGORIES = []
 for (var i = 0; i < CATEGORIES.length; i++) {
   if (CATEGORIES[i].id !== 'all') {
@@ -34,7 +34,7 @@ for (var i = 0; i < CATEGORIES.length; i++) {
  * @param {Object} [options.cache]        缓存实例（B-06 localCache 注入点，可选）
  */
 function ReadingEngine(options) {
-  this._entryCategory = options.entryCategory || 'all'
+  this._entryCategory = options.entryCategory || 'recommend'  // DG-03: 默认 all → recommend
   this._entryIndex = options.entryIndex || 0
   this._entryNewsId = options.entryNewsId || ''
   this._onProgress = options.onProgress || function () {}

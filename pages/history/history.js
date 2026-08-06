@@ -1,9 +1,8 @@
-// 浏览记录页 — TL-B14 / RQ-06（本地秒开 + 云端兜底合并）
+// 浏览记录页 — TL-B14 / RQ-06（本地秒开 · DG-04 纯本地化：云函数 getBrowseHistory 已停用）
 // 注：页面视觉细节（UI-B4 设计稿）待 PM + owner 评审通过后细化；本实现为功能骨架。
 
-// BUG-20260806-006: 改用全局单例 localCache（原各自 new 独立实例，内存隔离导致 stale read）
+// DG-03: 统一全局单例 localCache（detail/favorites/history 同源）
 var localCache = require('../../utils/localCache').localCache
-var cloud = require('../../utils/cloud')
 var { formatBrowseTime, isBrowseExpired } = require('../../utils/util')
 var app = getApp()
 
@@ -61,29 +60,20 @@ Page({
   },
 
   /**
-   * 加载浏览记录：本地秒开 → 云端合并（异步，失败静默保留本地）
+   * DG-04（纯本地化）：加载浏览记录 —— 本地读取 + 7 天过期过滤（云函数已停用）
    */
   _load: function () {
     var that = this
-    this.setData({ loading: true, syncing: true })
+    this.setData({ loading: true })
 
     var local = _cache.get('browseHistory') || []
     var merged = that._merge(local, [])
-    that.setData({ list: merged, loading: false, isEmpty: merged.length === 0 })
-
-    // 云端合并
-    cloud.callCloudFunction('getBrowseHistory', {}).then(function (res) {
-      var cloudList = (res && res.data && res.data.list) || []
-      var merged2 = that._merge(local, cloudList)
-      that.setData({ list: merged2, isEmpty: merged2.length === 0, syncing: false })
-    }).catch(function () {
-      // 云端失败：保持本地数据
-      that.setData({ syncing: false })
-    })
+    that.setData({ list: merged, loading: false, isEmpty: merged.length === 0, syncing: false })
   },
 
   /**
-   * 合并本地 + 云端（以 viewedAt 最新为准去重；过滤 7 天过期）
+   * 合并本地列表（以 viewedAt 最新为准去重；过滤 7 天过期）
+   * DG-04: 云端列表参数保留（兼容旧调用），实际仅本地
    */
   _merge: function (localList, cloudList) {
     var map = {}
@@ -101,9 +91,23 @@ Page({
   },
 
   onItemTap: function (e) {
+    var that = this
     var id = e.currentTarget.dataset.id
-    var cat = e.currentTarget.dataset.cat || 'all'
-    wx.navigateTo({ url: '/pages/detail/detail?id=' + id + '&category=' + cat })
+    var cat = e.currentTarget.dataset.cat || 'recommend'
+    // DG-04（方案 4 改动 A）：透传来源列表，详情按来源顺序翻页、禁跨分类
+    var list = (that.data.list || []).map(function (item) {
+      return {
+        id: item.id,
+        title: item.title || '',
+        category: item.category || '',
+        categoryName: item.categoryName || '',
+        source: item.source || '',
+        picUrl: item.picUrl || '',
+        time: item.time || '',
+      }
+    })
+    app.globalData.detailContext = { category: cat, list: list, source: 'history', entryId: id }
+    wx.navigateTo({ url: '/pages/detail/detail?id=' + id + '&category=' + cat + '&source=history' })
   },
 
   /**
