@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, STATUS_BAR_HEIGHT, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
@@ -11,7 +11,8 @@ var PANEL_CATEGORIES = CATEGORIES
 
 Page({
   data: {
-    statusBarHeight: STATUS_BAR_HEIGHT,
+    menuTop: 0,
+    menuHeight: 32,
     newsList: [],           // 首页当前分类的新闻
     cards: [],              // 卡片渲染数据（仅3张）
     currentIndex: 0,        // 当前卡片索引
@@ -74,6 +75,9 @@ Page({
     this.setData({ pageH: PAGE_HEIGHT })
     // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
     this.setData({
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app.globalData && app.globalData.menuTop) || 0,
+      menuHeight: (app.globalData && app.globalData.menuHeight) || 32,
       themeClass: (app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: dock 菜单 icon 按主题切换白色版
       isDark: this._isSystemDark(),

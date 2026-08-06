@@ -11,7 +11,8 @@ var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000
 
 Page({
   data: {
-    statusBarHeight: 20,
+    menuTop: 0,
+    menuHeight: 32,
     list: [],
     loading: true,
     isEmpty: false,
@@ -22,9 +23,10 @@ Page({
   },
 
   onLoad: function () {
-    var s = (app && app.globalData && app.globalData.statusBarHeight) || 20
     this.setData({
-      statusBarHeight: s,
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app && app.globalData.menuTop) || 0,
+      menuHeight: (app && app.globalData.menuHeight) || 32,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: 导航/空态 icon 按主题切换白色版

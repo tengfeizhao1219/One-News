@@ -7,54 +7,39 @@
   position: relative;
 }
 
-/* ============ 固定顶部栏（刷新左 + 设置右） ============ */
+/* ========== 固定顶部栏（与胶囊对齐 · BUG-20260806-004） ========== */
 .fixed-top-bar {
   position: absolute;
-  top: 0;
   left: 0;
-  width: 100%;  /* UX-IMPROVE04: 确保 space-between 生效 */
+  width: 100%;
   z-index: 15;
   pointer-events: none;
 }
 
 .top-bar-inner {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 0 40rpx;
-  height: 64rpx;
+  height: 100%;
   align-items: center;
 }
 
-/* S4: R 按钮已移除，以下样式废弃保留历史注释 */
-/* .top-bar-refresh { ... } */
-/* .refresh-icon { ... } */
-
 .top-bar-settings {
-  width: 56rpx;
-  height: 56rpx;
+  width: 64rpx;
+  height: 64rpx;
   border-radius: 50%;
-  background-color: var(--tag-bg);
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: auto;
-  /* 触摸热区扩至 ≥88rpx */
-  padding: 16rpx;
-  margin: -16rpx;
-  background-clip: content-box;
-  -webkit-background-clip: content-box;
+  margin-right: -8rpx;
 }
-
-.top-bar-settings:active {
-  opacity: 0.6;
+.top-bar-settings--hover {
+  background-color: var(--bg-subtle);
 }
-.settings-icon {
-  font-size: 28rpx;
-  line-height: 1;
-}
-
-.refresh-icon {
-  font-size: 28rpx;
+.top-bar-settings-icon-img {
+  width: 36rpx;
+  height: 36rpx;
 }
 
 /* ============ 卡片舞台 ============ */
@@ -125,14 +110,16 @@
 
 .card-body {
   flex: 1;
-  padding: 120rpx 64rpx 48rpx;
+  /* BUG-20260806-004: nav 与胶囊对齐，减少顶部留白 */
+  padding: 100rpx 64rpx 48rpx;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
 .card-title {
-  font-size: calc(52rpx * var(--font-scale));
+  /* BUG-20260806-004: 使用相对尺寸 52rpx */
+  font-size: 52rpx;
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.35;
@@ -156,9 +143,10 @@
 
 .summary-p {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: calc(32rpx * var(--font-scale));
+  /* BUG-20260806-004: 使用相对尺寸 */
+  font-size: 32rpx;
   color: var(--text-body);
-  line-height: calc(1.85 * var(--font-scale));
+  line-height: 1.85;
   margin-bottom: 24rpx;
   letter-spacing: 1rpx;
 }
@@ -167,12 +155,10 @@
   display: flex;
   align-items: center;
   gap: 16rpx;
-  /* UX-FIX-F12（owner 2026-08-02 批准折中）：由锁死 22rpx 改为「跟涨但封顶」。
-     --font-scale-meta 由 app.js 算好并封顶 1.15，故最大 25.3rpx。
-     仍显著小于正文，保住「元信息视觉退后」的版式意图，同时不再完全冻结无障碍缩放。 */
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  /* BUG-20260806-004: 元信息使用相对尺寸 22rpx */
+  font-size: 22rpx;
   color: var(--text-secondary);
-  margin-bottom: 20rpx; /* owner 直连：与详情页 detail-meta 间距对齐 */
+  margin-bottom: 20rpx;
   letter-spacing: 0.5rpx;
 }
 
@@ -183,8 +169,7 @@
   margin: 0 12rpx 0 0;
   padding: 3rpx 14rpx;
   border-radius: 16rpx;
-  /* 守 owner 元信息 22rpx 红线 + 继承 UX-FIX-F12 封顶跟涨 */
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: 22rpx;
   font-weight: 500;
   line-height: 1.4;
   letter-spacing: 0;

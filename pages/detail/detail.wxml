@@ -5,8 +5,22 @@
   data-font-scale="{{fontScaleTier}}"
   style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
 
-  <!-- 状态栏占位 -->
-  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
+  <!-- 顶部导航栏：返回（左）+ 进度指示（右），与原生胶囊对齐 -->
+  <!-- BUG-20260806-004: 导航栏高度=胶囊高度，位置对齐胶囊 -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
+    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 -->
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+      <text class="nav-back-icon">‹</text>
+    </view>
+    <view class="nav-position" wx:if="{{total > 1}}">
+      <text>{{positionText}}</text>
+      <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
+    </view>
+    <!-- 阅读进度条置于导航栏底部 -->
+    <view class="nav-progress" wx:if="{{pageState === 'ready'}}">
+      <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
+    </view>
+  </view>
 
   <!-- 骨架屏（加载中） -->
   <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
@@ -22,23 +36,6 @@
     <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
     <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
     <view class="state-retry" bindtap="goBack">返回</view>
-  </view>
-
-  <!-- 顶部栏：返回（左 · BUG-20260806-003）+ 进度指示（右） -->
-  <view class="nav-bar">
-    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 -->
-    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
-      <text class="nav-back-icon">‹</text>
-    </view>
-    <view class="nav-position" wx:if="{{total > 1}}">
-      <text>{{positionText}}</text>
-      <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
-    </view>
-  </view>
-
-  <!-- 阅读进度细条（UI-B11：nav 下方 2rpx 浅蓝线；单篇/多篇均显示阅读进度） -->
-  <view class="reading-progress" wx:if="{{pageState === 'ready'}}">
-    <view class="reading-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 
   <!-- 内容 -->
@@ -71,9 +68,6 @@
           <text>{{news.time}}</text>
           <!-- S7: owner 2026-08-02 决策，删除原文链接入口 -->
         </view>
-
-        <!-- 分隔线 -->
-        <view class="detail-divider"></view>
 
         <!-- 正文 -->
         <view class="detail-text">

@@ -1,4 +1,4 @@
-/* 浏览记录页样式 — TL-B14（功能骨架，视觉细节待 UI-B4 定稿） */
+/* 浏览记录页样式 — TL-B14 · BUG-20260806-004 */
 
 .page {
   height: 100vh;
@@ -8,31 +8,31 @@
   position: relative;
 }
 
-.status-bar {
-  flex-shrink: 0;
-}
-
-/* 顶部栏（返回主页 + 标题） */
+/* ========== 导航栏（与胶囊对齐） ========== */
 .nav-bar {
-  position: relative;
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 22;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16rpx 48rpx;
-  flex-shrink: 0;
 }
 .nav-home {
   position: absolute;
-  left: 24rpx;
+  left: 12rpx;
   top: 50%;
   transform: translateY(-50%);
-  width: 56rpx;
-  height: 56rpx;
+  width: 64rpx;
+  height: 64rpx;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
 }
-.nav-home--hover { opacity: 0.6; }
+.nav-home--hover {
+  background-color: var(--bg-subtle);
+}
 .nav-home-icon-img {
   width: 44rpx;
   height: 44rpx;

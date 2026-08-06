@@ -7,7 +7,8 @@ var META_SCALE_CAP = 1.15
 
 Page({
   data: {
-    statusBarHeight: 20,
+    menuTop: 0,
+    menuHeight: 32,
     fontScaleTier: 0,
     _fontScaleValue: 1,
     _metaScaleValue: 1,
@@ -27,10 +28,11 @@ Page({
   },
 
   onLoad: function () {
-    var s = (app && app.globalData && app.globalData.statusBarHeight) || 20
     var tier = (app && app.globalData && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
     this.setData({
-      statusBarHeight: s,
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app && app.globalData.menuTop) || 0,
+      menuHeight: (app && app.globalData.menuHeight) || 32,
       fontScaleTier: tier,
       _fontScaleValue: app.globalData._fontScaleValue || scaleMap[tier] || 1,
       _metaScaleValue: app.globalData._metaScaleValue || 1,

@@ -19,7 +19,8 @@ var CATEGORIES = [
 
 Page({
   data: {
-    statusBarHeight: 20,
+    menuTop: 0,
+    menuHeight: 32,
     list: [],
     filteredList: [],
     categories: CATEGORIES,
@@ -38,9 +39,10 @@ Page({
   },
 
   onLoad: function () {
-    var s = (app && app.globalData && app.globalData.statusBarHeight) || 20
     this.setData({
-      statusBarHeight: s,
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app && app.globalData.menuTop) || 0,
+      menuHeight: (app && app.globalData.menuHeight) || 32,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: 空态星星 icon 按主题切换白色版
@@ -291,7 +293,7 @@ Page({
       newsId: id,
       favorited: false,
     }).catch(function () {
-      wx.showToast({ title: '已取消收藏（待同步）', icon: 'none' })
+      // 云端同步取消失败：入队重试（静默，不提示用户）
       if (target) {
         cloud.enqueue({ name: 'setUserFavorite', data: {
           newsId: id,

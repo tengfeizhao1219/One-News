@@ -8,7 +8,6 @@
 // ============================================================
 
 var C = require('../../utils/constants')
-var STATUS_BAR_HEIGHT = C.STATUS_BAR_HEIGHT
 var PAGE_HEIGHT = C.PAGE_HEIGHT
 var getNewsDetail = require('../../utils/request').getNewsDetail
 var ReadingEngine = require('./reading-engine')
@@ -21,7 +20,9 @@ var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000
 
 Page({
   data: {
-    statusBarHeight: STATUS_BAR_HEIGHT,
+    // BUG-20260806-004: 导航栏与原生胶囊对齐
+    menuTop: 0,
+    menuHeight: 32,
     news: {},
     paragraphs: [],
     scrollTop: 0,
@@ -127,6 +128,9 @@ Page({
       fontScaleTier: tier,
       _fontScaleValue: scaleVal,
       _metaScaleValue: metaVal,
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app && app.globalData.menuTop) || 0,
+      menuHeight: (app && app.globalData.menuHeight) || 32,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: 与 themeClass 同批同步（页面无 onShow，避免错位）
@@ -824,7 +828,7 @@ Page({
   },
 
   /**
-   * TL-B13：收藏云端同步（本地已成功，云端失败入队重试 + 提示待同步）
+   * TL-B13：收藏云端同步（本地已成功，云端失败入队重试，静默——不提示用户）
    * @param {Object} news 新闻对象
    * @param {boolean} favorited true=收藏 / false=取消
    */
@@ -847,12 +851,11 @@ Page({
           })
       }
     }).catch(function () {
-      // 云端失败：入队重试 + 提示待同步
+      // 云端失败：入队重试（静默，不提示用户——云同步是后台行为）
       cloud.enqueue({ name: 'setUserFavorite', data: data })
       if (favorited) {
         cloud.enqueue({ name: 'setNewsRetained', data: { newsId: news.id, retained: true, retainedBy: 'favorite' } })
       }
-      wx.showToast({ title: '已收藏（待同步）', icon: 'none' })
     })
   },
 

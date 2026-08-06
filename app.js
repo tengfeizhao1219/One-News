@@ -53,6 +53,14 @@ App({
     this.globalData.screenHeight = sysInfo.screenHeight
     this.globalData.screenWidth = sysInfo.screenWidth
 
+    // BUG-20260806-004：导航栏与原生胶囊对齐
+    try {
+      var menuRect = wx.getMenuButtonBoundingClientRect()
+      this.globalData.menuTop = menuRect.top
+      this.globalData.menuHeight = menuRect.height
+      this.globalData.menuBottom = menuRect.bottom
+    } catch (e) { /* 低版本兼容：用估算值 */ }
+
     // 字体初始化：首入跟随系统，后续读取记忆
     this._initFontScale()
   },

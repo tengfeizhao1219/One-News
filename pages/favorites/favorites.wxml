@@ -1,10 +1,8 @@
-<!-- 收藏列表页 — TL-B13 / RQ-03 -->
+<!-- 收藏列表页 — TL-B13 / RQ-03 · BUG-20260806-004 -->
 <view class="page {{themeClass}}">
-  <!-- 状态栏占位 -->
-  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：返回主页（左 · TL-B15）+ 标题（中）+ 计数（右） -->
-  <view class="nav-bar">
+  <!-- 顶部导航栏：主页（左）+ 标题（中）+ 计数（右），与原生胶囊对齐 -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
       <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>

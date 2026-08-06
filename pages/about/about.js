@@ -2,14 +2,10 @@
 
 var app = getApp()
 
-var scaleMap = [1, 1.15, 1.3, 1.5]
-var META_SCALE_CAP = 1.15
-
 Page({
   data: {
-    statusBarHeight: 20,
-    _fontScaleValue: 1,
-    _metaScaleValue: 1,
+    menuTop: 0,
+    menuHeight: 32,
     appVersion: 'v6.3.0',
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
@@ -31,12 +27,10 @@ Page({
   },
 
   onLoad: function () {
-    var s = (app && app.globalData && app.globalData.statusBarHeight) || 20
-    var tier = (app && app.globalData && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
     this.setData({
-      statusBarHeight: s,
-      _fontScaleValue: app.globalData._fontScaleValue || scaleMap[tier] || 1,
-      _metaScaleValue: app.globalData._metaScaleValue || 1,
+      // BUG-20260806-004: 导航栏与胶囊对齐
+      menuTop: (app && app.globalData.menuTop) || 0,
+      menuHeight: (app && app.globalData.menuHeight) || 32,
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-20260806-003: 主页 icon 按主题切换白色版
       isDark: this._isSystemDark(),

@@ -1,11 +1,9 @@
-<!-- 设置页 — UI-B9 独立全屏页 -->
-<view class="page {{themeClass}}" data-font-scale="{{fontScaleTier}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+<!-- 设置页 — UI-B9 独立全屏页 · BUG-20260806-004 -->
+<view class="page {{themeClass}}">
 
-  <!-- 状态栏占位 -->
-  <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
-
-  <!-- 顶部栏：主页按钮 + 标题（BUG-20260806-003 owner 07:44 裁定：第 2 层页面统一主页按钮） -->
-  <view class="nav-bar">
+  <!-- 顶部导航栏：主页（左）+ 标题，与原生胶囊对齐 -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
+    <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） -->
     <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
