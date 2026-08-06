@@ -1,3 +1,22 @@
+## [2026-08-06 23:00] 🛠️ FE 交付 · BUG-20260806-023 系统返回手势后首页不恢复阅读位置 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `1808977`）：
+- owner 反馈：从首页进详情页上下翻页后，通过系统返回手势/物理返回键回首页，首页仍显示初始新闻，期望恢复到详情页最后阅读的新闻
+- **根因**：详情页仅 `goBack()`（顶部返回按钮）回写 `app.globalData._detailReturnState`；系统返回手势/物理返回键走 `onUnload` 不回写 → 首页 `_handleDetailReturn` 读到空状态无法定位
+- **修复**：在 `onUnload` 中回写阅读位置（新增 `_writeReturnState`，与 goBack 同逻辑）
+  - 引擎存在 → `getReturnState()`（category + newsId 精确定位）
+  - 引擎降级 → 旧格式（category + readingIndex）
+  - `goBack` 复用 `_writeReturnState`，保证两种返回方式行为一致
+- **覆盖场景**：顶部返回按钮 ✅ / 系统返回手势·物理键 ✅（本次修复）/ 🏠 reLaunch 回首页 ✅
+
+**范围**：仅 `pages/detail/detail.js`，其他页面不动。
+
+**回归**：v7/v511 全绿 ✅；v13 唯一失败项为 c621794 wheel-scale-active（另一会话改动，与本次无关）。
+
+**交接**：**@owner** 真机验证：进详情翻页后用系统返回手势回首页，首页应显示最后阅读的新闻。
+
+> — 小程序前端开发（FE） 2026-08-06 23:00
+
 ## [2026-08-06 22:52] 🛠️ FE 交付 · BUG-20260806-022 侧边栏新闻列表下移 16rpx | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `4e92b90`）：
