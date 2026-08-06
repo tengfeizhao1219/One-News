@@ -1,3 +1,19 @@
+## [2026-08-06 11:15] 🚀 PD 部署 · demo 上线 GitHub Pages | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：`docs/demo/yiyue-demo.html`（Pages 源副本）+ `docs/index.html` 画廊加入口
+- 文件：`docs/demo/yiyue-demo.html`（新增）、`docs/index.html`
+
+**部署结果（owner 要求「demo 放在已有 github 静态网页上」）**：
+- Pages 源 = main 分支 `/docs`（`docs/.nojekyll` 存在），站点 `https://tengfeizhao1219.github.io/One-News/`
+- demo 已上线：**https://tengfeizhao1219.github.io/One-News/demo/yiyue-demo.html** ✅（WebFetch 验证可访问，内容正常）
+- 主站画廊新增入口「DEMO · 一页 · 完整交互 Demo」置顶 ✅
+- **维护约定**：`docs/demo/` 为 Pages 部署副本，与仓库 `demo/` 保持同步；后续 demo 改动需双写（demo/ + docs/demo/）
+
+**状态**：D-09 设计已含导航栏-标题间距，demo 供 owner 确认；确认后 PD 提 FE 落地。
+
+---
+
 ## [2026-08-06 11:15] 📤→✅ FS 已提交 · commit `b2cd614`（AI 摘要根因闭环：前端 wxml 作用域遮蔽修复 `9a5b0db`）| 会话：[全栈开发(FS)]
 
 **提交记录**：
