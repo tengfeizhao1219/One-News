@@ -1,9 +1,11 @@
 <!-- 首页 - 卡片流主视图 -->
 <!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
+<!-- BUG-20260806-014 (FE): 根节点额外注入 --status-bar-height，让 .panel-header padding-top
+     按真机状态栏高度自适应（动态岛/刘海机型不贴顶） -->
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --status-bar-height: {{statusBarHeight}}px;">
 
   <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
   <!-- D-09 v1.2（BUG-20260806-007）: 占位对齐胶囊，高度仅下扩展 12px（与全页面条带规范一致） -->

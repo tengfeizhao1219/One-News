@@ -1,14 +1,19 @@
 <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
 <!-- v5.3-final：选中项固定顶部第二行锚定；触摸实时切分类 + 松手 snap + 震动 -->
+<!-- BUG-20260806-013 (FE): 去掉 .wheel 固定 432rpx 高度，改用 height:100% 撑满父容器，
+     配合 flex 居中让 .wheel-list 居中显示。视觉效果：滚轮列表居中，
+     上下空白（如分类只有 5 个时，"社会"上方/下方均有空白）均属触摸热区，
+     修复"左侧分类空白区域不支持上下滑动切换分类"的问题。
+     .wheel-list 高度仍由 inline 传入（计算自 itemHeight * visibleCount），
+     保证 _updateTranslate 的位移数学不变。 -->
 <view
   class="wheel {{touching ? 'active' : ''}}"
-  style="height: {{wheelHeight}}rpx;"
   catchtouchstart="onTouchStart"
   catchtouchmove="onTouchMove"
   catchtouchend="onTouchEnd"
   catchtouchcancel="onTouchEnd">
 
-  <view class="wheel-list" style="height: {{listHeight}}rpx; transform: translateY({{translateY}}rpx); transition: {{touching ? 'none' : 'transform 300ms cubic-bezier(.4,0,.2,1)'}};">
+  <view class="wheel-list" style="transform: translateY({{translateY}}rpx); transition: {{touching ? 'none' : 'transform 300ms cubic-bezier(.4,0,.2,1)'}};">
     <view
       wx:for="{{categories}}"
       wx:key="id"
