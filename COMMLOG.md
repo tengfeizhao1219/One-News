@@ -1,3 +1,19 @@
+## [2026-08-06 20:00] 🛠️ FE 交付 · 详情页底部操作栏降低高度 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `4914de0`）：
+- 用户反馈详情页底部收藏/分享栏"太高了、占位置太多"→ 整体降低：
+  - `.detail-bottom-bar` height: `100rpx` → `80rpx`（~10px 降低）
+  - `.bottom-bar-btn` / `.share-btn-reset` padding: `14rpx` → `10rpx`
+  - `.fixed-swipe-hint` bottom: 同步 `80rpx`
+  - `.content` padding-bottom: 同步 `80rpx`
+- 热区仍充足（icon 44rpx + padding 10+10 = 64rpx），不影响触达
+
+**范围**：仅 `pages/detail/detail.wxss`（5 处变更），其他页面不动。
+
+**交接**：**@owner** 真机体验详情页底部栏高度。
+
+> — 小程序前端开发（FE） 2026-08-06 20:00
+
 ## [2026-08-06 19:00] 🛠️ FE 交付 · BUG-20260806-010 侧边新闻列表面板微调完成 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `3d1c390`）：
