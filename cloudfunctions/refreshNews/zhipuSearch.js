@@ -178,9 +178,10 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
 // ─── 分类 Prompt 模板（每分类 N 条，含 content 正文）──
 
 const PER_CATEGORY_COUNT = 5  // v6.6：普通分类对齐聚合/天行量级，保证 60s 超时内完成
-const RECOMMEND_COUNT = 10    // DG-01（2026-08-06）：recommend 抓取量 5→10 条/轮
-                              // 首页默认分类（R5 首次 10 条），智谱一次 web_search 调用成本极低；
-                              // 实测单分类 60s 预算内可行（sports 5 条 ~35s，10 条 ~45-50s 余量收窄）
+const RECOMMEND_COUNT = 8     // DG-01 调整（2026-08-06 16:05）：recommend 抓取量 10→8 条/轮
+                              // 实证：10 条 prompt 智谱 web_search 50s 超时（ZHIPU_TIMEOUT），
+                              // 总耗时 56.8s 逼近 60s 云函数上限 → 折中 8 条（~45s 内完成，
+                              // 降级链余量充足）；首页首屏 10 条由 DG-03 用「8+翻底拉取」适配（PM 口径确认）
 
 /**
  * 生成分类搜索 Prompt（统一要求 content 正文）
