@@ -673,15 +673,13 @@
   align-items: flex-end;
   gap: 16rpx;
   opacity: 0;
-  transform: translateY(20rpx) scale(0.95);
-  transform-origin: bottom right;
   pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  /* BUG-FE-20260807-001: 收起时整体快速淡出（0.12s），展开动画由 .more-item 逐个负责 */
+  transition: opacity 0.12s ease;
 }
 
 .more-menu.show {
   opacity: 1;
-  transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
@@ -699,7 +697,29 @@
   font-weight: 500;
   letter-spacing: 1rpx;
   color: var(--text-primary);
+  /* BUG-FE-20260807-001: 气泡放大动画的原点固定在右下角（dock 栈的"生长"方向） */
+  transform-origin: bottom right;
   transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+/* ===== BUG-FE-20260807-001: 二级菜单依次"气泡"放大弹出 =====
+   ⚙ 点击展开时，4 个菜单项按 nth-child 延迟 0/60/120/180ms 依次触发
+   moreBubbleIn 动画：从 scale(0.2) 气泡式放大到 scale(1)，配合 easeOutBack
+   弹性曲线（cubic-bezier(0.175, 0.885, 0.32, 1.275)）在尾端轻微过冲，
+   形成"啵"地一下逐个冒出来的气泡感。收起时容器 0.12s 快速淡出，不回退动画。 */
+.more-menu.show .more-item {
+  /* backwards：delay 等待期也应用 0% 关键帧（隐藏），避免"还没轮到就出现"；
+     结束后回到基础态 scale(1)（无跳变，且 :active 按压反馈正常生效） */
+  animation: moreBubbleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
+}
+.more-menu.show .more-item:nth-child(1) { animation-delay: 0ms; }
+.more-menu.show .more-item:nth-child(2) { animation-delay: 60ms; }
+.more-menu.show .more-item:nth-child(3) { animation-delay: 120ms; }
+.more-menu.show .more-item:nth-child(4) { animation-delay: 180ms; }
+
+@keyframes moreBubbleIn {
+  0%   { opacity: 0; transform: scale(0.2); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .more-item:active {
