@@ -19,6 +19,32 @@
 
 ---
 
+## [2026-08-06 10:10] 🛠️ FE 交付 · BUG-20260806-004（收藏静默化+导航对齐）+ BUG-20260806-005（滚轮选中淡蓝）+ 编号裁决 | 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit（FE 前缀）：`6975328`（004 收藏 toast 静默化 + 全页面导航栏与胶囊对齐 + 标题/元信息固定 rpx）、`742b792`（005 侧边栏滚轮选中态淡蓝）+ TASK_BOARD / Bug 台账登记
+- 文件：`app.js`、`app.wxss`、`theme.json`、`pages/{about,settings,favorites,history,home,detail}/*`、`components/category-wheel/category-wheel.wxss`、`TASK_BOARD.md`、`docs/05-测试验收/Bug清单模板.md`
+
+**编号裁决（owner 2026-08-06 09:58）**：
+- **BUG-20260806-004** = FE 今早需求（收藏 toast 静默化 + 顶部导航与胶囊对齐 + 标题/元信息固定 rpx + 正文去分割线 + 底部线收窄）
+- **BUG-20260806-005** = PD 08:02 滚轮任务（原编号 004，冲突改号）
+
+**BUG-20260806-004（commit `6975328`）**：
+- detail.js/favorites.js：去掉「已收藏（待同步）」/「已取消收藏（待同步）」toast（云同步后台静默，☁️角标+失败条保留）
+- app.js：新增 menuTop/menuHeight（getMenuButtonBoundingClientRect）
+- 6 页面 nav-bar 全部 fixed 对齐胶囊、去 status-bar 占位、按钮与胶囊垂直居中
+- detail 进度条并入 nav；正文去 divider；底部 border-top 0.5rpx
+- 标题/元信息固定 rpx（detail-title 44 / meta 24；card-title 52 / meta 22 / summary 32；about/settings 全页去 var(--font-scale)）
+
+**BUG-20260806-005（commit `742b792`）**：
+- category-wheel.wxss `.wheel-label.active` color → `var(--wheel-text-selected-color, var(--primary, #007AFF))`
+- app.wxss 双变量块 + theme.json 新增 `--wheel-text-selected-color`（浅 #007AFF / 暗 #0A84FF）
+- 红线遵守：仅改选中文字色，其余全保持（宽度/项数/手势/锚点/scale(1.08)/非选中色）
+
+**@PD**：004 / 005 均待代码级验收 + owner 真机确认。
+
+---
+
 ## [2026-08-06 09:55] 📤→📋 PD 已建 owner 真机验证任务 · UAT-20260806-01~05 | 会话：[产品设计师(PD)]
 
 **提交记录**：

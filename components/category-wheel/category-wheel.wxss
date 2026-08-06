@@ -1,5 +1,6 @@
 /* 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2 · v5.3-final） */
 /* FE-3（2026-08-05）：硬编码 rgba → D-02 §5 Token 表 --wheel-* 变量 */
+/* BUG-20260806-004（2026-08-06）：选中态字体淡蓝 --primary（D-02 v2.4） */
 /* D-07 S2（G-03）：组件默认 styleIsolation=isolated，页面根节点的 .page--dark .wheel-label
    选择器无法命中组件内部；改用 CSS 变量继承（var() 穿透样式隔离）——
    --wheel-* 深色/浅色值定义在 app.wxss 的 .page--dark/.page--light 变量块，
@@ -40,9 +41,12 @@
   transition: color 300ms ease-out, background-color 300ms ease-out;
 }
 
-/* v5.3-final 选中项：淡蓝底色标记，颜色/字号/字重与 idle 一致 */
+/* v5.3-final 选中项：淡蓝底色标记 + 淡蓝字体（BUG-20260806-004 · D-02 v2.4） */
 .wheel-label.active {
-  color: var(--wheel-text-selected, rgba(0, 0, 0, 0.5));
+  /* BUG-20260806-004（owner 2026-08-06 08:02 裁定）：选中态字体淡蓝 --primary（浅 #007AFF / 暗 #0A84FF），
+     底色保留 --wheel-bg-selected。token 由 app.wxss .page--dark/.page--light 变量块注入，
+     var() 穿透样式隔离；未定义时回退 var(--primary)。 */
+  color: var(--wheel-text-selected-color, var(--primary, #007AFF));
   font-size: 24rpx;
   font-weight: 500;
   background-color: var(--wheel-bg-selected, rgba(0, 122, 255, 0.06));

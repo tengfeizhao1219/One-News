@@ -47,6 +47,8 @@ page {
   --wheel-opacity-active: 0.92;
   --wheel-text-idle: rgba(255, 255, 255, 0.12);
   --wheel-text-selected: rgba(255, 255, 255, 0.5);
+  /* BUG-20260806-004: 选中态字体淡蓝（D-02 v2.4），语义独立于 --wheel-text-selected */
+  --wheel-text-selected-color: #0A84FF;
   --wheel-text-active: rgba(255, 255, 255, 0.45);
   --wheel-scale-active: 1.08;
   --wheel-bg-selected: rgba(10, 132, 255, 0.10);
@@ -97,6 +99,8 @@ page {
   --wheel-opacity-active: 0.92;
   --wheel-text-idle: rgba(0, 0, 0, 0.12);
   --wheel-text-selected: rgba(0, 0, 0, 0.5);
+  /* BUG-20260806-004: 选中态字体淡蓝（D-02 v2.4），语义独立于 --wheel-text-selected */
+  --wheel-text-selected-color: #007AFF;
   --wheel-text-active: rgba(0, 0, 0, 0.45);
   --wheel-scale-active: 1.08;
   --wheel-bg-selected: rgba(0, 122, 255, 0.06);
