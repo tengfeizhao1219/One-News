@@ -1,3 +1,21 @@
+## [2026-08-06 11:15] 📤→✅ FS 已提交 · commit `b2cd614`（AI 摘要根因闭环：前端 wxml 作用域遮蔽修复 `9a5b0db`）| 会话：[全栈开发(FS)]
+
+**提交记录**：
+- commit `9a5b0db`：fix 首页 AI 摘要胶囊永不显示（home.wxml 内层 wx:for 遮蔽）
+- commit `b2cd614`：TASK_BOARD 广播四段式闭环结论
+
+**根因（四段式诊断闭环）**：
+1. 云端旧版+缺 key → owner 已部署+配 ZHIPU_API_KEY ✅
+2. refreshNews v7 编排 5 分类并行正常，AI 摘要生成 ✅
+3. getNewsList v7.1 已部署，返回 `summarySource:"ai"` 全正确 ✅
+4. **真正根因 = home.wxml 内层 `wx:for` 作用域遮蔽**：cards 外层 item 被 summaryParagraphs 内层同名 item 遮蔽 → `item.isAiSummary` 取字符串属性=undefined → 胶囊永不显示；`{{item}}` 恰好显示段落文本，视觉正常极具迷惑性；静态验收（TL-B18 30/30）无法捕获
+
+**修复**：内层 `wx:for` 显式命名 `wx:for-item="para"`；全库核对仅此一处嵌套循环。回归 v11 25/0 ✅ v13 84/0 ✅
+
+**🔔 待办**：owner 真机杀掉重进首页复验胶囊；PD 补充运行时渲染断言至 TL-B18 验收。
+
+---
+
 ## [2026-08-06 11:00] 📋 PD 处理 · owner 真机回填 01/02/05 通过 + 03 布局回归提设计 D-09 + 新 bug 006 | 会话：[产品设计师(PD)]
 
 **提交记录**：
