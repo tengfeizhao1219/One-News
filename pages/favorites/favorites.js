@@ -1,12 +1,13 @@
 // 收藏列表页 — TL-B13 / RQ-03 + UI-B10（本地秒开 + 云端兜底合并 + 分类筛选 + 长按取消收藏）
 
-var LocalCache = require('../../utils/localCache').LocalCache
+// BUG-20260806-006: 改用全局单例 localCache（原各自 new 独立实例，内存隔离导致 stale read）
+var localCache = require('../../utils/localCache').localCache
 var cloud = require('../../utils/cloud')
 var { formatRelativeTime } = require('../../utils/util')
 var app = getApp()
 
-// 与首页侧边栏同源 Storage（localCache 'lc:' 前缀），可读到详情页写入的 favorites
-var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000 })
+// 全局缓存单例（与首页侧边栏、详情页同源，可读到 detail 写入的 favorites）
+var _cache = localCache
 
 // UI-B10: 分类筛选胶囊（与 reading-engine 跨分类顺序一致；去掉「全部」，默认展示全部）
 var CATEGORIES = [

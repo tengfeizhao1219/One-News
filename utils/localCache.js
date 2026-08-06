@@ -193,7 +193,8 @@ class LocalCache {
   }
 }
 
-// 默认单例（项目全局使用）
-const localCache = new LocalCache()
+// 默认单例（项目全局使用 · BUG-20260806-006：全项目统一用此单例，避免多实例内存隔离 stale read）
+// 容量 500：与 detail 引擎缓存规模匹配（7 分类列表 + 各分类详情缓存 + favorites + browseHistory）
+const localCache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000 })
 
 module.exports = { LocalCache, localCache }

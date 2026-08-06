@@ -11,12 +11,14 @@ var C = require('../../utils/constants')
 var PAGE_HEIGHT = C.PAGE_HEIGHT
 var getNewsDetail = require('../../utils/request').getNewsDetail
 var ReadingEngine = require('./reading-engine')
-var LocalCache = require('../../utils/localCache').LocalCache
+// BUG-20260806-006: 改用全局单例 localCache（detail/favorites/history 原各自 new 独立实例，
+//   内存 Map 隔离导致「收藏后列表不显示新条目」stale read。单例内存共享，set 后所有 get 命中新值）
+var localCache = require('../../utils/localCache').localCache
 var cloud = require('../../utils/cloud')
 var app = getApp()
 
-// 全局缓存实例（引擎内部复用，favorites / browseHistory 同源存储为数组）
-var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000 })
+// 全局缓存单例（引擎内部复用，favorites / browseHistory 同源存储为数组）
+var _cache = localCache
 
 Page({
   data: {

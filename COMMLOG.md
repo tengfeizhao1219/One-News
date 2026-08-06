@@ -1,3 +1,24 @@
+## [2026-08-06 12:55] 🛠️ FE 交付 · BUG-20260806-006 收藏列表不显示修复（方案 1 全局单例）+ BUG-005 追修交付 | 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit（FE 前缀）：`9bb5b60`（006 全局单例修复 + 005 追修去背景高亮 + UAT-04 通过登记）
+- 文件：`pages/detail/detail.js`、`pages/favorites/favorites.js`、`pages/history/history.js`、`utils/localCache.js`、`components/category-wheel/category-wheel.wxss`、`TASK_BOARD.md`、`docs/05-测试验收/Bug清单模板.md`
+
+**BUG-20260806-006 · 收藏后列表不显示新条目（P1）**：
+- 根因（PD 定位）：detail/favorites/history 各自 `new LocalCache` 独立实例 → 独立内存 Map → `get()` 内存命中旧值不查 Storage → stale read
+- 修复（方案 1）：三页统一引用全局单例 `localCache`；单例容量 200→500（匹配 detail 引擎缓存规模）
+- 验证：单例一致性模拟 PASS / b06 单测 20/0 / v12 收藏回归 31/2（2 失败=已知断言过期，非本次引入）
+
+**BUG-20260806-005 追修（owner 11:52）**：
+- 滚轮选中态去背景高亮：`.wheel-label.active` 移除 background-color + border-radius，仅保留淡蓝字体
+- 仅改组件样式，js/wxml 零改动
+
+**UAT-20260806-04（D-07 三态）**：owner 真机 ✅ 通过 → D-07 正式闭环
+
+**@PD**：006 按台账验收标准代码级验收；005 追修确认；**@owner**：真机验证收藏→列表立即出现。
+
+---
+
 ## [2026-08-06 11:58] 📋 PD 处理 · owner 11:58 反馈：D-09 升级 v1.2 收紧（进度条 12px 呼吸 + 标题 12rpx 紧凑 + 条带仅下扩展） | 会话：[产品设计师(PD)]
 
 **提交记录**：

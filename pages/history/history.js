@@ -1,13 +1,14 @@
 // 浏览记录页 — TL-B14 / RQ-06（本地秒开 + 云端兜底合并）
 // 注：页面视觉细节（UI-B4 设计稿）待 PM + owner 评审通过后细化；本实现为功能骨架。
 
-var LocalCache = require('../../utils/localCache').LocalCache
+// BUG-20260806-006: 改用全局单例 localCache（原各自 new 独立实例，内存隔离导致 stale read）
+var localCache = require('../../utils/localCache').localCache
 var cloud = require('../../utils/cloud')
 var { formatBrowseTime, isBrowseExpired } = require('../../utils/util')
 var app = getApp()
 
-// 与 detail.js 同源 Storage（localCache 'lc:' 前缀），可读到 detail 写入的 browseHistory
-var _cache = new LocalCache({ maxItems: 500, defaultTTL: 7 * 24 * 60 * 60 * 1000 })
+// 全局缓存单例（与 detail.js 同源，可读到 detail 写入的 browseHistory）
+var _cache = localCache
 
 Page({
   data: {
