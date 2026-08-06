@@ -1,6 +1,10 @@
 /* 全局样式重置 */
 page {
-  background-color: var(--bg-page);
+  /* BUG-20260806-021 (FE): page 根背景改 --bg-card（原 --bg-page）。
+     iOS 底部 Home Indicator 安全区显示的是 page 根元素背景，而页面内容背景是
+     --bg-card（#FAF9F7），--bg-page（#F5F3F0）与它有色差 → 详情页/收藏页底部
+     出现一条"类似底部状态栏的窄色带"。统一为 --bg-card 后安全区与内容同色。 */
+  background-color: var(--bg-card);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
