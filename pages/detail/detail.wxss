@@ -128,7 +128,7 @@
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: calc(80rpx + env(safe-area-inset-bottom) + 48rpx);
+  padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
   box-sizing: border-box;
 }
 
@@ -180,9 +180,13 @@
 /* ============ 正文排版 ============ */
 
 .detail-body {
-  /* D-09 v1.2（BUG-20260806-007）: 标题位于导航栏下方 12rpx 紧凑呼吸
-     --nav-offset = menuTop + menuHeight + 12px（含条带下呼吸） */
-  padding: calc(var(--nav-offset, 0px) + 12rpx) 64rpx 80rpx;
+  /* BUG-20260806-018 (FE) 根因: nav-offset 被双重计入导致标题上方空白过大。
+     .content 在 BUG-20260806-012 已用 position:absolute; top:var(--nav-offset)
+     把整个 scroll-view 容器推到 nav-bar 下方。如果 .detail-body 内部再
+     padding-top: var(--nav-offset + 12rpx)，两次叠加 ≈ 100px 空白。
+     现在 padding-top 改为 12rpx（仅保留 12rpx 视觉呼吸），由外层 .content
+     的 absolute 定位统一负责 nav-bar 空间。 */
+  padding: 12rpx 64rpx 80rpx;
 }
 
 .detail-title {
@@ -252,8 +256,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  /* BUG-20260806-014: 底部栏从 100rpx 缩到 80rpx，给正文更多呼吸空间 */
-  height: calc(80rpx + env(safe-area-inset-bottom));
+  height: calc(128rpx + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
@@ -267,7 +270,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(80rpx + env(safe-area-inset-bottom));
+  bottom: calc(128rpx + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -305,7 +308,7 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
-  padding: 10rpx 0;  /* BUG-014: 从 14rpx 再缩到 10rpx，底部栏更紧凑；热区 44+10+10=64rpx 仍可触达 */
+  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
@@ -326,7 +329,7 @@
 
 .share-btn-reset {
   margin: 0;
-  padding: 10rpx 0;  /* BUG-014: 与 .bottom-bar-btn 同步缩为 10rpx */
+  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
@@ -406,8 +409,8 @@
 
 /* ============ 骨架屏（与首页一致） ============ */
 .detail-skeleton {
-  /* D-09 v1.2: 骨架屏从导航栏下方开始（与正文同基准） */
-  padding: calc(var(--nav-offset, 0px) + 12rpx) 64rpx 80rpx;
+  /* BUG-20260806-018 (FE): 去掉冗余 nav-offset（外层 .content 已 absolute 定位给空间） */
+  padding: 12rpx 64rpx 80rpx;
   flex: 1;
   box-sizing: border-box;
   display: flex;
