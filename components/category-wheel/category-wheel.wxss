@@ -64,9 +64,9 @@
   font-weight: 500;
 }
 
-/* 激活态（触摸中）：仅温和放大，颜色字号均不变 */
+/* 激活态（触摸中）：放大至 1.5x（BUG-20260806-017 owner 调整，原 1.08） */
 .wheel.active .wheel-label.active {
-  transform: scale(var(--wheel-scale-active, 1.08));
+  transform: scale(var(--wheel-scale-active, 1.5));
   transform-origin: center center;
   transition: transform 150ms ease-out;
 }

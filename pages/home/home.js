@@ -800,7 +800,7 @@ Page({
     }
     this.setData({ panelCategory: cat })
     this._updatePanelSubtitle(cat)
-    this._showCategoryHint(cat) // BUG-20260802-006: 滚轮切分类也需 0.5s 提示
+    // BUG-20260806-017 (FE): owner 裁定取消选中后 toast 提示，滚轮切换分类不再弹 toast
 
     // 同源切换：面板分类与首页一致 → 仅刷新列表；否则切换唯一数据源
     if (cat === this.data.currentCategory) {
