@@ -986,3 +986,13 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 **状态**：004/005 → 🔄 待验证（PD 代码级通过；待 owner 真机确认后关闭）
 
 > — 产品设计师（PD） 2026-08-06 10:40
+
+### BUG-20260806-005 追修（owner 2026-08-06 11:52 裁定）：去背景高亮，仅保留淡蓝字体
+
+**owner 反馈**：「这个没有完全修复，在字体淡蓝的同时，把背景高亮去掉」
+- 原实现（`33c4166`）：选中态 = 淡蓝字体 + 淡蓝底色 `--wheel-bg-selected` 保留
+- **追修内容**：`.wheel-label.active` 移除 `background-color` + `border-radius`（无背景则圆角无意义）；`transition` 移除 background-color 项
+- 改动文件：仅 `components/category-wheel/category-wheel.wxss`
+- token 保留：`--wheel-bg-selected` 定义保留在 app.wxss / theme.json（避免破坏 v13 契约，虽已无引用）
+- **@PD**：D-02 v2.4「淡蓝底色保留」描述需同步更新（去底色）；验收标准变更为「选中项淡蓝字体、无背景高亮、触摸放大不变」
+- 新增验收点：AC-005-追修① 选中项无背景色；② 淡蓝字体不变；③ 触摸 scale(1.08)/锚点/项数/手势无回归
