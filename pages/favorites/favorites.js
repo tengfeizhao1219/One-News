@@ -32,7 +32,12 @@ Page({
     filteredCount: 0,
     loading: true,
     isEmpty: false,
-    sheetVisible: false,
+    // BUG-20260806-020: 左滑状态 —— 当前打开的滑动项 id（'' 表示全部收起）
+    openSwipeId: '',
+    // BUG-20260806-020: 各滑动项实时位移（rpx），key = item.id
+    swipeOffsets: {},
+    // BUG-20260806-020: 正在拖动中的项 id（拖动时禁用 CSS transition 防滞后）
+    swipingId: '',
     _lastHomeTap: 0,
     // BUG-FS-20260805-001: 深色模式下空态星星 icon 切换白色版（image 渲染 SVG 时 currentColor 不生效→黑色，深色下几乎不可见）
     isDark: false,
@@ -162,13 +167,13 @@ Page({
   },
 
   onItemTap: function (e) {
-    // UI-B10: 长按触发后 300ms 内屏蔽 click，避免误跳转
-    if (this._longPressTriggered) {
-      this._longPressTriggered = false
-      return
-    }
     var that = this
     var id = e.currentTarget.dataset.id
+    // BUG-20260806-020: 若该项处于左滑打开状态，点击内容区应收起而非跳转
+    if (this.data.openSwipeId === id) {
+      this._closeSwipe(id)
+      return
+    }
     var cat = e.currentTarget.dataset.cat || 'recommend'
     // DG-04（方案 4 改动 A）：透传来源列表，详情按来源顺序翻页、禁跨分类
     var src = (that._allList || that.data.list).map(function (item) {
@@ -192,59 +197,141 @@ Page({
   onFilterTap: function (e) {
     var cat = e.currentTarget.dataset.id
     var next = this.data.activeCategory === cat ? '' : cat
+    // BUG-20260806-020: 切换分类时收起所有左滑项，避免残留
+    this._closeAllSwipes()
     this.setData({ activeCategory: next })
     this._applyFilter(this._allList || this.data.list, next)
   },
 
-  /**
-   * UI-B10: 长按开始计时，500ms 后弹出取消收藏 ActionSheet
-   */
-  onTouchStart: function (e) {
+  /* ============ BUG-20260806-020: 左滑取消收藏 ============
+     替换原「长按 → ActionSheet」交互。
+     左滑列表项 → 内容左移 160rpx 露出右侧红色"取消收藏"按钮；
+     点击按钮 → 取消收藏；右滑/松手回弹 → 恢复。 */
+
+  // 删除按钮宽度（rpx）
+  SWIPE_ACTION_W: 160,
+
+  onSwipeStart: function (e) {
+    var touch = e.touches[0]
+    this._swipe = {
+      id: e.currentTarget.dataset.id,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      horizontal: false,
+      dead: false,
+    }
+    // 若其它项已打开，先收起（避免多开）
+    if (this.data.openSwipeId && this.data.openSwipeId !== this._swipe.id) {
+      this._closeAllSwipes()
+    }
+  },
+
+  onSwipeMove: function (e) {
+    if (!this._swipe || this._swipe.dead) return
+    var touch = e.touches[0]
+    var dxPx = touch.clientX - this._swipe.startX
+    var dyPx = touch.clientY - this._swipe.startY
+
+    // 方向判定：水平位移显著且大于垂直 → 判定为左滑手势
+    if (!this._swipe.horizontal) {
+      if (Math.abs(dxPx) > 10 && Math.abs(dxPx) > Math.abs(dyPx)) {
+        this._swipe.horizontal = true
+      } else if (Math.abs(dyPx) > 10) {
+        // 垂直滚动，放弃本次滑动（不拦截 scroll-view 滚动）
+        this._swipe.dead = true
+        return
+      } else {
+        return
+      }
+    }
+
+    var pxPerRpx = this._pxPerRpx()
+    var dxRpx = dxPx / pxPerRpx
+    // 位移限制在 [-160, 0] rpx；右滑做阻尼（乘 0.3）
+    var offsetRpx = dxRpx < 0 ? Math.max(dxRpx, -this.SWIPE_ACTION_W) : Math.min(dxRpx * 0.3, 0)
+    var patch = { swipingId: this._swipe.id }
+    patch['swipeOffsets.' + this._swipe.id] = Math.round(offsetRpx)
+    this.setData(patch)
+  },
+
+  onSwipeEnd: function (e) {
+    if (!this._swipe) return
+    var swipe = this._swipe
+    this._swipe = null
+    if (swipe.dead) return
+
+    var touch = e.changedTouches[0]
+    var pxPerRpx = this._pxPerRpx()
+    var dxRpx = (touch.clientX - swipe.startX) / pxPerRpx
+    var id = swipe.id
+
+    // 超过阈值 → 打开
+    if (dxRpx < -60) {
+      this._openSwipe(id)
+    } else if (Math.abs(dxRpx) > 20) {
+      // 有实际滑动但未达阈值 → 回弹收起
+      this._closeSwipe(id)
+    }
+    // |dx| ≤ 20 视为轻点：不处理，交给 tap 事件（打开项点击收起 / 未打开项跳转）
+  },
+
+  _openSwipe: function (id) {
+    var patch = { swipingId: '', openSwipeId: id }
+    patch['swipeOffsets.' + id] = -this.SWIPE_ACTION_W
+    this.setData(patch)
+  },
+
+  _closeSwipe: function (id) {
+    var patch = { swipingId: '', openSwipeId: '' }
+    patch['swipeOffsets.' + id] = 0
+    this.setData(patch)
+  },
+
+  _closeAllSwipes: function () {
     var that = this
-    this._longPressTriggered = false
-    clearTimeout(this._lpTimer)
-    this._lpId = e.currentTarget.dataset.id
-    this._lpTimer = setTimeout(function () {
-      that._longPressTriggered = true
-      that._openSheet(that._lpId)
-    }, 500)
-  },
-
-  onTouchEnd: function () {
-    clearTimeout(this._lpTimer)
-  },
-
-  onLongPress: function (e) {
-    // 与 onTouchStart 双保险：真机 longpress 事件触发也打开 sheet
-    this._longPressTriggered = true
-    this._openSheet(e.currentTarget.dataset.id)
-  },
-
-  _openSheet: function (id) {
-    this._pendingId = id
-    this.setData({ sheetVisible: true })
-  },
-
-  onSheetCancel: function () {
-    this._pendingId = null
-    this.setData({ sheetVisible: false })
+    var patches = { swipingId: '', openSwipeId: '' }
+    // 把已打开项的位移归零
+    var openId = this.data.openSwipeId
+    if (openId) patches['swipeOffsets.' + openId] = 0
+    this.setData(patches)
   },
 
   /**
-   * UI-B10: 确认取消收藏 —— 本地立即移除（DG-04 纯本地，无云端双写）
+   * 获取当前设备 rpx→px 换算（屏幕宽度 / 750）
+   */
+  _pxPerRpx: function () {
+    if (this._pxPerRpxCache) return this._pxPerRpxCache
+    try {
+      var info = wx.getSystemInfoSync()
+      this._pxPerRpxCache = info.windowWidth / 750
+    } catch (e) {
+      this._pxPerRpxCache = 0.5
+    }
+    return this._pxPerRpxCache
+  },
+
+  /**
+   * 点击"取消收藏"按钮（左滑露出）→ 复用原 onConfirmUnfavorite 核心逻辑
+   */
+  onDeleteItem: function (e) {
+    var id = e.currentTarget.dataset.id
+    if (!id) return
+    this._pendingId = id
+    this._closeAllSwipes()
+    this.onConfirmUnfavorite()
+  },
+
+  /**
+   * 确认取消收藏 —— 本地立即移除（DG-04 纯本地，无云端双写）
    */
   onConfirmUnfavorite: function () {
     var that = this
     var id = this._pendingId
-    if (!id) {
-      that.setData({ sheetVisible: false })
-      return
-    }
+    if (!id) return
 
     // 乐观更新：先移除
     var next = (that._allList || that.data.list).filter(function (item) { return item.id !== id })
     that._setList(next)
-    that.setData({ sheetVisible: false })
     wx.showToast({ title: '已取消收藏', icon: 'none' })
 
     // 本地缓存写入

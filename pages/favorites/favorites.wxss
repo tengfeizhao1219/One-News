@@ -82,12 +82,6 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-.nav-count {
-  position: absolute;
-  right: 24rpx;
-  font-size: 24rpx;
-  color: var(--text-secondary);
-}
 
 /* UI-B10: 分类筛选胶囊（D-09 v1.2: 从导航栏下方 8rpx 开始） */
 .filter-bar {
@@ -115,12 +109,14 @@
   color: var(--bg-card);
 }
 
-/* UI-B10: 长按提示 */
-.longpress-hint {
-  font-size: 24rpx;
-  color: var(--text-tertiary);
-  padding: 0 32rpx 16rpx;
+/* BUG-20260806-020 (FE): "共x条"移到分类标签右侧（filter-bar 尾部，右对齐） */
+.filter-count {
+  margin-left: auto;
   flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  align-self: center;
 }
 
 /* 加载态骨架 */
@@ -177,17 +173,40 @@
 }
 
 /* 列表（BUG-FE-20260805-001：min-height:0 + overflow-y:auto，修复内容超一屏无法滚动，
-   与 detail 页 .content 方案对齐） */
+   与 detail 页 .content 方案对齐）
+   BUG-20260806-020 (FE): 顶部 padding 2rpx → 16rpx，首条不与上方元素贴死 */
 .list-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 2rpx 32rpx 40rpx;
+  padding: 16rpx 0 40rpx;
 }
+
+/* BUG-20260806-020 (FE): 左滑取消收藏 —— 滑动层结构。
+   wrapper 提供左右 32rpx 留白 + overflow:hidden 裁掉未滑出时的删除按钮。
+   swipe 容器 position:relative；删除按钮 absolute 固定在右侧，
+   内容区 (fav-item) 左移 translateX 后露出按钮。 */
+.fav-item-wrapper {
+  position: relative;
+  overflow: hidden;
+  /* 与 .list-scroll 的左右留白对齐（list-scroll 已改为左右 0，由 wrapper 提供 32rpx 留白） */
+  margin: 0 32rpx;
+  border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
+}
+
+/* 滑动容器：位移由 JS 的 swipeOffsets[item.id] 驱动（内联 style） */
+.fav-item-swipe {
+  position: relative;
+  width: 100%;
+  transition: transform 0.25s ease;
+  will-change: transform;
+}
+
 .fav-item {
   position: relative; /* UI-13: 待同步角标定位锚点 */
+  width: 100%;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
+  background-color: var(--bg-card);
   transition: opacity 0.2s;
 }
 .fav-item:active {
@@ -219,6 +238,23 @@
   color: var(--tag-text);
 }
 
+/* 左滑露出的删除按钮：absolute 固定在 swipe 容器右侧外（right:-160rpx，被 wrapper overflow:hidden 裁掉）。
+   swipe 容器 translateX(-160rpx) 左移时，按钮随容器进入右侧可视区。 */
+.fav-delete-btn {
+  position: absolute;
+  top: 0;
+  right: -160rpx;
+  bottom: 0;
+  width: 160rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-favorite);
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 500;
+}
+
 /* UI-13: 待同步角标（☁️ 待同步，12 号字等效 24rpx，次级色；点按重试该条上云） */
 .fav-pending {
   position: absolute;
@@ -230,51 +266,6 @@
   border-radius: 12rpx;
   padding: 2rpx 12rpx;
   line-height: 1.6;
-}
-
-/* UI-B10: 长按 ActionSheet */
-.sheet-mask {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay);
-  z-index: 50;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.sheet-mask.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-.action-sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-card);
-  border-radius: 24rpx 24rpx 0 0;
-  padding: 12rpx 0 24rpx;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  z-index: 51;
-  transform: translateY(100%);
-  transition: transform 0.25s ease;
-}
-.action-sheet.show {
-  transform: translateY(0);
-}
-.sheet-item {
-  padding: 30rpx 0;
-  text-align: center;
-  font-size: 32rpx;
-  color: var(--text-primary);
-}
-.sheet-item--danger {
-  color: var(--color-favorite);
-}
-.sheet-item--cancel {
-  color: var(--text-secondary);
-  border-top: 16rpx solid var(--bg-page);
-  margin-top: 12rpx;
 }
 
 /* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============

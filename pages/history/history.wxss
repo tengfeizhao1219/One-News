@@ -123,18 +123,19 @@
 }
 
 /* 列表（BUG-FE-20260805-001：min-height:0 + overflow-y:auto，修复内容超一屏无法滚动，
-   与 detail 页 .content 方案对齐） */
+   与 detail 页 .content 方案对齐）
+   BUG-20260806-020 (FE): 左右 padding 16rpx → 32rpx，文字不再贴屏幕边缘 */
 .list-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   /* D-09 v1.2: 内容从导航栏下方 8rpx 开始 */
-  padding: calc(var(--nav-offset, 0px) + 8rpx) 16rpx 40rpx;
+  padding: calc(var(--nav-offset, 0px) + 8rpx) 32rpx 40rpx;
 }
 .history-item {
   display: flex;
   gap: 16rpx;
-  padding: 24rpx 16rpx;
+  padding: 24rpx 0;  /* BUG-20260806-020: 左右 16rpx → 0（左右间距由 .list-scroll 32rpx 统一管理） */
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
   align-items: flex-start;
   cursor: pointer;
