@@ -433,10 +433,15 @@ async function searchWithQwen(category, maxTimeout = QWEN_TIMEOUT) {
   throw lastErr
 }
 
-// ─── DeepSeek API 降级搜索 ─────────────────────────
+// ─── DeepSeek API 降级搜索（DG-05 已从搜索链移除，仅保留函数备用）─────────
 
 /**
- * DeepSeek API 作为智谱失败时的降级搜索
+ * DeepSeek API 搜索（当前未接入搜索链）
+ * DG-05（2026-08-06）：实测 DeepSeek API 的 enable_search 不联网——模型明确回复
+ * "知识截止2025年5月、无自动联网搜索功能"，无 search_info/citations，即使充值成功
+ * 也返回不了实时新闻/URL。故 searchNewsByCategory 不再调用本函数，直接转聚合/天行兜底，
+ * 避免云函数运行时到 api.deepseek.com 出网慢导致的 40s 超时拖累 60s 预算。
+ * 若未来 DeepSeek 开放可用的联网搜索，可在此恢复并重新接入链。
  * B-12 策略3: 429 限流时指数退避重试（≤3 次）
  */
 async function searchWithDeepSeek(category, maxTimeout = DEEPSEEK_SEARCH_TIMEOUT) {
@@ -541,32 +546,13 @@ async function searchNewsByCategory(category, db, quotaRef) {
       return { news, engine: 'qwen' }
     } catch (qwenErr) {
       console.warn(`[zhipuSearch] Qwen ${category} 失败: ${qwenErr.message}`)
-      // DG-04：账户欠费/封禁是终态错误，本次运行无法恢复 → 跳过同为付费服务的 DeepSeek，直转聚合/天行（省 ~15s）
       if (isAccountBlocked(qwenErr)) {
-        console.error(`[zhipuSearch] ⚠️ Qwen 账户欠费/封禁(Arrearage) — 请到阿里云百炼缴清欠费后重试（免费额度需账户状态正常）。跳过 DeepSeek，转聚合/天行兜底`)
-        return { news: [], engine: 'none' }
+        console.error(`[zhipuSearch] ⚠️ Qwen 账户欠费/封禁(Arrearage) — 请到阿里云百炼缴清欠费后重试（免费额度需账户状态正常）`)
       }
-      if (budgetLeft() < 3000) {
-        console.warn(`[zhipuSearch] ${category} 搜索预算耗尽，转聚合/天行兜底`)
-        return { news: [], engine: 'none' }
-      }
-    }
-
-    // 降级②：DeepSeek API（策略4: 预算熔断；当前 402 余额不足会失败走聚合）
-    if (quotaRef && quotaRef.deepseekCalls >= DEEPSEEK_DAILY_CAP) {
-      console.warn(`[zhipuSearch] DeepSeek ${category} 跳过 — 已达日配额 ${DEEPSEEK_DAILY_CAP}`)
-      return { news: [], engine: 'skipped_quota' }
-    }
-
-    try {
-      console.log(`[zhipuSearch] 降级到 DeepSeek 搜索 ${category}...`)
-      const news = await searchWithDeepSeek(category, budgetLeft())
-      console.log(`[zhipuSearch] DeepSeek ${category}: ${news.length} 条`)
-      // 策略6: DeepSeek 调用计数
-      if (quotaRef) quotaRef.deepseekCalls++
-      return { news, engine: 'deepseek' }
-    } catch (dsErr) {
-      console.error(`[zhipuSearch] DeepSeek ${category} 也失败: ${dsErr.message}`)
+      // DG-05：跳过 DeepSeek 降级——实测 DeepSeek API 的 enable_search 不联网（模型明确回复
+      // "知识截止2025年5月、无自动联网搜索"），即使充值成功也返回不了实时新闻，且云函数运行时
+      // 到 api.deepseek.com 出网慢易超时。直接转聚合/天行兜底，省 15-40s，保障 60s 内必有写入。
+      console.warn(`[zhipuSearch] ${category} AI 搜索全失败，转聚合/天行兜底（DeepSeek 不联网，已跳过）`)
       return { news: [], engine: 'none' }
     }
   }
