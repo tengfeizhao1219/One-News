@@ -651,93 +651,14 @@
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
-   BUG-20260805-002 引入硬编码兜底（应对真机 theme.json CSS 变量偶发失效）。
-   D-07 治理：删除系统主题 media 查询，迁移为 .page--dark 前缀——
-   跟随系统深色与手动深色均注入 page--dark class，统一作用域，杜绝两套判定（G-02）。
-   色值来源：theme.json dark（--bg-page:#000 / --bg-card:#0D0D0D /
-   --text-primary:#FFF / --text-secondary:#999 / --text-body:#D4D4D4 /
-   --tag-bg:#1C1C1E / --tag-text:#999 / --divider:#1C1C1E /
-   --primary:#0A84FF / --primary-subtle:rgba(10,132,255,0.18)） */
-.page--dark {
-  background-color: #000000;
-}
-.page--dark .card {
-  background-color: #0D0D0D;
-}
-.page--dark .card-title,
-.page--dark .panel-title,
-.page--dark .panel-item-title,
-.page--dark .more-item,
-.page--dark .category-hint {
-  color: #FFFFFF;
-}
-.page--dark .card-meta,
-.page--dark .card-meta text,
-.page--dark .panel-subtitle,
-.page--dark .panel-empty,
-.page--dark .fixed-swipe-hint-text,
-.page--dark .state-message {
-  color: #999999;
-}
-.page--dark .summary-p {
-  color: #D4D4D4;
-}
-/* AI 摘要胶囊（UI-B8）：变量失效时兜底暗色值 */
-.page--dark .ai-chip {
-  color: #0A84FF;
-  background-color: rgba(10, 132, 255, 0.18);
-}
-/* 分类标签（全局 app.wxss 定义，此处兜底首页内出现的） */
-.page--dark .category-tag {
-  background-color: #1C1C1E;
-  color: #999999;
-}
-/* 底部滑动提示渐变（暗色底为 #0D0D0D） */
-.page--dark .fixed-swipe-hint {
-  background: linear-gradient(transparent, #0D0D0D 40%);
-}
-/* 状态重试按钮：白底黑字（与 var 正常时反转一致） */
-.page--dark .state-retry {
-  background-color: #FFFFFF;
-  color: #0D0D0D;
-}
-/* 顶部设置按钮 / 浮动 ⚙ / 菜单按压态 */
-.page--dark .top-bar-settings,
-.page--dark .floating-more,
-.page--dark .more-item:active,
-.page--dark .panel-item:active {
-  background-color: #1C1C1E;
-}
-/* dock 菜单项（浮层表面色：比纯黑页面背景亮一档，从蒙板中"浮"出） */
+/* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============
+   D-07 S1-S4 后变量注入已改为 app.wxss .page--dark/.page--light 显式变量块（class 注入，
+   非原生 darkmode media 查询），真机变量偶发失效已解决（v13 契约 84/0+ 通过）。
+   正常路径各选择器均已 var() 引用 → 兜底硬编码为纯冗余（双轨漂移风险源），删除。
+   保留以下深色专用覆盖（正常路径无等价 var() 或为特殊设计值）：
+   - .more-item 浮层表面色 #1C1C1E + 阴影强化（比 --bg-card 亮一档，从蒙板"浮"出） */
 .page--dark .more-item {
   background-color: #1C1C1E;
-  /* 暗色下原阴影在纯黑背景上不可见，加深一档强化悬浮感 */
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
-}
-/* 分类切换提示 */
-.page--dark .category-hint {
-  background-color: #0D0D0D;
-}
-/* 侧边栏面板 */
-.page--dark .slide-panel {
-  background-color: #0D0D0D;
-}
-/* 骨架屏 */
-.page--dark .skeleton-card {
-  background-color: #0D0D0D;
-}
-.page--dark .sk-title,
-.page--dark .sk-line,
-.page--dark .sk-tag,
-.page--dark .sk-source {
-  background: linear-gradient(90deg, #1C1C1E 0%, #0D0D0D 50%, #1C1C1E 100%);
-}
-
-/* BUG-20260805-003 followup：手动深色（.page--dark，非跟随系统）下菜单项同样需浮层表面色。
-   必须放在 .page--dark 块外——系统亮色 + 手动深色时页面根节点注入的是 page--dark，
-   但此规则独立声明，确保任意来源的 page--dark 均命中 */
-.page--dark .more-item {
-  background-color: #1C1C1E;
+  /* 暗色下原阴影在纯黑背景上不可见，加深一档强化悬浮感（box-shadow 豁免范畴） */
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
 }

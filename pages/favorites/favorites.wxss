@@ -40,7 +40,7 @@
   flex-shrink: 0;
   font-size: 24rpx;
   color: var(--color-warning);
-  background: rgba(245, 158, 11, 0.12);
+  background: var(--color-warning-subtle);
   padding: 12rpx 32rpx;
   text-align: center;
   display: none;
@@ -278,49 +278,11 @@
   margin-top: 12rpx;
 }
 
-/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
-   BUG-20260805-002 引入硬编码兜底（应对真机 theme.json CSS 变量偶发失效）。
-   D-07 治理：删除 @media，迁移为 .page--dark 前缀——跟随系统深色与手动深色统一作用域（G-02） */
-.page--dark {
-  background-color: #000000;
-}
-.page--dark .nav-title,
-.page--dark .fav-title,
-.page--dark .sheet-item,
-.page--dark .filter-chip.on {
-  color: #FFFFFF;
-}
-.page--dark .nav-count,
-.page--dark .fav-meta,
-.page--dark .longpress-hint,
-.page--dark .empty-text,
-.page--dark .filter-chip,
-.page--dark .fav-pending,
-.page--dark .sheet-item--cancel {
-  color: #999999;
-}
-.page--dark .fav-tag,
-.page--dark .filter-chip,
-.page--dark .fav-pending {
-  background-color: #1C1C1E;
-}
-.page--dark .filter-chip.on {
-  background-color: #FFFFFF;
-  color: #0D0D0D;
-}
-.page--dark .empty-hint {
-  color: #0A84FF;
-  background-color: #1C1C1E;
-}
-.page--dark .skeleton-item .sk-line {
-  background: #1C1C1E;
-}
-.page--dark .action-sheet {
-  background-color: #0D0D0D;
-}
-.page--dark .sheet-item--danger {
-  color: #FF453A;
-}
+/* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============
+   D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），变量失效问题已解决；
+   正常路径各选择器均已 var() 引用 → 兜底硬编码为纯冗余（双轨漂移风险源），删除。
+   保留深色专用覆盖（D-07 走查验收功能，正常路径无等价）：
+   - .fav-item:active 深色按压反馈（rgba(255,255,255,0.06)，特异性 0,2,1 > 浅色 0,1,1） */
 .page--dark .fav-item:active {
   background-color: rgba(255, 255, 255, 0.06);
 }

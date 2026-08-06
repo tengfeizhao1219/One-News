@@ -132,7 +132,7 @@
   left: 50%;
   transform: translateX(-50%);
   z-index: 25;
-  background: rgba(245, 158, 11, 0.15);
+  background: var(--color-warning-subtle);
   color: var(--color-warning);
   font-size: calc(24rpx * var(--font-scale));
   padding: 16rpx 32rpx;
@@ -440,24 +440,6 @@
   opacity: 0.7;
 }
 
-/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
-   修复 theme 变量偶发不生效；跟随系统深色与手动深色均注入 page--dark，统一作用域（G-02） */
-.page--dark .detail-title {
-  color: #FFFFFF;
-}
-.page--dark .detail-meta,
-.page--dark .detail-meta text,
-.page--dark .source-link,
-.page--dark .nav-position,
-.page--dark .bottom-bar-btn,
-.page--dark .bottom-bar-label,
-.page--dark .bottom-bar-icon,
-.page--dark .share-btn-reset {
-  color: #999999;
-}
-.page--dark .text-p {
-  color: #D4D4D4;
-}
-.page--dark .state-message {
-  color: #999999;
-}
+/* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============
+   D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），变量失效问题已解决；
+   正常路径各选择器均已 var() 引用 → 兜底硬编码为纯冗余（双轨漂移风险源），整块删除。 */

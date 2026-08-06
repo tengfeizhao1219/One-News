@@ -271,41 +271,7 @@
   font-weight: 500;
 }
 
-/* ============ 暗色模式兜底（D-07 S2 迁移：media query → .page--dark 前缀）============
-   BUG-20260805-002 引入硬编码兜底（应对真机 theme.json CSS 变量偶发失效）。
-   D-07 治理：删除 @media，迁移为 .page--dark 前缀——跟随系统深色与手动深色统一作用域（G-02） */
-.page--dark {
-  background-color: #000000;
-}
-.page--dark .nav-title,
-.page--dark .row-label,
-.page--dark .seg-item.on,
-.page--dark .preview-card {
-  color: #FFFFFF;
-}
-.page--dark .group-label,
-.page--dark .row-val,
-.page--dark .preview-label,
-.page--dark .pv-meta {
-  color: #999999;
-}
-.page--dark .row-sub,
-.page--dark .row-chev {
-  color: #666666;
-}
-.page--dark .card,
-.page--dark .preview-card {
-  background-color: #0D0D0D;
-}
-.page--dark .row + .row {
-  border-top-color: #1C1C1E;
-}
-.page--dark .seg {
-  background-color: #2C2C2E;
-}
-.page--dark .seg-item.on {
-  background-color: #636366;
-}
-.page--dark .switch {
-  background-color: #39393D;
-}
+/* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============
+   D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），变量失效问题已解决；
+   正常路径各选择器均已 var() 引用（--seg-bg/--seg-on-bg/--switch-off 等 token 已存在）
+   → 兜底硬编码为纯冗余（双轨漂移风险源），整块删除。 */
