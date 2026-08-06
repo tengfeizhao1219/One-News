@@ -311,6 +311,17 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   .kb-leg i{width:9px;height:9px;border-radius:3px;display:inline-block}
   .kb-foot{padding:10px 0 2px;color:var(--kb-sub);font-size:10.5px;
     border-top:1px solid var(--kb-line);margin-top:4px;line-height:1.35}
+  .kb-intro{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin:8px 0 14px;align-items:start}
+  .kb-intro .box{background:var(--kb-panel);border:1px solid var(--kb-line);border-radius:11px;padding:10px 12px}
+  .kb-intro h3{margin:0 0 6px;font-size:12.5px;font-weight:700}
+  .kb-bg{font-size:12px;line-height:1.55;color:var(--kb-ink)}
+  .kb-cl{display:flex;flex-direction:column;gap:7px}
+  .kb-cl-i{border-left:3px solid var(--kb-accent);background:var(--kb-bg);border-radius:0 8px 8px 0;padding:6px 9px}
+  .kb-cl-i .t{font-size:10.5px;color:var(--kb-sub)}
+  .kb-cl-i .who{display:inline-block;font-size:9.5px;font-weight:700;color:#fff;
+    background:var(--kb-accent);border-radius:10px;padding:1px 7px;margin-left:5px;vertical-align:middle}
+  .kb-cl-i .c{font-size:11.5px;line-height:1.42;margin-top:3px;color:var(--kb-ink)}
+  @media(max-width:760px){.kb-intro{grid-template-columns:1fr}}
   </style>
 
   <div class="kb-head">
@@ -324,6 +335,8 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     </div>
     <div id="kb-chain"></div>
   </div>
+
+  <section class="kb-intro" id="kb-intro"></section>
 
   <div class="kb-board" id="kb-board"></div>
   <div class="kb-leg" id="kb-leg"></div>
@@ -342,6 +355,20 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     const links=[...new Set(D.map(d=>d.link))], lC={};
     links.forEach((l,i)=>{ lC[l]=`hsl(${(i*67+200)%360} 62% 52%)` });
     $("kb-subtitle").textContent=M.subtitle+" · 更新 "+M.updated;
+    // 项目背景 + 最近变更（取最新 3 条）
+    const introEl=document.getElementById("kb-intro");
+    if(M.background||(M.changelog&&M.changelog.length)){
+      let h="";
+      if(M.background) h+=`<div class="box"><h3>📖 项目背景</h3><div class="kb-bg">${M.background}</div></div>`;
+      if(M.changelog&&M.changelog.length){
+        h+=`<div class="box"><h3>🕘 最近变更（最新 3 条）</h3><div class="kb-cl">`;
+        M.changelog.slice(0,3).forEach(e=>{
+          h+=`<div class="kb-cl-i"><div class="t">${e.time}<span class="who">${e.who}</span></div><div class="c">${e.content}</div></div>`;
+        });
+        h+=`</div></div>`;
+      }
+      introEl.innerHTML=h;
+    }
     const stEl=$("kb-stats"); M.columns.forEach(c=>{
       const n=D.filter(d=>d.col===c.key).length, s=document.createElement("span");
       s.className="kb-stat"; s.innerHTML=c.name+" <b>"+n+"</b>"; stEl.appendChild(s);

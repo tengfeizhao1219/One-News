@@ -22,6 +22,14 @@ window.KANBAN_META = {
     { key: "dev",    name: "开发状态",     hint: "FS / FE 编码与云函数" },
     { key: "test",   name: "测试状态 (API)", hint: "PM 功能/回归/单测 · 自动化" },
     { key: "accept", name: "验收状态 (真机)", hint: "owner / PD 真机验证 · UAT" }
+  ],
+  // 项目背景介绍（看板顶部展示）
+  background: "一页（One-News）是一款微信小程序 · AI 新闻速览产品，技术栈为原生微信小程序 + WXS + CloudBase 云开发，AI 引擎采用智谱 GLM-4-Flash（联网搜索）+ DeepSeek API（降级兜底）。项目由 PM / PD / FS / FE / PJM 多角色线上协作推进，当前处于「阶段五 · 测试验收」，阶段一~四已闭环。本看板以 6 大状态列（需求 → 设计 → 评审 → 开发 → 测试(API) → 验收(真机)）横向串联全流程，同一件事通过「关联链」跨阶段高亮，点击卡片即可追溯完整脉络。",
+  // 最近变更日志（取 COMMLOG.md 最新 3 条，含变更人/角色 + 变更内容）
+  changelog: [
+    { time: "2026-08-06 11:40", who: "产品设计师(PD)", content: "D-09 升级 v1.1 系统级规范：导航条带与胶囊 6px 呼吸、进度条去底槽同色、6 页面统一" },
+    { time: "2026-08-06 11:30", who: "产品设计师(PD)", content: "交互 demo 须基于当前设计稿；后续所有静态页 demo 统一标注「时间 + 调整说明」" },
+    { time: "2026-08-06 11:15", who: "产品设计师(PD)", content: "交互 demo 上线 GitHub Pages，主站画廊新增入口" }
   ]
 };
 
