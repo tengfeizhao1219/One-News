@@ -128,7 +128,8 @@
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
+  /* BUG-20260806-021: 底部留白同步 128rpx → 80rpx（bar 高度同步） */
+  padding-bottom: calc(80rpx + env(safe-area-inset-bottom) + 48rpx);
   box-sizing: border-box;
 }
 
@@ -249,6 +250,10 @@
 
 /* ============ 底部操作栏（收藏 + 分享） ============ */
 
+/* BUG-20260806-021 (FE): 底部栏高度 128rpx → 80rpx（-37.5%），
+   占用空间过大。同步压缩 icon 44→40rpx、label 22→20rpx、padding 22→8rpx，
+   保证内容(40+4+20+16=80rpx)恰好放满 bar 且不溢出。
+   注意：b7de8be 会话曾基于旧代码把 bar 回退到 128rpx，本次为再次压缩。 */
 .detail-bottom-bar {
   position: fixed;
   bottom: 0;
@@ -256,7 +261,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  height: calc(128rpx + env(safe-area-inset-bottom));
+  height: calc(80rpx + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
@@ -265,12 +270,13 @@
   border-top: 0.5rpx solid var(--divider);
 }
 
-/* UI-B7 §3.5: 详情页底部固定滑动提示条（位于操作栏上方，不响应点击） */
+/* UI-B7 §3.5: 详情页底部固定滑动提示条（位于操作栏上方，不响应点击）
+   BUG-20260806-021: bottom 同步 128rpx → 80rpx */
 .fixed-swipe-hint {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(128rpx + env(safe-area-inset-bottom));
+  bottom: calc(80rpx + env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -308,9 +314,9 @@
   align-items: center;
   justify-content: center;
   gap: 4rpx;
-  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
+  padding: 8rpx 0;  /* BUG-20260806-021: 原 22rpx → 8rpx，配合 bar 80rpx 内容(40+4+20+16=80rpx)恰好放满 */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   transition: transform 0.15s ease;
   background: transparent;
@@ -329,9 +335,9 @@
 
 .share-btn-reset {
   margin: 0;
-  padding: 22rpx 0;  /* D-05#4: 热区 44+22+22=88rpx ≥ 微信无障碍建议 */
+  padding: 8rpx 0;  /* BUG-20260806-021: 与 .bottom-bar-btn 同步 22rpx → 8rpx */
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -344,24 +350,25 @@
 }
 
 .bottom-bar-icon {
-  font-size: 44rpx;
+  font-size: 40rpx;  /* BUG-20260806-021: 44rpx → 40rpx */
   line-height: 1;
 }
 
-/* UI-B7 图标规范: 收藏图标用 image 直接渲染 SVG */
+/* UI-B7 图标规范: 收藏图标用 image 直接渲染 SVG
+   BUG-20260806-021: 44rpx → 40rpx */
 .bottom-bar-icon-img {
-  width: 44rpx;
-  height: 44rpx;
+  width: 40rpx;
+  height: 40rpx;
 }
 .bottom-bar-icon-faved {
-  font-size: 44rpx;
+  font-size: 40rpx;
   line-height: 1;
   color: var(--color-favorite);
 }
 
 .bottom-bar-label {
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
 }
 
