@@ -57,6 +57,10 @@ Page({
     _metaScaleValue: 1,
     // UI-B11: 阅读进度条百分比
     progressPercent: 0,
+    // BUG-20260806-003: 第 3 层及以上（detail）统一返回按钮（owner 07:44 裁定）
+    showBackButton: true,
+    // DG-02（需求方案 4）：来源标识 'home'|'history'|'favorites'
+    source: '',
     // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
     showSwipeHint: true,
   },
@@ -91,6 +95,9 @@ Page({
     var id = options.id
     var index = parseInt(options.index, 10) || 0
     var category = options.category || 'all'
+    // DG-02（需求方案 4）：来源识别 — history/favorites 进入时透传 source，
+    // 详情滑动范围 = 来源列表顺序，禁止跨分类补拉/跳转
+    var source = options.source || ''
 
     // UI-B11: 滑动提示同会话仅显示一次
     this._swipeHintDismissed = false
@@ -130,6 +137,7 @@ Page({
       fontScaleTier: tier,
       _fontScaleValue: scaleVal,
       _metaScaleValue: metaVal,
+      source: source,  // DG-02: 'history'|'favorites'（来源列表模式）
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
@@ -193,6 +201,8 @@ Page({
     var ctx = app.globalData.detailContext
     var preloadedList = null
     var preloadedCategory = null
+    // DG-02（需求方案 4）：history/favorites 透传来源列表（source 已带）；
+    // 首页透传（source 缺省）时沿用 detailContext
     if (ctx && ctx.list && ctx.list.length > 0 && ctx.category === entryCategory) {
       preloadedList = ctx.list
       preloadedCategory = ctx.category
@@ -205,6 +215,7 @@ Page({
       cache: _cache,  // B-06: 注入 localCache 实例
       preloadedList: preloadedList,        // UX-BUG09: 透传数据
       preloadedCategory: preloadedCategory, // UX-BUG09: 透传分类
+      source: this.data.source || '',      // DG-02: 'home'|'history'|'favorites'（禁跨分类）
       onProgress: function (info) {
         // 进度回调（引擎 init 完成时触发）
         that.setData({
@@ -303,7 +314,7 @@ Page({
     that._bottomScrollTop = null
     if (news && news.id) {
       that._checkFavorite(news.id)
-      that._recordBrowse(news) // TL-B14：浏览记录写入（本地 + 云端兜底）
+      that._recordBrowse(news) // DG-02/TL-B14：浏览记录写入（纯本地）
     }
   },
 
@@ -378,6 +389,11 @@ Page({
     // UX-BUG02: 只有滚动到边界时才触发翻页
     // 下滑(dy>0)→上一条（手指从上往下拉，内容从顶部滑入）；需内容已触顶
     // 上滑(dy<0)→下一条（手指从下往上推，内容从底部滑入）；需内容已触底
+    if (dy > 0 && this.data.isFirst) {
+      // DG-02（需求方案 4）：首条下滑 → 边界 toast（禁止静默）
+      wx.showToast({ title: '已经是第一篇了', icon: 'none' })
+      return
+    }
     if (dy > 0 && !this.data.isFirst) {
       if (this._isAtTop) {
         this._swipeToPrev()
@@ -457,8 +473,11 @@ Page({
 
     var result = that._engine.goNext()
     if (!result.canGo) {
+      // DG-02（需求 R3）：末条 → 尝试跨分类自动跳转（home 来源）；
+      // history/favorites 来源引擎返回 hasNext:false → 直接边界 toast
       that._animating = false
       that._switching = false
+      that._tryNextCategory()
       return
     }
 
@@ -512,6 +531,27 @@ Page({
         that._showNetworkToast()
       })
     }, 350)
+  },
+
+  /**
+   * DG-02（需求 R3 + 方案 4）：当前分类末条 → 跨分类自动跳转
+   * - home 来源：引擎按固定分类顺序加载下一分类首页追加（toast「正在阅读：分类」）
+   * - 所有分类读完 / history / favorites 来源：toast「已阅读完，回到首页获取更多新闻」
+   */
+  _tryNextCategory: function () {
+    var that = this
+    if (!that._engine || that._destroyed) return
+    that._engine.loadNextCategory().then(function (res) {
+      if (that._destroyed) return
+      if (!res.hasNext) {
+        wx.showToast({ title: '已阅读完，回到首页获取更多新闻', icon: 'none' })
+        return
+      }
+      // 跨分类跳转成功：提示切换分类 + 更新总数 + 立即翻页
+      wx.showToast({ title: '正在阅读：' + res.categoryName, icon: 'none' })
+      that.setData({ total: that._engine.getProgress().total })
+      that._swipeToNext()
+    })
   },
 
   /**
@@ -792,8 +832,7 @@ Page({
         that.setData({ isFavorited: false })
         // BUG-20260806-001：取消收藏反馈提示（对比收藏页已有「已取消收藏」提示）
         wx.showToast({ title: '已取消收藏', icon: 'none' })
-        // TL-B13 / RQ-03：云端同步取消（仅取消收藏，不取消 retained — 曾收藏即保留）
-        that._syncFavoriteCloud(news, false)
+        // DG-02（owner 09:48 决策③）：收藏纯本地，移除云端 setUserFavorite 同步
       } else {
         // 添加收藏（容量上限 200）
         if (favorites.length >= 200) {
@@ -814,6 +853,7 @@ Page({
             source: news.source || '',
             picUrl: news.picUrl || '',
             addedAt: Date.now(),
+            expireAt: Date.now() + 30 * 24 * 60 * 60 * 1000, // DG-02：30 天 TTL（需求方案 3）
           })
           _cache.set('favorites', favorites, { ttl: 0 })
         }
@@ -821,8 +861,8 @@ Page({
         setTimeout(function () { that.setData({ heartAnim: false }) }, 350)
         // BUG-20260806-001：收藏反馈提示
         wx.showToast({ title: '已收藏', icon: 'none' })
-        // TL-B13 / RQ-03 + RQ-16：云端双写收藏 + 标记 retained（30 天保留）
-        that._syncFavoriteCloud(news, true)
+        // DG-02（owner 09:48 决策③）：收藏纯本地，移除云端 setUserFavorite 双写 +
+        // retained 标记（retained 仅分享场景触发，onShareAppMessage 保留）
       }
     } catch (e) {
       wx.showToast({ title: isFav ? '取消收藏失败' : '收藏失败，请稍后重试', icon: 'none' })
@@ -830,41 +870,11 @@ Page({
   },
 
   /**
-   * TL-B13：收藏云端同步（本地已成功，云端失败入队重试，静默——不提示用户）
-   * @param {Object} news 新闻对象
-   * @param {boolean} favorited true=收藏 / false=取消
-   */
-  _syncFavoriteCloud: function (news, favorited) {
-    var data = {
-      newsId: news.id,
-      title: news.title || '',
-      category: news.category || '',
-      categoryName: news.categoryName || '',
-      source: news.source || '',
-      picUrl: news.picUrl || '',
-      favorited: favorited,
-    }
-    cloud.callCloudFunction('setUserFavorite', data).then(function () {
-      if (favorited) {
-        // 收藏成功 → 同步标记 retained（30 天），失败也入队
-        cloud.callCloudFunction('setNewsRetained', { newsId: news.id, retained: true, retainedBy: 'favorite' })
-          .catch(function () {
-            cloud.enqueue({ name: 'setNewsRetained', data: { newsId: news.id, retained: true, retainedBy: 'favorite' } })
-          })
-      }
-    }).catch(function () {
-      // 云端失败：入队重试（静默，不提示用户——云同步是后台行为）
-      cloud.enqueue({ name: 'setUserFavorite', data: data })
-      if (favorited) {
-        cloud.enqueue({ name: 'setNewsRetained', data: { newsId: news.id, retained: true, retainedBy: 'favorite' } })
-      }
-    })
-  },
-
-  /**
-   * TL-B14 / RQ-06：浏览记录写入（本地 LRU + 云端兜底）
-   * 本地存为数组（key=browseHistory，与 favorites 同源），按 id 去重、刷新 viewedAt、LRU 200；
-   * 渲染时按 7 天窗口过滤（惰性清理）。云端异步上报，失败静默入队。
+   * DG-02 / TL-B14：浏览记录写入（纯本地，owner 2026-08-06 09:48 决策）
+   * 本地存为数组（key=browseHistory），按 id 去重、刷新 viewedAt 置顶；
+   * 记录 expireAt = viewedAt + 7 天（DG-04 页面按此过滤 + app.js 每日清理）；
+   * LRU 上限 500（DG-03 将常量化到 utils/constants.js HISTORY_LIMIT）。
+   * 原云端 recordBrowse 上报已移除（云函数 DG-01 停用，避免入队重试噪音）。
    * @param {Object} news 新闻对象
    */
   _recordBrowse: function (news) {
@@ -876,6 +886,7 @@ Page({
       for (var i = 0; i < list.length; i++) {
         if (list[i].id === news.id) {
           list[i].viewedAt = now // 去重：刷新 viewedAt 置顶
+          list[i].expireAt = now + 7 * 24 * 60 * 60 * 1000 // 刷新 7 天 TTL
           list[i].title = news.title || list[i].title
           list[i].categoryName = news.categoryName || list[i].categoryName
           list[i].source = news.source || list[i].source
@@ -891,22 +902,11 @@ Page({
           categoryName: news.categoryName || '',
           source: news.source || '',
           viewedAt: now,
+          expireAt: now + 7 * 24 * 60 * 60 * 1000, // DG-02：7 天 TTL（需求方案 3）
         })
-        if (list.length > 200) list = list.slice(0, 200) // LRU 淘汰最旧
+        if (list.length > 500) list = list.slice(0, 500) // LRU 淘汰最旧（DG-03 常量化）
       }
       _cache.set('browseHistory', list, { ttl: 0 }) // 本地永久，渲染时按 7 天过滤
-
-      // 云端兜底（非阻塞）
-      cloud.report({
-        name: 'recordBrowse',
-        data: {
-          newsId: news.id,
-          title: news.title || '',
-          category: news.category || '',
-          categoryName: news.categoryName || '',
-          source: news.source || '',
-        },
-      })
     } catch (e) {
       // 本地写入异常不阻断阅读
     }

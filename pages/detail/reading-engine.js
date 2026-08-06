@@ -45,6 +45,9 @@ function ReadingEngine(options) {
   // UX-BUG09: 首页透传数据 — 跳过 init() 网络请求，直接使用预加载列表
   this._preloadedList = options.preloadedList || null
   this._preloadedCategory = options.preloadedCategory || null
+  // DG-02: 来源识别（'home' | 'history' | 'favorites' | ''）
+  // history/favorites 进入 → 滑动范围=透传列表，禁止跨分类补拉/跳转（需求 R3 + 方案 4）
+  this._source = options.source || ''
 
   // 状态
   this._mergedList = []       // 全分类合并列表 [{ news, category, categoryIndex }]
@@ -125,9 +128,8 @@ ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedC
     }
   }
 
-  // 补拉其余分类（后台静默加载，不阻塞入口渲染）
-  that._fetchRemainingCategories(catId)
-
+  // DG-02（需求 R1/R3）：滑动范围 = 透传列表，禁止后台补拉改范围
+  // （原 _fetchRemainingCategories 已删除——补拉导致顺序失控/总数漂移 P1/P2）
   // 未找到入口新闻时用 index 定位
   // BUG-20260806-002：入口新闻 ID 已传入但未命中 → 标记失效，禁止回退展示他条
   if (this._entryNewsId && !foundEntry) {
@@ -139,60 +141,11 @@ ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedC
 
   that._mergedList = merged
   that._globalIndex = entryGlobalIndex
-  that._total = merged.length
+  that._total = merged.length  // 总数锁定 = 透传列表长度（P2 修复：不再因补拉漂移）
   that._categoryIndexes = indexes
   that._initialized = true
 
   return Promise.resolve()
-}
-
-/**
- * UX-BUG09: 后台静默补拉其余分类（不阻塞入口渲染）
- */
-ReadingEngine.prototype._fetchRemainingCategories = function (skipCategoryId) {
-  var that = this
-  var fetches = []
-  for (var i = 0; i < READING_CATEGORIES.length; i++) {
-    var catId = READING_CATEGORIES[i].id
-    if (catId === skipCategoryId) continue
-    fetches.push(that._fetchCategoryWithCache(catId))
-  }
-
-  Promise.all(fetches).then(function (results) {
-    if (that._destroyed) return
-    // 将补拉数据追加到 _mergedList 末尾
-    var seen = {}
-    for (var j = 0; j < that._mergedList.length; j++) {
-      seen[that._mergedList[j].id] = true
-    }
-    for (var r = 0; r < results.length; r++) {
-      var list = results[r].list
-      var catId = results[r].categoryId
-      if (!that._categoryIndexes[catId]) {
-        that._categoryIndexes[catId] = that._mergedList.length
-      }
-      for (var k = 0; k < list.length; k++) {
-        var item = list[k]
-        var nid = item.id || item._id
-        if (!nid || seen[nid]) continue
-        seen[nid] = true
-        that._mergedList.push({
-          id: nid,
-          title: item.title || '',
-          summary: item.summary || '',
-          category: catId,
-          categoryName: item.categoryName || '',
-          source: item.source || '',
-          sourceUrl: item.sourceUrl || '',
-          picUrl: item.picUrl || '',
-          time: item.time || '',
-        })
-      }
-    }
-    that._total = that._mergedList.length
-  }).catch(function () {
-    // 后台补拉失败静默降级，跨分类翻页受限但不影响当前分类阅读
-  })
 }
 
 /**
@@ -316,6 +269,78 @@ ReadingEngine.prototype.getProgress = function () {
     categoryName: cur ? cur.categoryName : '',
     positionText: this._total > 0 ? (this._globalIndex + 1) + ' / ' + this._total : '',
   }
+}
+
+/**
+ * DG-02（需求 R3 + owner 决策②③）：跨分类自动跳转
+ * 当前分类已读到末条时，加载下一个有数据的分类首页并追加到 _mergedList。
+ * - 顺序：READING_CATEGORIES 固定顺序（recommend→tech→international→sports→life）
+ * - history/favorites 来源（_source 非空）→ 禁止跨分类（滑动范围=来源列表）
+ * @returns {Promise<{hasNext:boolean, category:string, categoryName:string, added:number}>}
+ */
+ReadingEngine.prototype.loadNextCategory = function () {
+  var that = this
+  if (that._source) {
+    // 来源列表模式：禁止跨分类跳转（需求 R3）
+    return Promise.resolve({ hasNext: false, category: '', categoryName: '', added: 0 })
+  }
+  var cur = that.getCurrent()
+  var curCat = cur ? cur.category : ''
+  // 找当前分类在 READING_CATEGORIES 中的位置
+  var curIdx = -1
+  for (var i = 0; i < READING_CATEGORIES.length; i++) {
+    if (READING_CATEGORIES[i].id === curCat) { curIdx = i; break }
+  }
+  var targetCatId = ''
+  var targetCatName = ''
+  for (var j = curIdx + 1; j < READING_CATEGORIES.length; j++) {
+    targetCatId = READING_CATEGORIES[j].id
+    targetCatName = READING_CATEGORIES[j].name
+    break // 取顺序上紧邻的下一分类
+  }
+  if (!targetCatId) {
+    return Promise.resolve({ hasNext: false, category: '', categoryName: '', added: 0 })
+  }
+
+  return that._fetchCategoryWithCache(targetCatId).then(function (result) {
+    var list = result.list || []
+    if (list.length === 0) {
+      // 下一分类无数据 → 跳过（owner 决策②③：无数据则跳下下分类）
+      return that.loadNextCategory()
+    }
+    // 去重追加
+    var seen = {}
+    for (var k = 0; k < that._mergedList.length; k++) {
+      seen[that._mergedList[k].id] = true
+    }
+    var added = 0
+    var startIdx = that._mergedList.length
+    that._categoryIndexes[targetCatId] = startIdx
+    for (var m = 0; m < list.length; m++) {
+      var item = list[m]
+      var nid = item.id || item._id
+      if (!nid || seen[nid]) continue
+      seen[nid] = true
+      that._mergedList.push({
+        id: nid,
+        title: item.title || '',
+        summary: item.summary || '',
+        category: targetCatId,
+        categoryName: item.categoryName || targetCatName,
+        source: item.source || '',
+        sourceUrl: item.sourceUrl || '',
+        picUrl: item.picUrl || '',
+        publishTime: item.publishTime || item.time,
+      })
+      added++
+    }
+    if (added === 0) {
+      // 全部去重（罕见）→ 跳过
+      return that.loadNextCategory()
+    }
+    that._total = that._mergedList.length
+    return { hasNext: true, category: targetCatId, categoryName: targetCatName, added: added }
+  })
 }
 
 /**
