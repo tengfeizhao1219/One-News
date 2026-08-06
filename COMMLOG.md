@@ -1,3 +1,20 @@
+## [2026-08-06 22:42] ⚡ DG-08 详情页性能优化（进入详情/翻页 1s → 秒开）| 会话：[全栈开发(FS)]
+
+**根因**（owner 反馈「进入详情页、上一条/下一条较慢，有时 ~1s」）：
+- 每次首访新闻，`getNewsDetail` 云函数走「缓存未命中」慢路径：外网抓正文（聚合接口/网页，各 2.5s 超时）→ **`await summarizeWithZhipu` LLM 摘要阻塞返回**（0.5~3s）。
+- refreshNews v6 虽尽力抓正文（contentFetcher 单条 6-12s 超时、60s 预算内并发 8），仍有大量条目 content 为空 → 详情几乎条条 miss。
+- 前端入口 `_prefetchWindow ±2` 并行发 4 个 getNewsDetail，叠加当前条 = 5 并发排队，加剧入口峰值。
+
+**已实施（提交 `054cc85`）**：
+1. **P0-1 · getNewsDetail 关键路径去 AI 摘要**：详情页只展示 content，不需要 summary；`await summarizeWithZhipu` 已从 miss 路径移除，只回写 content（summary 统一由 refreshNews 列表刷新时生成）。每次 miss 省一次 LLM 往返。
+2. **P1-1 · 前端预取错峰**：`_prefetchWindow` 改为只向后预取 +2；入口首次调用延迟 400ms，避免 5 并发；翻页期间仍立即预取。
+3. **P1-2 · localCache TTL 30min → 24h**：新闻正文 24h 内几乎不变，回看/来回翻更易命中本地缓存（瞬开）。
+
+**待部署**：`getNewsDetail`（云端安装依赖）+ `pages/detail/reading-engine.js` 随小程序发布。
+**待验证**：部署后真机复测进入详情/翻页耗时；getNewsDetail 日志应不再出现「AI 摘要生成成功」行。
+
+> — 全栈开发（FS） 2026-08-06 22:42
+
 ## [2026-08-06 22:35] 🛠️ FE 交付 · BUG-20260806-021 详情页底部操作栏再次压缩 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `2821c03`）：

@@ -24,6 +24,18 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-06 22:42 【DG-08 详情页性能优化 · 已实现提交 `054cc85` · @owner 部署 getNewsDetail + 真机复测】
+
+> **对象**：owner（部署 `getNewsDetail` 云函数 + 真机复测进入详情/翻页耗时）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+owner 反馈「进入详情页、上一条/下一条较慢，有时 ~1s」。根因：每次首访新闻 `getNewsDetail` 走缓存未命中慢路径（外网抓正文 + **AI 摘要阻塞返回**），且前端入口 5 并发预取排队。已实施三项优化（`054cc85`）：
+1. **AI 摘要移出详情关键路径**：`getNewsDetail` 不再 `await summarizeWithZhipu`（LLM 往返 0.5~3s），只回写 content；summary 统一由 refreshNews 生成。
+2. **预取错峰**：`_prefetchWindow` 只向后 +2；入口首次延迟 400ms；翻页期间仍立即预取。
+3. **localCache TTL 30min → 24h**：回看/来回翻更易命中本地缓存。
+
+🔔 **@owner**：云函数 `getNewsDetail` 需「上传并部署：云端安装依赖」；`reading-engine.js` 随小程序版本发布。复测看日志是否不再出现「AI 摘要生成成功」。
+
 ### ✅ 2026-08-06 18:53 【DG-07 DeepSeek 重新接入已实现并推送 · FS · @owner 知悉/可选复验】
 
 > **对象**：owner（知悉，可复验）、PM（DG-06 测试排期不变）、所有角色
@@ -3047,6 +3059,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 🔄 已交付待验收（FE `c017499` 提交中） | 无 | `pages/about/about.js` |
 | **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 已确认（PM，依赖 DG-01~04） | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
 | **DG-07** | **DeepSeek 重新接入**（应 owner 要求，作为搜索链最后 AI 兜底 + DG-04 预算护栏 + `DEEPSEEK_DAILY_CAP` 日配额） | **全栈开发（FS）** | ✅ 已完成并推送（`188a04b`） | DG-04 | `cloudfunctions/refreshNews/zhipuSearch.js` |
+| **DG-08** | **详情页性能优化**（AI 摘要移出 getNewsDetail 关键路径 + 预取只向后+2/入口延迟400ms + localCache TTL 24h） | **全栈开发（FS）** | ✅ 已完成待部署（`054cc85`，待 owner 部署 getNewsDetail + 真机复测） | DG-02 | `cloudfunctions/getNewsDetail/index.js` + `pages/detail/reading-engine.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
