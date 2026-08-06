@@ -252,33 +252,20 @@
 /* v5 稳定架构：全部改用 absolute 定位，彻底规避 flex 在真机上的高度/渲染异常。
    panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
 
-/* BUG-20260806-010 根因修复：侧边栏顶部状态栏填充层，遮盖 panel-header 上方空白区域 */
-.panel-status-fill {
+/* 面板标题栏：absolute 固定顶部 */
+.panel-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  z-index: 4;
-  /* height 由 wxml inline style 动态注入 */
-}
-
-/* 面板标题栏：absolute 固定顶部 */
-/* BUG-20260806-010 根因修复（owner 19:33 反馈修复无效）：
-   原硬编码 top:0; padding-top:100rpx 在真机上与状态栏+胶囊实际高度不匹配。
-   改为 wxml inline style 动态计算 top = menuTop + menuHeight + 12px（对齐 fixed-top-bar 底部），
-   padding-top 去硬编码。header 高度 = 36 标题 + 8 gap + 24 副标题 + 28 下 padding = 约 96rpx。
-   副标题从「今日新闻」下方左对齐（column + gap:8rpx + align-items:flex-start）。 */
-.panel-header {
-  position: absolute;
-  /* top 由 wxml inline style 动态注入（{{menuTop + menuHeight + 12}}px），CSS 中不设默认值 */
-  left: 0;
-  right: 0;
   z-index: 5;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8rpx;
-  padding: 0 40rpx 28rpx;
+  align-items: center;
+  gap: 16rpx;
+  /* BUG-20260806-014 v2 (FE): padding-top = 胶囊顶部 menuTop（而非 statusBarHeight + 24rpx）。
+     上一版用 statusBarHeight+24rpx 太靠下（≈胶囊底部下方），与胶囊不齐。
+     现在 "今日新闻" 文字顶部与右上角胶囊顶部对齐，视觉平衡。 */
+  padding: var(--menu-top, 44px) 40rpx 28rpx;
 }
 
 .panel-title {
@@ -289,8 +276,9 @@
   flex-shrink: 0;
 }
 
-/* UI-B7: 副标题「当前分类 · N 条」（BUG-010：移至「今日新闻」下方左对齐） */
+/* UI-B7: 副标题「当前分类 · N 条」 */
 .panel-subtitle {
+  flex: 1;
   font-size: calc(24rpx * var(--font-scale));
   color: var(--text-secondary);
   overflow: hidden;
@@ -298,10 +286,12 @@
   text-overflow: ellipsis;
 }
 
-/* 面板主体：absolute 铺满 header 下方区域（top 由 wxml inline style 动态注入） */
+/* 面板主体：absolute 铺满 header 下方区域
+   BUG-20260806-014 v2 (FE): top = 胶囊顶部 + 64rpx（36rpx 标题行高 + 28rpx 底部 padding），
+   与 .panel-header 底部对齐 */
 .panel-body {
   position: absolute;
-  /* top 由 wxml inline style 动态注入（calc(menuTop + menuHeight + 12px + 48px)），CSS 中不设默认值 */
+  top: calc(var(--menu-top, 44px) + 64rpx);
   left: 0;
   right: 0;
   bottom: 0;

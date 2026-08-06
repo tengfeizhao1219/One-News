@@ -10,12 +10,14 @@
   position: relative;
   overflow: hidden;
   width: 128rpx;
-  /* BUG-20260806-013 (FE): 撑满父容器（父 .panel-wheel 高度=panel-body 高度，大屏约 1300px），
+  /* BUG-20260806-013 v2 (FE): 撑满父容器（父 .panel-wheel 高度=panel-body 高度），
      触摸热区覆盖整个面板左侧，分类下方空白也能上下滑动切换分类。
-     配合下面的 flex 居中让 .wheel-list 垂直居中显示。 */
+     013 v1 曾用 align-items:center 垂直居中，owner 裁定分类列应贴顶对齐
+     （侧边栏从头部开始，不要悬浮中间）→ v2 改 align-items:flex-start。
+     height:100% 保留 = 触摸热区仍覆盖全部空白。 */
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   /* BUG-20260806-008②（AC-RQ15-19）+ BUG-20260806-010②（owner 18:34）: 触摸热区外扩 ——
      视觉宽度不变（box-sizing + padding），但触摸命中区域向右扩展 112rpx（128+112=240rpx，
      覆盖面板左 ~64%），空白/行间隙均可滚动；.panel-scroll left:128rpx 不变（视觉滚轮仍 128rpx） */
@@ -30,7 +32,7 @@
   opacity: var(--wheel-opacity-active, 0.92);        /* active 激活态 */
 }
 
-/* 列表整体（高度由内部 item 自然撑开，flex 居中使列表在容器中央） */
+/* 列表整体（高度由内部 item 自然撑开；flex-start 贴顶，与标题/侧边栏头部对齐） */
 .wheel-list {
   width: 100%;
   will-change: transform;
