@@ -137,14 +137,19 @@
   <view class="slide-panel {{showPanel ? 'show' : ''}} {{panelAnim ? 'done' : ''}}"
     bindtouchstart="onPanelTouchStart"
     bindtouchend="onPanelTouchEnd">
-    <!-- 面板标题栏：absolute 固定顶部 -->
-    <view class="panel-header">
+    <!-- BUG-20260806-010 根因修复：侧边栏顶部状态栏填充层，遮盖 panel-header 上方空白区域 -->
+    <view class="panel-status-fill" style="height: calc({{menuTop}}px + {{menuHeight}}px + 12px); background-color: var(--bg-card);"></view>
+    <!-- 面板标题栏：absolute 固定顶部，top 动态对齐 fixed-top-bar 底部（menuTop + menuHeight + 12px） -->
+    <!-- BUG-20260806-010 根因修复：原硬编码 top:0; padding-top:100rpx 在真机上与状态栏+胶囊实际高度不匹配，
+         导致副标题和列表从状态栏区域透出。改为动态计算：top = menuTop + menuHeight + 12px（≈fixed-top-bar 底部） -->
+    <view class="panel-header" style="top: calc({{menuTop}}px + {{menuHeight}}px + 12px);">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>
     </view>
 
-    <!-- 面板主体：absolute 铺满 header 下方区域 -->
-    <view class="panel-body">
+    <!-- 面板主体：absolute 铺满 header 下方区域（top 动态计算 = header 底部） -->
+    <!-- header 高约 48px（36rpx标题 + 8rpx gap + 24rpx副标题 + 28rpx下padding ≈ 96rpx = 48px） -->
+    <view class="panel-body" style="top: calc({{menuTop}}px + {{menuHeight}}px + 12px + 48px);">
       <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2）
            absolute 固定在 body 左侧，catch 触摸独立接管 -->
       <category-wheel

@@ -252,22 +252,33 @@
 /* v5 稳定架构：全部改用 absolute 定位，彻底规避 flex 在真机上的高度/渲染异常。
    panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
 
-/* 面板标题栏：absolute 固定顶部 */
-.panel-header {
+/* BUG-20260806-010 根因修复：侧边栏顶部状态栏填充层，遮盖 panel-header 上方空白区域 */
+.panel-status-fill {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
+  z-index: 4;
+  /* height 由 wxml inline style 动态注入 */
+}
+
+/* 面板标题栏：absolute 固定顶部 */
+/* BUG-20260806-010 根因修复（owner 19:33 反馈修复无效）：
+   原硬编码 top:0; padding-top:100rpx 在真机上与状态栏+胶囊实际高度不匹配。
+   改为 wxml inline style 动态计算 top = menuTop + menuHeight + 12px（对齐 fixed-top-bar 底部），
+   padding-top 去硬编码。header 高度 = 36 标题 + 8 gap + 24 副标题 + 28 下 padding = 约 96rpx。
+   副标题从「今日新闻」下方左对齐（column + gap:8rpx + align-items:flex-start）。 */
+.panel-header {
+  position: absolute;
+  /* top 由 wxml inline style 动态注入（{{menuTop + menuHeight + 12}}px），CSS 中不设默认值 */
+  left: 0;
+  right: 0;
   z-index: 5;
   display: flex;
-  align-items: center;
-  gap: 16rpx;
-  /* BUG-20260806-014 (FE): 顶部 padding 从静态 100rpx 改为按 statusBarHeight 自适应。
-     旧 100rpx（50px）的 padding-top 在 statusBarHeight ≈ 44px 时只剩 6px 视觉喘息，
-     "今日新闻"标题紧贴挖空屏。改为
-       calc(var(--status-bar-height, 44px) + 24rpx)  ←  状态栏 + 12px 视觉呼吸
-     "稍为往下移一点"达成。--status-bar-height 由 .page 根节点 inline 注入。 */
-  padding: calc(var(--status-bar-height, 44px) + 24rpx) 40rpx 28rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
+  padding: 0 40rpx 28rpx;
 }
 
 .panel-title {
@@ -278,9 +289,8 @@
   flex-shrink: 0;
 }
 
-/* UI-B7: 副标题「当前分类 · N 条」 */
+/* UI-B7: 副标题「当前分类 · N 条」（BUG-010：移至「今日新闻」下方左对齐） */
 .panel-subtitle {
-  flex: 1;
   font-size: calc(24rpx * var(--font-scale));
   color: var(--text-secondary);
   overflow: hidden;
@@ -288,12 +298,10 @@
   text-overflow: ellipsis;
 }
 
-/* 面板主体：absolute 铺满 header 下方区域
-   BUG-20260806-014 (FE): top 从静态 180rpx 改为 calc(var(--status-bar-height, 44px) + 116rpx)
-   = 状态栏 + 24rpx + 28rpx(下 padding) + 64rpx(标题+副标题) ← 始终对齐 .panel-header 底部 */
+/* 面板主体：absolute 铺满 header 下方区域（top 由 wxml inline style 动态注入） */
 .panel-body {
   position: absolute;
-  top: calc(var(--status-bar-height, 44px) + 116rpx);
+  /* top 由 wxml inline style 动态注入（calc(menuTop + menuHeight + 12px + 48px)），CSS 中不设默认值 */
   left: 0;
   right: 0;
   bottom: 0;
