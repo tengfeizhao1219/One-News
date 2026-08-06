@@ -1,9 +1,9 @@
-<!-- 收藏列表页 — TL-B13 / RQ-03 · BUG-20260806-004 -->
-<view class="page {{themeClass}}">
+<!-- 收藏列表页 — TL-B13 / RQ-03 · D-09 v1.2（BUG-20260806-007） -->
+<view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
 
-  <!-- 顶部导航栏：主页（左）+ 标题（中）+ 计数（右），与原生胶囊对齐 -->
-  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
-    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+  <!-- 顶部导航栏：主页（左）+ 标题（中）+ 计数（右）· D-09 v1.2（仅下扩展 12px，按钮锚定胶囊中心） -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2);">
       <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>

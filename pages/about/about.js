@@ -6,6 +6,7 @@ Page({
   data: {
     menuTop: 0,
     menuHeight: 32,
+    navOffset: 0,  // D-09 v1.2（BUG-20260806-007）: 内容起始基准
     appVersion: 'v6.3.0',
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
@@ -31,6 +32,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
+      // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px
+      navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-20260806-003: 主页 icon 按主题切换白色版
       isDark: this._isSystemDark(),

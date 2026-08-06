@@ -9,6 +9,7 @@ Page({
   data: {
     menuTop: 0,
     menuHeight: 32,
+    navOffset: 0,  // D-09 v1.2（BUG-20260806-007）: 内容起始基准
     fontScaleTier: 0,
     _fontScaleValue: 1,
     _metaScaleValue: 1,
@@ -33,6 +34,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
+      // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px
+      navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       fontScaleTier: tier,
       _fontScaleValue: app.globalData._fontScaleValue || scaleMap[tier] || 1,
       _metaScaleValue: app.globalData._metaScaleValue || 1,

@@ -13,6 +13,7 @@ Page({
   data: {
     menuTop: 0,
     menuHeight: 32,
+    navOffset: 0,  // D-09 v1.2（BUG-20260806-007）: 内容起始基准
     list: [],
     loading: true,
     isEmpty: false,
@@ -27,6 +28,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
+      // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px
+      navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: 导航/空态 icon 按主题切换白色版

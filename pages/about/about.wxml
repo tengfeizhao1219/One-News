@@ -1,11 +1,12 @@
 <!-- 关于一页 — dock「扩展位」改造（AB-01） -->
-<view class="page {{themeClass}}">
+<view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
 
-  <!-- 顶部导航栏：主页（左）+ 标题，与原生胶囊对齐 -->
-  <!-- BUG-20260806-004: 导航栏高度=胶囊高度，位置对齐胶囊 -->
-  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
-    <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） -->
-    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+  <!-- 顶部导航栏：主页（左）+ 标题 · D-09 v1.2（BUG-20260806-007）
+       top=menuTop；height=menuHeight+24rpx（仅下扩展 12px） -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
+    <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch）
+         D-09 v1.2: explicit 锚定胶囊中心 -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2);">
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">关于一页</view>

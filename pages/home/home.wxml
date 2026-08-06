@@ -6,8 +6,8 @@
   style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
 
   <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
-  <!-- fixed-top-bar 保留为空占位对齐胶囊（menuTop/menuHeight 注入），避免破坏页面结构 -->
-  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;"></view>
+  <!-- D-09 v1.2（BUG-20260806-007）: 占位对齐胶囊，高度仅下扩展 12px（与全页面条带规范一致） -->
+  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);"></view>
 
 
   <!-- ========== 骨架屏（加载中） ========== -->

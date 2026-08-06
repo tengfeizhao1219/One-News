@@ -25,6 +25,8 @@ Page({
     // BUG-20260806-004: 导航栏与原生胶囊对齐
     menuTop: 0,
     menuHeight: 32,
+    // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px（条带下呼吸）
+    navOffset: 0,
     news: {},
     paragraphs: [],
     scrollTop: 0,
@@ -141,6 +143,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
+      // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px
+      navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       // BUG-20260805-003: 全局手动主题（设置页深色模式）同步到本页根节点
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: 与 themeClass 同批同步（页面无 onShow，避免错位）

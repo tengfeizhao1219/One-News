@@ -3,20 +3,21 @@
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px;">
 
-  <!-- 顶部导航栏：返回（左）+ 进度指示（右），与原生胶囊对齐 -->
-  <!-- BUG-20260806-004: 导航栏高度=胶囊高度，位置对齐胶囊 -->
-  <view class="nav-bar" style="top: {{menuTop}}px; height: {{menuHeight}}px;">
-    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 -->
-    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+  <!-- 顶部导航栏：返回（左）+ 进度指示（右）· D-09 v1.2（BUG-20260806-007）
+       top=menuTop（无上呼吸）；height=menuHeight+24rpx（仅下扩展 12px） -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
+    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
+         D-09 v1.2: explicit 锚定胶囊中心（按钮中心 = 胶囊中心，不依赖条带内居中） -->
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuTop}}px + {{menuHeight}}px / 2 - 32rpx / 2);">
       <text class="nav-back-icon">‹</text>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
       <text wx:if="{{showCrossingCategory}}" class="position-category" style="color: {{flashColor}};"> · {{showCrossingCategory}}</text>
     </view>
-    <!-- 阅读进度条置于导航栏底部 -->
+    <!-- 阅读进度条置于导航栏底部（D-09 v1.2: 无底槽，胶囊下 12px） -->
     <view class="nav-progress" wx:if="{{pageState === 'ready'}}">
       <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
     </view>

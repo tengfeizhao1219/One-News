@@ -24,6 +24,31 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### 📢 2026-08-06 15:20 【FE 交付 · BUG-20260806-007 D-09 v1.2 系统级落地完成 · @PD 按 AC 8 项验收 / @owner 真机回归 UAT-03】
+
+> **对象**：PD（AC 8 项代码级验收）、owner（真机回归 UAT-03：标题位置 + 胶囊呼吸 + 进度条无底槽）、PM（知悉）
+> **发布**：小程序前端开发（FE）
+
+**BUG-20260806-007 · D-09 v1.2 系统级落地（6 页面）已完成**
+
+**导航条带（全页面统一）**：
+- `top: {{menuTop}}px`（无上呼吸）；`height: calc({{menuHeight}}px + 24rpx)`（仅下扩展 12px）—— detail/about/settings/favorites/history + home fixed-top-bar
+- 返回/主页按钮 **explicit 锚定胶囊中心**：`top: calc(menuTop + menuHeight/2 - 32rpx/2)`（不依赖条带内 top:50%，wxss 已移除 top:50% 依赖）
+- 进度条（仅 detail）：`bottom:0`（胶囊下 12px）+ `background: transparent`（无底槽，AC-D09-05）
+
+**内容起始位置（--nav-offset = menuTop + menuHeight + 12px 根节点注入）**：
+- detail：`.detail-body` / 骨架屏 `padding-top: calc(var(--nav-offset) + 12rpx)`（AC-D09-03）
+- favorites：`.filter-bar` `padding-top: calc(var(--nav-offset) + 8rpx)`（AC-D09-04）
+- history：`.list-scroll` 同上
+- settings / about：`.scroller` 同上
+- home：卡片垂直居中无顶置，仅同步条带高度（AC-D09-01 全页面一致）
+
+**回归**：v7 63/0 ✅ / v13 88/0 ✅
+
+**🔔 @PD**：按 §五 AC-D09-01~08 代码级验收；**@owner**：真机回归 UAT-03（标题位于导航栏下方、胶囊呼吸 12px、进度条无底槽、列表/次级页首元素不被遮挡）。
+> — 小程序前端开发（FE）
+
+---
 ### 📢 2026-08-06 14:10 【FE 交付 · DG-03/04/05 数据治理 FE 侧全部完成 · @PM 可排 DG-06 测试 / @FS 复核】
 
 > **对象**：PM（DG-06 测试排期）、FS（复核）、PD（了解）、owner（真机验证）
@@ -2759,7 +2784,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | UAT-20260806-05 | 深色模式 icon 视觉确认（dock/导航/空态）| owner | 🟡 | ✅ 通过（11:00 回填）| BUG-FS 修复 ✅ | 深色下 dock/导航/空态图标为白色版，无黑色图标 |
 | BUG-20260806-005 追修 | 滚轮选中态去背景高亮（仅保留淡蓝字体）| FE | 🟡 | ✅ 已交付（`9bb5b60`）| PD `33c4166` ✅ | 选中项淡蓝字体，**无背景高亮**；触摸放大/锚点/项数不变 · 待 owner 真机确认 |
 | BUG-20260806-006 | 收藏后收藏列表不显示新条目（LocalCache 多实例 stale read）| FE | 🔴 | ✅ **关闭（owner 真机验收通过 · 13:22）**| FE `5b87b1d` ✅ + PD 代码级 ✅ | **方案 1 全局单例**：detail/favorites/history 统一 `localCache` 单例；单例容量 200→500；收藏→列表立即出现 / 取消→立即消失 / 浏览历史同源生效，均真机验证通过 |
-| BUG-20260806-007 | D-09 v1.2 系统级落地：导航条带胶囊呼吸（仅下扩 12px）+ 按钮锚定胶囊中心 + 内容起始位置（detail 12rpx / 列表 8rpx）+ 进度条无底槽 | FE | 🔴 | 📋 新建（PD 13:09 提单，owner 已确认设计）| D-09 v1.2（owner 13:09 确认）| 6 页面统一实施；PD 按 AC 8 项验收 + owner 真机回归 |
+| BUG-20260806-007 | D-09 v1.2 系统级落地：导航条带胶囊呼吸（仅下扩 12px）+ 按钮锚定胶囊中心 + 内容起始位置（detail 12rpx / 列表 8rpx）+ 进度条无底槽 | FE | 🔴 | 🔄 已交付待验收（FE 提交中）| D-09 v1.2（owner 13:09 确认）| 6 页面统一实施；PD 按 AC 8 项验收 + owner 真机回归 |
 
 > **关联**：001/002/003 关闭 → PD 更新 Bug 台账状态；D-07 三态通过 → D-07 正式闭环（PD 走查底稿 §十二）。
 > **PD 代建说明**：任务表由 PM 维护，本次为 owner 要求即时建行，PM 可复核调整。

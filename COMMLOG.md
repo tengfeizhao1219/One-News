@@ -1,3 +1,23 @@
+## [2026-08-06 15:20] 🛠️ FE 交付 · BUG-20260806-007 D-09 v1.2 系统级落地（6 页面导航条带 + 内容起始位置）| 会话：[小程序前端开发(FE)]
+
+**提交记录**：
+- commit（FE 前缀）：BUG-20260806-007 全部改动
+- 文件：`pages/{detail,about,settings,favorites,history}/{wxml,wxss,js}` + `pages/home/home.wxml` + `TASK_BOARD.md`（15:20 广播）
+
+**导航条带（全页面统一）**：
+- `top: menuTop`（无上呼吸）；`height: calc(menuHeight + 24rpx)`（仅下扩展 12px）
+- 按钮 explicit 锚定胶囊中心：`top: calc(menuTop + menuHeight/2 - 32rpx/2)`（移除 wxss top:50% 依赖）
+- 进度条（detail）：bottom:0 + `background: transparent`（无底槽，胶囊下 12px）
+
+**内容起始位置（--nav-offset = menuTop + menuHeight + 12px）**：
+- detail `.detail-body`/骨架屏：+12rpx；favorites `.filter-bar` / history `.list-scroll` / settings·about `.scroller`：+8rpx
+- home：卡片居中无顶置，fixed-top-bar 同步条带高度
+
+**回归**：v7 63/0 ✅ / v13 88/0 ✅
+**@PD**：AC-D09-01~08 代码级验收；**@owner**：真机回归 UAT-03。
+
+---
+
 ## [2026-08-06 14:10] 🛠️ FE 交付 · DG-03/04/05 数据治理 FE 侧全部落地（首页改造 + 纯本地化 + 文案勘误）| 会话：[小程序前端开发(FE)]
 
 **提交记录**：

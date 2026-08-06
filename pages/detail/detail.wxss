@@ -8,7 +8,7 @@
   position: relative;
 }
 
-/* ============ 顶部导航栏（与原生胶囊对齐 · BUG-20260806-004） ============ */
+/* ============ 顶部导航栏（D-09 v1.2 · BUG-20260806-007） ============ */
 
 .nav-bar {
   position: fixed;
@@ -21,12 +21,12 @@
   padding: 0 48rpx;
 }
 
-/* BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 */
+/* BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
+   D-09 v1.2: explicit 锚定胶囊中心 — top 由 wxml inline 注入
+   （calc(menuTop + menuHeight/2 - 32rpx/2)），不依赖条带内 top:50% */
 .nav-back {
   position: absolute;
   left: 12rpx;
-  top: 50%;
-  transform: translateY(-50%);
   width: 64rpx;
   height: 64rpx;
   display: flex;
@@ -60,14 +60,14 @@
   font-size: 20rpx;
 }
 
-/* 进度条（nav 底部 · BUG-20260806-004） */
+/* 进度条（nav 底部 · D-09 v1.2: 无底槽，与页面同色，仅保留 3rpx 浅蓝进度线） */
 .nav-progress {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: 3rpx;
-  background: var(--divider);
+  background: transparent;  /* D-09 v1.2: 去底槽（原 var(--divider)） */
 }
 .nav-progress-bar {
   height: 100%;
@@ -148,7 +148,9 @@
 /* ============ 正文排版 ============ */
 
 .detail-body {
-  padding: 32rpx 64rpx 80rpx;  /* UX-IMPROVE05: 16→32 标题与状态栏间增加呼吸感 */
+  /* D-09 v1.2（BUG-20260806-007）: 标题位于导航栏下方 12rpx 紧凑呼吸
+     --nav-offset = menuTop + menuHeight + 12px（含条带下呼吸） */
+  padding: calc(var(--nav-offset, 0px) + 12rpx) 64rpx 80rpx;
 }
 
 .detail-title {
@@ -371,7 +373,8 @@
 
 /* ============ 骨架屏（与首页一致） ============ */
 .detail-skeleton {
-  padding: 80rpx 64rpx 80rpx;
+  /* D-09 v1.2: 骨架屏从导航栏下方开始（与正文同基准） */
+  padding: calc(var(--nav-offset, 0px) + 12rpx) 64rpx 80rpx;
   flex: 1;
   box-sizing: border-box;
   display: flex;
