@@ -17,6 +17,26 @@
 
 ---
 
+## [2026-08-06 08:16] 📤→✅ FS 已提交 · commit `e910b7a`（BUG-20260806-001~003 合并修复 + settings/about isDark 补充）| 会话：[全栈开发(FS)]
+
+**提交记录**：
+- commit `d6f46f4`：BUG-20260806-001~003 三项缺陷修复（与 FE `0946047` 并行方案 rebase 合并，采用 FE 单篇模式方案）
+- commit `e910b7a`：settings/about 主页按钮补充 `isDark` 深色切换（FE 实现遗漏，否则深色下主页 icon 变黑——BUG-FS-20260805-001 同根因复发）
+- 文件：`pages/detail/{detail.js,detail.wxml,reading-engine.js}`、`pages/settings/{settings.js,settings.wxml,settings.wxss}`、`pages/about/{about.js,about.wxml,about.wxss}`、`TASK_BOARD.md`（交付广播）、`COMMLOG.md`（本条）
+- 已删除：`assets/icons/back.{svg,-dark.svg}`（FE 方案用 ‹ 文本箭头，无需新图标）
+
+**合并说明**（与 FE 并行修复冲突处理）：
+- 002 采用 FE 方案（`_entryNotFound` + `hasEntryNewsId()/isEntryFound()` + `_loadFallback(newsId,true)` 单篇拉取 + `_singleMode` 禁翻页）——优于 FS 原 `_newsExpired` 方案（旧新闻详情仍可拉取时正常展示）
+- FS 独有贡献：settings/about `isDark` 数据 + `_isSystemDark()` + 主题切换即时刷新（FE 只加了 goHome，wxml 用了 `{{isDark ? '-dark' : ''}}` 但 js 未定义 → 深色 icon 黑）
+
+**验证**：node --check 通过；v7 63/0 ✅ v13 84/0 ✅ v11 25/0 ✅；PD 已先行验收 FE 修复（`c6c4bdd`，001/002/003 代码级全通过）
+
+**🔔 待办**：PD 复核 FS 补充项（settings/about isDark）；owner 真机验证 3 项 + settings/about 深色 icon。
+
+---
+
+---
+
 ## [2026-08-06 08:02] 📤→🔴 PD 已提单 · owner 确认后正式提出 BUG-20260806-004 + D-02 v2.4 设计变更 | 会话：[产品设计师(PD)]
 
 **提交记录**：
