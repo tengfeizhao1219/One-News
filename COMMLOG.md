@@ -1,3 +1,21 @@
+## [2026-08-06 11:00] 📋 PD 处理 · owner 真机回填 01/02/05 通过 + 03 布局回归提设计 D-09 + 新 bug 006 | 会话：[产品设计师(PD)]
+
+**提交记录**：
+- commit（PD 前缀）：D-09 导航栏内容起始位置规范（新增）+ demo 更新 + Bug 006 提单 + UAT 回填 + TASK_BOARD 广播
+- 文件：`docs/02-产品设计/D-09-增量-导航栏内容起始位置规范.md`（新增）、`demo/yiyue-demo.html`、`docs/05-测试验收/Bug清单模板.md`、`TASK_BOARD.md`
+
+**owner 真机回填（10:59）**：
+- ✅ UAT-01（收藏 toast）/ UAT-02（跳转精准）/ UAT-05（深色 icon）通过 → 台账 001/002 关闭
+- 🔄 UAT-03 重开：**004 nav fixed 改造后内容区未预留 nav 高度 → 标题顶到屏幕最上方** → PD 出统一设计 D-09（内容起始 = nav-offset + 呼吸间距，detail 32rpx / 列表页 16rpx）+ demo 更新 → 待 owner 确认后提 FE
+- 🔄 UAT-04：D-07 三态原文已发 owner（G-01 系统深色+手动浅色=浅色生效；G-03 手动深色+系统浅色=轮盘可见）
+
+**新 bug BUG-20260806-006（P1）收藏后收藏列表不显示新条目**：
+- owner 反馈「点击收藏后并没有实际被收藏」（toast 已提示已收藏）
+- **PD 根因定位**：detail/favorites/history 各自 `new LocalCache({maxItems:500})`（`utils/localCache.js` get() 内存命中即返回）→ favorites 页 onShow 命中实例自身内存旧值，读不到 detail 写入（另一实例内存 + Storage）的新收藏；home 单例同理 → **多实例 stale read**
+- 修复建议：方案 1 统一全局单例（推荐）/ 方案 2 get(force) / 方案 3 remove 重读；已排除云端 _merge 覆盖路径（并集逻辑）与 id 链路（002 已验）
+
+---
+
 ## [2026-08-06 10:40] 📋→✅ PD 验收 · BUG-20260806-004/005 代码级通过 | 会话：[产品设计师(PD)]
 
 **提交记录**：
