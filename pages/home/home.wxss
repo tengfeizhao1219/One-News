@@ -264,10 +264,12 @@
 .panel-wheel {
   flex-shrink: 0;
   width: 128rpx;
-  padding: 20rpx 0;
+  /* BUG-20260806-009 追修（owner 16:09）：wheel 从垂直居中改为顶部对齐——
+     选中固定位（第 2 行）上方只保留第 1 行一个分类名空间，不再留大片空白 */
+  padding: 8rpx 0;
   border-right: 1rpx solid var(--divider);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
 }
 
