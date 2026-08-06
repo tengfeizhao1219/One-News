@@ -306,12 +306,11 @@
 }
 
 /* 面板主体：absolute 铺满 header 下方区域
-   BUG-20260806-019 (FE): top = 胶囊底部(menuTop + menuHeight)。
-   原方案 top=menuTop+64rpx(=menuTop+32px@2x) 恰为胶囊底部，现等价于
-   menuTop+menuHeight（header 高度=胶囊高度，底部即胶囊底部），保持 body 起始位置不变 */
+   BUG-20260806-022 (FE): top 从胶囊底部 (menuTop+menuHeight) 改为胶囊底部 + 16rpx，
+   让"今日新闻"标题与下方分类/新闻列表之间多 16rpx 呼吸空间，避免上方内容挤。 */
 .panel-body {
   position: absolute;
-  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px));
+  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 16rpx);
   left: 0;
   right: 0;
   bottom: 0;
