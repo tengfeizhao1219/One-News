@@ -122,15 +122,17 @@
 
   <!-- 侧边栏面板（UI-B7：左侧分类滚轮 + 右侧仅标题列表，圆角高亮） -->
   <!-- owner 2026-08-06 16:33 裁定：面板整体滑动——面板内任意位置滑动均可驱动列表滚动。
-       16:59 追修（v1 scroll-view 包裹失效根因）：
-       ① scroll-view 作为 flex 子项高度计算不可靠 → 改用 position:absolute 铺满面板（高度确定）；
-       ② 列表 10 条内容高度 < 面板视口 → scroll-view 无内容可滚 → panel-list min-height:100vh 撑满，
-          保证任意情况内容超视口（至少可滚出 header 高度，滑动有明确反馈）。
+       17:08 系统性修复（官方文档依据：scroll-view 竖向滚动必须固定高度，文档未承诺百分比高度生效）：
+       ① .panel-scroll 高度改 height:100vh（确定性单位，不再依赖百分比父级链解析）；
+       ② .panel-list min-height: calc(100vh + 400rpx)（内容明确超高，滚动距离 ≥ 400rpx）；
+       ③ .slide-panel 动画状态机：.show 滑入完成后附加 .done（transform:none）——
+          移除 transform 祖先（translateX(0) 也是 transform，iOS 合成层内原生滚动已知受影响），
+          滚动期间面板无 transform，scroll-view 原生滚动恢复正常。
        架构：滚动区 = panel-header + panel-list 整体；滚轮 absolute 固定在左侧不随滚动（catch 触摸独立）。 -->
-  <view class="slide-panel {{showPanel ? 'show' : ''}}"
+  <view class="slide-panel {{showPanel ? 'show' : ''}} {{panelAnim ? 'done' : ''}}"
     bindtouchstart="onPanelTouchStart"
     bindtouchend="onPanelTouchEnd">
-    <!-- 滚动容器：铺满面板，滚动内容 = header + list，任意区域滑动均驱动滚动 -->
+    <!-- 滚动容器：height:100vh 固定高度（官方文档要求），滚动内容 = header + list，任意区域滑动均驱动滚动 -->
     <scroll-view class="panel-scroll" scroll-y>
       <view class="panel-header">
         <text class="panel-title">今日新闻</text>

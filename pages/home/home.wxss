@@ -228,9 +228,18 @@
   transform: translateX(0);
 }
 
-/* owner 2026-08-06 16:33 + 16:59 追修：面板整体滚动容器。
-   滚动区 = panel-header + panel-list 整体，任意位置滑动均可驱动列表滚动。
-   position:absolute 铺满（高度确定，规避 flex 子项 scroll-view 高度不可靠问题） */
+/* 17:08 系统性修复③：动画完成后附加 .done（定义在 .show 之后 → 同特异性下优先）——
+   transform:none 与 translateX(0) 视觉完全一致，但移除 transform 祖先，
+   使面板内的 scroll-view 原生滚动不受 iOS 合成层/包含块干扰。
+   仅在面板稳定显示（滑入动画结束）后存在；滑出动画前由 JS 先移除。 */
+.slide-panel.done {
+  transform: none;
+}
+
+/* 17:08 系统性修复①：滚动容器高度改确定性单位 height:100vh。
+   官方文档：竖向滚动必须给 scroll-view 固定高度，百分比（height:100%）解析不可靠——
+   v1 flex:1 与 v2 height:100% 两次失效的共同根因：视口被内容撑开 → 滚动距离恒为 0。
+   absolute 四边定位保留（不依赖 flex），height:100vh 直接锁定视口高度。 */
 .panel-scroll {
   position: absolute;
   top: 0;
@@ -240,7 +249,7 @@
   /* 内容避开左侧滚轮区域（128rpx 滚轮 + 32rpx 触摸热区） */
   padding-left: 160rpx;
   box-sizing: border-box;
-  height: 100%;
+  height: 100vh;
 }
 
 .panel-header {
@@ -283,9 +292,10 @@
 
 /* ============ 新闻列表 ============ */
 .panel-list {
-  /* 撑满视口：保证内容恒超滚动视口 → 列表短时也可滚动
-     （滚动距离 ≥ header 高度，滑动有明确反馈）；长列表自然超出 */
-  min-height: 100vh;
+  /* 17:08 系统性修复②：内容明确超高 → 滚动距离 ≥ 400rpx，滑动反馈清晰。
+     官方文档：内容总高度必须 > 容器高度才会触发滚动；
+     min-height:100vh 只有 header(~178rpx) 的滚动余量偏小，+400rpx 保证明显可滚。 */
+  min-height: calc(100vh + 400rpx);
 }
 
 /* UI-B7 §3.1 v5.3-final: 行距收窄，padding 8px 16px */

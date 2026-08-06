@@ -17,6 +17,7 @@ Page({
     cards: [],              // 卡片渲染数据（仅3张）
     currentIndex: 0,        // 当前卡片索引
     showPanel: false,       // 侧边栏是否显示
+    panelAnim: false,       // 17:08: 面板滑入动画是否完成（完成后附加 .done 移除 transform，恢复 scroll-view 滚动）
     categories: CATEGORIES,
     panelCategories: PANEL_CATEGORIES,  // 侧边栏分类（仅新闻分类）
     currentCategory: 'recommend', // DG-03: 首页默认分类（all → 推荐）
@@ -463,7 +464,8 @@ Page({
     if (dx < -PANEL_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
       // 左滑呼出面板 = 有效手势，提示立即淡出，同会话内不再复现
       this._swipeHintDismissed = true
-      this.setData({ showPanel: true, showSwipeHint: false })
+      this.setData({ showSwipeHint: false })
+      this.openPanel()
       return
     }
 
@@ -701,7 +703,7 @@ Page({
   // ============ 侧边栏 ============
 
   /**
-   * BUG-PD-019 + owner 2026-08-06 16:33: 侧边栏面板手势 —— 右滑关闭。
+   * BUG-PD-019 + owner 2026-08-06 16:33 + 17:08: 侧边栏面板手势 —— 右滑关闭。
    * card-stage 在 showPanel 时被 display:none，手势事件丢失，
    * 因此将 touch 事件直接绑在 slide-panel 上。
    * 注意：面板内部滚动由 panel-scroll（scroll-view）处理，
@@ -723,6 +725,40 @@ Page({
     }
   },
 
+  /**
+   * 17:08 系统性修复③：打开面板动画状态机。
+   * 阶段 1：showPanel=true（无 .done）→ .show 触发 translateX(100%)→0 滑入；
+   * 阶段 2：350ms 滑入完成后附加 panelAnim=true（.done）→ transform:none，
+   *         移除 transform 祖先，面板内 scroll-view 原生滚动恢复正常。
+   */
+  openPanel() {
+    clearTimeout(this._panelAnimTimer)
+    this.setData({ showPanel: true, panelAnim: false })
+    var that = this
+    this._panelAnimTimer = setTimeout(function () {
+      if (that._destroyed) return
+      if (that.data.showPanel) that.setData({ panelAnim: true })
+    }, 350)
+  },
+
+  /**
+   * 17:08 系统性修复③：关闭面板动画状态机。
+   * 阶段 1：先移除 .done（transform:none → translateX(0)，视觉完全一致，无跳动）；
+   * 阶段 2：30ms 后移除 .show（translateX(0) → translateX(100%) 滑出动画）。
+   * @param {Function} [done] 滑出动画触发后的回调（不等待动画结束）
+   */
+  _animateClose(done) {
+    if (!this.data.showPanel) return
+    clearTimeout(this._panelAnimTimer)
+    this.setData({ panelAnim: false })
+    var that = this
+    this._panelAnimTimer = setTimeout(function () {
+      if (that._destroyed) return
+      that.setData({ showPanel: false })
+      if (typeof done === 'function') done()
+    }, 30)
+  },
+
   closePanel() {
     const { panelCategory, currentCategory } = this.data
     // 关闭侧栏时，若侧栏分类与当前首页分类不一致，则切换
@@ -732,7 +768,7 @@ Page({
       this._showCategoryHint(panelCategory)
       this.loadCategory(panelCategory)
     }
-    this.setData({ showPanel: false })
+    this._animateClose()
   },
 
   onCategoryChange(e) {
@@ -791,8 +827,10 @@ Page({
     const { newsList } = this.data
     if (idx === undefined || idx < 0 || idx >= newsList.length) return
 
-    this.setData({ showPanel: false, currentIndex: idx })
+    this.setData({ currentIndex: idx })
     this.renderCards(newsList, idx)
+    // 17:08: 关闭面板走动画状态机（先移除 .done 再滑出）
+    this._animateClose()
   },
 
   // ============ 搜索 ============
