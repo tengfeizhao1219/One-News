@@ -135,6 +135,8 @@
 .history-item {
   display: flex;
   gap: 16rpx;
+  width: 100%;
+  box-sizing: border-box;
   padding: 24rpx 0;  /* BUG-20260806-020: 左右 16rpx → 0（左右间距由 .list-scroll 32rpx 统一管理） */
   border-bottom: 1rpx solid var(--divider, rgba(0,0,0,0.06));
   align-items: flex-start;
@@ -142,6 +144,7 @@
   position: relative;
   border-radius: 8rpx;
   min-height: 88rpx;
+  overflow: hidden;
 }
 .history-item:active {
   background-color: rgba(0, 0, 0, 0.04);
@@ -158,6 +161,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  word-break: break-all;
   margin-bottom: 8rpx;
 }
 .history-meta {
