@@ -99,8 +99,15 @@
 
 .card-body {
   flex: 1;
-  /* BUG-20260806-004: nav 与胶囊对齐，减少顶部留白 */
-  padding: 100rpx 64rpx 48rpx;
+  /* BUG-20260806-010 根因修复：原硬编码 padding-top:100rpx(≈50px) 在真机上远小于
+     状态栏(statusBarHeight≈44-54px) + 胶囊栏(menuHeight≈32px) + 呼吸(12px) ≈ 88-98px，
+     导致卡片标题从状态栏/胶囊区域透出。改为动态计算与 detail 页 --nav-offset 逻辑一致：
+     calc(statusBarHeight + menuHeight + 12px)，使用 --status-bar-height 变量。
+     fallback: 44px + 32px + 12px = 88px。padding-top 单独设置避免 calc 与 rpx 混用。 */
+  padding-top: calc(var(--status-bar-height, 44px) + 32px + 12px);
+  padding-right: 64rpx;
+  padding-bottom: 48rpx;
+  padding-left: 64rpx;
   display: flex;
   flex-direction: column;
   justify-content: center;
