@@ -24,6 +24,24 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-06 23:50 【DG-12 刷新改为异步编排 · 已实现 · @owner 部署 refreshNews + 前端发布】
+
+> **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+23:41 编排器日志暴露 **v7 自扇出架构硬伤**：`cloud.callFunction` RPC 硬超时 ~15s（官方文档确认服务端 config 仅支持 env、无法调长），而 worker 需 30-50s → 5 分片全报 `shard_error`，但 life 分片实际运行 36.3s **成功写入 5 条**，编排器却误报 total 0、前端 15s 超时。
+
+已实施 **异步编排**（`refreshNews/index.js` + `pages/home/home.js` + `zhipuSearch.js` + `config.js`）：
+1. **编排器 fire-and-forget**：立即触发 5 个 worker（独立实例继续跑完并写 `news_cache` + `backup`），随后做全局清理/时间戳，**立即返回「已触发后台刷新」**（async=true），不再同步等待聚合。
+2. **worker 自报配额**：新增 `incDailyQuota`（`db.command.inc` 原子自增），worker 完成后自报 DeepSeek/智谱配额，避免并发覆盖熔断失效；编排器删除配额写回。
+3. **去掉「全空→续期」**：getNewsList 已有三层兜底（news_cache → cache_backup → 内置精选），全源失败不会白屏，无需编排器续期。
+4. **前端错峰重拉**：`_refreshNewsCloud` 识别 `async=true` → toast「已触发后台刷新」，随后 8s/20s/40s 错峰重拉列表，用户无需再次下拉即可看到后台 worker 写入的新数据。
+5. **修 qwen 超时遮蔽**：`config.qwen.timeout` 15000→12000（此前遮蔽 DG-11 的 12s 常量）。
+
+**验证方法**：编排器日志应显示「异步触发 5 个分类…刷新已触发(编排/异步)」而非 shard_error；worker 日志显示各分类完成；前端下拉立即 toast「已触发后台刷新」。
+
+🔔 **@owner**：`refreshNews` 需「上传并部署：云端安装依赖」（DG-09~DG-12 一并生效）；`pages/home/home.js` 随小程序发布。
+
 ### ⚡ 2026-08-06 23:35 【DG-11 搜索阶段预算与超时收紧 · 已实现 · @owner 部署 refreshNews 后验证】
 
 > **对象**：owner（部署 `refreshNews` 云函数后观察耗时）、PM（知悉）、所有角色
@@ -3114,6 +3132,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-09** | **搜索阶段确定性失败短路**（1301 内容安全/账户欠费终态错误 → 跳过后续 AI 引擎直转聚合/天行，省 15~25s/刷新；另修复 juhe 10012 配额耗尽的 null 崩溃） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews 后观察耗时 ≤35s） | DG-08 日志复盘 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/sources/juhe.js` |
 | **DG-10** | **AI 摘要长度放宽**（100-150→100-300 字，max_tokens 300→600，门槛 20→30 字，prompt 加「各方反应」） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | owner 反馈 | `cloudfunctions/refreshNews/utils/contentFetcher.js` |
 | **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
+| **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已完成待部署（待 owner 部署 refreshNews + 小程序发布） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

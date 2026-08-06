@@ -1,3 +1,21 @@
+## [2026-08-06 23:50] 🔴 DG-12 刷新改异步编排（修复 v7 自扇出 15s RPC 硬超时）| 会话：[全栈开发(FS)]
+
+**触发**：23:41 编排器日志——5 分片全报 `callFunction:fail request timeout`（15s），但 **life 分片实际运行 36.3s 成功写入 5 条**。编排器误报 total 0、触发前端 15s 超时。
+
+**根因**：云函数间 `cloud.callFunction` RPC **硬超时 ~15s**（官方文档确认服务端 `config` 仅支持 `env`，无法调长 timeout），而 worker 在 AI 引擎全故障时需 30-50s。同步等待必然超时——worker 实例虽继续跑完并写库，但编排器收不到结果。
+
+**已实施（异步编排）**：
+1. `refreshNews/index.js`：编排器 **fire-and-forget** 触发 5 worker（独立实例跑完写 `news_cache`+`backup`）→ 全局清理/时间戳 → **立即返回 async=true「已触发后台刷新」**；删除同步聚合、配额写回、「全空→续期」（getNewsList 三层兜底 news_cache→backup→内置精选已保证不白屏）。
+2. `refreshNews/zhipuSearch.js`：新增 `incDailyQuota`（`db.command.inc` 原子自增），worker 完成后自报配额，避免并发覆盖熔断失效。
+3. `refreshNews/config.js`：`qwen.timeout` 15000→12000，修 config 遮蔽 DG-11 常量问题。
+4. `pages/home/home.js`：`_refreshNewsCloud` 识别 `async=true` → toast「已触发后台刷新」+ 8s/20s/40s 错峰重拉列表（`_schedulePostRefreshReload`），无需再次下拉即可看到新数据。
+
+**预期效果**：下拉刷新**立即**响应（不再 15s 超时/误报失败）；列表在 8-40s 内自动更新为 worker 写入的新数据；编排器日志不再出现 shard_error。
+
+**待部署**：`refreshNews`（云端安装依赖）+ `pages/home/home.js` 随小程序发布。
+
+> — 全栈开发（FS） 2026-08-06 23:50
+
 ## [2026-08-06 23:35] ⚡ DG-11 搜索阶段预算与超时收紧（40s → 30s）| 会话：[全栈开发(FS)]
 
 **触发**：23:31 双分类日志（recommend 54.05s / tech 50.44s）出现新模式——**三个 AI 引擎全部「请求超时」**（不再是 1301）：
