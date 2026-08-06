@@ -24,6 +24,47 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-06 13:45 【FS 交付 · DG-01 云函数改造 + DG-02 详情引擎重构 完成 · 数据治理 FS 侧全部落地 · @FE 可启动 DG-03/04】
+
+> **对象**：FE（DG-03/04/05 可认领）、PM（DG-06 测试）、owner（部署云函数 + 真机验证）、PD（了解）
+> **发布**：全栈开发（FS）
+
+**DG-01 云函数改造（commit `3394d8e`）**：
+1. `getNewsList`：stale 兜底条件收紧 `res.total===0`（仅 fresh 完全为空才触发，翻页过头不再混入过期新闻）
+2. `refreshNews/zhipuSearch.js`：recommend 抓取量 5→10 条/轮（`RECOMMEND_COUNT`，首页默认分类 R5 首屏 10 条；其余分类保持 5）
+3. **停用 4 云函数**：`recordBrowse` / `getBrowseHistory` / `setUserFavorite` / `getUserFavorites`（DEPRECATED 标记 + 早期返回，代码保留供回滚）
+
+**DG-02 详情引擎重构（commit `362f1ff`）**：
+1. 删除 `_fetchRemainingCategories` 后台补拉（P1 顺序失控/P2 总数漂移根治）+ 总数锁定
+2. 新增 `loadNextCategory()` 跨分类自动跳转（固定顺序 recommend→tech→intl→sports→life，无数据自动跳过）
+3. `source` 识别：history/favorites 进入 → 滑动范围=来源列表，禁跨分类
+4. 边界 toast：末条「已阅读完，回到首页获取更多新闻」/ 首条「已经是第一篇了」/ 跨分类「正在阅读：分类」
+5. **detail 去云端化**：`_recordBrowse` 移除 cloud.report + 加 expireAt(7 天) + LRU 500；`_syncFavoriteCloud` 删除（收藏纯本地，retained 仅分享）
+
+**回归**：v7 63/0 ✅ v7-runtime 41/0 ✅ v11 25/0 ✅
+
+> 🔔 **@FE**：DG-01 已解除依赖，可认领 **DG-03（首页改造）**——注意先提交 `utils/constants.js`（CATEGORIES all→recommend + FAVORITES_LIMIT/HISTORY_LIMIT 常量），DG-02 引擎已按新顺序兼容；**@owner**：云函数 `getNewsList` / `refreshNews` 需重新部署上云（停用的 4 个不用部署）；**[PM]** DG-06 测试可排期。
+> — 全栈开发（FS）
+
+---
+### ✅ 2026-08-06 13:26 【FS 拍板 · 数据治理任务分工确认（FS×2+FE×3+PM×1）+ DG-01 认领启动 · @各角色可认领】
+
+> **对象**：FE（认领 DG-03/04/05）、PM（DG-06 测试）、owner（知悉）
+> **发布**：技术负责人（FS）
+
+**一、分工拍板**：认可 PM `b643dbf` 建议分工（FS×2 + FE×3 + PM×1），无调整。任务表 DG-01~06 状态已更新（DG-01/02 ✅ 完成见上方）。
+
+**二、🔔 协作约束（拍板补充，各角色开工前必读）**：
+1. **`utils/constants.js`（DG-03 内）优先做**：`CATEGORIES` all→recommend 变更影响 DG-02 引擎的 `READING_CATEGORIES`（排除 all 逻辑）→ **FE 在 DG-03 开头先提交 constants.js**，FS 在 DG-02 同步适配（引擎已按新顺序兼容）
+2. **DG-01 停用云函数 ≠ 删除代码**：4 个云函数目录保留但加停用标记（`DEPRECATED` 注释），避免部署报错/引用断裂；前端同步停止调用（DG-02/DG-04 覆盖）
+3. **`getNewsDetail` / `setNewsRetained` 不在停用范围**（详情正文 + 分享留存，核心依赖）
+4. 依赖链：DG-01 → DG-02/03/04；DG-06 最后（全量回归 v5/v6/v7/v11/v12/v13）
+
+**三、FS 已交付 DG-01 + DG-02（commit `3394d8e` / `362f1ff`）**
+
+> — 技术负责人（FS）
+
+---
 ### 📢 2026-08-06 13:22 【FE · 移除首页右上角设置死按钮 · owner 13:21 裁定：设置入口统一走 ⚙ dock 菜单】
 
 > **对象**：owner（知悉）、PD（设计核对）、PM（知悉）
@@ -2813,8 +2854,8 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 
 | ID | 任务 | 负责人 | 状态 | 依赖 | 交付物 |
 |----|------|--------|:---:|------|------|
-| **DG-01** | **云函数改造**（stale 仅空时兜底 + recommend 10 条/轮 + 停用 4 云函数） | **全栈开发（FS）**（后端，唯一可做） | 📋 待技术负责人确认 | FS 评估完成 | `getNewsList/index.js` + `refreshNews/zhipuSearch.js`；停用 `recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites` |
-| **DG-02** | **详情引擎重构**（砍跨分类补拉 + 跨分类跳转 + 来源识别 + 总数锁定 + 边界 toast + detail 去云端化） | **全栈开发（FS）**（引擎核心，FS 评估已定方案） | 📋 待技术负责人确认 | DG-01 | `reading-engine.js` + `detail.js` |
+| **DG-01** | **云函数改造**（stale 仅空时兜底 + recommend 10 条/轮 + 停用 4 云函数） | **全栈开发（FS）**（后端，唯一可做） | ✅ 完成（`3394d8e`） | FS 评估完成 | `getNewsList/index.js` + `refreshNews/zhipuSearch.js`；停用 `recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites` |
+| **DG-02** | **详情引擎重构**（砍跨分类补拉 + 跨分类跳转 + 来源识别 + 总数锁定 + 边界 toast + detail 去云端化） | **全栈开发（FS）**（引擎核心，FS 评估已定方案） | ✅ 完成（`362f1ff`） | DG-01 | `reading-engine.js` + `detail.js` |
 | **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **小程序前端开发（FE）**（纯前端） | 📋 待技术负责人确认 | DG-01 | `home.js` + `home.wxml` + `utils/constants.js` |
 | **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 📋 待技术负责人确认 | DG-01 | `history.js` + `favorites.js` + `app.js` |
 | **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 📋 待技术负责人确认 | 无 | `pages/about/about.js` |
