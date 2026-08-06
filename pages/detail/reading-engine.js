@@ -55,6 +55,9 @@ function ReadingEngine(options) {
   this._total = 0
   this._categoryIndexes = {}  // { categoryId: startIndexInMergedList }
   this._prefetched = {}       // { globalIndex: true } 已预取详情
+  // DG-08：入口首次预取延迟（避免进入详情时当前条+预取 5 并发排队）
+  this._prefetchDeferred = false
+  this._prefetchTimer = null
   this._initialized = false
   this._initializing = false
   // BUG-20260806-002：入口新闻未命中标记（收藏/历史旧新闻已失效时禁止回退展示他条）
@@ -403,7 +406,7 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   // 预取窗口 ±2
   that._prefetchWindow()
 
-  // B-06: 先尝试读缓存（TTL 30 分钟）
+  // B-06: 先尝试读缓存（DG-08：TTL 30min → 24h，新闻正文 24h 内几乎不变，提升回看命中率）
   if (that._cache) {
     try {
       var cachedDetail = that._cache.get('newsDetail:' + cur.id)
@@ -421,10 +424,10 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
     that._onDetailReady(detail, paragraphs)
 
-    // B-06: 写入缓存（TTL 30 分钟）
+    // B-06: 写入缓存（DG-08：TTL 30min → 24h）
     if (that._cache) {
       try {
-        that._cache.set('newsDetail:' + cur.id, detail, { ttl: 30 * 60 * 1000 })
+        that._cache.set('newsDetail:' + cur.id, detail, { ttl: 24 * 60 * 60 * 1000 })
       } catch (e) { /* 缓存写入失败不阻塞 */ }
     }
 
@@ -456,21 +459,33 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
  */
 ReadingEngine.prototype._prefetchWindow = function () {
   var that = this
-  var start = Math.max(0, this._globalIndex - 2)
-  var end = Math.min(this._total - 1, this._globalIndex + 2)
-
-  for (var i = start; i <= end; i++) {
-    if (i === this._globalIndex) continue // 当前条不预取
-    if (this._prefetched[i]) continue      // 已预取
-
-    this._prefetched[i] = true
-    var item = this._mergedList[i]
-    if (!item) continue
-
-    getNewsDetail(item.id).catch(function () {
-      // 预取失败静默，不影响主流程
-    })
+  var doPrefetch = function () {
+    // DG-08：只向后预取 +2（向前几乎用不到），减少并发；预取失败静默，不影响主流程
+    var end = Math.min(that._total - 1, that._globalIndex + 2)
+    for (var i = that._globalIndex + 1; i <= end; i++) {
+      if (that._prefetched[i]) continue      // 已预取
+      that._prefetched[i] = true
+      var item = that._mergedList[i]
+      if (!item) continue
+      getNewsDetail(item.id).catch(function () {})
+    }
   }
+
+  // DG-08：入口首次调用延迟 400ms，避免「当前条 + 预取」并发排队拖慢首帧
+  if (!that._prefetchDeferred) {
+    that._prefetchDeferred = true
+    that._prefetchTimer = setTimeout(function () {
+      that._prefetchTimer = null
+      doPrefetch()
+    }, 400)
+    return
+  }
+  // 翻页期间：立即预取（下一两条尽快就绪）；清掉可能残留的延迟任务
+  if (that._prefetchTimer) {
+    clearTimeout(that._prefetchTimer)
+    that._prefetchTimer = null
+  }
+  doPrefetch()
 }
 
 /**

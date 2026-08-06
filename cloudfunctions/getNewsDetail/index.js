@@ -579,42 +579,27 @@ exports.main = async (event) => {
     console.log('[getNewsDetail] 使用 summary 兜底')
   }
 
-  // ── 第 5 步：AI 摘要（v6.2：智谱 GLM-4-Flash）──
-  // 抓取到正文后，用智谱 GLM-4-Flash 生成 100-150 字摘要，写回 summary 字段，
-  // 下次列表刷新即展示高质量摘要；未配置 Key 或调用失败则保持原 summary。
-  let aiSummary = null
-  if (finalContent && contentSource !== 'summary_fallback') {
-    const t0 = Date.now()
-    aiSummary = await summarizeWithZhipu(finalContent, doc.title)
-    if (aiSummary) {
-      console.log(`[getNewsDetail] AI 摘要生成成功 (${aiSummary.length} 字, 耗时 ${Date.now() - t0}ms)`)
-    } else {
-      console.warn(`[getNewsDetail] AI 摘要生成失败，保留原 summary (${Date.now() - t0}ms)`)
-    }
-  }
-
-  // ── 第 6 步：补写 content + summary 到来源集合（下次直接命中缓存）──
+  // ── 第 5 步：补写 content 到来源集合（下次直接命中缓存）──
+  // DG-08（2026-08-06）性能优化：AI 摘要移出详情关键路径。
+  // 此前 await summarizeWithZhipu 在每次缓存未命中时阻塞返回（LLM 往返 0.5~3s），
+  // 是「进入详情/翻页 ~1s」的主因之一。详情页只展示 content，不需要 summary；
+  // summary 统一由 refreshNews 列表刷新时生成。这里仅回写 content，不再生成摘要。
   if (finalContent && contentSource !== 'fallback') {
-    const cacheFields = { content: finalContent }
-    if (aiSummary) {
-      cacheFields.summary = aiSummary
-      cacheFields.summarySource = 'ai' // v6.1：标记 AI 摘要来源（前端胶囊依赖）
-    }
-    await cacheDoc(collection, newsId, cacheFields)
+    await cacheDoc(collection, newsId, { content: finalContent })
   }
 
-  // ── 第 7 步：阅读数+1 + 返回 ──
+  // ── 第 6 步：阅读数+1 + 返回 ──
   bumpViewCount(collection, doc._id)
 
   const result = {
     ...doc,
     content: finalContent,
-    summary: aiSummary || doc.summary || doc.title || '',
+    summary: doc.summary || doc.title || '',
   }
 
   return {
     code: 0,
     data: result,
-    meta: { source: collection, contentSource, engine: 'juhe', aiSummary: !!aiSummary },
+    meta: { source: collection, contentSource, engine: 'juhe' },
   }
 }
