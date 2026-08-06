@@ -397,8 +397,11 @@ async function runCategoryPipeline(category, quotaBaseline) {
   }
 
   // 5. 正文抓取 + AI 摘要（智谱/DeepSeek 源 skipFetch + skipAiSummary；聚合/天行源照常抓+摘要）
+  // P0-2：enrich 硬期限 = catStart + 55s（保留 5s 给 DB 写入/清理）——search 吃预算后 enrich
+  // 不再按 12s/条串行顶爆 60s；预算不足自动跳过 AI 摘要保正文（详情页缓存命中依赖 content）。
   const enrichStart = Date.now()
-  const enriched = await enrichNewsList(secPassed, 8, skipFetch, skipAiSummary)
+  const enrichDeadline = catStart + 55000
+  const enriched = await enrichNewsList(secPassed, 8, skipFetch, skipAiSummary, enrichDeadline)
   const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
   const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
   console.log(`[refreshNews][${category}] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)

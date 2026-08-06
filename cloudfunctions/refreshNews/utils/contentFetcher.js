@@ -424,9 +424,12 @@ const summarizeWithDashscope = summarizeWithZhipu
  * @param {number} [concurrency] - 并发数（控制外部 API 压力；缺省读 config.rateLimit.enrichConcurrency，默认 8）
  * @param {boolean} [skipFetch=false] - 是否跳过网页抓取（智谱已自带正文）
  * @param {boolean} [skipAiSummary=false] - 是否跳过 AI 摘要生成（智谱已内联 summary）
+ * @param {number} [deadline=0] - P0-2：enrich 阶段硬期限（毫秒时间戳，0=不限制）。
+ *   剩余预算不足时优先保「正文抓取」（详情页缓存命中依赖 content），跳过 AI 摘要；
+ *   剩余 <3s 时不再启动新条目，确保整函数 60s 内必有写入。
  * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
-async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSummary = false) {
+async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSummary = false, deadline = 0) {
   // B-14: 并发数可配置（默认 8，防外部 API 压力 + 拖慢首屏）
   if (!concurrency || concurrency < 1) {
     concurrency = (config.rateLimit && config.rateLimit.enrichConcurrency) || 8
@@ -436,6 +439,8 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
 
   async function worker() {
     while (cursor < newsList.length) {
+      // P0-2：剩余预算 < 3s 不再启动新条目（保写入，防整函数 60s 超时 0 写入）
+      if (deadline && Date.now() + 3000 > deadline) break
       const idx = cursor++
       const item = newsList[idx]
       try {
@@ -476,14 +481,19 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
             summarySource = 'ai'
           }
         } else if (content && content.length > 10) {
-          // B-14: AI 摘要同样加超时兜底（12s）
-          const aiSummary = await Promise.race([
-            summarizeWithZhipu(content, item.title),
-            new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
-          ])
-          if (aiSummary && aiSummary.length >= 20) {
-            enriched.summary = aiSummary
-            summarySource = 'ai'
+          // P0-2：剩余预算不足跑摘要（<8s）→ 跳过 AI 摘要，保留 content（详情页优先正文，摘要仅列表展示用）
+          if (!deadline || Date.now() + 8000 <= deadline) {
+            // B-14: AI 摘要同样加超时兜底（12s）
+            const aiSummary = await Promise.race([
+              summarizeWithZhipu(content, item.title),
+              new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
+            ])
+            if (aiSummary && aiSummary.length >= 20) {
+              enriched.summary = aiSummary
+              summarySource = 'ai'
+            }
+          } else {
+            console.warn(`[enrich] ${item.id || ''} 预算不足跳过 AI 摘要（保留 content，summarySource=${summarySource}）`)
           }
         }
 
