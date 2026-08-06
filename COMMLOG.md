@@ -1,3 +1,33 @@
+## [2026-08-06 21:05] 🛠️ FE 交付 · BUG-20260806-020 收藏/历史页三合一优化 | 会话：[小程序前端开发(FE)]
+
+**实现**（commit `5344f72`）：
+- owner 反馈三项优化：
+
+  **① 文字贴边优化**
+  - history.wxss: `.list-scroll` 左右 padding `16rpx` → `32rpx`；`.history-item` 左右 padding `16rpx` → `0`（间距由 list-scroll 统一管理）
+  - favorites.wxss: `.list-scroll` 顶部 padding `2rpx` → `16rpx`，首条不与上方元素贴死
+
+  **② 收藏页 UI 调整**
+  - 删除分类下方提示词「提示：长按任意列表项可取消收藏」（longpress-hint）
+  - "共x条"从导航栏右上角移到分类筛选胶囊右侧（filter-bar 尾部右对齐，filter-count）
+
+  **③ 长按取消 → 左滑取消**
+  - 替换原「长按 → ActionSheet」为「左滑 → 露出右侧红色"取消收藏"按钮」
+  - 列表项滑动层结构：`fav-item-wrapper(overflow:hidden)` > `fav-item-swipe(translateX)` > `fav-item` + `fav-delete-btn(absolute right:-160rpx)`
+  - 手势 `onSwipeStart/Move/End`：左滑超 60rpx 阈值滑开露出按钮，不足回弹；拖动中禁用 transition 防滞后
+  - 点击删除按钮 → `onDeleteItem` 复用 `onConfirmUnfavorite` 本地移除逻辑
+  - 点击已打开项内容区 → 收起而非跳转；轻点不处理交给 tap
+  - 切换分类/删除后自动收起所有打开项
+  - 删除 ActionSheet 相关 WXML/WXSS/JS（sheet-mask/action-sheet/sheet-item/onSheetCancel/onLongPress）
+
+**范围**：`pages/favorites/favorites.{js,wxml,wxss}` + `pages/history/history.wxss`，其他页面不动。
+
+**回归**：v7 架构全绿 ✅；v13 唯一失败项为另一会话 c621794 改的 wheel-scale-active 1.08→1.5（测试预期未同步，与本次无关）；v12 云同步旧测试预存失败（DG-04 已纯本地化）。
+
+**交接**：**@owner** 真机体验：历史页文字不再贴边；收藏页"共x条"在分类右侧、无提示词；左滑列表项露出"取消收藏"按钮。
+
+> — 小程序前端开发（FE） 2026-08-06 21:05
+
 ## [2026-08-06 20:55] 🛠️ FE 交付 · BUG-20260806-019 侧边栏"今日新闻"与胶囊垂直对齐 | 会话：[小程序前端开发(FE)]
 
 **实现**（commit `eeaea43`）：
