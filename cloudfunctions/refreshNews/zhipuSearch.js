@@ -175,15 +175,22 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
   })
 }
 
-// ─── 分类 Prompt 模板（每分类 15 条，含 content 正文）──
+// ─── 分类 Prompt 模板（每分类 N 条，含 content 正文）──
 
-const PER_CATEGORY_COUNT = 5  // v6.6：对齐聚合/天行量级，保证 60s 超时内完成
+const PER_CATEGORY_COUNT = 5  // v6.6：普通分类对齐聚合/天行量级，保证 60s 超时内完成
+const RECOMMEND_COUNT = 10    // DG-01（2026-08-06）：recommend 抓取量 5→10 条/轮
+                              // 首页默认分类（R5 首次 10 条），智谱一次 web_search 调用成本极低；
+                              // 实测单分类 60s 预算内可行（sports 5 条 ~35s，10 条 ~45-50s 余量收窄）
 
 /**
  * 生成分类搜索 Prompt（统一要求 content 正文）
+ * @param {string} categoryName 分类名
+ * @param {string} sources 新闻源
+ * @param {number} [count] 条数（缺省 PER_CATEGORY_COUNT）
  */
-function buildPrompt(categoryName, sources) {
-  return `请从以下可信新闻源搜索今日最重要的${PER_CATEGORY_COUNT}条${categoryName}：
+function buildPrompt(categoryName, sources, count) {
+  const n = count || PER_CATEGORY_COUNT
+  return `请从以下可信新闻源搜索今日最重要的${n}条${categoryName}：
 新闻源：${sources}
 
 要求：
@@ -194,7 +201,7 @@ function buildPrompt(categoryName, sources) {
    - content: 新闻正文（字符串，300-500字，完整叙述事件背景、经过、影响，分段用\\n分隔）
    - source: 来源（必须是上述新闻源之一）
    - url: 原文链接（真实网页 URL，以 http/https 开头）
-3. 所有${PER_CATEGORY_COUNT}条放在一个 JSON 数组中返回
+3. 所有${n}条放在一个 JSON 数组中返回
 4. 只返回 JSON 数组，不要其他文字
 
 返回格式示例：
@@ -202,7 +209,7 @@ function buildPrompt(categoryName, sources) {
 }
 
 const CATEGORY_PROMPTS = {
-  recommend: buildPrompt('国内要闻', 'xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com'),
+  recommend: buildPrompt('国内要闻', 'xinhuanet.com, people.com.cn, cctv.com, chinanews.com, thepaper.cn, huanqiu.com', RECOMMEND_COUNT),
   tech: buildPrompt('科技新闻', '36kr.com, huxiu.com, techcrunch.com'),
   sports: buildPrompt('科学探索新闻', 'xinhuanet.com, cctv.com, thepaper.cn, reuters.com, nationalgeographic.com, science.org'),
   international: buildPrompt('国际新闻', 'reuters.com, bbc.com, apnews.com, huanqiu.com, chinanews.com'),

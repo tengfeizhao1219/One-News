@@ -32,10 +32,11 @@ async function getFromDbCache(category, pageNum, pageSize) {
 
     const res = await queryCache(where, pageNum, pageSize)
 
-    // 2. 未过期无数据 → 放宽条件查历史数据（stale 兜底），保证列表不空
-    //    v5.9：refreshNews 因外部 API 配额/故障拉不到新数据时，历史缓存仍可展示，
-    //    否则 cacheExpire 过期后 getNewsList 返回空列表，用户看到"无新闻"。
-    if (!res || res.list.length === 0) {
+    // 2. stale 兜底（owner 2026-08-06 09:48 决策：仅 fresh 完全为空时启动，兜底不加时间上限）
+    //    DG-01：条件从 res.list.length === 0 收紧为 res.total === 0——
+    //    翻页翻过头（fresh 有数据但当前页空）不再误触发 stale 混入过期新闻；
+    //    仅 fresh 一条都没有（total=0，如 refreshNews 故障/配额耗尽）才走历史缓存。
+    if (!res || res.total === 0) {
       const staleWhere = category && category !== 'all'
         ? { category }
         : {}
