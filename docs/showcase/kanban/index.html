@@ -66,19 +66,35 @@
   .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
   footer{padding:14px 22px 30px;color:var(--sub);font-size:11px;border-top:1px solid var(--line)}
   a{color:var(--accent);text-decoration:none}
-  /* 项目背景 + 最近变更 */
-  .intro{display:grid;grid-template-columns:1.5fr 1fr;gap:14px;padding:14px 22px 4px;align-items:start}
-  @media(max-width:760px){.intro{grid-template-columns:1fr}}
-  .intro .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;
-    padding:12px 14px;box-shadow:var(--shadow)}
-  .intro h3{margin:0 0 7px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
-  .intro .bg{font-size:12.5px;line-height:1.6;color:var(--ink)}
-  .cl{display:flex;flex-direction:column;gap:8px}
-  .cl-item{border-left:3px solid var(--accent);background:var(--bg);border-radius:0 8px 8px 0;padding:7px 10px}
-  .cl-item .t{font-size:11px;color:var(--sub)}
-  .cl-item .who{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;
+  /* 任务详情底部抽屉（点击卡片滑出） */
+  .sheet-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;
+    transition:opacity .25s;z-index:60}
+  .sheet-mask.show{opacity:1;pointer-events:auto}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:82vh;background:var(--panel);
+    border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);
+    transform:translateY(100%);transition:transform .28s cubic-bezier(.22,1,.36,1);
+    z-index:61;display:flex;flex-direction:column}
+  .sheet.show{transform:translateY(0)}
+  .sheet-hd{display:flex;align-items:flex-start;gap:10px;padding:16px 18px 10px;border-bottom:1px solid var(--line)}
+  .sheet-hd .sid{font-size:12px;font-weight:700;color:var(--accent);font-family:ui-monospace,monospace}
+  .sheet-hd .stt{font-size:13px;margin-left:auto;white-space:nowrap}
+  .sheet-hd .ttl{font-size:15px;font-weight:700;margin:4px 0 0;line-height:1.35;flex:1}
+  .sheet-close{margin-left:6px;font-size:18px;line-height:1;background:none;border:none;
+    color:var(--sub);cursor:pointer;padding:2px 6px}
+  .sheet-bd{padding:12px 18px calc(26px + env(safe-area-inset-bottom));overflow-y:auto}
+  .sheet-bd .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .sheet-bd .kv{font-size:12px;color:var(--sub);background:var(--chip);border-radius:8px;padding:3px 9px}
+  .sheet-bd .kv b{color:var(--ink)}
+  .sheet-bd h4{margin:16px 0 7px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .sheet-bd .bg{font-size:13px;line-height:1.65;color:var(--ink)}
+  .sheet-bd .cl{display:flex;flex-direction:column;gap:8px}
+  .sheet-bd .cl-i{border-left:3px solid var(--accent);background:var(--bg);border-radius:0 8px 8px 0;padding:7px 10px}
+  .sheet-bd .cl-i .t{font-size:11px;color:var(--sub)}
+  .sheet-bd .cl-i .who{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;
     background:var(--accent);border-radius:10px;padding:1px 8px;margin-left:6px;vertical-align:middle}
-  .cl-item .c{font-size:12px;line-height:1.45;margin-top:4px;color:var(--ink)}
+  .sheet-bd .cl-i .c{font-size:12.5px;line-height:1.45;margin-top:4px;color:var(--ink)}
+  .sheet-bd .empty{font-size:12.5px;color:var(--sub);font-style:italic}
+  .sheet-link-btn{margin-top:16px;width:100%;justify-content:center;padding:9px 12px}
 </style>
 </head>
 <body>
@@ -94,18 +110,29 @@
   <div id="chain"></div>
 </header>
 
-<section class="intro" id="intro"></section>
-
 <div class="board" id="board"></div>
 
 <div class="legend" id="legend"></div>
 
 <footer>
   数据源：<code>TASK_BOARD.md</code>（全局各角色任务）+ <code>COMMLOG.md</code> + <code>CONTEXT.md</code> ·
-  点击任意卡片可高亮它在「需求→设计→评审→开发→测试→验收」中的完整关联链。
+  点击任意卡片查看任务详情（背景 + 最近 3 条变更）；详情内可一键高亮其在全流程中的关联链。
 </footer>
 
-<script src="changelog.js"></script>
+<div class="sheet-mask" id="sheetMask"></div>
+<aside class="sheet" id="sheet" aria-hidden="true">
+  <div class="sheet-hd">
+    <div>
+      <span class="sid" id="sheetId"></span>
+      <div class="ttl" id="sheetTitle"></div>
+    </div>
+    <span class="stt" id="sheetStatus"></span>
+    <button class="sheet-close" id="sheetClose" aria-label="关闭">✕</button>
+  </div>
+  <div class="sheet-bd" id="sheetBody"></div>
+</aside>
+
+<script src="tasklog.js"></script>
 <script src="data.js"></script>
 <script>
 (function(){
@@ -121,21 +148,51 @@
   document.getElementById("title").textContent = META.title;
   document.getElementById("subtitle").textContent = META.subtitle + " · 更新 " + META.updated;
 
-  // 项目背景 + 最近变更（changelog 由 changelog.js 自动生成，取最新 3 条）
-  const CL = window.KANBAN_CHANGELOG || [];
-  const introEl = document.getElementById("intro");
-  if(META.background || CL.length){
-    let h = "";
-    if(META.background) h += `<div class="box"><h3>📖 项目背景</h3><div class="bg">${META.background}</div></div>`;
-    if(CL.length){
-      h += `<div class="box"><h3>🕘 最近变更（COMMLOG 最新 3 条）</h3><div class="cl">`;
-      CL.slice(0,3).forEach(e=>{
-        h += `<div class="cl-item"><div class="t">${e.time}<span class="who">${e.who}</span></div><div class="c">${e.content}</div></div>`;
+  // 任务详情（点击卡片滑出底部抽屉）：任务背景 + 该任务最近 3 条变更
+  const esc = s => (s==null ? "" : String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const sheet = document.getElementById("sheet");
+  const sheetMask = document.getElementById("sheetMask");
+  const sId = document.getElementById("sheetId");
+  const sTitle = document.getElementById("sheetTitle");
+  const sStatus = document.getElementById("sheetStatus");
+  const sBody = document.getElementById("sheetBody");
+  function openDetail(d){
+    const tl = (window.KANBAN_TASKLOG && window.KANBAN_TASKLOG[d.id]) || null;
+    const bg = (tl && tl.background) ? tl.background : (d.note || "暂无背景说明（COMMLOG 中未检索到该任务 ID）。");
+    const log = tl ? tl.log : [];
+    sId.textContent = d.id;
+    sTitle.textContent = d.title;
+    sStatus.textContent = (statusMap[d.status]||"") + " " + d.status;
+    sStatus.style.color = statusColor[d.status] || "";
+    let h = '<div class="row">'
+      + '<span class="kv">负责：<b>'+esc(d.role)+'</b></span>'
+      + '<span class="kv">优先级：<b>'+esc(d.prio)+'</b></span>'
+      + '<span class="kv">更新：<b>'+esc(d.updated)+'</b></span>'
+      + '<span class="kv">关联链：<b>'+esc(d.link)+'</b></span>'
+      + '</div>';
+    h += '<h4>📖 任务背景</h4><div class="bg">'+esc(bg)+'</div>';
+    h += '<h4>🕘 最近变更（COMMLOG 最新 3 条）</h4>';
+    if(log.length){
+      h += '<div class="cl">';
+      log.forEach(e=>{
+        h += '<div class="cl-i"><div class="t">'+esc(e.time)+'<span class="who">'+esc(e.who||"—")+'</span></div><div class="c">'+esc(e.content)+'</div></div>';
       });
-      h += `</div></div>`;
+      h += '</div>';
+    } else {
+      h += '<div class="empty">暂无变更记录（COMMLOG 中未检索到任务 ID '+esc(d.id)+'）</div>';
     }
-    introEl.innerHTML = h;
+    h += '<button class="sheet-link-btn" id="sheetLinkBtn">🔗 查看关联链（'+esc(d.link)+'）</button>';
+    sBody.innerHTML = h;
+    document.getElementById("sheetLinkBtn").addEventListener("click", ()=>{ closeSheet(); focusLink(d.link); });
+    sheet.classList.add("show"); sheetMask.classList.add("show"); sheet.setAttribute("aria-hidden","false");
+    sBody.scrollTop = 0;
   }
+  function closeSheet(){
+    sheet.classList.remove("show"); sheetMask.classList.remove("show"); sheet.setAttribute("aria-hidden","true");
+  }
+  document.getElementById("sheetClose").addEventListener("click", closeSheet);
+  sheetMask.addEventListener("click", closeSheet);
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeSheet(); });
 
   // 统计
   const statsEl = document.getElementById("stats");
@@ -172,7 +229,7 @@
         <span class="link" style="background:${linkColor[d.link]}">🔗 ${d.link}</span>
       </div>
       ${d.note?`<div class="note">${d.note}</div>`:""}`;
-    el.addEventListener("click",()=>focusLink(d.link));
+    el.addEventListener("click",()=>openDetail(d));
     return el;
   }
 

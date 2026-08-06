@@ -311,17 +311,35 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   .kb-leg i{width:9px;height:9px;border-radius:3px;display:inline-block}
   .kb-foot{padding:10px 0 2px;color:var(--kb-sub);font-size:10.5px;
     border-top:1px solid var(--kb-line);margin-top:4px;line-height:1.35}
-  .kb-intro{display:grid;grid-template-columns:1.5fr 1fr;gap:12px;margin:8px 0 14px;align-items:start}
-  .kb-intro .box{background:var(--kb-panel);border:1px solid var(--kb-line);border-radius:11px;padding:10px 12px}
-  .kb-intro h3{margin:0 0 6px;font-size:12.5px;font-weight:700}
-  .kb-bg{font-size:12px;line-height:1.55;color:var(--kb-ink)}
-  .kb-cl{display:flex;flex-direction:column;gap:7px}
-  .kb-cl-i{border-left:3px solid var(--kb-accent);background:var(--kb-bg);border-radius:0 8px 8px 0;padding:6px 9px}
-  .kb-cl-i .t{font-size:10.5px;color:var(--kb-sub)}
-  .kb-cl-i .who{display:inline-block;font-size:9.5px;font-weight:700;color:#fff;
+  /* 任务详情底部抽屉（点击卡片滑出），kb- 作用域避免与宿主页冲突 */
+  .kb-sheet-mask{position:fixed;inset:0;background:rgba(0,0,0,.35);opacity:0;pointer-events:none;
+    transition:opacity .25s;z-index:60}
+  .kb-sheet-mask.show{opacity:1;pointer-events:auto}
+  .kb-sheet{position:fixed;left:0;right:0;bottom:0;max-height:82vh;background:var(--kb-panel);
+    border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);
+    transform:translateY(100%);transition:transform .28s cubic-bezier(.22,1,.36,1);
+    z-index:61;display:flex;flex-direction:column}
+  .kb-sheet.show{transform:translateY(0)}
+  .kb-sheet-hd{display:flex;align-items:flex-start;gap:10px;padding:16px 18px 10px;border-bottom:1px solid var(--kb-line)}
+  .kb-sheet-hd .sid{font-size:12px;font-weight:700;color:var(--kb-accent);font-family:ui-monospace,monospace}
+  .kb-sheet-hd .stt{font-size:13px;margin-left:auto;white-space:nowrap}
+  .kb-sheet-hd .ttl{font-size:15px;font-weight:700;margin:4px 0 0;line-height:1.35;flex:1}
+  .kb-sheet-close{margin-left:6px;font-size:18px;line-height:1;background:none;border:none;
+    color:var(--kb-sub);cursor:pointer;padding:2px 6px}
+  .kb-sheet-bd{padding:12px 18px calc(26px + env(safe-area-inset-bottom));overflow-y:auto;color:var(--kb-ink)}
+  .kb-sheet-bd .row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+  .kb-sheet-bd .kv{font-size:12px;color:var(--kb-sub);background:var(--kb-chip);border-radius:8px;padding:3px 9px}
+  .kb-sheet-bd .kv b{color:var(--kb-ink)}
+  .kb-sheet-bd h4{margin:16px 0 7px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .kb-sheet-bd .bg{font-size:13px;line-height:1.65;color:var(--kb-ink)}
+  .kb-sheet-bd .cl{display:flex;flex-direction:column;gap:7px}
+  .kb-sheet-bd .cl-i{border-left:3px solid var(--kb-accent);background:var(--kb-bg);border-radius:0 8px 8px 0;padding:6px 9px}
+  .kb-sheet-bd .cl-i .t{font-size:10.5px;color:var(--kb-sub)}
+  .kb-sheet-bd .cl-i .who{display:inline-block;font-size:9.5px;font-weight:700;color:#fff;
     background:var(--kb-accent);border-radius:10px;padding:1px 7px;margin-left:5px;vertical-align:middle}
-  .kb-cl-i .c{font-size:11.5px;line-height:1.42;margin-top:3px;color:var(--kb-ink)}
-  @media(max-width:760px){.kb-intro{grid-template-columns:1fr}}
+  .kb-sheet-bd .cl-i .c{font-size:11.5px;line-height:1.42;margin-top:3px;color:var(--kb-ink)}
+  .kb-sheet-bd .empty{font-size:12.5px;color:var(--kb-sub);font-style:italic}
+  .kb-sheet-link-btn{margin-top:16px;width:100%;justify-content:center;padding:9px 12px}
   </style>
 
   <div class="kb-head">
@@ -336,17 +354,28 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <div id="kb-chain"></div>
   </div>
 
-  <section class="kb-intro" id="kb-intro"></section>
-
   <div class="kb-board" id="kb-board"></div>
   <div class="kb-leg" id="kb-leg"></div>
   <div class="kb-foot">
     数据源：<code>TASK_BOARD.md</code>（全局各角色任务）+ <code>COMMLOG.md</code> + <code>CONTEXT.md</code> ·
-    点击任意卡片可高亮它在「需求→设计→评审→开发→测试→验收」中的完整关联链。
+    点击任意卡片查看任务详情（背景 + 最近 3 条变更）；详情内可一键高亮其在全流程中的关联链。
   </div>
 
+  <div class="kb-sheet-mask" id="kb-sheetMask"></div>
+  <aside class="kb-sheet" id="kb-sheet">
+    <div class="kb-sheet-hd">
+      <div>
+        <span class="sid" id="kb-sheetId"></span>
+        <div class="ttl" id="kb-sheetTitle"></div>
+      </div>
+      <span class="stt" id="kb-sheetStatus"></span>
+      <button class="kb-sheet-close" id="kb-sheetClose" aria-label="关闭">✕</button>
+    </div>
+    <div class="kb-sheet-bd" id="kb-sheetBody"></div>
+  </aside>
+
   <script>const $=id=>document.getElementById(id);</script>
-  <script src="showcase/kanban/changelog.js"></script>
+  <script src="showcase/kanban/tasklog.js"></script>
   <script src="showcase/kanban/data.js"></script>
   <script>
   (function(){
@@ -357,21 +386,41 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     const links=[...new Set(D.map(d=>d.link))], lC={};
     links.forEach((l,i)=>{ lC[l]=`hsl(${(i*67+200)%360} 62% 52%)` });
     $("kb-subtitle").textContent=M.subtitle+" · 更新 "+M.updated;
-    // 项目背景 + 最近变更（changelog 由 changelog.js 自动生成，取最新 3 条）
-    const CL=window.KANBAN_CHANGELOG||[];
-    const introEl=document.getElementById("kb-intro");
-    if(M.background||CL.length){
-      let h="";
-      if(M.background) h+=`<div class="box"><h3>📖 项目背景</h3><div class="kb-bg">${M.background}</div></div>`;
-      if(CL.length){
-        h+=`<div class="box"><h3>🕘 最近变更（COMMLOG 最新 3 条）</h3><div class="kb-cl">`;
-        CL.slice(0,3).forEach(e=>{
-          h+=`<div class="kb-cl-i"><div class="t">${e.time}<span class="who">${e.who}</span></div><div class="c">${e.content}</div></div>`;
-        });
-        h+=`</div></div>`;
+    // 任务详情（点击卡片滑出底部抽屉）：任务背景 + 该任务最近 3 条变更
+    const esc=s=>(s==null?"":String(s)).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    const kbSheet=$("kb-sheet"), kbMask=$("kb-sheetMask"),
+          kbId=$("kb-sheetId"), kbTitle=$("kb-sheetTitle"), kbStatus=$("kb-sheetStatus"), kbBody=$("kb-sheetBody");
+    function openDetail(d){
+      const tl=(window.KANBAN_TASKLOG&&window.KANBAN_TASKLOG[d.id])||null;
+      const bg=(tl&&tl.background)?tl.background:(d.note||"暂无背景说明（COMMLOG 中未检索到该任务 ID）。");
+      const log=tl?tl.log:[];
+      kbId.textContent=d.id; kbTitle.textContent=d.title;
+      kbStatus.textContent=(sM[d.status]||"")+" "+d.status; kbStatus.style.color=sC[d.status]||"";
+      let h='<div class="row">'
+        +'<span class="kv">负责：<b>'+esc(d.role)+'</b></span>'
+        +'<span class="kv">优先级：<b>'+esc(d.prio)+'</b></span>'
+        +'<span class="kv">更新：<b>'+esc(d.updated)+'</b></span>'
+        +'<span class="kv">关联链：<b>'+esc(d.link)+'</b></span>'
+        +'</div>';
+      h+='<h4>📖 任务背景</h4><div class="bg">'+esc(bg)+'</div>';
+      h+='<h4>🕘 最近变更（COMMLOG 最新 3 条）</h4>';
+      if(log.length){
+        h+='<div class="cl">';
+        log.forEach(e=>{ h+='<div class="cl-i"><div class="t">'+esc(e.time)+'<span class="who">'+esc(e.who||"—")+'</span></div><div class="c">'+esc(e.content)+'</div></div>'; });
+        h+='</div>';
+      } else {
+        h+='<div class="empty">暂无变更记录（COMMLOG 中未检索到任务 ID '+esc(d.id)+'）</div>';
       }
-      introEl.innerHTML=h;
+      h+='<button class="kb-sheet-link-btn" id="kb-sheetLinkBtn">🔗 查看关联链（'+esc(d.link)+'）</button>';
+      kbBody.innerHTML=h;
+      $("kb-sheetLinkBtn").addEventListener("click",()=>{ closeSheet(); focusLink(d.link); });
+      kbSheet.classList.add("show"); kbMask.classList.add("show");
+      kbBody.scrollTop=0;
     }
+    function closeSheet(){ kbSheet.classList.remove("show"); kbMask.classList.remove("show"); }
+    $("kb-sheetClose").addEventListener("click",closeSheet);
+    kbMask.addEventListener("click",closeSheet);
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeSheet(); });
     const stEl=$("kb-stats"); M.columns.forEach(c=>{
       const n=D.filter(d=>d.col===c.key).length, s=document.createElement("span");
       s.className="kb-stat"; s.innerHTML=c.name+" <b>"+n+"</b>"; stEl.appendChild(s);
@@ -391,7 +440,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       el.innerHTML=`<div class="top"><span class="kb-id">${d.id}</span><span class="kb-prio ${pc}">${d.prio}</span><span class="kb-st" style="color:${sC[d.status]}">${sM[d.status]}</span></div>
         <div class="kb-tt">${d.title}</div><div class="kb-meta"><span class="kb-role">${d.role}</span><span class="kb-link" style="background:${lC[d.link]}">🔗 ${d.link}</span></div>
         ${d.note?`<div class="kb-note">${d.note}</div>`:""}`;
-      el.addEventListener("click",()=>focusLink(d.link)); return el;
+      el.addEventListener("click",()=>openDetail(d)); return el;
     }
     const chEl=$("kb-chain"), rBtn=$("kb-resetBtn");
     function focusLink(link){
@@ -423,6 +472,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     });
   })();
   </script>
+
   </div><!-- /kanban-wrap -->
   </div><!-- /tab-kanban -->
 
@@ -652,7 +702,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()}
 /* ===== Demo 交互原型库 ===== */
 const DEMOS=[
   {id:"SIDEBAR",title:"侧边栏新闻列表 · 最新设计",file:"showcase/sidebar-news-list.html",cat:"首页",desc:"2026-08-06 · 侧边栏列表最新设计（含 D-02 v2.5 滚轮去底色、当前项主题色高亮、仅标题列表），1:1 取自当前 app 实现"},
-  {id:"D-09",
+  {id:"D-09",title:"内容展示起始位置调整",file:"showcase/d09-nav-content-spacing.html",cat:"详情",desc:"2026-08-06 · D-09：导航固定后标题顶置修复——仅调整内容起始位置（标题位于导航栏下 16px），其余以当前设计为准"},
   {id:"DEMO",title:"一页 · 完整交互 Demo",file:"demo/yiyue-demo.html",cat:"主 Demo",desc:"完整交互演示：卡片流 / 左滑列表 / 侧边栏分类滚轮 / 详情阅读（历史原型，不代表当前设计）"},
   {id:"UI-B11",title:"详情页优化",file:"showcase/detail-redesign.html",cat:"详情",desc:"现状 vs 优化：顶部阅读进度条 + 滑动提示可消除 + 收藏态强化（1:1 原型）"},
   {id:"UI-B10",title:"收藏页优化",file:"showcase/favorites-redesign.html",cat:"收藏",desc:"卡片化列表 + 分类筛选 + 长按取消收藏（现状 vs 优化，1:1 原型）"},
