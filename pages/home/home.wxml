@@ -121,25 +121,29 @@
   </view>
 
   <!-- 侧边栏面板（UI-B7：左侧分类滚轮 + 右侧仅标题列表，圆角高亮） -->
-  <!-- owner 2026-08-06 17:20 裁定（v4 最终架构）：
-       ① panel-header 固定在面板顶部（状态栏/胶囊下方），永远显示，不随列表滚动；
-       ② 仅列表区域滚动，内容过多时可滑动，内容少时完整显示（不撑高）；
-       ③ 滚轮固定在列表左侧（flex 流内），catch 触摸独立；
-       ④ 保留 v3 已验证的滚动能力：scroll-view 用 flex:1 + height:0（社区验证可靠高度写法）
-          + .slide-panel .done 动画状态机（动画完成后 transform:none，移除 transform 祖先）。 -->
+  <!-- owner 2026-08-06 17:52 裁定（v5 最终稳定架构）：
+       v4 flex:1+height:0 在真机导致 scroll-view 与 category-wheel 渲染异常（列表空白、滚轮只显部分分类）。
+       v5 彻底改用 absolute 定位：
+       ① panel-header absolute 固定顶部；
+       ② panel-body absolute 铺满剩余区域；
+       ③ panel-wheel absolute 固定在 body 左侧；
+       ④ panel-scroll absolute 固定在 body 右侧，高度由 top/bottom 确定（不再依赖 flex/百分比）；
+       ⑤ 保留 .slide-panel .done 动画状态机（动画完成后 transform:none）。
+       ⑥ 列表内容多时滚动，少时完整显示（不撑高）。
+       所有历史版本保留在 git 中，可随时回滚。 -->
   <view class="slide-panel {{showPanel ? 'show' : ''}} {{panelAnim ? 'done' : ''}}"
     bindtouchstart="onPanelTouchStart"
     bindtouchend="onPanelTouchEnd">
-    <!-- 面板标题栏：固定顶部（flex-shrink:0），不参与列表滚动 -->
+    <!-- 面板标题栏：absolute 固定顶部 -->
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>
     </view>
 
-    <!-- 面板主体：左侧滚轮固定 + 右侧列表滚动 -->
+    <!-- 面板主体：absolute 铺满 header 下方区域 -->
     <view class="panel-body">
       <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2）
-           flex 流内固定（flex-shrink:0），catch 触摸独立接管 -->
+           absolute 固定在 body 左侧，catch 触摸独立接管 -->
       <category-wheel
         class="panel-wheel"
         categories="{{panelCategories}}"
@@ -147,7 +151,7 @@
         bind:change="onWheelChange">
       </category-wheel>
 
-      <!-- 右侧仅标题列表：仅列表区域滚动（flex:1 + height:0 可靠高度），内容多时可滑，少时完整显示 -->
+      <!-- 右侧仅标题列表：absolute 固定在 body 右侧，高度确定，内容多时可滚 -->
       <scroll-view class="panel-scroll" scroll-y>
         <view class="panel-list">
           <view 

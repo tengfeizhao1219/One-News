@@ -236,9 +236,16 @@
   transform: none;
 }
 
-/* 面板标题栏：固定顶部（flex-shrink:0），不随列表滚动（owner 17:20 裁定） */
+/* v5 稳定架构：全部改用 absolute 定位，彻底规避 flex 在真机上的高度/渲染异常。
+   panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
+
+/* 面板标题栏：absolute 固定顶部 */
 .panel-header {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 16rpx;
@@ -263,17 +270,23 @@
   text-overflow: ellipsis;
 }
 
-/* 面板主体：占 header 之外的剩余高度，内部 = 滚轮（固定）+ 列表（滚动） */
+/* 面板主体：absolute 铺满 header 下方区域（header 高约 180rpx） */
 .panel-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
+  position: absolute;
+  top: 180rpx;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
-/* 左侧滚轮：flex 流内固定（flex-shrink:0），顶部对齐，catch 触摸独立接管 */
+/* 左侧滚轮：absolute 固定在 body 左侧，高度铺满 body，catch 触摸独立接管 */
 .panel-wheel {
-  flex-shrink: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 128rpx;
+  height: 100%;
+  z-index: 2;
   border-right: 1rpx solid var(--divider);
   display: flex;
   align-items: flex-start;
@@ -281,14 +294,16 @@
 }
 
 /* ============ 新闻列表 ============ */
-/* 17:20 系统性修复④：滚动容器用 flex:1 + height:0（社区验证可靠高度写法，等价固定高度）。
-   官方文档要求 scroll-view 必须固定高度；flex:1 单独用不可靠（v1 失败），
-   height:0 + flex-grow 分配 = 确定高度（panel-body 剩余空间）。
-   仅列表区域滚动；内容多时可滑，内容少时完整显示（不撑高，owner 17:20 裁定）。 */
+/* 滚动容器：absolute 固定在 body 右侧（left:128rpx 避开滚轮），
+   高度由 top:0 / bottom:0 确定（= body 高），不依赖 flex/百分比/height:0，
+   官方文档要求 scroll-view 固定高度 → 此写法高度完全确定。 */
 .panel-scroll {
-  flex: 1;
-  height: 0;
-  min-height: 0;
+  position: absolute;
+  top: 0;
+  left: 128rpx;
+  right: 0;
+  bottom: 0;
+  height: 100%;
 }
 
 .panel-list {
