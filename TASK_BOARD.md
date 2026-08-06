@@ -2856,10 +2856,10 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 |----|------|--------|:---:|------|------|
 | **DG-01** | **云函数改造**（stale 仅空时兜底 + recommend 10 条/轮 + 停用 4 云函数） | **全栈开发（FS）**（后端，唯一可做） | ✅ 完成（`3394d8e`） | FS 评估完成 | `getNewsList/index.js` + `refreshNews/zhipuSearch.js`；停用 `recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites` |
 | **DG-02** | **详情引擎重构**（砍跨分类补拉 + 跨分类跳转 + 来源识别 + 总数锁定 + 边界 toast + detail 去云端化） | **全栈开发（FS）**（引擎核心，FS 评估已定方案） | ✅ 完成（`362f1ff`） | DG-01 | `reading-engine.js` + `detail.js` |
-| **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **小程序前端开发（FE）**（纯前端） | 📋 待技术负责人确认 | DG-01 | `home.js` + `home.wxml` + `utils/constants.js` |
-| **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 📋 待技术负责人确认 | DG-01 | `history.js` + `favorites.js` + `app.js` |
-| **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 📋 待技术负责人确认 | 无 | `pages/about/about.js` |
-| **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 待技术负责人确认 | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
+| **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **小程序前端开发（FE）**（纯前端） | 📋 已确认（FE，依赖 DG-01） | DG-01 | `home.js` + `home.wxml` + `utils/constants.js` |
+| **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **小程序前端开发（FE）**（纯前端） | 📋 已确认（FE，依赖 DG-01） | DG-01 | `history.js` + `favorites.js` + `app.js` |
+| **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **小程序前端开发（FE）**（1 行，顺手） | 📋 已确认（FE） | 无 | `pages/about/about.js` |
+| **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 已确认（PM，依赖 DG-01~04） | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

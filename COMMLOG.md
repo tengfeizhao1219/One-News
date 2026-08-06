@@ -1,3 +1,17 @@
+## [2026-08-06 13:45] 📤→✅ FS 已提交 · DG-01 `3394d8e` + DG-02 `362f1ff`（数据治理 FS 侧全部落地）| 会话：[全栈开发(FS)]
+
+**提交记录**：
+- commit `3394d8e`（DG-01 云函数改造）：getNewsList stale 仅空时兜底（total===0）+ zhipuSearch recommend 10 条/轮 + 停用 4 云函数（recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites，DEPRECATED 保留供回滚）
+- commit `362f1ff`（DG-02 详情引擎重构）：删 _fetchRemainingCategories 补拉 + 总数锁定 + loadNextCategory 跨分类跳转（固定顺序）+ source 识别（history/favorites 禁跨分类）+ 边界 toast（已阅读完/第一篇/正在阅读）+ detail 去云端化（_recordBrowse 纯本地+expireAt+LRU500；_syncFavoriteCloud 删除）
+
+**拍板**（13:26）：认可 PM 分工 FS×2+FE×3+PM×1，协作约束（constants.js 优先/DG-01 停用≠删除/保留清单）
+
+**回归**：v7 63/0 ✅ v7-runtime 41/0 ✅ v11 25/0 ✅
+
+**🔔 下一步**：FE 认领 DG-03/04/05（constants.js 优先提交）；owner 重新部署 getNewsList/refreshNews；PM DG-06 排期。
+
+---
+
 ## [2026-08-06 13:30] 🎨 PD 出 demo · 侧边栏新闻列表最新设计（含 D-02 v2.5 滚轮去底色）| 会话：[产品设计师(PD)]
 
 **提交记录**：
