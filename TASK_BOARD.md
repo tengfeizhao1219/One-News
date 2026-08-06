@@ -2444,6 +2444,19 @@
 | Q-06.4 | 回滚预案（上一版本 tag + 云函数版本回退步骤） | 项目经理 | ⏳ | Q-06.1 | 记录到 `docs/06-上线复盘/` |
 | **AB-01** | **✅ dock「关于一页」页面开发（FE 已交付 `34d20a5`）** | **小程序前端开发（FE）** | ✅ | PM 方案已确认 | 8 文件全部完成：`pages/about/about.{js,wxml,wxss,json}` + `home.{wxml,js}` dock 改造 + `info.svg` + `app.json` 注册；验收清单已就绪：`docs/05-测试验收/AB-01-关于一页验收清单.md`；待 owner 真机验证 |
 
+### 🆕 数据存储与展示统一治理（owner 2026-08-06 09:48 确认 · FS 10:10 评估完成）
+
+> 需求：`docs/01-需求规划/数据存储与展示统一整理-需求说明-20260806.md` | 评估：`docs/04-开发实现/数据治理-5项FS评估-20260806.md`
+
+| ID | 任务 | 负责人 | 状态 | 依赖 | 交付物 |
+|----|------|--------|:---:|------|------|
+| **DG-01** | **云函数改造**（stale 仅空时兜底 + recommend 10 条/轮） | **全栈开发（FS）** | 📋 | FS 评估完成 | `getNewsList/index.js` + `refreshNews/zhipuSearch.js`；停用 `recordBrowse/getBrowseHistory/setUserFavorite/getUserFavorites` |
+| **DG-02** | **详情引擎重构**（砍跨分类补拉 + 跨分类跳转 + 来源识别 + 总数锁定 + 边界 toast） | **全栈开发（FS）** | 📋 | DG-01 | `reading-engine.js` + `detail.js`（含 `_recordBrowse`/`_syncFavoriteCloud` 去云端化） |
+| **DG-03** | **首页改造**（推荐分类默认 + 10+5×3 拉取 + toast 统一 + 侧边栏推荐置顶） | **全栈开发（FS）** | 📋 | DG-01 | `home.js` + `home.wxml` + `utils/constants.js`（CATEGORIES all→recommend + FAVORITES_LIMIT/HISTORY_LIMIT 常量） |
+| **DG-04** | **历史/收藏纯本地化**（本地存储 + 透传来源列表 + 每日清理） | **全栈开发（FS）** | 📋 | DG-01 | `history.js` + `favorites.js` + `app.js`（每日清理） |
+| **DG-05** | **about 文案勘误**（「五层降级链」→「多层降级保障」） | **全栈开发（FS）** | 📋 | 无 | `pages/about/about.js`（1 行） |
+| **DG-06** | **测试**（列表一致性/来源顺序/拉取计数/本地存储断言） | **产品经理（PM）** | 📋 | DG-01~04 | 测试脚本 + 回归 v5/v6/v7/v11/v12/v13 全绿 |
+
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
 | Bug ID | 标题 | 指派给 | 严重度 | 状态 | 说明 |
