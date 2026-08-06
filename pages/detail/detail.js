@@ -93,6 +93,8 @@ Page({
     this._swipeHintDismissed = false
     // 短内容翻页保护：内容不足一屏时需两次上滑才翻页（第一次滚到底，第二次翻页）
     this._needsSecondSwipe = false
+    // BUG-20260806-002: 单篇模式标记（入口新闻未命中时启用，禁止翻页）
+    this._singleMode = false
 
     // UX-FIX04: 同步字体档位用于截断保护
     var app = getApp()
@@ -229,6 +231,12 @@ Page({
     engine.init().then(function () {
       // BUG-004: 页面已销毁则跳过 setData
       if (that._destroyed) return
+      // BUG-20260806-002：入口新闻在合并列表中未命中（收藏/历史页跳转的旧新闻）
+      // 方案 A 单篇模式：直接拉取该新闻详情，禁止回退展示他条；拉取失败提示失效
+      if (engine.hasEntryNewsId() && !engine.isEntryFound()) {
+        that._loadFallback(newsId, true)
+        return
+      }
       var progress = engine.getProgress()
       that.setData({
         currentIndex: progress.index,
@@ -304,15 +312,19 @@ Page({
   },
 
   /**
-   * 降级加载（引擎初始化失败时）
+   * 降级加载（引擎初始化失败 或 BUG-20260806-002 入口新闻未命中时）
+   * @param {string} newsId 新闻 ID
+   * @param {boolean} isExpiredEntry true=入口新闻未命中（单篇模式，失败提示「该新闻已失效」）
    */
-  _loadFallback: function (newsId) {
+  _loadFallback: function (newsId, isExpiredEntry) {
     var that = this
     if (!newsId) {
       that.setData({ pageState: 'error', errorMessage: '新闻加载失败' })
       wx.showToast({ title: '新闻加载失败', icon: 'none' })
       return
     }
+    // BUG-20260806-002：单篇模式 — 禁用跨分类翻页（引擎仍存在，但 total=1 边界挡住 goNext/goPrev）
+    that._singleMode = !!isExpiredEntry
     getNewsDetail(newsId).then(function (news) {
       var text = news.content || news.summary || ''
       var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
@@ -331,8 +343,9 @@ Page({
         that._startSwipeHintTimer()
         if (news && news.id) that._checkFavorite(news.id)
     }).catch(function () {
-      that.setData({ pageState: 'error', errorMessage: '新闻详情暂不可用，请返回重试' })
-      wx.showToast({ title: '新闻详情暂不可用，请返回重试', icon: 'none' })
+      var msg = isExpiredEntry ? '该新闻已失效' : '新闻详情暂不可用，请返回重试'
+      that.setData({ pageState: 'error', errorMessage: msg })
+      wx.showToast({ title: msg, icon: 'none' })
     })
   },
 
@@ -429,6 +442,8 @@ Page({
   _swipeToNext: function () {
     var that = this
     if (that._animating || !that._engine) return
+    // BUG-20260806-002：单篇模式禁止翻页
+    if (that._singleMode) return
     that._animating = true
     // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
     that._switching = true
@@ -499,6 +514,8 @@ Page({
   _swipeToPrev: function () {
     var that = this
     if (that._animating || !that._engine) return
+    // BUG-20260806-002：单篇模式禁止翻页
+    if (that._singleMode) return
     that._animating = true
     // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
     that._switching = true
@@ -767,6 +784,8 @@ Page({
         favorites = favorites.filter(function (f) { return f.id !== news.id })
         _cache.set('favorites', favorites, { ttl: 0 }) // 0 = 永不过期
         that.setData({ isFavorited: false })
+        // BUG-20260806-001：取消收藏反馈提示（对比收藏页已有「已取消收藏」提示）
+        wx.showToast({ title: '已取消收藏', icon: 'none' })
         // TL-B13 / RQ-03：云端同步取消（仅取消收藏，不取消 retained — 曾收藏即保留）
         that._syncFavoriteCloud(news, false)
       } else {
@@ -794,6 +813,8 @@ Page({
         }
         that.setData({ isFavorited: true, heartAnim: true })
         setTimeout(function () { that.setData({ heartAnim: false }) }, 350)
+        // BUG-20260806-001：收藏反馈提示
+        wx.showToast({ title: '已收藏', icon: 'none' })
         // TL-B13 / RQ-03 + RQ-16：云端双写收藏 + 标记 retained（30 天保留）
         that._syncFavoriteCloud(news, true)
       }

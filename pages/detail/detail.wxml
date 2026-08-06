@@ -21,15 +21,14 @@
   <view class="state-container" wx:if="{{pageState === 'error' || pageState === 'empty'}}">
     <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
     <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
-    <view class="state-retry" bindtap="goBack">返回首页</view>
+    <view class="state-retry" bindtap="goBack">返回</view>
   </view>
 
-  <!-- 顶部栏：返回主页（左 · TL-B15）+ 进度指示（右） -->
+  <!-- 顶部栏：返回（左 · BUG-20260806-003）+ 进度指示（右） -->
   <view class="nav-bar">
-    <!-- TL-B15: 全局返回主页入口（🏠，左侧），点击 reLaunch 回首页并清栈 -->
-    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
-      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
-      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 -->
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
+      <text class="nav-back-icon">‹</text>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>

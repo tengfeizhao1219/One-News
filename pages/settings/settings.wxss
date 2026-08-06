@@ -19,21 +19,21 @@
   padding: 6rpx 14rpx 10rpx;
   flex-shrink: 0;
 }
-.nav-back {
+/* BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） */
+.nav-home {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 56rpx;
   height: 56rpx;
+  opacity: 1;
 }
-.nav-back--hover {
+.nav-home--hover {
   opacity: 0.6;
 }
-.nav-back-icon {
-  color: var(--primary);
-  font-size: 48rpx;
-  line-height: 1;
-  margin-top: -4rpx;
+.nav-home-icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 .nav-title {
   font-size: 34rpx;

@@ -44,6 +44,24 @@ Page({
     this.setData({ themeClass: (app && app.globalData && app.globalData.themeClass) || '' })
   },
 
+  /**
+   * BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch）
+   */
+  goHome: function () {
+    var now = Date.now()
+    if (this._lastHomeTap && now - this._lastHomeTap < 300) return
+    this._lastHomeTap = now
+    wx.reLaunch({
+      url: '/pages/home/home',
+      fail: function () {
+        try {
+          var pages = getCurrentPages()
+          wx.navigateBack({ delta: Math.max(1, pages.length - 1) })
+        } catch (e) { wx.reLaunch({ url: '/pages/home/home' }) }
+      },
+    })
+  },
+
   goBack: function () {
     var pages = getCurrentPages()
     if (pages.length > 1) {

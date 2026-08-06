@@ -4,10 +4,11 @@
   <!-- 状态栏占位 -->
   <view class="status-bar" style="height: {{statusBarHeight + 6}}px;"></view>
 
-  <!-- 顶部栏：返回 + 标题 -->
+  <!-- 顶部栏：主页（左 · BUG-20260806-003）+ 标题 -->
   <view class="nav-bar">
-    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover">
-      <text class="nav-back-icon">‹</text>
+    <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover">
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">关于一页</view>
   </view>

@@ -19,32 +19,27 @@
   flex-shrink: 0;
 }
 
-/* TL-B15: 全局返回主页入口（🏠，左侧固定） */
-.nav-home {
+/* BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮 */
+.nav-back {
   position: absolute;
-  left: 24rpx;
+  left: 8rpx;
   top: 50%;
   transform: translateY(-50%);
-  width: 56rpx;
-  height: 56rpx;
+  width: 72rpx;
+  height: 72rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 1;
+  border-radius: 50%;
 }
-.nav-home--hover {
-  opacity: 0.6; /* 点击反馈，跟随 PRD §5.7.4 */
+.nav-back--hover {
+  background-color: var(--bg-subtle);
 }
-.nav-home-icon-img {
-  width: 44rpx;
-  height: 44rpx;
-}
-
-.nav-back {
-  font-size: calc(28rpx * var(--font-scale));  /* D-05#2: 参与字号缩放 */
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 1rpx;
+.nav-back-icon {
+  font-size: 44rpx;
+  color: var(--text-primary);
+  line-height: 1;
+  transform: translateY(-2rpx);
 }
 
 .nav-position {

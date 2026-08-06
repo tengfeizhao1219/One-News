@@ -54,6 +54,8 @@ function ReadingEngine(options) {
   this._prefetched = {}       // { globalIndex: true } 已预取详情
   this._initialized = false
   this._initializing = false
+  // BUG-20260806-002：入口新闻未命中标记（收藏/历史旧新闻已失效时禁止回退展示他条）
+  this._entryNotFound = false
 }
 
 /**
@@ -127,7 +129,11 @@ ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedC
   that._fetchRemainingCategories(catId)
 
   // 未找到入口新闻时用 index 定位
-  if (!foundEntry && that._entryIndex >= 0 && that._entryIndex < merged.length) {
+  // BUG-20260806-002：入口新闻 ID 已传入但未命中 → 标记失效，禁止回退展示他条
+  if (this._entryNewsId && !foundEntry) {
+    this._entryNotFound = true
+    entryGlobalIndex = 0
+  } else if (!foundEntry && that._entryIndex >= 0 && that._entryIndex < merged.length) {
     entryGlobalIndex = that._entryIndex
   }
 
@@ -265,7 +271,12 @@ ReadingEngine.prototype._buildMergedList = function (results) {
   }
 
   // 如果按 ID 没找到，用分类+索引定位
-  if (!foundEntry && this._entryCategory) {
+  // BUG-20260806-002：入口新闻 ID 已传入但未命中（收藏/历史旧新闻不在列表）→
+  // 标记失效，禁止回退展示他条；由上层走单篇模式（getNewsDetail 拉取或提示失效）
+  if (this._entryNewsId && !foundEntry) {
+    this._entryNotFound = true
+    entryGlobalIndex = 0
+  } else if (!foundEntry && this._entryCategory) {
     var catStart = indexes[this._entryCategory] || 0
     var catSize = merged.length - catStart
     if (catSize <= 0) {
@@ -459,6 +470,22 @@ ReadingEngine.prototype.isFirst = function () {
 
 ReadingEngine.prototype.isLast = function () {
   return this._globalIndex >= this._total - 1
+}
+
+/**
+ * BUG-20260806-002：是否传入了入口新闻 ID
+ * @returns {boolean}
+ */
+ReadingEngine.prototype.hasEntryNewsId = function () {
+  return !!this._entryNewsId
+}
+
+/**
+ * BUG-20260806-002：入口新闻是否在合并列表中命中
+ * @returns {boolean} true=命中 / false=未命中（可能已失效）
+ */
+ReadingEngine.prototype.isEntryFound = function () {
+  return !this._entryNotFound
 }
 
 /**
