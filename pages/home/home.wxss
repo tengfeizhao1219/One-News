@@ -228,12 +228,19 @@
   transform: translateX(0);
 }
 
+/* owner 2026-08-06 16:33: 面板整体滚动容器 —— 包裹 panel-header + panel-body，
+   面板内任意位置滑动均可驱动列表滚动（除滚轮区域由 catchtouchmove 独立接管） */
+.panel-scroll {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+
 .panel-header {
   display: flex;
   align-items: center;
   gap: 16rpx;
   padding: 100rpx 40rpx 28rpx;
-  flex-shrink: 0;
 }
 
 .panel-title {
@@ -254,11 +261,10 @@
   text-overflow: ellipsis;
 }
 
-/* UI-B7: 面板主体 = 左侧滚轮 + 右侧列表 */
+/* UI-B7: 面板主体 = 左侧滚轮 + 右侧列表
+   在 scroll-view 内，panel-body 不限制高度（由内容撑开），保证列表完整渲染 */
 .panel-body {
-  flex: 1;
   display: flex;
-  min-height: 0;
 }
 
 .panel-wheel {
@@ -276,10 +282,7 @@
 /* ============ 新闻列表 ============ */
 .panel-list {
   flex: 1;
-  /* BUG-FE-20260805-002 全局排查：统一滚动容器规范（min-height:0），防止 flex
-     子项被内容撑开导致滚动失效 */
-  min-height: 0;
-  overflow-y: auto;
+  /* 外层 panel-scroll 已提供滚动能力，panel-list 作为普通 view 不再需要 overflow/min-height */
 }
 
 /* UI-B7 §3.1 v5.3-final: 行距收窄，padding 8px 16px */

@@ -121,39 +121,46 @@
   </view>
 
   <!-- 侧边栏面板（UI-B7：左侧分类滚轮 + 右侧仅标题列表，圆角高亮） -->
-  <!-- BUG-PD-019: 面板自身绑定 touch 事件实现右滑关闭，因为 card-stage 在 showPanel 时被 display:none -->
+  <!-- BUG-PD-019 + owner 2026-08-06 16:33 裁定：面板整体滑动——
+       将 panel-header + panel-body 包裹在 scroll-view 中，面板内任意位置滑动均可驱动列表滚动；
+       滚轮组件通过 catchtouchmove 独立捕获触摸事件不冒泡；
+       右滑关闭手势绑定在外层 slide-panel（不被 scroll-view 吞掉的横向手势） -->
   <view class="slide-panel {{showPanel ? 'show' : ''}}"
     bindtouchstart="onPanelTouchStart"
     bindtouchend="onPanelTouchEnd">
-    <view class="panel-header">
-      <text class="panel-title">今日新闻</text>
-      <text class="panel-subtitle">{{panelSubtitle}}</text>
-    </view>
+    <scroll-view class="panel-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view class="panel-header">
+        <text class="panel-title">今日新闻</text>
+        <text class="panel-subtitle">{{panelSubtitle}}</text>
+      </view>
 
-    <view class="panel-body">
-      <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
-      <category-wheel
-        class="panel-wheel"
-        categories="{{panelCategories}}"
-        activeId="{{panelCategory}}"
-        bind:change="onWheelChange">
-      </category-wheel>
+      <view class="panel-body">
+        <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2）
+             使用 catchtouchstart/catchtouchmove 阻止冒泡，防止外层 scroll-view 干扰滚轮拖拽 -->
+        <category-wheel
+          class="panel-wheel"
+          categories="{{panelCategories}}"
+          activeId="{{panelCategory}}"
+          bind:change="onWheelChange">
+        </category-wheel>
 
-      <!-- 右侧仅标题列表（去缩略图/来源/时间，当前项圆角高亮） -->
-      <scroll-view class="panel-list" scroll-y>
-        <view 
-          wx:for="{{filteredNewsList}}" 
-          wx:key="id"
-          class="panel-item {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}"
-          data-index="{{item._originalIndex}}"
-          bindtap="onPanelItemTap">
-          <text class="panel-item-title">{{item.title}}</text>
+        <!-- 右侧仅标题列表（去缩略图/来源/时间，当前项圆角高亮）
+             不再需要独立 scroll-view——外层 panel-scroll 已提供滚动能力 -->
+        <view class="panel-list">
+          <view 
+            wx:for="{{filteredNewsList}}" 
+            wx:key="id"
+            class="panel-item {{item._originalIndex === panelCurrentIndex ? 'current' : ''}}"
+            data-index="{{item._originalIndex}}"
+            bindtap="onPanelItemTap">
+            <text class="panel-item-title">{{item.title}}</text>
+          </view>
+          <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
+            暂无新闻
+          </view>
         </view>
-        <view wx:if="{{filteredNewsList.length === 0}}" class="panel-empty">
-          暂无新闻
-        </view>
-      </scroll-view>
-    </view>
+      </view>
+    </scroll-view>
   </view>
 
 </view>

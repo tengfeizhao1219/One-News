@@ -701,9 +701,11 @@ Page({
   // ============ 侧边栏 ============
 
   /**
-   * BUG-PD-019: 侧边栏面板手势 —— 右滑关闭。
+   * BUG-PD-019 + owner 2026-08-06 16:33: 侧边栏面板手势 —— 右滑关闭。
    * card-stage 在 showPanel 时被 display:none，手势事件丢失，
    * 因此将 touch 事件直接绑在 slide-panel 上。
+   * 注意：面板内部滚动由 panel-scroll（scroll-view）处理，
+   * 纵向滑动不会触发关闭；只有横向右滑（dx>50 且 |dx|>|dy|）才关闭面板。
    */
   onPanelTouchStart(e) {
     this._panelTouchStartX = e.touches[0].clientX
@@ -715,6 +717,7 @@ Page({
     var dx = e.changedTouches[0].clientX - (this._panelTouchStartX || 0)
     var dy = e.changedTouches[0].clientY - (this._panelTouchStartY || 0)
     // 右滑且横向位移 > 纵向位移且超过 50px 阈值 → 关闭面板
+    // 纵向滑动（scroll-view 滚动）: dy 大 dx 小 → 不触发关闭
     if (dx > 50 && Math.abs(dx) > Math.abs(dy)) {
       this.closePanel()
     }
