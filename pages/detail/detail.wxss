@@ -104,15 +104,26 @@
 
 /* ============ 正文区域 ============ */
 
+/* BUG-20260806-012 (FE) 根因：
+   详情页真正根因不是状态栏背景，而是 .content (scroll-view) 的起始位置。
+   .page 是 display:flex/column 容器，.status-bar-fill 和 .nav-bar 都用 position:fixed
+   脱离了文档流（不占空间），导致 .content 用 flex:1 占据从 top:0 开始的全部高度；
+   而 scroll-view 内部没有 padding-top，所以正文从屏幕顶端 0px 开始渲染，
+   与 status-bar-fill 和 nav-bar 视觉重叠——这就是用户看到的"状态栏区域显示正文内容"。
+   修复：使用已有的 CSS 变量 --nav-offset（= menuTop + menuHeight + 12）
+   给 .content 加 padding-top，把内部内容推到 nav-bar 下方。
+   padding-top 在 scroll-view 内生效（enhanced 模式也支持），作为不破坏
+   position:fixed 状态栏/nav-bar 的最小风险修复。 */
 .content {
   flex: 1;
   /* BUG-FE-20260805-002 全局排查：统一滚动容器规范（min-height:0），防止 flex
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  /* BUG-20260806-004: 导航栏与胶囊对齐，content 从 nav 下方开始 */
-  margin-top: 0;
+  /* BUG-20260806-012: scroll-view 起跳位置 = nav-bar 底部 + 12rpx 下呼吸 */
+  padding-top: var(--nav-offset, 0px);
   padding-bottom: calc(128rpx + env(safe-area-inset-bottom) + 48rpx);
+  box-sizing: border-box;
 }
 
 /* 翻页动画容器 — 对标首页卡片逻辑 */
