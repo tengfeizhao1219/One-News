@@ -2,7 +2,8 @@
 
 .page {
   height: 100vh;
-  background-color: var(--bg-page);
+  /* BUG-20260806-010 (FE): 根背景统一 --bg-card，与详情页一致（原 --bg-page 造成顶部色带割裂 + 两页底色不一致） */
+  background-color: var(--bg-card);
   overflow: hidden;
   position: relative;
 }
