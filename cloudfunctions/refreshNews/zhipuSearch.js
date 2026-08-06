@@ -25,10 +25,13 @@ const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
-const ZHIPU_TIMEOUT = 40000  // DG-01 调整（2026-08-06 16:18）：50s→40s
-                             // 实证：50s 超时 + 60s 云函数上限 = 降级链无余量（16:14 life 60s 强杀）
-                             // 40s：5 条 prompt 实测 35-38s 可完成；超时后降级链（juhe/tianxing+摘要）~20s 内兜住
-                             // 代价：recommend 8 条可能超时降级（聚合 5 条兜底，不断供），可接受
+const ZHIPU_TIMEOUT = 20000  // DG-04（2026-08-06 22:5x）：50s→40s→20s。智谱 web_search 成功多在 3s 内，
+                             // 40s 多为无效超时（浪费预算）；20s 既保覆盖又给降级链留余量
+const QWEN_SEARCH_TIMEOUT = 15000   // DG-04：Qwen 降级搜索超时（账户欠费会 <1s 快速 400，正常联网 ~10s）
+const DEEPSEEK_SEARCH_TIMEOUT = 15000 // DG-04：DeepSeek 降级搜索超时（当前 402/超时基本不可用，短超时避免拖垮预算）
+// DG-04：单分类 AI 搜索阶段「硬预算」——无论几级引擎，搜索总耗时不得超过此值，
+// 超出立即转聚合/天行兜底，确保整函数 60s 内必有写入（根治 17:03 life 整函数 60s 超时 0 写入）
+const SEARCH_PHASE_BUDGET_MS = 40000
 
 // ─── DeepSeek API 配置（降级）──────────────────────
 
@@ -58,6 +61,13 @@ function backoffWithJitter(attempt) {
   const base = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * Math.pow(2, attempt))
   const jitter = base * 0.3 * (Math.random() * 2 - 1)  // ±30%
   return Math.round(base + jitter)
+}
+
+// DG-04（2026-08-06）：识别「账户级欠费/封禁」等终态错误——本次运行无法恢复，
+// 应快速跳过后续付费引擎以保预算（典型：阿里云 Arrearage / overdue-payment）
+function isAccountBlocked(err) {
+  const m = (err && err.message) || ''
+  return /Arrearage|overdue-payment|欠费|Access denied|account is in good standing/i.test(m)
 }
 
 // ─── system_kv 配额读写（策略4 + 策略6）─────────────
@@ -289,7 +299,7 @@ function parseNewsFromContent(content, category) {
  * 使用智谱 GLM-4-Flash + web_search 搜索新闻
  * B-12 策略3: 429 限流时指数退避重试（≤3 次）
  */
-async function searchWithZhipu(category) {
+async function searchWithZhipu(category, maxTimeout = ZHIPU_TIMEOUT) {
   const prompt = CATEGORY_PROMPTS[category]
   if (!prompt) throw new Error(`未知分类: ${category}`)
   if (!ZHIPU_API_KEY) throw new Error('未配置 ZHIPU_API_KEY')
@@ -327,7 +337,7 @@ async function searchWithZhipu(category) {
           'Content-Type': 'application/json',
         },
         body: requestBody,
-        timeout: ZHIPU_TIMEOUT,
+        timeout: Math.min(ZHIPU_TIMEOUT, maxTimeout),
       })
 
       const content = result.choices?.[0]?.message?.content || ''
@@ -358,7 +368,7 @@ const QWEN_API_KEY = process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
 const QWEN_BASE_HOST = 'dashscope.aliyuncs.com'
 const QWEN_PATH = '/compatible-mode/v1/chat/completions'
 const QWEN_MODEL = config.qwen?.model || 'qwen-turbo'
-const QWEN_TIMEOUT = config.qwen?.timeout || 40000
+const QWEN_TIMEOUT = config.qwen?.timeout || QWEN_SEARCH_TIMEOUT
 
 /**
  * 通义千问 API 作为智谱失败时的降级搜索（OpenAI 兼容模式 + enable_search 联网）
@@ -366,7 +376,7 @@ const QWEN_TIMEOUT = config.qwen?.timeout || 40000
  * @param {string} category 分类名
  * @returns {Promise<Array>} 新闻列表
  */
-async function searchWithQwen(category) {
+async function searchWithQwen(category, maxTimeout = QWEN_TIMEOUT) {
   const prompt = CATEGORY_PROMPTS[category]
   if (!prompt) throw new Error(`未知分类: ${category}`)
   if (!QWEN_API_KEY) throw new Error('未配置 DASHSCOPE_API_KEY')
@@ -397,7 +407,7 @@ async function searchWithQwen(category) {
           'Content-Type': 'application/json',
         },
         body: requestBody,
-        timeout: QWEN_TIMEOUT,
+        timeout: Math.min(QWEN_TIMEOUT, maxTimeout),
       })
 
       const content = result.choices?.[0]?.message?.content || ''
@@ -429,7 +439,7 @@ async function searchWithQwen(category) {
  * DeepSeek API 作为智谱失败时的降级搜索
  * B-12 策略3: 429 限流时指数退避重试（≤3 次）
  */
-async function searchWithDeepSeek(category) {
+async function searchWithDeepSeek(category, maxTimeout = DEEPSEEK_SEARCH_TIMEOUT) {
   const prompt = CATEGORY_PROMPTS[category]
   if (!prompt) throw new Error(`未知分类: ${category}`)
   if (!DEEPSEEK_API_KEY) throw new Error('未配置 DEEPSEEK_API_KEY')
@@ -461,7 +471,7 @@ async function searchWithDeepSeek(category) {
           'Content-Type': 'application/json',
         },
         body: requestBody,
-        timeout: ZHIPU_TIMEOUT,
+        timeout: Math.min(DEEPSEEK_SEARCH_TIMEOUT, maxTimeout),
       })
 
       const content = result.choices?.[0]?.message?.content || ''
@@ -502,25 +512,44 @@ async function searchWithDeepSeek(category) {
  * @param {object} quotaRef - 可变配额引用 { deepseekCalls, zhipuCalls }
  */
 async function searchNewsByCategory(category, db, quotaRef) {
+  // DG-04：搜索阶段总预算硬上限——无论几级引擎，搜索总耗时不得超过此值。
+  // 超出立即转聚合/天行兜底，确保整函数 60s 内必有写入（根治 life 整函数 60s 超时 0 写入）。
+  const deadline = Date.now() + SEARCH_PHASE_BUDGET_MS
+  const budgetLeft = () => Math.max(0, deadline - Date.now())
+
   // 首选：智谱 GLM-4-Flash
   try {
     console.log(`[zhipuSearch] 智谱搜索 ${category}...`)
-    const news = await searchWithZhipu(category)
+    const news = await searchWithZhipu(category, budgetLeft())
     console.log(`[zhipuSearch] 智谱 ${category}: ${news.length} 条`)
     // 策略6: 智谱调用计数
     if (quotaRef) quotaRef.zhipuCalls++
     return { news, engine: 'zhipu' }
   } catch (zhipuErr) {
     console.warn(`[zhipuSearch] 智谱 ${category} 失败: ${zhipuErr.message}`)
+    // 预算不足，放弃后续 AI 引擎，直接聚合/天行兜底
+    if (budgetLeft() < 3000) {
+      console.warn(`[zhipuSearch] ${category} 搜索预算耗尽，转聚合/天行兜底`)
+      return { news: [], engine: 'none' }
+    }
 
     // 降级①：通义千问 Qwen（DG-03 接入，免费额度，qwen-turbo 永久免费）
     try {
       console.log(`[zhipuSearch] 降级到 Qwen 搜索 ${category}...`)
-      const news = await searchWithQwen(category)
+      const news = await searchWithQwen(category, budgetLeft())
       console.log(`[zhipuSearch] Qwen ${category}: ${news.length} 条`)
       return { news, engine: 'qwen' }
     } catch (qwenErr) {
       console.warn(`[zhipuSearch] Qwen ${category} 失败: ${qwenErr.message}`)
+      // DG-04：账户欠费/封禁是终态错误，本次运行无法恢复 → 跳过同为付费服务的 DeepSeek，直转聚合/天行（省 ~15s）
+      if (isAccountBlocked(qwenErr)) {
+        console.error(`[zhipuSearch] ⚠️ Qwen 账户欠费/封禁(Arrearage) — 请到阿里云百炼缴清欠费后重试（免费额度需账户状态正常）。跳过 DeepSeek，转聚合/天行兜底`)
+        return { news: [], engine: 'none' }
+      }
+      if (budgetLeft() < 3000) {
+        console.warn(`[zhipuSearch] ${category} 搜索预算耗尽，转聚合/天行兜底`)
+        return { news: [], engine: 'none' }
+      }
     }
 
     // 降级②：DeepSeek API（策略4: 预算熔断；当前 402 余额不足会失败走聚合）
@@ -531,7 +560,7 @@ async function searchNewsByCategory(category, db, quotaRef) {
 
     try {
       console.log(`[zhipuSearch] 降级到 DeepSeek 搜索 ${category}...`)
-      const news = await searchWithDeepSeek(category)
+      const news = await searchWithDeepSeek(category, budgetLeft())
       console.log(`[zhipuSearch] DeepSeek ${category}: ${news.length} 条`)
       // 策略6: DeepSeek 调用计数
       if (quotaRef) quotaRef.deepseekCalls++
