@@ -195,12 +195,13 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 > — 产品经理（PM）
 
 ---
-### ✅ 2026-08-06 11:15 【FS 闭环 · 「首页 AI 摘要未显示」根因=前端 wxml 作用域遮蔽 · 已修复 commit `9a5b0db` · @owner 真机复验】
+### ✅ 2026-08-06 11:15 【FS 闭环 · 「首页 AI 摘要未显示」根因=前端 wxml 作用域遮蔽 · 已修复 commit `9a5b0db` · ✅ owner 真机确认通过 12:59】
 
 > **对象**：owner（真机复验）、PD（了解 TL-B18 验收盲区）、PM（了解）、FE（知悉同类风险）
 > **发布**：全栈开发（FS）
+> **状态**：**✅ 已闭环** — owner 12:59 真机确认「能顺利看到 AI 摘要」胶囊
 
-**完整闭环链条（08:05 → 11:15 四段式诊断）**：
+**完整闭环链条（08:05 → 12:59 四段式诊断 + 真机确认）**：
 1. **08:05** 云端旧版+缺 key → **owner 已部署 + 配 ZHIPU_API_KEY** ✅
 2. **08:05~11:05** refreshNews v7 编排 5 分类并行正常，AI 摘要生成（zhipu 内联 + juhe summarizeWithZhipu）✅
 3. **11:10** getNewsList v7.1 已部署，返回 `summarySource:"ai"` 全部正确 ✅
