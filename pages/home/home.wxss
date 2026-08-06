@@ -253,6 +253,8 @@
    panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
 
 /* 面板标题栏：absolute 固定顶部 */
+/* BUG-20260806-010①（owner 18:34）：副标题从「今日新闻」右侧 → 移到下方左对齐，
+   header 改 column 布局；高度由 180rpx 增至 196rpx（100 上 padding + 36 标题 + 8 gap + 24 副标题 + 28 下 padding） */
 .panel-header {
   position: absolute;
   top: 0;
@@ -260,8 +262,9 @@
   right: 0;
   z-index: 5;
   display: flex;
-  align-items: center;
-  gap: 16rpx;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8rpx;
   padding: 100rpx 40rpx 28rpx;
 }
 
@@ -273,9 +276,8 @@
   flex-shrink: 0;
 }
 
-/* UI-B7: 副标题「当前分类 · N 条」 */
+/* UI-B7: 副标题「当前分类 · N 条」（BUG-010：移至「今日新闻」下方左对齐） */
 .panel-subtitle {
-  flex: 1;
   font-size: calc(24rpx * var(--font-scale));
   color: var(--text-secondary);
   overflow: hidden;
@@ -283,10 +285,10 @@
   text-overflow: ellipsis;
 }
 
-/* 面板主体：absolute 铺满 header 下方区域（header 高约 180rpx） */
+/* 面板主体：absolute 铺满 header 下方区域（header 高约 196rpx，BUG-010 随 column 布局上调） */
 .panel-body {
   position: absolute;
-  top: 180rpx;
+  top: 196rpx;
   left: 0;
   right: 0;
   bottom: 0;
