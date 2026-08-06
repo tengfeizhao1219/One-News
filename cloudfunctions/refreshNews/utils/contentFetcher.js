@@ -325,82 +325,88 @@ module.exports = {
  * @returns {Promise<string|null>} 100-150 字中文摘要
  */
 function summarizeWithZhipu(content, title) {
-  const cfg = config.zhipuSummary
-  const apiKey = cfg.apiKey
-  if (!apiKey) {
-    console.warn('[contentFetcher] ZHIPU_API_KEY 未配置，跳过 AI 摘要')
+    // config 模块级引用（顶部 require ../config）
+  // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
+  const engines = []
+  const zhipuCfg = (config.zhipuSummary || {})
+  if (zhipuCfg.apiKey) {
+    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
+  }
+  const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
+  if (dashKey) {
+    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen-turbo', timeout: 8000 })
+  }
+  if (engines.length === 0) {
+    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU/DASHSCOPE），跳过 AI 摘要')
     return Promise.resolve(null)
   }
-  // v6.2：降低正文门槛到 10 字，提高 AI 摘要覆盖率
+  // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)
+  const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
 
-  const input = content.slice(0, cfg.maxInputChars || 2000)
-
-  const body = JSON.stringify({
-    model: cfg.model || 'glm-4-flash',
-    messages: [
-      {
-        role: 'system',
-        content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文简洁摘要。要求：突出核心事件与关键信息，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
-      },
-      {
-        role: 'user',
-        content: `新闻标题：${title || ''}\n\n新闻正文：\n${input}`,
-      },
-    ],
-    max_tokens: 300,
-    temperature: 0.3,
-  })
-
-  const doRequest = () => new Promise((resolve) => {
-    const https = require('https')
-    const url = new URL(cfg.baseUrl)
-    const req = https.request({
-      hostname: url.hostname,
-      path: url.pathname + url.search,
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-      timeout: cfg.timeout || 8000,
-    }, (res) => {
-      let data = ''
-      res.on('data', chunk => { data += chunk })
-      res.on('end', () => {
-        try {
-          const r = JSON.parse(data)
-          const summary = r.choices && r.choices[0] && r.choices[0].message
-            ? r.choices[0].message.content.trim()
-            : null
-          resolve(summary)
-        } catch (e) {
-          resolve(null)
-        }
+  // 顺序尝试各引擎（智谱 → Qwen），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
+  function tryEngine(idx) {
+    return new Promise((resolve) => {
+      if (idx >= engines.length) { resolve(null); return }
+      const eng = engines[idx]
+      const body = JSON.stringify({
+        model: eng.model,
+        messages: [
+          {
+            role: 'system',
+            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文简洁摘要。要求：突出核心事件与关键信息，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
+          },
+          {
+            role: 'user',
+            content: `新闻标题：${title || ''}\n\n新闻正文：\n${input}`,
+          },
+        ],
+        max_tokens: 300,
+        temperature: 0.3,
       })
+      const doRequest = () => new Promise((r) => {
+        const https = require('https')
+        const url = new URL(eng.baseUrl)
+        const req = https.request({
+          hostname: url.hostname,
+          path: url.pathname + url.search,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${eng.apiKey}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout: eng.timeout,
+        }, (res) => {
+          let data = ''
+          res.on('data', chunk => { data += chunk })
+          res.on('end', () => {
+            try {
+              const resp = JSON.parse(data)
+              const summary = resp.choices && resp.choices[0] && resp.choices[0].message
+                ? resp.choices[0].message.content.trim()
+                : null
+              r(summary)
+            } catch (e) { r(null) }
+          })
+        })
+        req.on('error', () => r(null))
+        req.on('timeout', () => { req.destroy(); r(null) })
+        req.write(body)
+        req.end()
+      })
+      ;(async () => {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const summary = await doRequest()
+          if (summary && summary.length >= 20) { resolve(summary); return }
+          if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
+        }
+        console.warn(`[summarize] ${eng.name} 摘要失败，尝试下一引擎`)
+        tryEngine(idx + 1).then(resolve)
+      })()
     })
-
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => { req.destroy(); resolve(null) })
-    req.write(body)
-    req.end()
-  })
-
-  // 最多重试 2 次（共 3 次尝试），指数退避 500ms/1500ms
-  return new Promise(async (resolve) => {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const summary = await doRequest()
-      if (summary && summary.length >= 20) {
-        resolve(summary)
-        return
-      }
-      if (attempt < 2) {
-        await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
-      }
-    }
-    resolve(null)
-  })
+  }
+  return tryEngine(0)
 }
 
 // v6.2：保留旧函数名兼容（contentFetcher 内部已改用 summarizeWithZhipu）

@@ -35,6 +35,16 @@ module.exports = {
     timeout: 45000,
   },
 
+  // 通义千问 Qwen API（refreshNews 智谱降级兜底数据源 · DG-03 接入 2026-08-06）
+  // 优先读环境变量 DASHSCOPE_API_KEY（阿里云百炼申请，qwen-turbo 免费额度）；
+  // OpenAI 兼容模式 + enable_search 联网搜索。降级链：智谱 → Qwen → DeepSeek → 聚合/天行
+  qwen: {
+    apiKey: process.env.DASHSCOPE_API_KEY || '',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+    model: 'qwen-turbo',
+    timeout: 40000,
+  },
+
   // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
   bailian: {
     apiKey: process.env.DASHSCOPE_API_KEY || '',

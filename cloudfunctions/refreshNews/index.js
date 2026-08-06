@@ -295,19 +295,20 @@ async function runCategoryPipeline(category, quotaBaseline) {
   let skipFetch = false
   let skipAiSummary = false
 
-  const zhipuKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || ''
-  if (zhipuKey) {
+  // DG-03：任一 AI 搜索 key（智谱/通义）即可进搜索分支（内部含三级降级：智谱→Qwen→DeepSeek）
+  const aiKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
+  if (aiKey) {
     const { searchNewsByCategory } = require('./zhipuSearch')
     try {
       const r = await searchNewsByCategory(category, db, quotaRef)
       if (r.news && r.news.length > 0) {
         news = r.news
-        engine = r.engine // 'zhipu' | 'deepseek'
-        skipFetch = true       // 智谱/DeepSeek 已自带 content（300-500 字正文）
+        engine = r.engine // 'zhipu' | 'qwen' | 'deepseek'
+        skipFetch = true       // AI 源已自带 content（500-800 字正文）
         skipAiSummary = true   // 已内联 summary（AI 来源）
-        console.log(`[refreshNews][${category}] 智谱/DeepSeek 命中: ${news.length} 条 (engine=${engine})`)
+        console.log(`[refreshNews][${category}] AI 搜索命中: ${news.length} 条 (engine=${engine})`)
       } else {
-        console.warn(`[refreshNews][${category}] 智谱/DeepSeek 无结果，降级聚合/天行`)
+        console.warn(`[refreshNews][${category}] AI 搜索无结果，降级聚合/天行`)
       }
     } catch (err) {
       console.error(`[refreshNews][${category}] 智谱搜索异常:`, err.message)
@@ -443,6 +444,7 @@ exports.main = async (event) => {
   //    单独配置 DEEPSEEK_API_KEY 无法产出数据，故不纳入检测（防旧 B-13 误伤双引擎）。
   const availableSources = []
   if (process.env.ZHIPU_API_KEY || config.zhipu?.apiKey) availableSources.push('zhipu')
+  if (process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey) availableSources.push('qwen')  // DG-03
   if (config.juhe.apiKey) availableSources.push('juhe')
   if (config.tian.apiKey) availableSources.push('tianxing')
   if (availableSources.length === 0) {

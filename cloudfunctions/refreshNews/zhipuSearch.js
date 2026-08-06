@@ -352,6 +352,77 @@ async function searchWithZhipu(category) {
   throw lastErr
 }
 
+// ─── 通义千问 Qwen API 降级搜索（DG-03 接入 2026-08-06）─────────────────
+
+const QWEN_API_KEY = process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
+const QWEN_BASE_HOST = 'dashscope.aliyuncs.com'
+const QWEN_PATH = '/compatible-mode/v1/chat/completions'
+const QWEN_MODEL = config.qwen?.model || 'qwen-turbo'
+const QWEN_TIMEOUT = config.qwen?.timeout || 40000
+
+/**
+ * 通义千问 API 作为智谱失败时的降级搜索（OpenAI 兼容模式 + enable_search 联网）
+ * qwen-turbo 免费额度（阿里云百炼新人 7000 万+ token / qwen-turbo 永久免费）
+ * @param {string} category 分类名
+ * @returns {Promise<Array>} 新闻列表
+ */
+async function searchWithQwen(category) {
+  const prompt = CATEGORY_PROMPTS[category]
+  if (!prompt) throw new Error(`未知分类: ${category}`)
+  if (!QWEN_API_KEY) throw new Error('未配置 DASHSCOPE_API_KEY')
+
+  const requestBody = JSON.stringify({
+    model: QWEN_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+      },
+      { role: 'user', content: prompt }
+    ],
+    enable_search: true,  // 通义千问 OpenAI 兼容模式联网搜索
+    temperature: 0.1,
+    max_tokens: 12000,
+  })
+
+  let lastErr = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await httpsRequest({
+        hostname: QWEN_BASE_HOST,
+        path: QWEN_PATH,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${QWEN_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+        timeout: QWEN_TIMEOUT,
+      })
+
+      const content = result.choices?.[0]?.message?.content || ''
+      // 复用 zhipu 的 JSON 解析；id 前缀替换为 qwen_ 避免与智谱/DeepSeek 冲突
+      return parseNewsFromContent(content, category).map(item => ({
+        ...item,
+        id: item.id.replace('zhipu_', 'qwen_'),
+      }))
+    } catch (err) {
+      lastErr = err
+      if (err.errorCode === config.errorCodes.API_RATE_LIMIT) {
+        if (attempt < MAX_RETRIES) {
+          const delay = err.retryAfterMs || backoffWithJitter(attempt)
+          console.warn(`[zhipuSearch] Qwen ${category} 限流，第 ${attempt + 1}/${MAX_RETRIES} 次重试，等待 ${delay}ms`)
+          await sleep(delay)
+          continue
+        }
+        console.warn(`[zhipuSearch] Qwen ${category} 限流重试耗尽（${MAX_RETRIES} 次）`)
+      }
+      break
+    }
+  }
+  throw lastErr
+}
+
 // ─── DeepSeek API 降级搜索 ─────────────────────────
 
 /**
@@ -442,7 +513,17 @@ async function searchNewsByCategory(category, db, quotaRef) {
   } catch (zhipuErr) {
     console.warn(`[zhipuSearch] 智谱 ${category} 失败: ${zhipuErr.message}`)
 
-    // 降级：DeepSeek API（策略4: 预算熔断）
+    // 降级①：通义千问 Qwen（DG-03 接入，免费额度，qwen-turbo 永久免费）
+    try {
+      console.log(`[zhipuSearch] 降级到 Qwen 搜索 ${category}...`)
+      const news = await searchWithQwen(category)
+      console.log(`[zhipuSearch] Qwen ${category}: ${news.length} 条`)
+      return { news, engine: 'qwen' }
+    } catch (qwenErr) {
+      console.warn(`[zhipuSearch] Qwen ${category} 失败: ${qwenErr.message}`)
+    }
+
+    // 降级②：DeepSeek API（策略4: 预算熔断；当前 402 余额不足会失败走聚合）
     if (quotaRef && quotaRef.deepseekCalls >= DEEPSEEK_DAILY_CAP) {
       console.warn(`[zhipuSearch] DeepSeek ${category} 跳过 — 已达日配额 ${DEEPSEEK_DAILY_CAP}`)
       return { news: [], engine: 'skipped_quota' }
@@ -540,6 +621,7 @@ async function searchAllCategories(categories = null, db = null) {
 module.exports = {
   searchNewsByCategory,
   searchAllCategories,
+  searchWithQwen,
   CATEGORY_PROMPTS,
   readDailyQuota,
   writeDailyQuota,
