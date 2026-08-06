@@ -2,7 +2,9 @@
 <view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
 
   <!-- 顶部导航栏：主页（左）+ 标题 · D-09 v1.2（仅下扩展 12px，按钮锚定胶囊中心） -->
-  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx);">
+  <!-- BUG-20260806-009 v3: 状态栏不透明背景层 -->
+  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-page);"></view>
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-page);">
     <!-- BUG-20260806-003: 第 2 层页面统一使用主页按钮（home.svg + reLaunch） -->
     <!-- BUG-20260806-009 follow-up: 按钮是 .nav-bar 子元素 absolute 定位，相对 nav-bar 偏移。
          正确公式：top = menuHeight/2 - 32rpx（去掉 menuTop，避免双重定位） -->

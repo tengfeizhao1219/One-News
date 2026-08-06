@@ -34,6 +34,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
+      // BUG-20260806-009 v3: 状态栏背景层高度（custom 模式下 setNavigationBarColor 无效）
+      statusBarHeight: (app && app.globalData.statusBarHeight) || 20,
       // D-09 v1.2（BUG-20260806-007）: 内容起始基准 = menuTop + menuHeight + 12px
       navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       fontScaleTier: tier,

@@ -1195,9 +1195,10 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 
 #### 根因分析
 
-**状态栏透明**：
-- `app.js` `_syncWindowStyle` 仅调用了 `wx.setBackgroundColor`（窗口背景色）和 `wx.setBackgroundTextStyle`（下拉 loading 点颜色），**未调用 `wx.setNavigationBarColor`** 来设置状态栏前景/背景色。
-- 微信自定义导航栏模式下，状态栏背景色由 `wx.setNavigationBarColor` 控制。
+**状态栏透明**（v3 更新）：
+- ~~v1 方案（`wx.setNavigationBarColor`）~~：**无效**——`navigationStyle: custom` 模式下该 API 控制的是原生导航栏，而 custom 模式已隐藏原生导航栏，API 调用被忽略。owner 16:16 真机复验「状态栏还是透明的」证实。
+- **v3 正确方案（微信官方做法）**：页面顶部加 **fixed 等高背景层**（`.status-bar-fill`，`height = statusBarHeight`，`background-color` = 页面背景色，`z-index: 21`）覆盖状态栏区域；同时给 `.nav-bar` / `.fixed-top-bar` 补上背景色（原为透明，滚动内容会从导航栏区域透出）。
+- 深浅色同步：背景色用 CSS 变量（`--bg-card` / `--bg-page`），跟随主题自动切换，无需运行时 API。
 
 **按钮对齐偏差**（双重定位 bug）：
 - D-09 v1.2 按钮公式 `calc(menuTop + menuHeight/2 - 32rpx/2)` 假定了按钮高度为 **32rpx**，但实际 CSS 中按钮尺寸为 `width: 64rpx; height: 64rpx`。
@@ -1208,10 +1209,10 @@ Promise.then 回调仍会调用 `that.setData()`，微信控制台打印 "page n
 
 #### 修复方案
 
-**① 状态栏不透明**（`app.js` + 6 页面 `onLoad`）：
-- `app.js` `_syncWindowStyle` 新增 `wx.setNavigationBarColor` 调用；
-- **关键**：API 是页面级，App.onLaunch 调用可能不生效，**必须在每个页面 onLoad 中调用**（新增 `app.setNavBarColor(theme)` 公共方法）；
-- 深浅色同步：浅色 `#F5F3F0` / 深色 `#000000`。
+**① 状态栏不透明（v3 最终方案）**：
+- ~~v1：`wx.setNavigationBarColor`（无效，custom 模式下被忽略）~~；
+- **v3（已落地）**：① 全局 `.status-bar-fill` 类（`app.wxss`：fixed + top:0 + z-index:21）；② 6 页面 WXML 顶部加 `<view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: [页面背景色];">`；③ 6 页面 JS 注入 `statusBarHeight`；④ 6 页面 `.nav-bar`/`.fixed-top-bar` 补背景色（页面背景色）；
+- 深浅色同步：纯 CSS 变量（`--bg-card`/`--bg-page`），主题切换自动跟随，无需运行时 API。
 
 **② 按钮对齐修正**（5 页面 WXML，`detail` / `favorites` / `history` / `settings` / `about`）：
 ```
@@ -1227,7 +1228,7 @@ top: calc({{menuHeight}}px / 2 - 32rpx)
 
 #### 验收标准（AC）
 
-- **AC-009-01**：浅色/深色模式下状态栏均不透明，背景色与页面主题一致（浅色 `#F5F3F0` / 深色 `#000000`）；
+- **AC-009-01**：浅色/深色模式下状态栏均不透明，背景色与页面主题一致（浅色 `#F5F3F0` / 深色 `#000000`）——**v3 背景层方案**：6 页面顶部均有 `.status-bar-fill` 层（高度 = statusBarHeight，背景 = 页面背景色变量），滚动内容不从状态栏区域透出；
 - **AC-009-02**：5 页面（detail/favorites/history/settings/about）返回/Home 按钮与右上角原生胶囊按钮垂直中心对齐（偏差 ≤ 2px）；
 - **AC-009-03**：按钮 top 公式统一为 `calc(menuHeight/2 - 32rpx)`（相对 nav-bar 内的偏移，**不包含 menuTop**），按钮高 64rpx，中心 = 胶囊中心；
 - **AC-009-04**：修复不引入回归（各页面滚动、点击、翻页行为不变）。
@@ -1236,7 +1237,10 @@ top: calc({{menuHeight}}px / 2 - 32rpx)
 
 | 文件 | 修改内容 |
 |---|---|
-| `app.js` | `_syncWindowStyle` 新增 `wx.setNavigationBarColor` |
+| `app.wxss` | 新增 `.status-bar-fill` 全局类（fixed + z-index:21） |
+| `app.js` | `_syncWindowStyle` 新增 `wx.setNavigationBarColor`（v3 保留为兜底，实际不生效） |
+| 6 页面 JS（home/detail/favorites/history/settings/about） | 注入 `statusBarHeight` |
+| 6 页面 WXML | 顶部加 `.status-bar-fill` 背景层 + `.nav-bar`/`.fixed-top-bar` 补背景色 |
 | `pages/detail/detail.wxml` | 按钮 top 公式修正 |
 | `pages/favorites/favorites.wxml` | 按钮 top 公式修正 |
 | `pages/history/history.wxml` | 按钮 top 公式修正 |

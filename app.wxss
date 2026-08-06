@@ -120,6 +120,19 @@ page {
   flex-shrink: 0;
 }
 
+/* BUG-20260806-009 v3（2026-08-06）：状态栏不透明背景层。
+   navigationStyle:custom 模式下 wx.setNavigationBarColor 无效（原生导航栏被隐藏），
+   微信官方做法 = 页面顶部加 fixed 等高背景层覆盖状态栏区域。
+   高度与背景色由页面 WXML 内联注入（height: statusBarHeight; background-color: 页面背景色）。
+   z-index 21：高于内容（1~20），低于 nav-bar（22），保证内容滚动不从状态栏区域透出。 */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 21;
+}
+
 /* 全局组件样式 */
 .category-tag {
   display: inline-block;

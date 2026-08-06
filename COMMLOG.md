@@ -1,3 +1,19 @@
+## [2026-08-06 16:20] 🔄 BUG-20260806-009 v3 · 状态栏背景层方案（owner 16:16 复验「状态栏还是透明」）| 会话：[产品设计师(PD)]
+
+**关键认知修正**：`wx.setNavigationBarColor` 在 `navigationStyle: custom` 模式下**无效**——该 API 控制的是原生导航栏，custom 模式已隐藏原生导航栏，API 被忽略。v1/v2 方案（app.js + 页面 onLoad 调用）全部失效，owner 真机复验证实。
+
+**v3 正确方案（微信官方做法）**：
+1. `app.wxss` 新增 `.status-bar-fill` 全局类：fixed + top:0 + z-index:21（高于内容低于 nav-bar）
+2. 6 页面 WXML 顶部加 `<view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: 页面背景色;">` 覆盖状态栏区域
+3. 6 页面 JS 注入 `statusBarHeight`（app.globalData 已有）
+4. 6 页面 `.nav-bar`/`.fixed-top-bar` 补背景色（原透明 → 页面背景色，滚动内容不再透出）
+
+**背景色按页面区分**：detail/favorites/history 用 `--bg-card`；settings/about/home 用 `--bg-page`；深浅色靠 CSS 变量自动跟随，无需运行时 API。
+
+**AC-009-01 更新**：6 页面顶部均有状态栏背景层，滚动内容不从状态栏区域透出。
+
+> — 产品设计师（PD） 2026-08-06 16:20
+
 ## [2026-08-06 16:15] 🔄 BUG-20260806-008 v2.7 追修 · wheel 面板内顶部对齐（owner 16:09 真机反馈）| 会话：[产品设计师(PD)]
 
 **owner 原话**：「侧边分类的位置要稍微再高一点，固定的分类名称展示区域上方只保留一个分类名称展示区域就可以了，不要留太多的空间」

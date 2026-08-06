@@ -79,6 +79,8 @@ Page({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app.globalData && app.globalData.menuTop) || 0,
       menuHeight: (app.globalData && app.globalData.menuHeight) || 32,
+      // BUG-20260806-009 v3: 状态栏背景层高度（custom 模式下 setNavigationBarColor 无效）
+      statusBarHeight: (app.globalData && app.globalData.statusBarHeight) || 20,
       themeClass: (app.globalData && app.globalData.themeClass) || '',
       // BUG-FS-20260805-001: dock 菜单 icon 按主题切换白色版
       isDark: this._isSystemDark(),
