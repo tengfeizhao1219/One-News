@@ -1,18 +1,23 @@
 <!-- 首页 - 卡片流主视图 -->
 <!-- UX-FIX-F13: 根节点注入 --font-scale / --font-scale-meta，修复缩放变量从未进入 DOM 的断链 -->
-<!-- BUG-20260806-014 v2 (FE): 注入 --menu-top（胶囊顶部位置 px）,"今日新闻"标题与胶囊垂直对齐；
-     BUG-20260806-019 (FE): 新增 --menu-height 注入，配合 calc 让"今日新闻"文字中心与胶囊中心垂直对齐；
+<!-- BUG-20260806-014 v2 (FE): 注入 --menu-top（胶囊顶部位置 px），"今日新闻"标题顶部与胶囊顶部对齐；
      --status-bar-height 保留兜底 -->
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --status-bar-height: {{statusBarHeight}}px; --menu-top: {{menuTop}}px; --menu-height: {{menuHeight}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --status-bar-height: {{statusBarHeight}}px; --menu-top: {{menuTop}}px;">
 
   <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
   <!-- D-09 v1.2（BUG-20260806-007）: 占位对齐胶囊，高度仅下扩展 12px（与全页面条带规范一致） -->
   <!-- BUG-20260806-009 v3: 状态栏不透明背景层（home 页卡片全屏，需遮住状态栏区域防内容透出） -->
   <!-- BUG-20260806-010 (FE): 状态栏/顶部条带背景统一 --bg-card，与详情页一致，消除顶部色带割裂 -->
-  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+  <!-- BUG-20260806-020 (FE) 根因: status-bar-fill 高度用 statusBarHeight 会露底。
+       胶囊顶部 menuTop 通常比 statusBarHeight 大 3~6px（胶囊与状态栏底部有间隙），
+       原实现 height: statusBarHeight 只覆盖到 44px，而 fixed-top-bar 从 menuTop(≈50px) 开始，
+       中间 44~50px 露出下层卡片内容 → 用户看到的"状态栏中间空隙"。
+       修复: height 改用 menuTop，让状态栏背景层与 fixed-top-bar 无缝衔接（同色相邻）。
+       与详情页/浏览历史页保持一致的两层结构。 -->
+  <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-card);"></view>
   <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);"></view>
 
 
@@ -146,8 +151,7 @@
          （=屏幕顶端 0），高度 = statusBarHeight，背景 var(--bg-card)，与详情页高度一致。 -->
     <view class="panel-status-bar" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
 
-    <!-- 面板标题栏：absolute 固定顶部（top = 胶囊顶部，高度 = 胶囊高度，flex 垂直居中，
-         使"今日新闻"文字中心与右上角胶囊中心垂直对齐） -->
+    <!-- 面板标题栏：absolute 固定顶部（padding-top = var(--menu-top) 已对齐胶囊顶部） -->
     <view class="panel-header">
       <text class="panel-title">今日新闻</text>
       <text class="panel-subtitle">{{panelSubtitle}}</text>
