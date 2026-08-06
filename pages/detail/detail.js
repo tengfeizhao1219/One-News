@@ -172,6 +172,29 @@ Page({
   // BUG-004: 页面销毁标记，防止回调中 setData
   onUnload: function () {
     this._destroyed = true
+    // BUG-20260806-023 (FE): onUnload 时回写阅读位置 —— 覆盖「系统返回手势/物理返回键」场景。
+    // 原仅 goBack()（顶部返回按钮）回写 _detailReturnState，系统返回手势走 onUnload 不回写，
+    // 导致首页从详情返回后仍显示初始新闻。此处与 goBack 同逻辑回写，无论哪种返回方式首页都能恢复。
+    this._writeReturnState()
+  },
+
+  /**
+   * BUG-20260806-023 (FE): 回写阅读位置到 app.globalData._detailReturnState（供首页恢复）
+   * goBack 与 onUnload 共用，避免两种返回方式行为不一致
+   */
+  _writeReturnState: function () {
+    try {
+      if (this._engine) {
+        var state = this._engine.getReturnState()
+        app.globalData._detailReturnState = state
+      } else {
+        // 引擎降级时使用旧格式
+        app.globalData._detailReturnState = {
+          category: this.data.category,
+          readingIndex: this.data.currentIndex,
+        }
+      }
+    } catch (e) {}
   },
 
   /**
@@ -659,16 +682,8 @@ Page({
 
   goBack: function () {
     // B-07: 回写阅读位置（含跨分类索引 + newsId 用于精确定位）
-    if (this._engine) {
-      var state = this._engine.getReturnState()
-      app.globalData._detailReturnState = state
-    } else {
-      // 引擎降级时使用旧格式
-      app.globalData._detailReturnState = {
-        category: this.data.category,
-        readingIndex: this.data.currentIndex,
-      }
-    }
+    // BUG-20260806-023: 复用 _writeReturnState（与 onUnload 同逻辑），保证两种返回方式一致
+    this._writeReturnState()
     wx.navigateBack()
   },
 
