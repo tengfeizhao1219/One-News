@@ -104,55 +104,16 @@
   margin-bottom: 16rpx;
 }
 
-.origin-strong {
-  font-size: 30rpx;
-  line-height: 1.8;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* 理念列表 */
-.principle {
-  display: flex;
-  padding: 18rpx 0;
-}
-
-.principle + .principle {
+/* 初衷落款（owner 亲笔寄语：书于正式上线前） */
+.origin-sign {
+  margin-top: 28rpx;
+  padding-top: 20rpx;
   border-top: 1rpx solid var(--divider);
-}
-
-.principle-index {
-  flex-shrink: 0;
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 50%;
-  background-color: var(--primary-subtle);
-  color: var(--primary);
   font-size: 24rpx;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 4rpx;
-}
-
-.principle-body {
-  flex: 1;
-  margin-left: 20rpx;
-  min-width: 0;
-}
-
-.principle-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.principle-desc {
-  margin-top: 6rpx;
-  font-size: 26rpx;
   line-height: 1.6;
-  color: var(--text-body);
+  color: var(--text-secondary);
+  text-align: right;
+  letter-spacing: 1rpx;
 }
 
 /* 坚持的事 */

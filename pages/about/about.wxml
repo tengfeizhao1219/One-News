@@ -25,27 +25,20 @@
     </view>
 
     <!-- 我们的初衷 -->
+    <!-- 2026-08-07 owner 亲笔介绍：替换原 v1 文案（上线前寄语） -->
     <view class="section">
       <view class="section-title">我们的初衷</view>
       <view class="card">
-        <view class="origin-p">新闻本该是「知道今天发生了什么」。</view>
-        <view class="origin-p">可打开任何一个新闻 App，迎接你的往往是：信息流、弹窗、算法推荐、无限下拉、视频、广告……你只是想看几条新闻，却像走进了一个喧闹的集市。</view>
-        <view class="origin-p">所以我们做了「一页」——一个简单到近乎固执的新闻阅读器：</view>
-        <view class="origin-strong">打开就是今天值得读的一条，上下滑动逐页翻看。没有信息流，没有「猜你喜欢」，没有无限刷。</view>
-      </view>
-    </view>
-
-    <!-- 我们的理念 -->
-    <view class="section">
-      <view class="section-title">我们的理念</view>
-      <view class="card">
-        <view class="principle" wx:for="{{principles}}" wx:key="title">
-          <view class="principle-index">{{index + 1}}</view>
-          <view class="principle-body">
-            <view class="principle-title">{{item.title}}</view>
-            <view class="principle-desc">{{item.desc}}</view>
-          </view>
-        </view>
+        <view class="origin-p">关于一页。我个人其实很久之前就苦于寻找一款干净，纯粹，不被打扰的新闻类软件，作为填充上下班路上可以利用零散时间来获取一些当下时事的入口。然在当下信息爆炸的时代，很难去找到这样一款简单易用的软件。这便是【一页 One News】诞生的初衷。</view>
+        <view class="origin-p">这个小程序的诞生，也实在是得益于AI时代的来临，才给了我这样一个不懂代码的人也能根据自己想法去推出一款小程序的可能性。是的，这个小程序是花了大概一周半时间且全程都是通过AI来实现，我个人作为用户只是提出我的需求和建议，其余完全由AI实现，很赞！</view>
+        <view class="origin-p">我们再回到一页上面。我想很多人也有和我一样的诉求：仅仅只是浏览一些当下的新闻。不想被推荐，不想被追踪，也不想被学习我的个人行为偏好。有什么读什么，仅此而已。</view>
+        <view class="origin-p">于是，在整个设计阶段，我一再强调 简单，极致的用户体验。我甚至都想把一些多余的返回/主页的按钮也去掉。所以当你进入这个小程序的时候，你会发现功能似乎少的可怜，主页上除了新闻似乎没有其他功能可用，这恰恰是一页想要实现的目的。</view>
+        <view class="origin-p">我们筛选了一些新闻，当前只包含了很少的几个分类，且每个分类下面也只拉取了10条以内的新闻，每小时更新一次。因为我觉得，我们阅读新闻的目的只是去获取一些时事，但你不可能沉迷于此，因此我想为这个新闻设置一个边界，阅读完了，就该结束了，而不是一直刷下去。</view>
+        <view class="origin-p">但是，我很遗憾的告诉大家，由于目前整个新闻的来源都是依赖一些公开且免费😂的三方新闻接口，因此新闻质量上参差不齐，这也是我一直苦恼的地方，后续会持续想办法优化，实在不行就氪金。</view>
+        <view class="origin-p">同时，我觉得还有很多有价值的功能待实现，比如妻子提出来的可以针对感兴趣的新闻进行实时追踪，也比如读到某一条新闻想要了解更多时，通过AI进行搜索更多，再比如可以借助AI快速阅读等等。。。，一切皆在路上。</view>
+        <view class="origin-p">无论如何，我都想让一页，越简单越好，同时赋予它新颖，有趣又能帮助我们简单，高质量阅读新闻的诉求。</view>
+        <view class="origin-p">不再赘述，希望大家用的轻松，用的简单。</view>
+        <view class="origin-sign">一页 One News · 书于 2026年8月7号 正式上线前</view>
       </view>
     </view>
 
