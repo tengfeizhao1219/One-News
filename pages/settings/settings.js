@@ -181,15 +181,11 @@ Page({
   },
 
   /**
-   * UI-B9: 意见反馈
+   * RQ-22-FE（PRD RQ-22 · AC-01）: 意见反馈落地为留言板页。
+   * 原 wx.openFeedback()（官方反馈入口，无实际留言功能）改为跳转 pages/feedback/feedback。
    */
   onFeedback: function () {
-    // 小程序内优先尝试 openFeedback，不支持则 toast 引导
-    if (wx.openFeedback) {
-      wx.openFeedback()
-    } else {
-      wx.showToast({ title: '已唤起反馈入口', icon: 'none' })
-    }
+    wx.navigateTo({ url: '/pages/feedback/feedback' })
   },
 
   /**

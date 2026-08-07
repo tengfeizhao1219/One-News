@@ -1,0 +1,36 @@
+<!-- 文明留言公约页 — RQ-22-FE · D-02 §2/§3.2 -->
+<view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
+
+  <!-- BUG-20260806-009 v3: 状态栏不透明背景层 -->
+  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-page);"></view>
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-page);">
+    <!-- 返回（左）：navigateBack 回留言板 -->
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
+      <text class="nav-back-text">‹ 返回</text>
+    </view>
+    <view class="nav-title">文明留言公约</view>
+  </view>
+
+  <view class="rule-content">
+    <!-- 违规提示卡（进入即展示「留言未通过审核」+ 具体原因）· D-02 §3.2 -->
+    <view wx:if="{{showViolation}}" class="violation-card">
+      <view class="violation-title">⚠️ 留言未通过审核</view>
+      <view class="violation-reason" wx:if="{{reason}}">{{reason}}</view>
+      <view class="violation-tip">您的留言因内容不合规未能发布，请阅读下方公约后重新提交。</view>
+    </view>
+
+    <!-- 公约标题 -->
+    <view class="rule-title">文明留言公约</view>
+
+    <!-- 公约条目（编号列表）· D-02 §3.2 -->
+    <view class="rule-list">
+      <view class="rule-item" wx:for="{{clauses}}" wx:key="*this">
+        <view class="rule-num">{{index + 1}}</view>
+        <text class="rule-text">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 返回留言板按钮 -->
+    <view class="rule-back-btn" bindtap="goBack">返回留言板</view>
+  </view>
+</view>

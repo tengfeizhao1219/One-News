@@ -1,0 +1,119 @@
+<!-- 意见反馈留言板 — RQ-22-FE · D-02 增量 RQ-22 设计规范 v1.0 -->
+<!-- 第 2 层页面：nav-bar（主页按钮 + 标题）+ 内容区，与 settings/favorites 一致（D-09） -->
+<view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
+
+  <!-- BUG-20260806-009 v3: 状态栏不透明背景层 -->
+  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
+    <!-- BUG-20260806-009 follow-up: 主页按钮相对 nav-bar 偏移 -->
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    </view>
+    <view class="nav-title">意见反馈</view>
+    <!-- 筛选入口（仅作者 isAuthor 可见，不可伪造）· D-02 §2/§3.1 -->
+    <view wx:if="{{isAuthor}}" class="nav-filter" bindtap="toggleFilter">
+      <text class="nav-filter-label">筛选 ▾</text>
+    </view>
+  </view>
+
+  <!-- 管理计数条（仅作者）：「共 N 条」（Q4 ✅）· D-02 §3.1 -->
+  <view wx:if="{{isAuthor && !loading}}" class="manage-bar">
+    <text class="manage-count">共 {{total}} 条</text>
+  </view>
+
+  <!-- 筛选下拉（仅作者）· D-02 §4 -->
+  <view wx:if="{{filterOpen}}" class="filter-mask" bindtap="toggleFilter"></view>
+  <view wx:if="{{filterOpen && isAuthor}}" class="filter-dropdown">
+    <view class="filter-option {{filter === 'all' ? 'on' : ''}}" data-f="all" bindtap="onFilterSelect">全部</view>
+    <view class="filter-option {{filter === 'violation' ? 'on' : ''}}" data-f="violation" bindtap="onFilterSelect">仅违规标记</view>
+    <view class="filter-option {{filter === 'mine' ? 'on' : ''}}" data-f="mine" bindtap="onFilterSelect">仅我的回复</view>
+  </view>
+
+  <!-- 加载中：骨架 3 条（D-02 §5） -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="skeleton-card" wx:for="{{3}}" wx:key="*this">
+      <view class="sk-head">
+        <view class="sk-line s1"></view>
+        <view class="sk-line s2"></view>
+      </view>
+      <view class="sk-line s3"></view>
+      <view class="sk-line s4"></view>
+    </view>
+  </view>
+
+  <!-- 空态（D-02 §5） -->
+  <view class="empty-wrap" wx:elif="{{isEmpty}}">
+    <view class="empty-icon">💬</view>
+    <view class="empty-text">还没有留言，来说两句吧</view>
+    <view class="empty-hint" bindtap="goHome">去首页</view>
+  </view>
+
+  <!-- 留言列表（倒序 · 卡片式） -->
+  <view wx:else class="feedback-scroll-wrap">
+    <scroll-view class="feedback-scroll" scroll-y>
+      <view class="feedback-list">
+        <view class="msg-card {{item.deleted ? 'deleted' : ''}}" wx:for="{{list}}" wx:key="id">
+          <!-- 卡片头：昵称（作者角标）+ 相对时间 -->
+          <view class="msg-head">
+            <view class="msg-nick">
+              <text class="msg-nick-text">{{item.nickname}}</text>
+              <text wx:if="{{item.isAuthorNick}}" class="author-badge">作者</text>
+            </view>
+            <text class="msg-time">{{item.timeText}}</text>
+          </view>
+          <!-- 内容：纯文本，多行，不限字数（Q1 ✅） -->
+          <view class="msg-content">{{item.content}}</view>
+          <!-- 删除（仅作者，卡片右下角）· D-02 §3.1 -->
+          <view wx:if="{{item.showDelete}}" class="msg-delete" data-id="{{item.id}}" bindtap="onDelete">🗑 删除</view>
+          <!-- 回复区（楼中楼嵌套，缩进 + 浅色底，最深 4 级收平） -->
+          <view class="reply-area">
+            <view
+              class="reply-item {{r.deleted ? 'deleted' : ''}}"
+              wx:for="{{item.replies}}"
+              wx:for-item="r"
+              wx:key="id"
+              style="padding-left: {{r.depth * 16}}rpx;">
+              <view class="reply-head">
+                <text class="reply-nick">{{r.nickname}}</text>
+                <text wx:if="{{r.isAuthorNick}}" class="author-badge">作者</text>
+                <text class="reply-time">{{r.timeText}}</text>
+              </view>
+              <view class="reply-content">{{r.content}}</view>
+              <view wx:if="{{r.showDelete}}" class="msg-delete reply-delete" data-id="{{r.id}}" bindtap="onDelete">🗑 删除</view>
+            </view>
+            <!-- 回复输入框（点「回复」展开） -->
+            <view class="reply-input-row" wx:if="{{replyTargetId === item.id}}">
+              <input
+                class="reply-input"
+                placeholder="回复 {{item.nickname}}…"
+                value="{{replyDraft[item.id]}}"
+                data-id="{{item.id}}"
+                bindinput="onReplyInput"
+                bindconfirm="onReplySend" />
+              <view class="reply-send" data-id="{{item.id}}" bindtap="onReplySend">发送</view>
+            </view>
+            <view class="reply-toggle" data-id="{{item.id}}" bindtap="toggleReply">
+              {{replyTargetId === item.id ? '收起回复' : '回复'}}
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部固定输入区 · D-02 §3.1 -->
+  <view class="bottom-input-wrap">
+    <!-- 30s 冷却倒计时（D-02 §4：输入区上方） -->
+    <view wx:if="{{cooldownLeft > 0}}" class="cooldown-hint">请 {{cooldownLeft}} 秒后再试</view>
+    <view class="bottom-input-row">
+      <input
+        class="bottom-input"
+        placeholder="说说你的建议…"
+        value="{{draft}}"
+        bindinput="onDraftInput"
+        confirm-type="send"
+        bindconfirm="onSend" />
+      <view class="send-btn {{sendDisabled ? 'disabled' : ''}}" bindtap="onSend">发送</view>
+    </view>
+  </view>
+</view>

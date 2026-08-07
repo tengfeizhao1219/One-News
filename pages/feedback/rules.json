@@ -1,0 +1,7 @@
+{
+  "navigationStyle": "custom",
+  "backgroundColor": "#F5F3F0",
+  "darkmode": true,
+  "themeLocation": "theme.json",
+  "usingComponents": {}
+}
