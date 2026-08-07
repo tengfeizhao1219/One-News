@@ -29,6 +29,12 @@ Page({
   },
 
   onLoad: function (options) {
+    // decodeURIComponent：feedback.js 用 encodeURIComponent 传 reason（支持中文/特殊字符）；
+    // try/catch 兜底双编码等异常
+    var reason = ''
+    if (options && options.reason) {
+      try { reason = decodeURIComponent(options.reason) } catch (e) { reason = options.reason }
+    }
     this.setData({
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,
@@ -36,8 +42,8 @@ Page({
       navOffset: ((app && app.globalData.menuTop) || 0) + ((app && app.globalData.menuHeight) || 32) + 12,
       themeClass: (app && app.globalData && app.globalData.themeClass) || '',
       isDark: this._isSystemDark(),
-      reason: (options && options.reason) || '',
-      showViolation: !!(options && options.reason),
+      reason: reason,
+      showViolation: !!reason,
     })
     if (app && app.setNavBarColor) {
       app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')

@@ -121,15 +121,15 @@
   color: var(--text-body);
 }
 
-/* 返回留言板按钮 · D-02 §3.2 */
+/* 返回留言板按钮 · D-02 §3.2（宽度适配内容 + 居中，"底部 padding 40rpx"实为按钮下方间距） */
 .rule-back-btn {
-  margin-top: 48rpx;
+  display: table;
+  margin: 48rpx auto 40rpx;
   height: 88rpx;
   line-height: 88rpx;
-  text-align: center;
+  padding: 0 80rpx;
   border-radius: 44rpx;
   background-color: var(--primary);
   color: #ffffff;
   font-size: 30rpx;
-  padding-bottom: 40rpx;
 }
