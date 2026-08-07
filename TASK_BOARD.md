@@ -29,15 +29,17 @@
 > **对象**：owner（部署验证）、PM（QA 联调）、FE（知悉）
 > **发布**：全栈开发（FS）
 
-**RQ-22-FS 已完成**：`cloudfunctions/feedback/{create,list,delete}/` 三个云函数，严格按交接单 FS §四 接口实现。
+**RQ-22-FS 已完成**：`cloudfunctions/feedback-{create,list,delete}/` 三个云函数，严格按交接单 FS §四 接口实现。
+
+> ⚠️ **部署命名说明**（2026-08-07 14:46 修正）：微信开发者工具要求云函数目录为 `cloudfunctions/<函数名>/index.js` 一级结构，**函数名不能含 `/`**。交接单中的 `feedback/create` 等为逻辑接口名，实际部署云函数名为 `feedback-create` / `feedback-list` / `feedback-delete`（前端调用名已同步改为连字符）。
 
 **交付内容**：
 
 | 云函数 | 入参 | 出参 | 说明 |
 |--------|------|------|------|
-| `feedback/create` | `{content, parentId?}` | `{code:0, data}` / `{code:'BLOCKED', data:{reason}}` | 留言+回复复用；关键词黑名单 + AI 校验（智谱→DeepSeek 降级）；30s 限频；昵称生成（微信用户+随机4位/一页君） |
-| `feedback/list` | `{pageNum, pageSize, filter?}` | `{code:0, data:{list,total}, isAuthor}` | 扁平记录+前端组树；filter 支持 all/violation/mine；非作者过滤已删除 |
-| `feedback/delete` | `{id}` | `{code:0}` | 云函数内再次校验 AUTHOR_OPENID；软删除 status='deleted' |
+| `feedback-create` | `{content, parentId?}` | `{code:0, data}` / `{code:'BLOCKED', data:{reason}}` | 留言+回复复用；关键词黑名单 + AI 校验（智谱→DeepSeek 降级）；30s 限频；昵称生成（微信用户+随机4位/一页君） |
+| `feedback-list` | `{pageNum, pageSize, filter?}` | `{code:0, data:{list,total}, isAuthor}` | 扁平记录+前端组树；filter 支持 all/violation/mine；非作者过滤已删除 |
+| `feedback-delete` | `{id}` | `{code:0}` | 云函数内再次校验 AUTHOR_OPENID；软删除 status='deleted' |
 
 **关键实现**：
 - 作者识别：环境变量 `AUTHOR_OPENID`（交接单 §4.3 已确认）
@@ -48,7 +50,7 @@
 **部署步骤（owner）**：
 1. 云开发控制台 → 数据库 → 创建 `feedback` 集合
 2. 索引：`rootId` 升序 + `createdAt` 降序（顶层时间流）· `rootId` 升序 + `createdAt` 升序（回复正序）· `openid` 升序 + `createdAt` 降序（限频）
-3. 上传 `feedback/create`、`feedback/list`、`feedback/delete` 三个云函数（云端安装依赖）
+3. 上传 `feedback-create`、`feedback-list`、`feedback-delete` 三个云函数（云端安装依赖）
 4. 给三个云函数配置环境变量：`AUTHOR_OPENID=你的openid`（+ ZHIPU_API_KEY / DEEPSEEK_API_KEY）
 5. 真机验证：留言/回复/作者角标/删除/筛选
 

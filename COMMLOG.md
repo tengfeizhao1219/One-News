@@ -1,3 +1,18 @@
+## [2026-08-07 14:50] 🔧 RQ-22-FS 部署修正：云函数名从 `feedback/create` 改为连字符 `feedback-create` | 会话：[全栈开发(FS)]
+
+**问题**：owner 上传 `cloudfunctions/feedback/` 报 `ResourceNotFound.Function`——微信开发者工具要求云函数目录为 `cloudfunctions/<函数名>/index.js` **一级结构，函数名不能含 `/`**。交接单中的 `feedback/create` 等逻辑接口名无法直接作为部署函数名。
+
+**修正**：
+- 目录重构：`cloudfunctions/feedback/{create,list,delete}/` → `cloudfunctions/feedback-{create,list,delete}/`（三个独立一级目录）
+- 前端 `pages/feedback/feedback.js`：3 处 `wx.cloud.callFunction` 调用名同步改为 `feedback-list` / `feedback-create` / `feedback-delete`
+- 逻辑接口名（交接单/PRD 文档中的 `feedback/create` 等）保留为文档约定，实际部署名见 TASK_BOARD RQ-22-FS 广播「部署命名说明」
+
+**遗留提示**：交接单/PRD 中 `feedback/create` 等命名与微信部署规则不符，PM 后续可考虑在文档中统一标注「逻辑接口名 ≠ 部署函数名」规范。
+
+> — 全栈开发（FS） 2026-08-07 14:50
+
+---
+
 ## [2026-08-07 14:35] ✅ RQ-22-FS 意见反馈留言板云函数完成（create/list/delete）| 会话：[全栈开发(FS)]
 
 按交接单 FS §四 + PRD §5 实现三个云函数，与 FE 前端（commit `0bc6ce3`）接口完全对齐：

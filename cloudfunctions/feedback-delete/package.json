@@ -1,7 +1,7 @@
 {
-  "name": "feedback/list",
+  "name": "feedback-delete",
   "version": "1.0.0",
-  "description": "意见反馈留言板 list 云函数（RQ-22-FS）",
+  "description": "意见反馈留言板 delete 云函数（RQ-22-FS）",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "latest"

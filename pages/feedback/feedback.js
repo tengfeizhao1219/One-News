@@ -95,7 +95,7 @@ Page({
   _load: function () {
     this.setData({ loading: true })
     wx.cloud.callFunction({
-      name: 'feedback/list',
+      name: 'feedback-list',
       data: { pageNum: 1, pageSize: 50, filter: this.data.filter },
     })
       .then((res) => {
@@ -199,7 +199,7 @@ Page({
       return
     }
     this.setData({ sending: true, sendDisabled: true })
-    this._call('feedback/create', { content })
+    this._call('feedback-create', { content })
       .then((r) => {
         this.setData({ sending: false })
         if (r.code === 0) {
@@ -240,7 +240,7 @@ Page({
     const content = ((this.data.replyDraft || {})[id] || '').trim()
     if (!content || this.data.replySending) return
     this.setData({ replySending: true })
-    this._call('feedback/create', { content, parentId: id })
+    this._call('feedback-create', { content, parentId: id })
       .then((r) => {
         this.setData({ replySending: false })
         if (r.code === 0) {
@@ -271,7 +271,7 @@ Page({
       confirmColor: '#FF3B30',
       success: (res) => {
         if (!res.confirm) return
-        this._call('feedback/delete', { id })
+        this._call('feedback-delete', { id })
           .then((r) => {
             if (r.code === 0) {
               wx.showToast({ title: '已删除', icon: 'none' })
