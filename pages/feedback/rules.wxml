@@ -1,8 +1,8 @@
 <!-- 文明留言公约页 — RQ-22-FE · D-02 §2/§3.2 -->
 <view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
 
-  <!-- BUG-20260806-009 v3: 状态栏不透明背景层 -->
-  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-page);"></view>
+  <!-- BUG-20260806-020（FE · 同 home 修复）: 状态栏背景层高度用 menuTop 与 nav-bar 顶部无缝衔接 -->
+  <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-page);"></view>
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-page);">
     <!-- 返回（左）：navigateBack 回留言板 -->
     <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
