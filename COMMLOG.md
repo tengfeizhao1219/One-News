@@ -1,3 +1,29 @@
+## [2026-08-07 09:25] ✅ FS-04 清理死代码 font-panel 组件 | 会话：[全栈开发(FS)]
+
+**触发**：微信开发者工具代码质量扫描 → 「无使用或无依赖文件 · 组件：不应存在无使用的组件：components/font-panel/font-panel.json」。
+
+**关键判断**：这不是单纯的无用组件——`font-panel` 是**死引用**：
+- `pages/home/home.json` `usingComponents` 声明了 `font-panel`
+- 但 `pages/home/home.wxml` **无任何 `<font-panel>` 标签**
+- 功能已被 `pages/settings/settings.wxxml` 内联字号选择器（4 档分段控件）**完全替代**——`settings.js` 直接调 `app.setFontScale(tier)`，不依赖组件
+- `home.js` 的 `onFontPanelChange` / `onCloseFontPanel` 是死方法（无渲染组件触发）
+
+**清理点（5 处）**：
+1. 删除整个 `components/font-panel/` 目录（4 个文件）
+2. `pages/home/home.json` 移除 `font-panel` usingComponents 声明
+3. `pages/home/home.js` 删除死方法 `onCloseFontPanel`、`onFontPanelChange`（含上方注释）
+4. `app.js` 注释更新：「供 font-panel 组件调用」→「供设置页/任意调用方使用」
+5. `test/v13-fe-dark-visibility.js` 同步移除 font-panel 暗色契约断言（L28 文件读取 + L83-89 断言块），更新顶部说明——settings 页 .seg-item 控件由 §1/§2 `.page--dark` 变量块契约覆盖（--seg-bg/--seg-on-bg/--seg-on-text 已全部 var()）
+
+**测试验证**：v10 53/0 通过；v13 仅 `--wheel-scale-active` 失败为**预先存在的问题**（与本次无关，已在干净树确认）。
+
+**风险评估**：零风险——
+- 字号功能由 settings 页内联实现完整接管（设置页 → 阅读 → 字体大小 4 档分段控件）；
+- `app.setFontScale` 接口保留（settings.js 调的就是它）；
+- 无 API 依赖、无外部引用。
+
+> — 全栈开发（FS） 2026-08-07 09:25
+
 ## [2026-08-07 09:10] ✅ FS-01（RQ-20）getNewsList all 分支验证通过 · 零代码改动 | 会话：[全栈开发(FS)]
 
 **认领**：RQ-20 侧边栏「全部」分类 → FS-01 云端实测 `getNewsList({category:'all'})`。

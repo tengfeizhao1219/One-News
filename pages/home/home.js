@@ -1054,20 +1054,4 @@ Page({
       })
     }
   },
-
-  /**
-   * 关闭字体面板
-   */
-  onCloseFontPanel() {
-    this.setData({ showFontPanel: false })
-  },
-
-  /**
-   * 字体档位变更回调（从 font-panel 组件触发）
-   */
-  onFontPanelChange(e) {
-    var tier = e.detail.tier
-    this._syncFontScale()
-    this.setData({ fontScaleTier: tier })
-  },
 })

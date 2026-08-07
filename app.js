@@ -285,7 +285,7 @@ App({
   },
 
   /**
-   * 设置字体档位（供 font-panel 组件调用）
+   * 设置字体档位（供设置页/任意调用方使用；2026-08-07 FS-04 清理后）
    * @param {number} tier 0-3
    */
   setFontScale(tier) {

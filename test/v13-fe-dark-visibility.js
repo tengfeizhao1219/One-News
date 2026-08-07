@@ -7,14 +7,17 @@
  *     手动深色 + 系统浅色时分类轮盘 var() 取系统浅色值 → 黑字落深底不可见
  *   - 发现 C：`--flash-*`（5 个）未入 `.page--dark` 块 → 手动深色下
  *     详情页进度分类名高亮色取浅色值，偏暗/对比度不足
- *   - S3 #3：font-panel `.radio-dot` 硬编码 `#FFFFFF` → 暗色下
- *     白点（--text-primary 白圆）+ 白底 → 选中圆点不可见
  *   - S3 #2：settings `.switch-knob` 硬编码 `#fff` → 裸色收敛
+ *
+ * 注意（2026-08-07 FS-04）：font-panel 组件已被清理（功能由 settings 内联字号选择器接管，
+ * 见 components/font-panel/ 删除记录），本测试同步移除 font-panel 相关断言。
+ * 字号选择 UI 已在 settings 页 .seg / .seg-item 全部走 var()，由本测试 §1/§2 的
+ * `.page--dark` 变量块契约覆盖（--seg-bg/--seg-on-bg/--seg-on-text）。
  *
  * 本测试锁定"FE 暗色可见性"契约（与 FS 的 S1-S4 架构治理互不重叠，
  * 后者见 PM D-07 §检查点 v13-theme-contract.js）：
- *   - `.page--dark` 块 = theme.json dark 分支全量颜色变量（含 wheel / flash 系列）
- *   - 关键交互控件（radio-dot / switch-knob）必须走 CSS 变量，无裸色
+ *   - `.page--dark` 块 = theme.json dark 分支全量颜色变量（含 wheel / flash / seg 系列）
+ *   - 关键交互控件（switch-knob）必须走 CSS 变量，无裸色
  *
  * 运行：node test/v13-fe-dark-visibility.js
  */
@@ -25,7 +28,6 @@ const path = require('path')
 const ROOT = path.resolve(__dirname, '..')
 const theme = JSON.parse(fs.readFileSync(path.join(ROOT, 'theme.json'), 'utf8'))
 const appWxss = fs.readFileSync(path.join(ROOT, 'app.wxss'), 'utf8')
-const fontPanel = fs.readFileSync(path.join(ROOT, 'components/font-panel/font-panel.wxss'), 'utf8')
 const settingsWxss = fs.readFileSync(path.join(ROOT, 'pages/settings/settings.wxss'), 'utf8')
 
 let pass = 0
@@ -80,15 +82,7 @@ function check(name, cond, detail) {
   }
 }
 
-// 3) font-panel 单选框选中圆点走 CSS 变量（暗色下白点+白圆不可见的根因）
-{
-  check('font-panel .radio-dot 用 var(--bg-card)',
-    /\.radio-dot\s*\{[\s\S]*?background-color:\s*var\(--bg-card\)/.test(fontPanel))
-  check('font-panel 无裸色 #FFFFFF',
-    !/background-color:\s*#FFFFFF/.test(fontPanel))
-}
-
-// 4) settings 开关 knob 走 CSS 变量（裸色收敛）
+// 3) settings 开关 knob 走 CSS 变量（裸色收敛）
 {
   check('settings .switch-knob 用 var(--switch-knob)',
     /\.switch-knob\s*\{[\s\S]*?background:\s*var\(--switch-knob,\s*#FFFFFF\)/.test(settingsWxss))
