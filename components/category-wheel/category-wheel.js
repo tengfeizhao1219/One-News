@@ -34,6 +34,14 @@ Component({
     attached() {
       const h = this.data.itemHeight * this.data.visibleCount
       this.setData({ wheelHeight: h, listHeight: h })
+      // BUG-20260807-001: 缓存 px→rpx 系数（750rpx = windowWidth px）。
+      // itemHeight/translateY 均为 rpx，而触摸事件 clientY 为 px；
+      // 兜底 2 对应 375px 屏（1rpx=0.5px），其余设备按真实 windowWidth 计算。
+      try {
+        this._px2rpx = 750 / wx.getSystemInfoSync().windowWidth
+      } catch (e) {
+        this._px2rpx = 2
+      }
       this._activeIndex = 0
       this._updateTranslate()
     },
@@ -85,13 +93,16 @@ Component({
       const touch = e.touches && e.touches[0]
       if (!touch || this._startY === undefined) return
       const deltaY = touch.clientY - this._startY
+      // BUG-20260807-001: px→rpx 换算。此前 deltaY(px) 直接与 itemHeight(rpx) 混算，
+      // 在 375px 屏上阈值翻倍（下滑一格不触发）、跟手减半、Math.round 边界方向不对称。
+      const deltaYRpx = deltaY * (this._px2rpx || 2)
       const { itemHeight } = this.data
       const len = (this.data.categories || []).length
 
       // BUG-008③（AC-RQ15-20）: 连续跟手位移 —— rawTranslate 直接跟随手指（无按格跳变）
-      var rawTranslate = this._startTranslate + deltaY
+      var rawTranslate = this._startTranslate + deltaYRpx
       // 浮点请求索引（仅用于高亮/change/震动 + 边界弹性判定）
-      var rawIdx = this._startIndex - deltaY / itemHeight
+      var rawIdx = this._startIndex - deltaYRpx / itemHeight
       var clamped = Math.max(0, Math.min(len - 1, Math.round(rawIdx)))
 
       // 位移：正常范围连续跟手；越界叠加弹性（FE-1 / AC-RQ15-06）
