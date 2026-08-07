@@ -340,6 +340,32 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   .kb-sheet-bd .cl-i .c{font-size:11.5px;line-height:1.42;margin-top:3px;color:var(--kb-ink)}
   .kb-sheet-bd .empty{font-size:12.5px;color:var(--kb-sub);font-style:italic}
   .kb-sheet-link-btn{margin-top:16px;width:100%;justify-content:center;padding:9px 12px}
+  /* 状态编辑器 */
+  .kb-sheet-bd .st-edit{margin-top:18px}
+  .kb-sheet-bd .st-edit h4{margin-bottom:8px}
+  .kb-sheet-bd .st-btns{display:flex;gap:6px;flex-wrap:wrap}
+  .kb-sheet-bd .st-btn{font-size:12px;padding:6px 11px;border-radius:9px;border:1px solid var(--kb-line);
+    background:var(--kb-chip);color:var(--kb-ink);cursor:pointer;transition:.15s}
+  .kb-sheet-bd .st-btn:hover{border-color:var(--kb-accent)}
+  .kb-sheet-bd .st-btn.on{background:var(--kb-accent);color:#fff;border-color:var(--kb-accent);font-weight:700}
+  .kb-sheet-bd .doc-btns{display:flex;gap:8px;margin-top:12px}
+  .kb-sheet-bd .doc-btns .kb-sheet-link-btn{margin-top:0}
+  /* Token 弹窗 */
+  .kb-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:80}
+  .kb-modal-mask.show{display:flex}
+  .kb-modal{background:var(--kb-bg);color:var(--kb-ink);border-radius:14px;padding:18px 20px;width:min(440px,92vw);box-shadow:0 12px 40px rgba(0,0,0,.3)}
+  .kb-modal h3{margin:0 0 4px;font-size:15px}
+  .kb-modal .sub{font-size:12px;color:var(--kb-sub);margin-bottom:8px}
+  .kb-modal input{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--kb-line);background:var(--kb-chip);color:var(--kb-ink);font-size:13px;margin:4px 0;box-sizing:border-box}
+  .kb-modal .row{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+  .kb-modal .hint{font-size:11.5px;color:var(--kb-sub);line-height:1.55;margin-top:10px}
+  .kb-modal .mstatus{font-size:12px;margin-top:8px;min-height:16px}
+  .kb-modal .mstatus.ok{color:var(--kb-done)} .kb-modal .mstatus.err{color:var(--kb-block)}
+  /* Toast */
+  .kb-toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);
+    background:rgba(20,22,28,.92);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:90;max-width:90vw;text-align:center}
+  .kb-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   </style>
 
   <div class="kb-head">
@@ -348,6 +374,8 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <div class="kb-bar">
       <div class="kb-stats" id="kb-stats"></div>
       <div class="kb-spacer"></div>
+      <button class="kb-btn" id="kb-refreshBtn" title="重新从仓库拉取任务数据">🔄 刷新</button>
+      <button class="kb-btn" id="kb-syncBtn" title="设置 GitHub Token 以在网页改状态并回写 git">🔧 同步</button>
       <button class="kb-btn" id="kb-resetBtn" style="display:none">退出关联</button>
       <button class="kb-btn" id="kb-themeBtn">🌙 暗色</button>
     </div>
@@ -357,8 +385,8 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   <div class="kb-board" id="kb-board"></div>
   <div class="kb-leg" id="kb-leg"></div>
   <div class="kb-foot">
-    数据源：<code>TASK_BOARD.md</code>（全局各角色任务）+ <code>COMMLOG.md</code> + <code>CONTEXT.md</code> ·
-    点击任意卡片查看任务详情（背景 + 最近 3 条变更）；详情内可一键高亮其在全流程中的关联链。
+    数据源：<code>tasks.json</code>（每次刷新实时拉取，可点 🔧 同步 填入 Token 后在网页直接改状态并回写 git）+ <code>COMMLOG.md</code>（背景与最近变更）·
+    点击任意卡片查看任务详情（背景 + 最近 3 条变更 + 关联链 + GitHub 文档）；详情内可更新状态。
   </div>
 
   <div class="kb-sheet-mask" id="kb-sheetMask"></div>
@@ -374,13 +402,38 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
     <div class="kb-sheet-bd" id="kb-sheetBody"></div>
   </aside>
 
+  <!-- Token 设置弹窗 -->
+  <div class="kb-modal-mask" id="kb-tokenMask">
+    <div class="kb-modal">
+      <h3>🔧 同步设置（GitHub Token）</h3>
+      <div class="sub">用于在网页直接修改任务状态并回写 git</div>
+      <input id="kb-tokenInput" type="password" placeholder="ghp_... 或 github_pat_..." autocomplete="off" spellcheck="false" />
+      <div class="mstatus" id="kb-tokenStatus"></div>
+      <div class="row">
+        <button class="kb-btn" id="kb-tokenClear">清除</button>
+        <button class="kb-btn" id="kb-tokenSave">保存</button>
+        <button class="kb-btn" id="kb-tokenClose">关闭</button>
+      </div>
+      <div class="hint">Token 仅保存在本机浏览器（localStorage），仅发往 <code>api.github.com</code>，不上传任何第三方。需要 <b>repo</b> 权限（对当前仓库的读写）。清除后本机不再保留。</div>
+    </div>
+  </div>
+  <div class="kb-toast" id="kb-toast"></div>
+
   <script>const $=id=>document.getElementById(id);</script>
   <script src="showcase/kanban/tasklog.js"></script>
   <script src="showcase/kanban/data.js"></script>
   <script>
-  (function(){
-    if(!window.KANBAN_META){ document.querySelector('.kanban-wrap').innerHTML='<p style="padding:30px;color:var(--kb-sub)">⚠️ 看板数据未加载（data.js 缺失）</p>'; return }
-    const M=window.KANBAN_META, D=window.KANBAN_DATA;
+  (async function(){
+    // 拉取可变任务源 tasks.json（权威，每次加载实时拉取）；失败则回退 data.js 静态快照
+    try{
+      const r=await fetch('showcase/kanban/tasks.json',{cache:'no-store'});
+      if(r.ok){ const j=await r.json(); if(j&&j.tasks){ window.KANBAN_META=j.meta||window.KANBAN_META; window.KANBAN_DATA=j.tasks; } }
+    }catch(e){ /* 保留 data.js 全局兜底 */ }
+    renderKanban();
+
+    function renderKanban(){
+      if(!window.KANBAN_META){ document.querySelector('.kanban-wrap').innerHTML='<p style="padding:30px;color:var(--kb-sub)">⚠️ 看板数据未加载（data.js 缺失）</p>'; return }
+      const M=window.KANBAN_META, D=window.KANBAN_DATA;
     const sM={done:"✅",doing:"🔄",wait:"⏳",block:"🚫",cancel:"❌"};
     const sC={done:"var(--kb-done)",doing:"var(--kb-doing)",wait:"var(--kb-wait)",block:"var(--kb-block)",cancel:"var(--kb-cancel)"};
     const links=[...new Set(D.map(d=>d.link))], lC={};
@@ -412,8 +465,27 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
         h+='<div class="empty">暂无变更记录（COMMLOG 中未检索到任务 ID '+esc(d.id)+'）</div>';
       }
       h+='<button class="kb-sheet-link-btn" id="kb-sheetLinkBtn">🔗 查看关联链（'+esc(d.link)+'）</button>';
+      // 文档按钮（功能②）：GitHub 源 + 渲染页
+      if(d.doc){
+        h+='<div class="doc-btns">'
+          +'<button class="kb-sheet-link-btn" id="kb-docBtn">📄 在 GitHub 查看文档</button>'
+          +'<button class="kb-sheet-link-btn" id="kb-docPageBtn">🌐 查看渲染页</button>'
+          +'</div>';
+      }
+      // 状态编辑器（功能①）
+      const STATUSES=[["done","✅ 已完成"],["doing","🔄 进行中"],["wait","⏳ 等待"],["block","🚫 阻塞"],["cancel","❌ 已取消"]];
+      h+='<div class="st-edit"><h4>📝 更新状态</h4><div class="st-btns">';
+      STATUSES.forEach(([k,lab])=>{ h+='<button class="st-btn'+(d.status===k?' on':'')+'" data-st="'+k+'">'+lab+'</button>'; });
+      h+='</div></div>';
       kbBody.innerHTML=h;
       $("kb-sheetLinkBtn").addEventListener("click",()=>{ closeSheet(); focusLink(d.link); });
+      if(d.doc){
+        $("kb-docBtn").addEventListener("click",()=>window.open(d.doc,"_blank","noopener"));
+        $("kb-docPageBtn").addEventListener("click",()=>window.open("https://tengfeizhao1219.github.io/One-News/tasks/"+encodeURIComponent(d.id)+".html","_blank","noopener"));
+      }
+      kbBody.querySelectorAll(".st-btn").forEach(b=>{
+        b.addEventListener("click",()=>{ const st=b.dataset.st; if(st===d.status) return; updateStatus(d.id,st); });
+      });
       kbSheet.classList.add("show"); kbMask.classList.add("show");
       kbBody.scrollTop=0;
     }
@@ -470,6 +542,69 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       document.documentElement.setAttribute("data-theme",d?"light":"dark");
       tBtn.textContent=d?"🌙 暗色":"☀️ 亮色";
     });
+
+    /* ===== 刷新 / 同步按钮 ===== */
+    $("kb-refreshBtn").addEventListener("click",()=>location.reload());
+    $("kb-syncBtn").addEventListener("click",openTokenModal);
+
+    /* ===== Token 设置（仅存本机 localStorage） ===== */
+    const TOKEN_KEY="kanban_gh_token";
+    function getToken(){ try{ return localStorage.getItem(TOKEN_KEY)||""; }catch(e){ return ""; } }
+    const tokenMask=$("kb-tokenMask"), tokenInput=$("kb-tokenInput"),
+          tokenStatus=$("kb-tokenStatus"), tokenSave=$("kb-tokenSave"),
+          tokenClear=$("kb-tokenClear"), tokenClose=$("kb-tokenClose");
+    function openTokenModal(){
+      tokenInput.value=getToken();
+      tokenStatus.textContent=getToken()?"已保存 Token（仅本机）":"尚未保存 Token";
+      tokenStatus.className="mstatus"+(getToken()?" ok":"");
+      tokenMask.classList.add("show");
+      setTimeout(()=>tokenInput.focus(),50);
+    }
+    function closeTokenModal(){ tokenMask.classList.remove("show"); }
+    tokenClose.addEventListener("click",closeTokenModal);
+    tokenMask.addEventListener("click",e=>{ if(e.target===tokenMask) closeTokenModal(); });
+    tokenSave.addEventListener("click",()=>{
+      const v=tokenInput.value.trim();
+      if(!v){ tokenStatus.textContent="Token 为空，未保存"; tokenStatus.className="mstatus err"; return; }
+      try{ localStorage.setItem(TOKEN_KEY,v); }catch(e){ tokenStatus.textContent="保存失败："+e.message; tokenStatus.className="mstatus err"; return; }
+      tokenStatus.textContent="✅ 已保存（仅本机浏览器，只发往 api.github.com）"; tokenStatus.className="mstatus ok";
+      setTimeout(closeTokenModal,900);
+    });
+    tokenClear.addEventListener("click",()=>{
+      try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+      tokenInput.value=""; tokenStatus.textContent="已清除本机 Token"; tokenStatus.className="mstatus";
+    });
+
+    /* ===== 写回：把状态变更提交到 tasks.json（GitHub Contents API） ===== */
+    function b64decodeUtf8(b64){ return new TextDecoder().decode(Uint8Array.from(atob(b64),c=>c.charCodeAt(0))); }
+    function b64encodeUtf8(str){ const bytes=new TextEncoder().encode(str); let bin=""; for(let i=0;i<bytes.length;i++) bin+=String.fromCharCode(bytes[i]); return btoa(bin); }
+    function toast(msg){ const t=$("kb-toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),3400); }
+    async function updateStatus(id,status){
+      const token=getToken();
+      if(!token){ openTokenModal(); toast("请先点 🔧 同步 填入 GitHub Token"); return; }
+      toast("正在同步 "+id+" → "+status+" …");
+      const url="https://api.github.com/repos/tengfeizhao1219/One-News/contents/docs/showcase/kanban/tasks.json";
+      const headers={"Authorization":"Bearer "+token,"Accept":"application/vnd.github+json"};
+      try{
+        const r1=await fetch(url,{headers});
+        if(r1.status===401||r1.status===403){ toast("❌ Token 无效或无权限（需 repo 权限）"); return; }
+        if(r1.status===404){ toast("❌ 未找到 tasks.json"); return; }
+        if(!r1.ok){ toast("❌ 读取失败 HTTP "+r1.status); return; }
+        const j1=await r1.json(); const sha=j1.sha;
+        const cur=JSON.parse(b64decodeUtf8(j1.content));
+        const t=cur.tasks.find(x=>x.id===id); if(!t){ toast("❌ 未找到任务 "+id); return; }
+        t.status=status;
+        const body=b64encodeUtf8(JSON.stringify(cur,null,2));
+        const r2=await fetch(url,{method:"PUT",headers,body:JSON.stringify({
+          message:"chore(kanban): "+id+" 状态 → "+status, content:body, sha})});
+        if(r2.status===401||r2.status===403){ toast("❌ Token 无效或无权限"); return; }
+        if(r2.status===429){ toast("⏳ GitHub 限流，请稍后重试"); return; }
+        if(!r2.ok){ toast("❌ 提交失败 HTTP "+r2.status); return; }
+        toast("✅ 已同步（GitHub Pages 约 1–3 分钟后全网生效），即将刷新…");
+        setTimeout(()=>location.reload(),1300);
+      }catch(err){ toast("❌ 网络异常："+(err&&err.message?err.message:"无法连接 api.github.com")); }
+    }
+    } // end renderKanban
   })();
   </script>
 
