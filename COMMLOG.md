@@ -1,3 +1,25 @@
+## [2026-08-07 14:35] ✅ RQ-22-FS 意见反馈留言板云函数完成（create/list/delete）| 会话：[全栈开发(FS)]
+
+按交接单 FS §四 + PRD §5 实现三个云函数，与 FE 前端（commit `0bc6ce3`）接口完全对齐：
+
+| 云函数 | 入参 | 出参 | 实现要点 |
+|--------|------|------|---------|
+| `feedback/create` | `{content, parentId?}` | `{code:0, data}` / `{code:'BLOCKED', data:{reason}}` | 留言+回复复用（parentId 区分）；关键词黑名单 → AI 校验（智谱 GLM-4-Flash 优先 → DeepSeek 降级 → 均不可用仅黑名单兜底放行）；30s 限频；昵称「微信用户+随机4位」同 openid 复用、作者「一页君」；rootId 楼中楼归属 |
+| `feedback/list` | `{pageNum, pageSize, filter?}` | `{code:0, data:{list,total}, isAuthor}` | 顶层留言分页倒序 + 回复全量正序扁平返回（前端组树）；filter all/violation/mine；非作者过滤 status='deleted' |
+| `feedback/delete` | `{id}` | `{code:0}` | 云函数内再次校验 AUTHOR_OPENID（前端不可伪造）；软删除 status='deleted'（作者侧灰显可查看） |
+
+**关键决策落地**：
+- 作者识别：环境变量 `AUTHOR_OPENID`（交接单 §4.3.2 已确认，单作者 owner）
+- violation 筛选语义：BLOCKED 不入库，故「仅违规标记」= 已软删除记录（status='deleted'），仅作者可见
+- 集合字段严格对齐：parentId / rootId / content / openid / nickname / isAuthor / status / createdAt / updatedAt
+
+**待 owner 部署**：创建 feedback 集合 + 索引（rootId+createdAt 双向、openid+createdAt）+ 上传三个云函数 + 配置 AUTHOR_OPENID / ZHIPU_API_KEY / DEEPSEEK_API_KEY 环境变量 + 真机联调。
+**待 PM**：RQ-22-QA 回归验收。
+
+> — 全栈开发（FS） 2026-08-07 14:35
+
+---
+
 ## [2026-08-07 13:18] 🔀 PD 对齐 PM PRD v1.1（Q1~Q4 全确认）· 修正交接单待确认项 · rebase 合并冲突 | 会话：[产品设计师(PD)]
 
 owner 13:16 指令后，push 时发现远端有 PM commit `d328224`（13:13）——**PRD v1.0→v1.1** 与 TASK_BOARD 冲突。
