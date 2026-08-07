@@ -1,3 +1,28 @@
+## [2026-08-07 08:10] ⚡ FS-02 分享卡片改 AI 摘要图 + 全链路去图片 | 会话：[全栈开发(FS)]
+
+**触发**：owner 反馈 ① 分享新闻时缩略图/空白区域展示 AI 摘要内容（现在是图片）、② 不想让新闻中有任何图片（获取新闻时也去掉）。
+
+**改动一：分享卡片展示 AI 摘要（替代图片）**
+| 文件 | 改动 |
+|------|------|
+| `components/share-card/share-card.js` | 新增 `generateShareImage({category,isDark,title,summary})`：Canvas 400×300 绘制「品牌小标 + 标题≤2行（26px 粗体）+ AI 摘要≤6行（18px，超长省略号）+ 分类角标」，主题色背景；`generateImage` 保留为无摘要降级 |
+| `pages/detail/detail.js` | 新增 `_pregenShareImage(news)`：`_renderDetail`（news 就绪/翻页）时预生成当前新闻摘要图缓存到 `_placeholderCache`；`onShareAppMessage` **不再用 `news.picUrl`**，一律用摘要图缓存，极端竞态降级微信默认图标；删除死代码 `_getSyncPlaceholder` |
+
+**改动二：全链路去掉新闻图片**
+| 文件 | 改动 |
+|------|------|
+| `refreshNews/index.js` | `batchInsert` `picUrl` 一律置空入库 |
+| `sources/juhe.js` / `sources/tianxing.js` | 数据源 `picUrl` 置空（不再从响应取缩略图） |
+| `utils/newsCleaner.js` | `stripHtmlTags` 新增：① `<figure>/<picture>/<figcaption>` 图片容器整体删 ② 裸 `<img>/<image>/<source>` ③ Markdown 图片 `![alt](url)` ④ 裸图片 URL（.jpg/.jpeg/.png/.gif/.webp/.bmp 结尾，带 query 也删，不误伤普通文章链接）——`getNewsDetail` 复用同一清洗器自动生效 |
+
+**清洗验证**（6 断言全过）：HTML img / Markdown 图片 / 裸图片 URL / figure 容器均删净；无图正文与普通 URL 完整保留。
+
+**前端说明**：首页卡片与详情页本就纯文本渲染（wxml 无新闻图片），无需改动；`getUserFavorites`/`setUserFavorite`/history/favorites 的 picUrl 为透传字段，后端置空后自然为空，结构不变。
+
+**待部署**：`refreshNews`（云端安装依赖）+ 前端（`share-card.js` + `detail.js`）随小程序发布。
+
+> — 全栈开发（FS） 2026-08-07 08:10
+
 ## [2026-08-07 07:40] ⚡ FS-01 拉取数量 5→8 + 定时刷新可观测性增强 | 会话：[全栈开发(FS)]
 
 **触发**：owner 反馈 ① 每次拉取新闻 5 条太少、② 每小时自动触发的新闻刷新似乎不生效。

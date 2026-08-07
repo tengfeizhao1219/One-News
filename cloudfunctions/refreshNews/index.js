@@ -251,7 +251,8 @@ async function batchInsert(newsList) {
         source: item.source,
         sourceUrl: item.sourceUrl || '',
         publishTime: item.publishTime,
-        picUrl: item.picUrl || '',
+        // FS-02（2026-08-07 owner 决策）：新闻中不含任何图片 → picUrl 一律置空，不再入库
+        picUrl: '',
         viewCount: 0,
         isRetained,
         retainedAt,

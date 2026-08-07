@@ -182,7 +182,8 @@ function formatJuheNewsItem(rawItem, category) {
     categoryName: CATEGORY_NAMES[category] || category,
     source: rawItem.author_name || rawItem.src || '聚合数据',
     sourceUrl: rawItem.url || '',
-    picUrl: (rawItem.thumbnail_pic_s || rawItem.thumbnail_pic_s02 || rawItem.thumbnail_pic_s03 || '').split(',')[0] || '',
+    // FS-02（2026-08-07 owner 决策）：新闻中不含任何图片 → picUrl 置空
+    picUrl: '',
     publishTime: rawItem.date || new Date().toISOString().slice(0, 10),
   }
 }

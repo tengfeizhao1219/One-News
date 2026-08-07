@@ -24,6 +24,26 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-07 08:10 【FS-02 分享卡片改 AI 摘要图 + 全链路去图片 · 已实现 · @owner 部署 refreshNews + 前端发布】
+
+> **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布 `share-card.js`/`detail.js`）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+**一、分享卡片展示 AI 摘要（替代图片）**：
+- `components/share-card/share-card.js`：新增 `generateShareImage({category,isDark,title,summary})`，Canvas 绘制「品牌小标 + 标题≤2行 + AI 摘要≤6行 + 分类角标」；`generateImage` 保留为降级
+- `pages/detail/detail.js`：`_pregenShareImage(news)` 在 `_renderDetail`（news 就绪/翻页）预生成当前新闻摘要图缓存；`onShareAppMessage` **不再用 `news.picUrl`**，一律用摘要图缓存（极端竞态降级微信默认图标）；删除死代码 `_getSyncPlaceholder`
+
+**二、全链路去掉新闻图片**：
+- `refreshNews/index.js` `batchInsert`：`picUrl` 一律置空入库
+- `sources/juhe.js` / `sources/tianxing.js`：数据源 `picUrl` 置空
+- `utils/newsCleaner.js` `stripHtmlTags`：新增清理 ① `<figure>/<picture>` 图片容器 ② 裸 `<img>/<image>/<source>` ③ Markdown 图片 `![alt](url)` ④ 裸图片 URL（.jpg/.png/.gif/.webp/.bmp 结尾，不误伤普通链接）——`getNewsDetail` 复用同一清洗器自动生效
+- 前端 wxml 本就纯文本渲染（无新闻图片），无需改
+
+**效果**：分享卡片缩略图显示「标题 + AI 摘要」文字图（非新闻图）；数据库不再存 picUrl；正文清洗掉所有图片语法/URL。
+
+**验证**：真机分享看缩略图是否显示摘要文字；部署 refreshNews 后刷新一轮，查 DB `news_cache` 的 `picUrl` 应为空、content 无图片 URL。
+
+---
 ### ⚡ 2026-08-07 07:40 【FS-01 拉取数量 5→8 + 定时刷新可观测性增强 · 已实现 · @owner 部署 refreshNews + 前端发布】
 
 > **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布 `utils/constants.js`）、PM（知悉）、所有角色
@@ -3159,6 +3179,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-11** | **搜索阶段预算与超时收紧**（预算 40→30s，zhipu 20→15s / qwen 15→12s / deepseek 15→10s，治「全引擎超时」型故障） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 tech worker 35.86s，−14.6s） | 23:31 双分类日志 | `cloudfunctions/refreshNews/zhipuSearch.js` |
 | **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 编排器 445ms 返回 async=true；前端发布待 owner 真机） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
 | **FS-01** | **拉取数量 5→8 + 定时刷新可观测性增强**（PER_CATEGORY_COUNT 5→8、聚合/天行 5→8、MORE_PAGE_SIZE 5→8；编排/worker 打印触发 SOURCE + 定时器健康自检 >2h 警告；排查定时刷新不生效：最大嫌疑=数据源全故障，次=云端触发器缺失） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；观察日志 SOURCE=wx_trigger 是否每小时出现） | owner 反馈「5 条太少」+「定时刷新不生效」 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/index.js` + `utils/constants.js` |
+| **FS-02** | **分享卡片改 AI 摘要图 + 全链路去图片**（share-card 新增 generateShareImage 绘制标题+摘要；detail.js 分享不用 picUrl 改摘要图；后端 picUrl 置空 + newsCleaner 清洗 HTML/Markdown/裸图片 URL） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；真机验证分享缩略图显示摘要文字） | owner 反馈「分享展示 AI 摘要」「新闻中不要任何图片」 | `components/share-card/share-card.js` + `pages/detail/detail.js` + `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/sources/{juhe,tianxing}.js` + `cloudfunctions/refreshNews/utils/newsCleaner.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

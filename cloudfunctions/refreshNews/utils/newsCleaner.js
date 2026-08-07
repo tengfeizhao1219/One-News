@@ -36,6 +36,10 @@ function decodeHtmlEntities(text) {
 
 /**
  * 移除 HTML 标签和脚本
+ * FS-02（2026-08-07 owner 决策）：新闻中不含任何图片——
+ *   ① HTML <img>/<figure>/<picture> 等标签（由通用 <[^>]+> 一并移除，此处先删块级容器防残留）；
+ *   ② Markdown 图片语法 ![alt](url)；
+ *   ③ 裸图片 URL（http(s)://...以 .jpg/.jpeg/.png/.gif/.webp/.bmp 结尾）。
  */
 function stripHtmlTags(text) {
   return text
@@ -43,7 +47,17 @@ function stripHtmlTags(text) {
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
     .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+    // FS-02：图片容器整体删除（含其中文字 alt），防 <figure><img><figcaption> 残留
+    .replace(/<(?:figure|picture|figcaption)[^>]*>[\s\S]*?<\/(?:figure|picture|figcaption)>/gi, '')
+    // FS-02：裸 <img ...> / <image ...> / <source ...> 标签（含自闭合）
+    .replace(/<img\s[^>]*>/gi, '')
+    .replace(/<image\s[^>]*>/gi, '')
+    .replace(/<source\s[^>]*>/gi, '')
     .replace(/<!--[\s\S]*?-->/g, '')
+    // FS-02：Markdown 图片语法 ![alt](url)
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    // FS-02：裸图片 URL（http/https + 图片扩展名结尾）
+    .replace(/https?:\/\/[^\s"'<>）)]+\.(?:jpe?g|png|gif|webp|bmp)(?:\?[^\s"'<>）)]*)?/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/div>/gi, '\n')

@@ -141,7 +141,8 @@ function formatTianNewsItem(rawItem, category) {
     categoryName: CATEGORY_NAMES[category] || category,
     source: rawItem.source || rawItem.src || '天行数据',
     sourceUrl: rawItem.url || '',
-    picUrl: (rawItem.picUrl || rawItem.pic_url || '').split(',')[0] || '', // 取第一张
+    // FS-02（2026-08-07 owner 决策）：新闻中不含任何图片 → picUrl 置空
+    picUrl: '',
     publishTime: rawItem.pub_time || rawItem.ctime || new Date().toISOString(),
   }
 }

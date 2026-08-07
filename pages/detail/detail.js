@@ -164,7 +164,8 @@ Page({
     }
 
     // BUG-002 追修: 提前触发占位图预生成（不等引擎初始化，抢占 300ms 竞态窗口）
-    this._pregenPlaceholder(category)
+    // FS-02: news 尚未加载 → 先生成分类占位图兜底；_renderDetail 会用 AI 摘要图覆盖
+    this._pregenShareImage(null)
 
     // 初始化跨分类阅读引擎（方案 A：全量预拉 + localCache 缓存注入）
     this._initEngine(id, index, category)
@@ -360,6 +361,8 @@ Page({
       that._checkFavorite(news.id)
       that._recordBrowse(news) // DG-02/TL-B14：浏览记录写入（纯本地）
     }
+    // FS-02: news 就绪 → 预生成当前新闻的 AI 摘要分享图（翻页到新新闻也会重新生成）
+    that._pregenShareImage(news)
   },
 
   /**
@@ -774,23 +777,39 @@ Page({
     })
   },
 
-  // ============ 分享（B-05 + UX-FIX02 占位图预缓存） ============
+  // ============ 分享（B-05 + UX-FIX02 占位图预缓存 + FS-02 AI 摘要图） ============
 
   /**
-   * UX-FIX02: 预生成当前新闻分类的占位图 base64
-   * 在引擎初始化后调用，Canvas 异步 → 缓存到 _placeholderCache
-   * onShareAppMessage 同步读取缓存
+   * UX-FIX02 / FS-02: 预生成分享卡片图（AI 摘要图），缓存到 _placeholderCache
+   * 优先：有标题+摘要 → 绘制「AI 摘要分享图」（标题 ≤2 行 + 摘要 ≤6 行）；
+   * 无摘要降级 → 分类主题色占位图。
+   * 在 _renderDetail（news 就绪，含翻页）调用；onLoad 早期仅降级分类图兜底。
+   * onShareAppMessage 同步读取缓存（Canvas 2d 的 toDataURL 异步，分享回调不支持 async）
    */
-  _pregenPlaceholder: function (category) {
+  _pregenShareImage: function (news) {
     var that = this
-    var cat = category || this.data.category || 'recommend'  // DG-03: 默认 all → recommend
+    var cat = (news && news.category) || this.data.category || 'recommend'  // DG-03: 默认 all → recommend
     var isDark = this._isSystemDark()
+    var title = (news && news.title) || ''
+    var summary = (news && news.summary) || ''
 
     // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）
     setTimeout(function () {
       try {
         var shareComp = that.selectComponent('#share-card')
-        if (shareComp && typeof shareComp.generateImage === 'function') {
+        if (shareComp && typeof shareComp.generateShareImage === 'function') {
+          shareComp.generateShareImage({
+            category: cat,
+            isDark: isDark,
+            title: title,
+            summary: summary,
+          }).then(function (dataUrl) {
+            that._placeholderCache = dataUrl
+          }).catch(function () {
+            that._placeholderCache = null
+          })
+        } else if (shareComp && typeof shareComp.generateImage === 'function') {
+          // 旧版组件降级：分类占位图
           shareComp.generateImage(cat, isDark).then(function (dataUrl) {
             that._placeholderCache = dataUrl
           }).catch(function () {
@@ -805,7 +824,9 @@ Page({
 
   /**
    * 微信原生分享（button open-type="share" 触发）
-   * 转发卡片：标题（≤30字）+ 封面图/分类占位图 + path 可回看
+   * 转发卡片：标题（≤30字）+ AI 摘要图（FS-02，替代原新闻图/分类占位图）+ path 可回看
+   * FS-02（owner 决策）：新闻中不含任何图片 → imageUrl 不再使用 news.picUrl，
+   * 一律用 Canvas 生成的 AI 摘要图（_placeholderCache）。
    */
   onShareAppMessage: function () {
     var news = this.data.news || {}
@@ -833,31 +854,22 @@ Page({
       path += '?id=' + news.id + '&index=' + this.data.currentIndex + '&category=' + this.data.category
     }
 
-    // BUG-002: 分享占位图时序竞态修复
-    // 优先级：picUrl > Canvas预缓存 > 同步纯色兜底
-    var imageUrl = news.picUrl || this._placeholderCache
-    if (!imageUrl) {
-      imageUrl = this._getSyncPlaceholder(news.category)
-    }
+    // FS-02: 摘要图缓存（_renderDetail 已预生成）→ 极端竞态降级 undefined（微信默认图标）
+    var imageUrl = this._placeholderCache || undefined
 
     return {
       title: title,
       path: path,
-      imageUrl: imageUrl || undefined,
+      imageUrl: imageUrl,
     }
   },
 
   /**
    * BUG-002: 同步兜底 — 当 Canvas 预缓存未就绪时，
    * 返回 undefined（微信使用默认图标，优于显示错误占位）
-   * 正常情况下 _pregenPlaceholder 会在首次分享前完成（300ms vs 用户操作延迟 >1s）
+   * 正常情况下 _pregenShareImage 会在首次分享前完成（150ms vs 用户操作延迟 >1s）。
+   * FS-02: onShareAppMessage 直接用 _placeholderCache || undefined，等价于本方法 → 已删除
    */
-  _getSyncPlaceholder: function (category) {
-    // Canvas 2d 的 toDataURL 是异步的，onShareAppMessage 不支持 async
-    // 此处无法同步生成有效图片。预缓存 _placeholderCache 覆盖绝大多数场景，
-    // 极端竞态（300ms 内分享）降级为微信默认图标——可接受
-    return undefined
-  },
 
   /**
    * D-07 S4（G-08）：判断当前生效主题是否暗色（B-05 分享占位图用）
