@@ -76,5 +76,7 @@ window.KANBAN_DATA = [
   { id: "AB-01-A",    title: "「关于一页」真机验证", col: "accept", role: "owner", prio: "P2", status: "wait", link: "关于一页", note: "验收清单已就绪", updated: "08-06" },
   { id: "BUG-RT",     title: "真机复测：BUG-20260802-001/004/006（翻页/数据源/分类提示）", col: "accept", role: "owner", prio: "P1", status: "wait", link: "真机复测", note: "BLK-09 设备资源；代码已修待复测", updated: "08-05" },
   { id: "Q-05",       title: "产品验收（60 条验收项，P0❌→阻断）", col: "accept", role: "PM", prio: "P0", status: "doing", link: "交互标准", note: "建议待翻页真机复测通过启动", updated: "08-05" },
+  // ===== 开发状态 (FS / FE) =====
+  { id: "RQ-22",      title: "意见反馈留言板（设置页意见反馈落地：留言/回复/作者角标/管理/合规审核/文明公约页）", col: "dev", role: "FE", prio: "P1", status: "doing", link: "意见反馈留言板", note: "需求池 RQ-22；存储=云数据库✅ 合规=关键词黑名单+AI✅（owner 拍板 08-07）；展示/用户体系等 7 项待细化；FE 前端实施细化中", updated: "08-07" },
   { id: "Q-06",       title: "上线检查（合并确认/部署/审核准备/回滚预案）", col: "accept", role: "PJM", prio: "P0", status: "wait", link: "交互标准", note: "Q-06.1~06.4 关口检查", updated: "08-05" }
 ];
