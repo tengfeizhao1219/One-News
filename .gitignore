@@ -14,3 +14,6 @@ __pycache__/
 push_retry.py
 push_retry.sh
 resolve_rebase_conflicts.py
+
+# node_modules（云端安装依赖，不入库）
+node_modules/
