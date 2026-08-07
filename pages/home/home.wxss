@@ -161,10 +161,10 @@
 
 .summary-p {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  /* BUG-20260806-004: 使用相对尺寸 */
-  font-size: 32rpx;
+  /* BUG-20260807-003: 正文摘要保留无障碍缩放（对齐 detail .text-p；BUG-20260806-004 误将正文固定 rpx） */
+  font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 1.85;
+  line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
   letter-spacing: 1rpx;
 }

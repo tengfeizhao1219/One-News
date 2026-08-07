@@ -214,9 +214,10 @@
 }
 .pv-summary {
   font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  font-size: 30rpx;
+  /* BUG-20260807-003: 预览卡摘要=正文，保留无障碍缩放（对齐 detail .text-p；标题/元信息仍固定） */
+  font-size: calc(30rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 1.8;
+  line-height: calc(1.8 * var(--font-scale));
   letter-spacing: 0.5rpx;
   display: -webkit-box;
   -webkit-line-clamp: 2;

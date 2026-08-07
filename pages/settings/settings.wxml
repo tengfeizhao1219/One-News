@@ -1,5 +1,6 @@
 <!-- 设置页 — UI-B9 独立全屏页 · D-09 v1.2（BUG-20260806-007） -->
-<view class="page {{themeClass}}" style="--nav-offset: {{navOffset}}px;">
+<!-- BUG-20260807-003: 根节点注入 --font-scale / --font-scale-meta，预览卡摘要随档位缩放（对齐 UX-FIX-F13） -->
+<view class="page {{themeClass}}" style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --nav-offset: {{navOffset}}px;">
 
   <!-- 顶部导航栏：主页（左）+ 标题 · D-09 v1.2（仅下扩展 12px，按钮锚定胶囊中心） -->
   <!-- BUG-20260806-009 v3: 状态栏不透明背景层 -->
