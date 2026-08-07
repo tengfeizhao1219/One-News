@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>意见反馈留言板 · UI/UX Demo（RQ-22-D）</title>
+<style>
+  :root { --bg-page:#F5F3F0; --bg-card:#FAF9F7; --bg-subtle:#F0EEEA; --text-primary:#1C1C1E;
+    --text-secondary:#6B6B70; --text-body:#5E5E60; --text-tertiary:#8A8A8E; --divider:#E8E6E1;
+    --tag-bg:#EEECE8; --primary:#007AFF; --danger:#FF3B30; --warn-subtle:rgba(245,158,11,.15); --chip-bg:rgba(28,28,30,.85); --chip-text:#fff; }
+  body.dark { --bg-page:#000; --bg-card:#0D0D0D; --bg-subtle:#1A1A1C; --text-primary:#fff;
+    --text-secondary:#999; --text-body:#D4D4D4; --text-tertiary:#666; --divider:#1C1C1E;
+    --tag-bg:#1C1C1E; --primary:#0A84FF; --danger:#FF453A; --warn-subtle:rgba(255,159,10,.15); --chip-bg:rgba(255,255,255,.15); }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    background:#2A2A2E; display:flex; justify-content:center; align-items:flex-start; min-height:100vh;
+    padding:24px 16px 60px; -webkit-font-smoothing:antialiased; }
+  .wrap { display:flex; gap:28px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+  .toolbar { width:100%; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-bottom:6px; }
+  .toolbar button { padding:8px 14px; border-radius:10px; border:1px solid rgba(255,255,255,.2);
+    background:rgba(255,255,255,.08); color:#fff; font-size:13px; cursor:pointer; }
+  .toolbar button:hover { background:rgba(255,255,255,.16); }
+  .toolbar .hint { width:100%; text-align:center; color:rgba(255,255,255,.6); font-size:12px; }
+
+  /* ============ 手机壳 ============ */
+  .phone { width:375px; height:812px; background:var(--bg-page); border-radius:44px;
+    border:9px solid #1c1c1e; position:relative; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.5);
+    transition:background .3s; flex-shrink:0; }
+  .statusbar { height:44px; display:flex; justify-content:space-between; align-items:center;
+    padding:0 20px; color:var(--text-primary); font-size:14px; font-weight:600; }
+  .capsule { width:88px; height:30px; background:var(--chip-bg); border-radius:15px;
+    display:flex; align-items:center; justify-content:flex-end; padding-right:8px; gap:6px; }
+  .capsule i { width:10px; height:10px; border-radius:50%; background:var(--chip-text); opacity:.9; }
+  .capsule b { width:8px; height:8px; border:1.5px solid var(--chip-text); border-radius:2px; opacity:.9; }
+
+  /* 导航 */
+  .navbar { position:absolute; top:44px; left:0; right:0; height:38px; display:flex; align-items:center;
+    padding:0 8px; background:var(--bg-page); z-index:22; }
+  .nav-home { width:32px; height:32px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; color:var(--text-primary); cursor:pointer; }
+  .nav-home svg { width:22px; height:22px; fill:var(--text-primary); }
+  .nav-title { flex:1; text-align:center; font-size:17px; font-weight:600; color:var(--text-primary); }
+  .nav-r { width:32px; height:32px; }
+
+  /* 作者管理条 */
+  .admin-bar { position:absolute; top:82px; left:0; right:0; z-index:5; display:flex; align-items:center;
+    gap:10px; padding:8px 16px 4px; background:var(--bg-page); }
+  .chip { font-size:14px; padding:5px 12px; border-radius:12px; background:var(--tag-bg);
+    color:var(--text-secondary); cursor:pointer; white-space:nowrap; }
+  .chip.on { background:var(--text-primary); color:var(--bg-card); }
+  .admin-count { margin-left:auto; font-size:12px; color:var(--text-secondary); }
+
+  /* 列表 */
+  .list { position:absolute; top:120px; left:0; right:0; bottom:76px; overflow-y:auto;
+    padding:8px 16px 24px; -webkit-overflow-scrolling:touch; }
+  .msg-card { background:var(--bg-card); border-radius:10px; padding:12px; margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .msg-head { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+  .msg-nick { font-size:14px; font-weight:600; color:var(--text-primary); }
+  .author-badge { font-size:11px; padding:1px 5px; border-radius:4px; background:var(--primary);
+    color:#fff; font-weight:500; }
+  .msg-time { margin-left:auto; font-size:11px; color:var(--text-tertiary); }
+  .msg-del { font-size:12px; color:var(--danger); cursor:pointer; padding:0 2px; display:none; }
+  .is-author .msg-del { display:block; }
+  .msg-body { font-size:15px; color:var(--text-primary); line-height:1.6; margin-bottom:4px;
+    word-break:break-word; }
+  .msg-reply-toggle { font-size:12px; color:var(--text-secondary); cursor:pointer; padding:2px 0; }
+
+  /* 回复区（楼中楼） */
+  .reply-area { margin:8px 0 0 8px; padding:8px; background:var(--bg-subtle); border-radius:8px; }
+  .reply-item { margin-bottom:6px; }
+  .reply-item:last-child { margin-bottom:0; }
+  .reply-nick { font-size:12px; font-weight:500; color:var(--text-primary); display:inline; }
+  .reply-body { font-size:14px; color:var(--text-primary); line-height:1.55; margin-top:2px; }
+  .reply-time { font-size:10px; color:var(--text-tertiary); }
+  .reply-input-wrap { margin-top:8px; display:flex; gap:6px; }
+  .reply-input { flex:1; font-size:13px; padding:6px 10px; border-radius:8px; background:var(--tag-bg);
+    color:var(--text-primary); border:none; outline:none; min-height:28px; }
+  .reply-send { font-size:13px; padding:0 14px; border-radius:14px; background:var(--primary);
+    color:#fff; border:none; cursor:pointer; }
+
+  /* 底部输入区 */
+  .input-bar { position:absolute; left:0; right:0; bottom:0; z-index:10; background:var(--bg-card);
+    border-top:0.5px solid var(--divider); padding:8px 12px 16px; display:flex; align-items:flex-end; gap:8px; }
+  .input-box { flex:1; font-size:15px; padding:8px 12px; border-radius:8px; background:var(--tag-bg);
+    color:var(--text-primary); border:none; outline:none; min-height:36px; max-height:100px; resize:none; }
+  .send-btn { font-size:15px; padding:8px 16px; border-radius:18px; background:var(--primary);
+    color:#fff; border:none; cursor:pointer; font-weight:600; }
+  .send-btn:disabled { opacity:.4; cursor:not-allowed; }
+  .cooldown { position:absolute; bottom:70px; left:0; right:0; text-align:center; font-size:12px;
+    color:var(--text-secondary); z-index:9; }
+
+  /* 公约页 */
+  .rules { position:absolute; top:82px; left:0; right:0; bottom:0; overflow-y:auto; padding:16px; display:none; }
+  .rules.show { display:block; }
+  .warn-card { background:var(--warn-subtle); border-radius:10px; padding:12px; font-size:14px;
+    color:var(--text-body); margin-bottom:16px; line-height:1.6; }
+  .rules h3 { font-size:18px; font-weight:700; color:var(--text-primary); margin:14px 0 8px; }
+  .rule-item { display:flex; gap:8px; font-size:14px; color:var(--text-body); line-height:1.7; margin-bottom:6px; }
+  .rule-item b { color:var(--primary); font-weight:600; }
+  .rules-btn { position:absolute; left:16px; right:16px; bottom:24px; height:44px; border-radius:22px;
+    background:var(--primary); color:#fff; font-size:15px; border:none; cursor:pointer; }
+
+  .spec { width:340px; background:#1c1c1e; border-radius:16px; padding:18px; color:#ddd;
+    font-size:12.5px; line-height:1.8; max-height:812px; overflow:auto; }
+  .spec h3 { color:#fff; font-size:14px; margin:14px 0 6px; }
+  .spec h3:first-child { margin-top:0; }
+  .spec code { background:rgba(255,255,255,.1); padding:1px 5px; border-radius:4px; font-size:11.5px; }
+  .spec .t { color:#0A84FF; }
+  .spec small { color:#888; }
+  .spec ul { padding-left:16px; }
+  .spec .note { border:1px dashed rgba(255,255,255,.25); border-radius:8px; padding:8px 10px; margin-top:8px; color:#bbb; }
+</style>
+</head>
+<body class="light">
+  <div class="wrap">
+    <div>
+      <div class="toolbar">
+        <button onclick="toggleTheme()">🌗 切换深浅色</button>
+        <button onclick="toggleAuthor()">🛡 切换作者视角</button>
+        <button onclick="showRules()">📜 查看文明公约页</button>
+        <div class="hint">留言板：输入文字点发送（含 30s 限频演示）· 点「回复」展开楼中楼 · 作者视角可见删除/筛选</div>
+      </div>
+
+      <div class="phone" id="phone">
+        <div class="statusbar"><span>9:41</span><div class="capsule"><i></i><b></b></div></div>
+        <div class="navbar">
+          <div class="nav-home" onclick="backHome()"><svg viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg></div>
+          <div class="nav-title" id="navTitle">意见反馈</div>
+          <div class="nav-r"></div>
+        </div>
+
+        <!-- 作者管理条 -->
+        <div class="admin-bar" id="adminBar" style="display:none;">
+          <div class="chip on" data-f="all" onclick="setFilter(this)">全部</div>
+          <div class="chip" data-f="flagged" onclick="setFilter(this)">违规标记</div>
+          <div class="admin-count" id="adminCount">共 0 条</div>
+        </div>
+
+        <!-- 留言列表 -->
+        <div class="list" id="list"></div>
+
+        <!-- 30s 冷却提示 -->
+        <div class="cooldown" id="cooldown"></div>
+
+        <!-- 底部输入区 -->
+        <div class="input-bar">
+          <textarea class="input-box" id="inputBox" placeholder="写下你的意见或建议…" maxlength="500"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMsg()">发送</button>
+        </div>
+
+        <!-- 文明公约页 -->
+        <div class="rules" id="rules">
+          <div class="warn-card">⚠️ 你提交的留言未通过内容审核，请阅读文明留言公约后重新提交。</div>
+          <h3>文明留言公约</h3>
+          <div class="rule-item"><b>1.</b>请勿发布涉黄、暴力、人身攻击等违法或不良信息</div>
+          <div class="rule-item"><b>2.</b>请勿发布广告、营销或与新闻产品无关的推广内容</div>
+          <div class="rule-item"><b>3.</b>请勿泄露他人隐私或进行恶意骚扰</div>
+          <div class="rule-item"><b>4.</b>请理性表达，尊重不同观点，文明讨论</div>
+          <div class="rule-item"><b>5.</b>违规留言将被拦截，情节严重者限制使用</div>
+          <button class="rules-btn" onclick="backToBoard()">返回留言板</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="spec" id="spec">
+      <h3>📐 意见反馈留言板 · 参数速查（RQ-22-D）</h3>
+      <small>rpx 值（750 设计稿）· 完整规范见 docs/02-产品设计/D-02-增量-RQ22-意见反馈留言板-UIUX设计.md</small>
+      <div class="note">🛡 留言板为「卡片式列表 + 底部固定输入区」轻社区页；入口：设置页「意见反馈」→ navigateTo。</div>
+
+      <h3>页面结构</h3>
+      <ul>
+        <li>nav-bar：主页 + 标题「意见反馈」（D-09）</li>
+        <li>作者管理条（仅作者）：筛选 chip + 「共 N 条」</li>
+        <li>留言列表（倒序）→ 留言卡片 → 回复区（楼中楼）</li>
+        <li>底部固定输入区（文本框 + 发送 + 30s 冷却）</li>
+      </ul>
+
+      <h3>留言卡片</h3>
+      <ul>
+        <li>bg <code class="t">--bg-card</code> · 圆角 <code>20rpx</code> · padding <code>24rpx</code></li>
+        <li>昵称 <code>28rpx/600</code> · 作者角标 <code>22rpx</code> 主题色底白字</li>
+        <li>相对时间 <code>22rpx</code> tertiary · 内容 <code>30rpx/1.6</code></li>
+        <li>删除（仅作者）<code>24rpx</code> <span class="t">--color-favorite</span></li>
+      </ul>
+
+      <h3>回复区（楼中楼）</h3>
+      <ul>
+        <li>缩进 <code>16rpx</code> · bg <code class="t">--bg-subtle</code> · 圆角 <code>16rpx</code></li>
+        <li>最深 <code>4</code> 级后收平 · 回复输入框点「回复」展开</li>
+      </ul>
+
+      <h3>输入区 / 交互</h3>
+      <ul>
+        <li>文本框 min-height <code>72rpx</code> max-height <code>200rpx</code> · 发送 72rpx 主题色</li>
+        <li>30s 限频：冷却中拦截 + 倒计时提示</li>
+        <li>违规 → 跳转文明公约页（不入库）</li>
+        <li>动画 ≤300ms · toast 120ms</li>
+      </ul>
+
+      <h3>暗色</h3>
+      <ul>
+        <li>全部走 token：<code class="t">--bg-page/card/subtle/tag-bg</code> + 文字族 + <code class="t">--primary</code> / <code class="t">--color-favorite</code></li>
+      </ul>
+    </div>
+  </div>
+
+<script>
+/* ============ 模拟数据 ============ */
+var NICK = '微信用户 8a3f';
+var isAuthor = false;
+var lastSent = 0;
+var cooldownTimer = null;
+var replyOpen = {};   // 回复输入框是否展开
+
+var data = [
+  { id:1, nick:'微信用户 8a3f', isAuthor:false, time:'2 分钟前', flagged:false,
+    content:'希望详情页能支持夜间自动切换深色模式，现在手动切换有点麻烦。',
+    replies:[
+      { nick:'微信用户 c2e9', isAuthor:false, time:'1 分钟前', content:'支持，同求！' },
+      { nick:'产品作者', isAuthor:true, time:'刚刚', content:'收到，正在评估自动跟随系统的方案，感谢反馈 🙏' }
+    ]},
+  { id:2, nick:'微信用户 f7a1', isAuthor:false, time:'15 分钟前', flagged:true,
+    content:'广告投放可以接受，但希望能去掉正文中的推广链接。',
+    replies:[]},
+  { id:3, nick:'产品作者', isAuthor:true, time:'1 小时前', flagged:false,
+    content:'新版本已优化首页加载速度，欢迎体验并反馈问题。',
+    replies:[
+      { nick:'微信用户 8a3f', isAuthor:false, time:'30 分钟前', content:'确实快了很多，赞！' }
+    ]}
+];
+
+/* ============ 渲染 ============ */
+function renderList() {
+  var filter = document.querySelector('.chip.on') ? document.querySelector('.chip.on').dataset.f : 'all';
+  var list = document.getElementById('list');
+  var html = '';
+  data.forEach(function(m){
+    if (filter === 'flagged' && !m.flagged) return;
+    html += '<div class="msg-card' + (isAuthor ? ' is-author' : '') + '">'
+      + '<div class="msg-head">'
+      +   '<span class="msg-nick">' + m.nick + '</span>'
+      +   (m.isAuthor ? '<span class="author-badge">作者</span>' : '')
+      +   '<span class="msg-time">' + m.time + '</span>'
+      +   (isAuthor ? '<span class="msg-del" onclick="delMsg(' + m.id + ')">删除</span>' : '')
+      + '</div>'
+      + '<div class="msg-body">' + m.content + '</div>'
+      + (m.flagged ? '<div style="font-size:11px;color:#F59E0B;margin-bottom:4px;">⚠️ 违规标记</div>' : '')
+      + '<div class="msg-reply-toggle" onclick="toggleReply(' + m.id + ')">'
+      +   (m.replies.length ? '回复 ' + m.replies.length : '回复') + (replyOpen[m.id] ? ' ▾' : ' ▸')
+      + '</div>'
+      + (replyOpen[m.id] ? renderReplies(m) : '')
+      + '</div>';
+  });
+  if (!data.length) html = '<div style="text-align:center;padding:80px 0;color:var(--text-secondary);font-size:14px;">还没有留言，来说两句吧</div>';
+  list.innerHTML = html;
+  var count = data.filter(function(m){ return filter==='flagged' ? m.flagged : true; }).length;
+  document.getElementById('adminCount').textContent = '共 ' + count + ' 条';
+}
+function renderReplies(m) {
+  var html = '<div class="reply-area">';
+  m.replies.forEach(function(r){
+    html += '<div class="reply-item">'
+      + '<span class="reply-nick">' + r.nick + '</span>' + (r.isAuthor ? ' <span class="author-badge">作者</span>' : '')
+      + ' <span class="reply-time">' + r.time + '</span>'
+      + '<div class="reply-body">' + r.content + '</div></div>';
+  });
+  html += '<div class="reply-input-wrap"><input class="reply-input" placeholder="写下回复…"><button class="reply-send" onclick="sendReply(' + m.id + ', this)">发送</button></div>';
+  html += '</div>';
+  return html;
+}
+renderList();
+
+/* ============ 交互 ============ */
+function sendMsg() {
+  var box = document.getElementById('inputBox');
+  var txt = box.value.trim();
+  if (!txt) return;
+  var now = Date.now();
+  if (now - lastSent < 30000) {
+    showCooldown(Math.ceil((30000 - (now - lastSent)) / 1000));
+    return;
+  }
+  if (/广告|推广|加微信|优惠/.test(txt)) {
+    showRules();
+    box.value = '';
+    return;
+  }
+  data.unshift({ id: Date.now(), nick:NICK, isAuthor:isAuthor, time:'刚刚', flagged:false, content:txt, replies:[] });
+  box.value = '';
+  lastSent = now;
+  renderList();
+  showCooldown(30);
+}
+function sendReply(id, btn) {
+  var inp = btn.parentNode.querySelector('.reply-input');
+  var txt = inp.value.trim();
+  if (!txt) return;
+  data.forEach(function(m){ if (m.id === id) m.replies.push({ nick: isAuthor ? '产品作者' : NICK, isAuthor:isAuthor, time:'刚刚', content:txt }); });
+  renderList();
+}
+function toggleReply(id) { replyOpen[id] = !replyOpen[id]; renderList(); }
+function delMsg(id) {
+  if (!confirm('确定删除这条留言？')) return;
+  data = data.filter(function(m){ return m.id !== id; });
+  renderList();
+}
+function setFilter(el) {
+  document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
+  el.classList.add('on');
+  renderList();
+}
+function showCooldown(n) {
+  var cd = document.getElementById('cooldown');
+  if (cooldownTimer) clearInterval(cooldownTimer);
+  var t = n;
+  cd.textContent = '请 ' + t + ' 秒后再试';
+  cooldownTimer = setInterval(function(){
+    t--;
+    if (t <= 0) { clearInterval(cooldownTimer); cd.textContent = ''; }
+    else cd.textContent = '请 ' + t + ' 秒后再试';
+  }, 1000);
+}
+
+/* ============ 视图切换 ============ */
+function showRules() {
+  document.getElementById('rules').classList.add('show');
+  document.getElementById('navTitle').textContent = '文明留言公约';
+  document.querySelectorAll('.list,.input-bar,.admin-bar,.cooldown').forEach(function(e){ e.style.display = 'none'; });
+  document.getElementById('inputBox').value = '';
+}
+function backToBoard() {
+  document.getElementById('rules').classList.remove('show');
+  document.getElementById('navTitle').textContent = '意见反馈';
+  document.querySelectorAll('.list,.input-bar,.admin-bar').forEach(function(e){ e.style.display = ''; });
+  renderList();
+}
+function backHome(){ toggleTheme(); } // demo 示意
+
+/* ============ 工具 ============ */
+function toggleTheme(){ document.body.classList.toggle('dark'); }
+function toggleAuthor(){
+  isAuthor = !isAuthor;
+  document.getElementById('adminBar').style.display = isAuthor ? 'flex' : 'none';
+  renderList();
+  if (!isAuthor) document.querySelectorAll('.chip').forEach(function(c){ c.classList.remove('on'); });
+}
+</script>
+</body>
+</html>
