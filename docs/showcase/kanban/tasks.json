@@ -513,7 +513,7 @@
       "prio": "P1",
       "status": "doing",
       "link": "意见反馈留言板",
-      "note": "需求池 RQ-22；存储=云数据库✅ 合规=关键词黑名单+AI✅（owner 拍板 08-07）；展示/用户体系等 7 项待细化；FE 前端实施细化中",
+      "note": "✅ FE 完成（0bc6ce3：feedback/rules 页 + 设置页入口 + app.json）；待 FS 云函数 create/list/delete + 词库 + AI 审核（交接单 §四）→ 真机联调 + QA 12 条",
       "updated": "08-07",
       "doc": "https://github.com/tengfeizhao1219/One-News/blob/main/docs/tasks/RQ-22.md"
     },
