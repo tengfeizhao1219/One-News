@@ -508,7 +508,7 @@ Page({
     }
 
     // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
-    if (Math.abs(dy) < 70 || dt > 500) return
+    if (Math.abs(dy) < SWIPE_THRESHOLD || dt > 500) return
     // 首次有效上/下滑 → 提示消失（与详情页一致），同会话内不再复现
     this._swipeHintDismissed = true
     this.setData({ showSwipeHint: false })
@@ -820,35 +820,6 @@ Page({
     } finally {
       this.setData({ loadingMore: false })
     }
-  },
-
-  // ============ 导航指示点点击（UX-IMPROVE06） ============
-
-  /**
-   * 点击右侧导航点，跳转到对应卡片
-   */
-  onNavDotTap(e) {
-    if (this._isAnimating) return
-    var targetIndex = e.currentTarget.dataset.index
-    if (targetIndex === undefined) return
-    var idx = parseInt(targetIndex)
-    if (isNaN(idx) || idx < 0 || idx >= this.data.newsList.length) return
-    if (idx === this.data.currentIndex) return
-
-    this._isAnimating = true
-    // 判断方向：目标在下方（上滑切换）还是上方（下滑切换）
-    if (idx > this.data.currentIndex) {
-      this._animateSwipeNext()
-    } else {
-      this._animateSwipePrev()
-    }
-
-    // 直接渲染到目标位置（不再链式调用动画，renderCards 自带 animClass=''）
-    var that = this
-    this.renderCards(this.data.newsList, idx)
-    setTimeout(function () {
-      that._isAnimating = false
-    }, 50)
   },
 
   // ============ 卡片点击 ============

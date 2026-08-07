@@ -42,8 +42,8 @@ function refreshPageSize() {
 // 手势阈值（v5.9: 与详情页完全对齐——阈值70px、动画350ms ease）
 const SWIPE_THRESHOLD = 70       // 上下滑动切换阈值（与详情页 onTouchEnd 一致）
 const PANEL_SWIPE_THRESHOLD = 60 // 左滑呼出面板阈值
-const SWIPE_ANIMATION_MS = 350   // 翻页动画时长（与详情页 setTimeout 350ms 一致）
-const BOUNCE_ANIMATION_MS = 200  // 回弹动画时长（v5.9 已废弃：卡片页不再使用回弹逻辑）
+// SWIPE_ANIMATION_MS / BOUNCE_ANIMATION_MS 已于 2026-08-07 巡检清理：
+// 页面均使用硬编码 setTimeout（350ms/200ms），常量零引用；BOUNCE 注释自述已废弃
 
 // 请求配置
 // DG-03（2026-08-06 数据治理 · owner 决策）：首页首次 10 条；翻底/翻顶每次 5 条；
@@ -70,8 +70,6 @@ module.exports = {
   refreshPageSize,
   SWIPE_THRESHOLD,
   PANEL_SWIPE_THRESHOLD,
-  SWIPE_ANIMATION_MS,
-  BOUNCE_ANIMATION_MS,
   PAGE_SIZE,
   MORE_PAGE_SIZE,
   MORE_PAGE_LIMIT,

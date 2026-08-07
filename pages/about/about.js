@@ -71,15 +71,6 @@ Page({
     }
   },
 
-  goBack: function () {
-    var pages = getCurrentPages()
-    if (pages.length > 1) {
-      wx.navigateBack()
-    } else {
-      wx.reLaunch({ url: '/pages/home/home' })
-    }
-  },
-
   /**
    * BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮
    * TL-B15 / RQ-17：reLaunch 回首页并清栈（防抖 300ms，失败降级逐层回退）

@@ -65,14 +65,15 @@ console.log('\n【静态】home.js onTouchEnd 左滑面板判定顺序（Bug2）
   const body = m ? m[1] : ''
   // 注意：注释里也写了「Math.abs(dy) < 70」（全角括号），必须匹配 `if (` 代码形态，避免误命中注释
   const panelIdx = body.indexOf('if (dx < -PANEL_SWIPE_THRESHOLD')
-  const verticalReturnIdx = body.indexOf('if (Math.abs(dy) < 70')
-  check('onTouchEnd 左滑面板判定早于纵向早退（Math.abs(dy)<70）',
+  // 2026-08-07 巡检：纵向阈值改用常量 SWIPE_THRESHOLD（=70），顺序校验不变
+  const verticalReturnIdx = body.indexOf('if (Math.abs(dy) < SWIPE_THRESHOLD')
+  check('onTouchEnd 左滑面板判定早于纵向早退（Math.abs(dy)<SWIPE_THRESHOLD）',
     panelIdx >= 0 && verticalReturnIdx >= 0 && panelIdx < verticalReturnIdx,
     'panelIdx=' + panelIdx + ' verticalReturnIdx=' + verticalReturnIdx)
   check('onTouchEnd 左滑面板条件含横向优先 Math.abs(dx) > Math.abs(dy)',
     /dx < -PANEL_SWIPE_THRESHOLD && Math\.abs\(dx\) > Math\.abs\(dy\)/.test(body))
   check('onTouchEnd 纵向翻页仍需 70px + 500ms',
-    body.includes('Math.abs(dy) < 70') && body.includes('dt > 500'))
+    body.includes('Math.abs(dy) < SWIPE_THRESHOLD') && body.includes('dt > 500'))
 }
 
 // ===== 首页：Bug1 新卡以 incomingAnim 起始（无中心闪现）=====

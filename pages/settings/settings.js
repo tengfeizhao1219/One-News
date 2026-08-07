@@ -210,11 +210,4 @@ Page({
       },
     })
   },
-
-  /**
-   * 返回上一页（保留：页面内无其他入口，原 nav-back 已改主页按钮）
-   */
-  goBack: function () {
-    wx.navigateBack()
-  },
 })

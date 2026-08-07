@@ -75,8 +75,7 @@ var mockConstants = {
   CATEGORIES: CATEGORIES,
   SWIPE_THRESHOLD: 50,
   PANEL_SWIPE_THRESHOLD: 60,
-  SWIPE_ANIMATION_MS: 10,
-  BOUNCE_ANIMATION_MS: 10,
+  // SWIPE_ANIMATION_MS/BOUNCE_ANIMATION_MS 已随 2026-08-07 巡检清理（constants.js 零引用废弃常量）
   STATUS_BAR_HEIGHT: 20,
   PAGE_HEIGHT: 667,
   PAGE_SIZE: 8,    // FS-06（2026-08-07）：10→8，与 utils/constants.js 同步
@@ -361,7 +360,7 @@ async function testCategoryHint() {
   await page.loadNews()      // 加载流程走完（含 pageState loading→ready + renderCards）
   check('加载/刷新流程走完后提示未被覆盖清空', page.data.categoryHint === '科学探索')
   await tick(600)
-  assertEqual('提示最终仍按 500ms 定时器清除', page.data.categoryHint, '')
+  assertEqual('提示最终仍按 600ms 定时器清除', page.data.categoryHint, '')
 
   // 连续快速切换：定时器不叠加导致提前清除
   page._showCategoryHint('tech')
@@ -370,7 +369,7 @@ async function testCategoryHint() {
   await tick(350)
   assertEqual('连续切换时新提示不被上一个定时器提前清掉', page.data.categoryHint, '社会')
   await tick(250)
-  assertEqual('新提示按自己的 500ms 清除', page.data.categoryHint, '')
+  assertEqual('新提示按自己的 600ms 清除', page.data.categoryHint, '')
 }
 
 // ===== WXML / WXSS 静态验收 =====

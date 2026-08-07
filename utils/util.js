@@ -26,31 +26,6 @@ function formatRelativeTime(dateStr) {
 }
 
 /**
- * 防抖
- */
-function debounce(fn, delay = 300) {
-  let timer = null
-  return function (...args) {
-    if (timer) clearTimeout(timer)
-    timer = setTimeout(() => fn.apply(this, args), delay)
-  }
-}
-
-/**
- * 节流
- */
-function throttle(fn, delay = 100) {
-  let last = 0
-  return function (...args) {
-    const now = Date.now()
-    if (now - last >= delay) {
-      last = now
-      fn.apply(this, args)
-    }
-  }
-}
-
-/**
  * 浏览记录相对时间（TL-B14 / UI-03）
  * 今天 → HH:mm；昨天 → 昨天；2~7 天 → N 天前；超过 7 天 → ''（不展示）
  * @param {number} ts 毫秒时间戳
@@ -88,8 +63,6 @@ function isBrowseExpired(ts) {
 
 module.exports = {
   formatRelativeTime,
-  debounce,
-  throttle,
   formatBrowseTime,
   isBrowseExpired,
 }

@@ -103,13 +103,6 @@ Page({
   },
 
   /**
-   * UI-14 兼容：同步失败条重试入口保留（纯本地后无云端，直接重载本地）
-   */
-  onSyncRetry: function () {
-    this._load()
-  },
-
-  /**
    * UI-B10: 统一设置列表并应用当前筛选
    */
   _setList: function (list) {
