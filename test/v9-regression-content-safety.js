@@ -43,7 +43,7 @@ Module.prototype.require = function (id) {
 
 // ── 测试 ────────────────────────────────────────────
 const path = require('path')
-const { SecurityCheck } = require(path.join(__dirname, '..', 'cloudfunctions/common/securityCheck'))
+const { SecurityCheck } = require(path.join(__dirname, '..', 'cloudfunctions/refreshNews/securityCheck'))
 
 const STATE = { NORMAL: 'normal', DEGRADED: 'degraded', DISABLED: 'disabled' }
 

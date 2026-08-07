@@ -284,11 +284,15 @@ function runTests() {
 
         // --- 预取窗口 ---
         console.log('\n【运行时】预取窗口')
-        // 翻到中间位置触发预取
-        for (var j = 0; j < 5; j++) { engine.goPrev() } // 从末条回退
-        var prefetchedCount = Object.keys(engine._prefetched).length
-        check('预取窗口已填充（_prefetched 非空）', prefetchedCount > 0)
-        console.log('  [INFO] 预取了 ' + prefetchedCount + ' 条')
+        // 2026-08-07 上线前修复：原逻辑在「末条」位置测预取——预取窗口是向后 +2，
+        // 末条时 i=末条+1 超界 → 循环不执行 → _prefetched 恒空（测试流程 bug，非代码 bug）。
+        // 修正：先回退到中间位置（非末条），再 loadCurrentDetail 触发预取（窗口非空）。
+        while (engine._globalIndex > 5) { engine.goPrev() } // 回退到全局索引 ≤5 的中间位置
+        return engine.loadCurrentDetail().then(function () {
+          var prefetchedCount = Object.keys(engine._prefetched).length
+          check('预取窗口已填充（_prefetched 非空）', prefetchedCount > 0)
+          console.log('  [INFO] 预取了 ' + prefetchedCount + ' 条')
+        })
 
         // --- 结果 ---
         console.log('\n==============================================')

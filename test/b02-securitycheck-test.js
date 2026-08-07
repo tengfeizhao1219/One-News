@@ -25,7 +25,7 @@ global.__mockWxSdk = {
   imgSecCheck: async () => { gCalls++; if (gThrow) throw new Error('NET'); return { errCode: gErrCode } },
 }
 
-const { SecurityCheck, STATE } = require('../cloudfunctions/common/securityCheck')
+const { SecurityCheck, STATE } = require('../cloudfunctions/refreshNews/securityCheck')
 
 // ── 测试 ──────────────────────────────────────────────────
 let passed = 0, failed = 0
@@ -95,11 +95,11 @@ console.log('=== B-10 securityCheck 单测 (AC-RQ10) ===\n')
   })
 
   // TC06: DISABLED
-  await test('TC06: DISABLED 全放行', async () => {
+  await test('TC06: DISABLED 全放行（risk=disabled，区别于 degraded=API 降级）', async () => {
     const sc = new SecurityCheck()
     sc._state = STATE.DISABLED
     const r = await sc.checkText('x')
-    assert(r.pass); assertEq(r.risk, 'degraded')
+    assert(r.pass); assertEq(r.risk, 'disabled')
   })
 
   // TC07: reset

@@ -80,8 +80,9 @@ function validateNewsItem(item) {
     return { valid: false, reason: '来源为空或太短' }
   }
   // 排除明显的占位符/推广来源
+  // 2026-08-07 上线前审查：补 `^未知来源$`（"未知"与"未知来源"均为占位符性质，宽松模式也应收敛）
   const invalidSourcePatterns = [
-    /^来源$/, /^未知$/, /^Unknown$/i, /^未命名$/,
+    /^来源$/, /^未知$/, /^未知来源$/, /^Unknown$/i, /^未命名$/,
     /广告/, /推广/, /Sponsored/i,
   ]
   for (const pattern of invalidSourcePatterns) {
