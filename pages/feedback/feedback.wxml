@@ -12,15 +12,15 @@
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-title">意见反馈</view>
-    <!-- 筛选入口（仅作者 isAuthor 可见，不可伪造）· D-02 §2/§3.1 -->
-    <view wx:if="{{isAuthor}}" class="nav-filter" bindtap="toggleFilter">
-      <text class="nav-filter-label">筛选 ▾</text>
-    </view>
   </view>
 
-  <!-- 管理计数条（仅作者）：「共 N 条」（Q4 ✅）· D-02 §3.1 -->
+  <!-- 管理计数条（仅作者）：「共 N 条」+ 筛选入口（右侧）· D-02 §3.1 -->
+  <!-- RQ-22-FE v2：筛选按钮从 nav-bar 移到 manage-bar，避免与原生胶囊重叠 -->
   <view wx:if="{{isAuthor && !loading}}" class="manage-bar">
     <text class="manage-count">共 {{total}} 条</text>
+    <view class="manage-filter" bindtap="toggleFilter">
+      <text class="manage-filter-label">筛选 ▾</text>
+    </view>
   </view>
 
   <!-- 筛选下拉（仅作者）· D-02 §4 -->

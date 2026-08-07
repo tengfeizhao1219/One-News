@@ -50,27 +50,26 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-/* 筛选入口（仅作者）：标题右侧「筛选 ▾」· D-02 §3.1 */
-.nav-filter {
-  position: absolute;
-  right: 24rpx;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 12rpx;
-}
-.nav-filter-label {
-  font-size: 28rpx;
-  color: var(--text-secondary);
-}
 
-/* ========== 管理计数条（仅作者）· D-02 §3.1 ========== */
+/* ========== 管理计数条 + 筛选入口（仅作者）· D-02 §3.1 ========== */
+/* RQ-22-FE v2：筛选按钮从 nav-bar 移到 manage-bar 右侧，避免与原生胶囊重叠 */
 .manage-bar {
   padding: calc(var(--nav-offset, 0px) + 8rpx) 32rpx 8rpx;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .manage-count {
+  font-size: 24rpx;
+  color: var(--text-secondary);
+}
+.manage-filter {
+  display: flex;
+  align-items: center;
+  padding: 4rpx 12rpx;
+}
+.manage-filter-label {
   font-size: 24rpx;
   color: var(--text-secondary);
 }
@@ -86,8 +85,8 @@
 }
 .filter-dropdown {
   position: fixed;
-  top: calc(var(--nav-offset, 0px) + 8rpx);
-  right: 24rpx;
+  top: calc(var(--nav-offset, 0px) + 48rpx);
+  right: 32rpx;
   z-index: 31;
   min-width: 220rpx;
   background-color: var(--bg-card);
