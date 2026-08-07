@@ -48,10 +48,29 @@ exports.main = async (event) => {
     // filter 条件
     // 说明：BLOCKED 内容不入库，当前数据模型无独立「违规标记」字段。
     //   violation 筛选 = 已删除（软删除 status='deleted'，作者侧灰显可查看，Q3 已确认）
-    //   mine 筛选 = 当前调用者（openid 匹配）
-    const baseWhere = { rootId: topWhere }
+    //   mine 筛选 = 当前调用者（openid 匹配）：我的顶层留言 + 我回复过的留言（其顶层作为上下文一并返回，
+    //              否则「我回复别人的留言」因顶层不在列表中而挂载不上、不可见）
+    let topFilter
     if (filter === 'mine') {
-      baseWhere.openid = openid
+      // 1) 查我发过的回复的 rootId 集合（挂载点所在的顶层）
+      let myRootIds = []
+      try {
+        const myRepliesRes = await db.collection('feedback')
+          .where({ openid, rootId: _.exists(true) })
+          .field({ rootId: true })
+          .limit(100)
+          .get()
+        myRootIds = [...new Set((myRepliesRes.data || []).map((d) => d.rootId).filter(Boolean))]
+      } catch (e) {
+        console.warn('[feedback/list] 我的回复查询失败:', e.message)
+      }
+      // 2) 顶层 = 我的顶层留言（rootId 空且 openid=我）∪ 我回复过的留言（_id in myRootIds）
+      const myTop = { rootId: topWhere, openid }
+      const conds = [myTop]
+      if (myRootIds.length > 0) conds.push({ _id: _.in(myRootIds) })
+      topFilter = conds.length > 1 ? _.or(conds) : myTop
+    } else {
+      topFilter = { rootId: topWhere }
     }
 
     // 1. 分页查询顶层留言
@@ -59,14 +78,14 @@ exports.main = async (event) => {
     if (filter === 'violation') {
       // 仅违规标记：软删除的留言（作者视角）
       msgRes = await db.collection('feedback')
-        .where(_.and([baseWhere, { status: 'deleted' }]))
+        .where(_.and([topFilter, { status: 'deleted' }]))
         .orderBy('createdAt', 'desc')
         .skip((pageNum - 1) * pageSize)
         .limit(pageSize)
         .get()
     } else {
       msgRes = await db.collection('feedback')
-        .where(baseWhere)
+        .where(topFilter)
         .orderBy('createdAt', 'desc')
         .skip((pageNum - 1) * pageSize)
         .limit(pageSize)
@@ -78,7 +97,7 @@ exports.main = async (event) => {
     // 2. 总数统计（当前 filter 条件下的顶层留言数）
     let total = 0
     try {
-      const totalRes = await db.collection('feedback').where(baseWhere).count()
+      const totalRes = await db.collection('feedback').where(topFilter).count()
       total = totalRes.total || 0
     } catch (e) {
       console.warn('[feedback/list] 总数统计失败:', e.message)
