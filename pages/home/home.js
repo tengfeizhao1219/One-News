@@ -9,6 +9,10 @@ const app = getApp()
 // 侧边栏分类列表（纯新闻分类，收藏入口已迁移至 dock 菜单「我的收藏」）
 var PANEL_CATEGORIES = CATEGORIES
 
+// RQ-20（全部聚合）内容分类：CATEGORIES 去除 all 本身，作为「全部」视图并行拉取的分类集合
+// 与 reading-engine READING_CATEGORIES 口径一致（顺序 = CATEGORIES 固定顺序）
+var CONTENT_CATEGORIES = CATEGORIES.filter(function (c) { return c.id !== 'all' })
+
 Page({
   data: {
     menuTop: 0,
@@ -318,12 +322,86 @@ Page({
 
   // ============ 数据加载 ============
 
+  /**
+   * RQ-20（全部聚合）：并行拉取所有内容分类首页 → 按 CATEGORIES 顺序合并去重。
+   * 「全部」视图一次性展示各分类数据（单分类 8 条 × 5 分类 ≈ 40 条），
+   * 替代原先 getNewsList({category:'all'}) 单请求只返回 PAGE_SIZE=8 条的问题。
+   * 单分类失败不阻塞整体（catch 返回空数组）。
+   * @returns {Promise<Array>} 合并去重后的新闻列表
+   */
+  async _loadAllAggregated() {
+    var that = this
+    var fetches = CONTENT_CATEGORIES.map(function (c) {
+      return getNewsList({ category: c.id, pageNum: 1, pageSize: PAGE_SIZE })
+        .then(function (res) { return res.list || [] })
+        .catch(function (err) {
+          console.warn('[home] 全部聚合分类拉取失败:', c.id, err)
+          return []
+        })
+    })
+    var results = await Promise.all(fetches)
+    if (that._destroyed) return []
+    var seen = {}
+    var merged = []
+    for (var i = 0; i < results.length; i++) {
+      var catList = results[i] || []
+      for (var j = 0; j < catList.length; j++) {
+        var item = catList[j]
+        var nid = item.id || item._id
+        if (!nid || seen[nid]) continue
+        seen[nid] = true
+        merged.push(item)
+      }
+    }
+    return merged
+  },
+
+  /**
+   * RQ-20（全部聚合）：「全部」视图翻底加载更多 —— 并行拉取各内容分类下一页，
+   * 相对当前 newsList 去重后追加。
+   * @param {number} currentPage 当前已拉到的页码（下一页 = currentPage + 1）
+   * @returns {Promise<Array>} 新增条目（未并入 newsList）
+   */
+  async _loadMoreAllAggregated(currentPage) {
+    var that = this
+    var seen = {}
+    var existing = this.data.newsList || []
+    for (var e = 0; e < existing.length; e++) {
+      var eid = existing[e].id || existing[e]._id
+      if (eid) seen[eid] = true
+    }
+    var fetches = CONTENT_CATEGORIES.map(function (c) {
+      return getNewsList({ category: c.id, pageNum: currentPage + 1, pageSize: MORE_PAGE_SIZE })
+        .then(function (res) { return res.list || [] })
+        .catch(function (err) {
+          console.warn('[home] 全部聚合加载更多分类拉取失败:', c.id, err)
+          return []
+        })
+    })
+    var results = await Promise.all(fetches)
+    if (that._destroyed) return []
+    var newItems = []
+    for (var i = 0; i < results.length; i++) {
+      var catList = results[i] || []
+      for (var j = 0; j < catList.length; j++) {
+        var item = catList[j]
+        var nid = item.id || item._id
+        if (!nid || seen[nid]) continue
+        seen[nid] = true
+        newItems.push(item)
+      }
+    }
+    return newItems
+  },
+
   async loadNews(resolveIndex) {
     try {
       this.setData({ pageState: 'loading', errorMessage: '' })
 
-      const res = await getNewsList({ category: this.data.currentCategory })
-      const list = res.list || []
+      // RQ-20：'all'（全部）→ 并行聚合各分类首页，一次性展示所有分类数据
+      const list = this.data.currentCategory === 'all'
+        ? await this._loadAllAggregated()
+        : (await getNewsList({ category: this.data.currentCategory })).list || []
 
       if (list.length === 0) {
         this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试' })
@@ -633,6 +711,13 @@ Page({
     const { currentCategory, loadingMore } = this.data
     if (loadingMore) return
 
+    // RQ-20（全部聚合）：'all' 已聚合所有内容分类，读到末尾 → 直接加载更多，
+    // 避免切到下一分类（recommend）导致与聚合内容重复。
+    if (currentCategory === 'all') {
+      this.loadMoreNews()
+      return
+    }
+
     // 找当前分类在 CATEGORIES 中的顺序位置
     const curIdx = CATEGORIES.findIndex(c => c.id === currentCategory)
     const nextCat = curIdx >= 0 && curIdx < CATEGORIES.length - 1 ? CATEGORIES[curIdx + 1] : null
@@ -774,8 +859,10 @@ Page({
     this.setData({ loadingMore: true })
     wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
     try {
-      const res = await getNewsList({ category: currentCategory, pageNum: currentPage + 1, pageSize: MORE_PAGE_SIZE })
-      const newItems = res.list || []
+      // RQ-20：'all'（全部）→ 并行拉取各分类下一页聚合追加；其余分类保持单请求
+      const newItems = currentCategory === 'all'
+        ? await this._loadMoreAllAggregated(currentPage)
+        : (await getNewsList({ category: currentCategory, pageNum: currentPage + 1, pageSize: MORE_PAGE_SIZE })).list || []
       if (newItems.length === 0) {
         wx.showToast({ title: '已经到底啦', icon: 'none' })
         return
@@ -804,8 +891,10 @@ Page({
     this.setData({ loadingMore: true })
     wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
     try {
-      const res = await getNewsList({ category: this.data.currentCategory, pageNum: 1, pageSize: PAGE_SIZE })
-      const list = res.list || []
+      // RQ-20：'all'（全部）→ 并行聚合各分类首页；其余分类保持单请求
+      const list = this.data.currentCategory === 'all'
+        ? await this._loadAllAggregated()
+        : (await getNewsList({ category: this.data.currentCategory, pageNum: 1, pageSize: PAGE_SIZE })).list || []
       this.setData({ newsList: list, currentPage: 1, currentIndex: 0, loadMoreCount: 0 })
       this.renderCards(list, 0)
       // BUG-20260802-004: 刷新后侧栏随卡片一起更新

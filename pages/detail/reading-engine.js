@@ -289,6 +289,12 @@ ReadingEngine.prototype.loadNextCategory = function () {
   }
   var cur = that.getCurrent()
   var curCat = cur ? cur.category : ''
+  // RQ-20（全部聚合）：'all' 聚合视图已包含所有内容分类，末尾即到底，禁止再补拉。
+  // 否则 curCat='all' 不在 READING_CATEGORIES（curIdx=-1）→ 恒取 recommend →
+  // 而 recommend 已在聚合列表内 → added=0 → 递归死循环。
+  if (curCat === 'all') {
+    return Promise.resolve({ hasNext: false, category: '', categoryName: '', added: 0 })
+  }
   // 找当前分类在 READING_CATEGORIES 中的位置
   var curIdx = -1
   for (var i = 0; i < READING_CATEGORIES.length; i++) {
