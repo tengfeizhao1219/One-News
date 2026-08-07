@@ -3142,7 +3142,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | BUG-20260806-008 | 滚轮交互三优化（owner 15:12）：①选中锚点修正恒第2行不贴顶 ②触摸热区全条带 ③拖动连续跟手+snap；**16:09 诉求：侧边分类上移、选中固定位上方仅 1 个分类名空间 → main「侧边栏面板整体滑动 v3」`.panel-wheel` absolute(top:180rpx=header 下缘) 系统性达成**（取代 v2.7 flex 顶部对齐，语义一致更彻底，保留 008② 热区 padding-right:32rpx）| FE | 🔴 | ✅ **关闭（owner 真机通过 · 17:47）** | D-02 v2.6（AC-RQ15-18/19/20）+ v3 面板滑动 | PD 按 AC 验收通过 + owner 真机通过 |
 | BUG-20260806-009 | 状态栏不透明 + 按钮胶囊对齐（owner 15:24）：v1 `setNavigationBarColor` 无效→v2 页面级调用仍无效→**v3 状态栏背景层方案**（`.status-bar-fill` 固定层 + nav-bar 补背景色 + 按钮公式 `menuHeight/2-32rpx` 去 menuTop）；**已被 origin/main 完整吸收（6 页面全含）** | FE | 🟡 | ✅ **关闭（owner 真机通过 · 17:47）** | D-09 v1.2 按钮公式勘误 + v3 背景层 | PD 按 AC-009-01~04 验收通过 + owner 真机通过 |
 | BUG-20260806-010 | 侧边新闻列表面板微调（owner 18:34）：① **副标题下移**——「推荐 · N 条」从 panel-header 右侧移到「今日新闻」下方，header 改 `flex-direction:column; align-items:flex-start; gap:8rpx`；panel-body top 随 header 高度增加同步上调（180rpx→196rpx）。② **左侧分类滑动扩展**——`.panel-wheel` 触摸热区从 128rpx+32rpx 扩展到 **~240rpx**（覆盖面板左 ~64%）：`wheel` width 128rpx + `padding-right:112rpx; margin-right:-112rpx; box-sizing:content-box`（视觉 128rpx、命中 240rpx，左对齐），`.panel-scroll` left:128rpx 不变；catch 触摸整个 wheel 区域响应切分类。**首页 + 其他不动**。AC：副标题在下方左对齐；wheel 热区 ~240rpx 整区上下滑动响应；panel-body top 同步调整；视觉 wheel 仍 128rpx；首页无回归；真机通过 | FE | 🟡 | ✅ **FE 已完成（commit `3d1c390`，2026-08-06 19:00）** | D-02 v2.7 wheel + 现有 v5 面板 | PD 按 AC 验收 + owner 真机 |
-| BUG-20260807-003 | 收藏/历史页体验增量（owner 08-07 12:14 · 020 已覆盖大部分 → 本单为增量）：① **边距**：020 已把 favorites/history 列表左右留白加到 32rpx，owner 真机若仍觉贴边 → 加大至 40rpx（目标：文字不贴屏幕边缘）② **「共 x 条」位置**：从 filter-bar 尾部（右对齐）移到分类胶囊**下方一行**（左对齐 · 24rpx · `--text-secondary` · 与胶囊左缘 32rpx 对齐；分类下方提示词已由 020 删除）③ **左滑取消**：favorites 020 已实现左滑露出红色「取消收藏」（阈值 60rpx/snap/回弹），owner 真机确认；history 页当前无删除功能，是否加左滑删除 → **待 owner 确认** | FE | 🟡 | 📋 新建（PD 12:14 提单）| BUG-20260806-020（`5344f72`）| PD 按 AC 验收 + owner 真机 |
+| BUG-20260807-003 | 收藏页体验增量（owner 12:14 · **12:18 决策收窄**）：**① 「共 x 条」位置**：从 filter-bar 尾部（右对齐）移到分类胶囊**下方一行**（左对齐 · 24rpx · `--text-secondary` · 与胶囊左缘 32rpx 对齐）——FE 主任务。**② 边距**：020 已加左右 32rpx，owner 12:18 决策「先 pull 真机看 32rpx 效果」，暂不加宽；真机仍贴边再加大。**③ 左滑**：favorites 020 已实现左滑「取消收藏」（`5344f72`），owner 真机确认；**history 左滑删除：暂停不做（owner 12:18）** | FE | 🟡 | 📋 新建（PD 12:14 · 12:18 收窄）| BUG-20260806-020（`5344f72`）| PD 按 AC 验收 + owner 真机 |
 
 > **关联**：001/002/003 关闭 → PD 更新 Bug 台账状态；D-07 三态通过 → D-07 正式闭环（PD 走查底稿 §十二）。
 > **PD 代建说明**：任务表由 PM 维护，本次为 owner 要求即时建行，PM 可复核调整。
@@ -3482,7 +3482,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | ID | 任务 | 负责人 | 优先级 | 状态 | 依赖 | 交付物/验收 |
 |----|------|------|:---:|:---:|------|------|
 | **PM-01** | PRD 撰写（意见反馈留言板 v0.1） | 产品经理（PM） | 🔴 P0 | ✅ 已完成（`PRD-RQ22-意见反馈留言板.md`） | 无 | PRD 文档 |
-| **RQ-22-D** | **UI/UX 设计**：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页） | 产品设计师（PD） | 🔴 P0 | 📋 待认领 | PM-01 ✅ | D-02 增量文档（交互+视觉+暗色 token + 10 条 AC） |
+| **RQ-22-D** | **UI/UX 设计**：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页） | 产品设计师（PD） | 🔴 P0 | 🔄 **进行中（PD 12:23 认领）** | PM-01 ✅ | D-02 增量文档（交互+视觉+暗色 token + 10 条 AC） |
 | RQ-22-FE | 前端实现：留言板页 + 公约页 + 设置页入口改跳转 | 前端开发（FE） | ⏳ | 📋 待认领 | RQ-22-D | pages/feedback/* |
 | RQ-22-FS | 后端实现：feedback 云函数（create/list/delete）+ 关键词词库 + AI 审核 | 全栈开发（FS） | ⏳ | 📋 待认领 | RQ-22-D（接口对齐）| cloudfunctions/feedback* |
 | RQ-22-QA | 回归 + 验收标准 12 条 | 产品经理（PM） | 🟡 | 📋 待认领 | RQ-22-FE/FS | 验收报告 |
