@@ -63,10 +63,11 @@
   padding: 0 48rpx;
 }
 
-/* BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
+/* BUG-20260806-027: 第 3 层（detail）顶部按钮改为首页按钮（goHome/reLaunch），
+   非返回按钮。样式与首页 nav-home 一致：image 渲染 home.svg 主题色，深色用白色版。
    D-09 v1.2: explicit 锚定胶囊中心 — top 由 wxml inline 注入
-   （calc(menuTop + menuHeight/2 - 32rpx/2)），不依赖条带内 top:50% */
-.nav-back {
+   （calc(menuHeight/2 - 32rpx)），不依赖条带内 top:50% */
+.nav-home {
   position: absolute;
   left: 12rpx;
   width: 64rpx;
@@ -76,13 +77,12 @@
   justify-content: center;
   border-radius: 50%;
 }
-.nav-back--hover {
+.nav-home--hover {
   background-color: var(--bg-subtle);
 }
-.nav-back-icon {
-  font-size: 40rpx;
-  color: var(--text-primary);
-  line-height: 1;
+.nav-home-icon-img {
+  width: 44rpx;
+  height: 44rpx;
 }
 
 /* 进度指示（右侧） */
@@ -408,13 +408,9 @@
   border: none;
 }
 
-.bottom-bar-icon {
-  font-size: 40rpx;  /* BUG-20260806-021: 44rpx → 40rpx */
-  line-height: 1;
-}
-
-/* UI-B7 图标规范: 收藏图标用 image 直接渲染 SVG
-   BUG-20260806-021: 44rpx → 40rpx */
+/* UI-B7 图标规范: 收藏/分享图标均用 image 直接渲染 SVG（主题色跟随 currentColor）
+   BUG-20260806-021: 44rpx → 40rpx
+   BUG-20260806-027: 分享图标由文本 ↗ 改为 share.svg image，与收藏一致避免发灰 */
 .bottom-bar-icon-img {
   width: 40rpx;
   height: 40rpx;

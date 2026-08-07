@@ -16,14 +16,17 @@
   <view class="status-pill {{statusPillShow ? 'show' : ''}}">{{statusPillText}}</view>
 
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
-    <!-- BUG-20260806-003: 第 3 层（detail）使用返回按钮（navigateBack），非主页按钮
+    <!-- BUG-20260806-027: 第 3 层（detail）顶部按钮由「返回」改为「首页」。
+         原因：详情页可从分享卡片冷启动进入（页面栈无上级），navigateBack 失效；
+         goHome 用 wx.reLaunch 重建首页，不依赖页面栈，任何入口都能返回首页。
          D-09 v1.2: explicit 锚定胶囊中心（按钮中心 = 胶囊中心，不依赖条带内居中） -->
     <!-- BUG-20260806-009 follow-up: 按钮是 .nav-bar 子元素 absolute 定位，相对 nav-bar 偏移。
          nav-bar.top = menuTop（屏幕坐标），按钮中心 = 胶囊中心（屏幕坐标 menuTop+menuHeight/2）
          → 按钮 top（相对 nav-bar）= menuHeight/2 - 32rpx（按钮半高）。
          之前公式多算了 menuTop（双重定位 bug）。 -->
-    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
-      <text class="nav-back-icon">‹</text>
+    <view class="nav-home" bindtap="goHome" hover-class="nav-home--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
+      <!-- BUG-FS-20260805-001: 深色模式切换白色版 icon -->
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
     <view class="nav-position" wx:if="{{total > 1}}">
       <text>{{positionText}}</text>
@@ -121,7 +124,9 @@
       <text class="bottom-bar-label">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
     <button class="bottom-bar-btn share-btn-reset" open-type="share">
-      <text class="bottom-bar-icon">↗</text>
+      <!-- BUG-20260806-027: 分享图标由文本「↗」改为 SVG image（与收藏一致，避免发灰；
+           主题色跟随 currentColor，深色模式用白色版） -->
+      <image class="bottom-bar-icon-img" src="/assets/icons/share{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="bottom-bar-label">分享</text>
     </button>
   </view>
