@@ -146,11 +146,11 @@
   /* 长标题/无空格长串也能正常换行，避免被页面 overflow 直接硬切 */
   word-break: break-word;
   overflow-wrap: anywhere;
-  /* 限制最多 3 行，过长显示省略号，避免被页面 overflow 直接裁断 */
+  /* 限制最多 5 行，过长显示省略号，避免被页面 overflow 直接裁断 */
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
 }
 
@@ -580,7 +580,7 @@
 /* UX-FIX04: 超大字号（tier 3）截断保护 — 首页卡片 */
 [data-font-scale="3"] .card-title {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
