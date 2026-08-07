@@ -305,6 +305,37 @@
   text-indent: 2em;
 }
 
+/* ============ AI 解读标识（详情页正文顶部） ============ */
+/* 版权策略：AI 独立解读 ≠ 原文复述，需显著标识满足法规要求 */
+.ai-interpretation-badge {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
+  padding: 16rpx 24rpx;
+  background-color: var(--primary-subtle);
+  border-radius: 16rpx;
+  border-left: 6rpx solid var(--primary);
+}
+
+.ai-interpretation-badge .ai-chip {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: #fff;
+  background-color: var(--primary);
+}
+
+.ai-interpretation-badge .ai-badge-desc {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
 /*  back-bottom 已移除 */
 
 /* ============ 底部操作栏（收藏 + 分享） ============ */

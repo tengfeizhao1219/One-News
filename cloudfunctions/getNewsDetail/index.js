@@ -597,6 +597,7 @@ exports.main = async (event) => {
     ...doc,
     content: finalContent,
     summary: doc.summary || doc.title || '',
+    contentSource: doc.contentSource || contentSource,  // 优先 DB 中的值，兜底按需抓取的类型
   }
 
   return {

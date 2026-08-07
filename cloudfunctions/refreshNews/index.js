@@ -245,6 +245,7 @@ async function batchInsert(newsList) {
         title: item.title,
         summary,
         summarySource,        // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示依赖）
+        contentSource: item.contentSource || '',  // 'ai_interpretation' | 'fetched'（版权策略：区分 AI 解读 vs 抓取原文）
         content: item.content || '',   // v6：refreshNews 已直接抓正文
         category: item.category,
         categoryName: item.categoryName,
@@ -677,6 +678,7 @@ async function writeBackupSnapshot(category, docs) {
     id: doc.id,
     title: doc.title,
     summary: doc.summary,
+    contentSource: doc.contentSource || '',
     category: doc.category,
     categoryName: doc.categoryName || '',
     source: doc.source || '',

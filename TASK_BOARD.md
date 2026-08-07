@@ -133,6 +133,24 @@
 > — 产品设计师（PD） 2026-08-07 13:13
 
 ---
+### ⏸️ 2026-08-07 13:20 【FS-08 AI 独立解读改造 · 已实现暂缓部署 · @owner 待决策是否启动】
+
+> **对象**：owner（决策是否启动）、PM（知悉）
+> **发布**：全栈开发（FS）
+
+**owner 决策**：AI 独立解读改造（FS-08）**暂不真正实施**（不部署云函数、不发前端），代码保留本地工作区，日志留痕，方便随时启动。
+
+**方案内容**（版权风险规避）：正文从「AI 复述原文」改为「AI 独立解读」+ 详情页「AI 解读」标识。
+- 背景：PM 调研报告确认官方 RSS 是最佳补充源，但 AI 复述原文存在剽窃风险；owner 方案 = AI 解读作正文 + 原文链接跳转
+- 已改 6 文件（zhipuSearch prompt 3 处 + contentSource 字段、contentFetcher 删原文覆盖、index.js/getNewsDetail 透传 contentSource、detail.wxml/wxss 标识）
+- 测试：165/165 断言通过
+- 详细留档见 COMMLOG（2026-08-07 13:20 FS-08 条目，含启动部署步骤）
+
+**同工作区未提交的另外两项已确认改动**（注意区分）：
+- ✅ 首页标题行数放宽 3→5（home.wxss，待发版）
+- ✅ 标题 HTML 实体清洗 cleanTitle（newsCleaner 双份 + juhe/tianxing/zhipuSearch/getNewsList/getNewsDetail）
+
+---
 ### ❌ 2026-08-07 10:42 【FS-07 多平台分享面板 · 已回滚 · owner 反馈「设计差体验差」】
 
 > **对象**：owner（已回滚）、PM（知悉）

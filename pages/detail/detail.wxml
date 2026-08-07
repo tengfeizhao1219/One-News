@@ -87,6 +87,11 @@
 
         <!-- 正文 -->
         <view class="detail-text">
+          <!-- AI 解读标识（版权策略：AI 独立解读 ≠ 原文复述，需法规标识） -->
+          <view class="ai-interpretation-badge" wx:if="{{news.contentSource === 'ai_interpretation'}}">
+            <text class="ai-chip">AI 解读</text>
+            <text class="ai-badge-desc">本文由 AI 独立解读生成，仅供参考</text>
+          </view>
           <block wx:for="{{paragraphs}}" wx:key="*this">
             <view class="text-p">{{item}}</view>
           </block>

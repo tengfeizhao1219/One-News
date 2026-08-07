@@ -257,9 +257,9 @@ function buildPrompt(categoryName, sources, count) {
 1. 必须是最近发布的最新新闻
 2. 每条新闻输出为 JSON 对象，包含以下字段：
    - title: 新闻标题（字符串，不超过50字）
-   - summary: 新闻摘要（字符串，80-150字，概括核心）
-   - content: 新闻正文（字符串，500-800字，尽量完整叙述事件背景、经过、影响、各方反应，分段用\\n分隔）
-   - source: 来源（必须是上述新闻源之一）
+   - summary: 新闻摘要（字符串，80-150字，概括核心事件）
+   - content: AI 独立解读（字符串，400-600字，请基于搜索到的多个信源，用你自己的语言撰写一篇独立的新闻解读。解读应包含事件背景、关键事实、各方反应和影响分析。这不是原文复述——请综合多个信源的信息，用独立客观的分析语气撰写。分段用\\n分隔）
+   - source: 主要来源（必须是上述新闻源之一）
    - url: 原文链接（真实网页 URL，以 http/https 开头）
 3. 所有${n}条放在一个 JSON 数组中返回
 4. 只返回 JSON 数组，不要其他文字
@@ -324,7 +324,8 @@ function parseNewsFromContent(content, category) {
       id: `zhipu_${category}_${Date.now()}_${i}`,
       title: cleanTitle(String(item.title || '').trim()),
       summary: String(item.summary || item.content?.slice(0, 150) || '').trim(),
-      content: String(item.content || item.summary || '').trim(),  // 🆕 完整正文
+      content: String(item.content || item.summary || '').trim(),
+      contentSource: 'ai_interpretation',  // 标记 AI 独立解读（版权策略：非原文复述）
       category,
       categoryName: categoryNames[category] || category,
       sourceUrl: String(item.url || item.sourceUrl || '').trim(),
@@ -357,7 +358,7 @@ async function searchWithZhipu(category, maxTimeout = ZHIPU_TIMEOUT) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用 web_search 工具从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻解读编辑。使用 web_search 工具从指定可信新闻源搜索信息，基于事实进行独立的分析解读，而非复述原文。严格按要求输出 JSON 格式。每条新闻必须包含：content 字段（400-600字 AI 独立解读，基于多个信源综合撰写，包含事件背景、关键事实、各方反应和影响分析，使用客观分析语气）和 url 字段（真实网页链接，以 http/https 开头）。禁止事项：禁止逐字复述或高度相似地改写单一来源的原文段落；禁止编造不存在的事实或数据；不得使用占位符 URL；解读中不要出现"据报道""据悉""记者了解到"等新闻通讯社套话。'
       },
       { role: 'user', content: prompt }
     ],
@@ -434,7 +435,7 @@ async function searchWithQwen(category, maxTimeout = QWEN_TIMEOUT) {
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻解读编辑。使用联网搜索从指定可信新闻源搜索信息，基于事实进行独立的分析解读，而非复述原文。严格按要求输出 JSON 格式。每条新闻必须包含：content 字段（400-600字 AI 独立解读，基于多个信源综合撰写，包含事件背景、关键事实、各方反应和影响分析，使用客观分析语气）和 url 字段（真实网页链接，以 http/https 开头）。禁止事项：禁止逐字复述或高度相似地改写单一来源的原文段落；禁止编造不存在的事实或数据；不得使用占位符 URL；解读中不要出现"据报道""据悉""记者了解到"等新闻通讯社套话。'
       },
       { role: 'user', content: prompt }
     ],
@@ -500,7 +501,7 @@ async function searchWithDeepSeek(category, maxTimeout = DEEPSEEK_SEARCH_TIMEOUT
     messages: [
       {
         role: 'system',
-        content: '你是一个专业的新闻搜索助手。使用联网搜索从指定可信新闻源搜索信息，严格按要求输出 JSON 格式。不要编造任何信息。每条新闻必须包含 content 字段（500-800字尽可能完整的正文，越接近原始报道越好）和 url 字段（真实网页链接，以 http/https 开头），不得使用占位符。'
+        content: '你是一个专业的新闻解读编辑。使用联网搜索从指定可信新闻源搜索信息，基于事实进行独立的分析解读，而非复述原文。严格按要求输出 JSON 格式。每条新闻必须包含：content 字段（400-600字 AI 独立解读，基于多个信源综合撰写，包含事件背景、关键事实、各方反应和影响分析，使用客观分析语气）和 url 字段（真实网页链接，以 http/https 开头）。禁止事项：禁止逐字复述或高度相似地改写单一来源的原文段落；禁止编造不存在的事实或数据；不得使用占位符 URL；解读中不要出现"据报道""据悉""记者了解到"等新闻通讯社套话。'
       },
       { role: 'user', content: prompt }
     ],

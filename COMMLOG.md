@@ -111,6 +111,44 @@ owner 12:56 反馈：「demo 没有放到 github 静态页面上」。
 **待 owner 确认**：① 边距目标（32rpx 是否够 / 加大 40rpx）② history 是否加左滑删除。
 
 > — 产品设计师（PD） 2026-08-07 12:14
+---
+
+## [2026-08-07 13:20] ⏸️ FS-08 AI 独立解读改造 · 已实现但暂缓部署（owner 决策：本地留档随时启动） | 会话：[全栈开发(FS)]
+
+**背景**：基于 PM 调研报告（`docs/01-需求规划/新闻数据源调研报告-2026-08-07.md`）——官方 RSS 是零成本补充源，但版权风险需规避。owner 决策：正文从「AI 复述原文」改为「AI 独立解读」+ 详情页标识，规避未经授权引用新闻内容的剽窃风险。
+
+**owner 决策（2026-08-07 13:21）**：方案**暂不真正实施**（不部署云函数、不发前端），代码**保留本地工作区**，日志留痕，方便随时启动。
+
+**已完成的本地改动（未部署，git 工作区可见）**：
+
+| 文件 | 改动 | 状态 |
+|------|------|:--:|
+| `cloudfunctions/refreshNews/zhipuSearch.js` | 3 处 system prompt（智谱/Qwen/DeepSeek）+ buildPrompt：角色「搜索助手」→「解读编辑」；content 从「500-800字复述原文」→「400-600字 AI 独立解读（含背景/事实/各方反应/影响分析，禁止复述原文、禁止套话）」；parseNewsFromContent 添加 `contentSource: 'ai_interpretation'` | ✅ 本地 |
+| `cloudfunctions/refreshNews/utils/contentFetcher.js` | 删除 DG-03「AI content<800字抓原文覆盖」逻辑（版权风险源）；enriched 添加 `contentSource: 'fetched'` 兜底 | ✅ 本地 |
+| `cloudfunctions/refreshNews/index.js` | batchInsert + backupToCacheBackup 写入 `contentSource` 字段 | ✅ 本地 |
+| `cloudfunctions/getNewsDetail/index.js` | result 透传 `contentSource` 字段（优先 DB 值，兜底抓取类型） | ✅ 本地 |
+| `pages/detail/detail.wxml` | 正文顶部添加 AI 解读标识（`wx:if="{{news.contentSource === 'ai_interpretation'}}"`） | ✅ 本地 |
+| `pages/detail/detail.wxss` | 新增 `.ai-chip` + `.ai-interpretation-badge` 样式 | ✅ 本地 |
+
+**测试验证**：4 个回归测试全部通过（v4 70/0、v9 32/0、b02 10/0、v10 53/0）。
+
+**contentSource 字段设计**（供随时启动参考）：
+- `'ai_interpretation'`：AI 独立解读（智谱/Qwen/DeepSeek 生成，zhipuSearch.js 设置）
+- `'fetched'`：网页抓取原文（聚合/天行降级源，contentFetcher.js 兜底）
+- `''` / 旧数据无此字段：前端 wx:if 自动跳过标识（读时兼容，无需迁移脚本；news_cache TTL 7 天自然过期）
+
+**启动时的部署步骤（后续如需实施）**：
+1. 部署云函数：`refreshNews` + `getNewsDetail`（上传并部署，云端安装依赖）
+2. 等一轮 refreshNews 触发（每小时定时或手动下拉），新数据自带 `contentSource: 'ai_interpretation'`
+3. 发布前端版本：详情页 AI 解读标识渲染生效
+4. 验收点：AI 源详情页显示「AI 解读」标识；聚合/天行源不显示；旧数据不报错
+
+**注意**：本次会话同时完成了两项已确认的改动，与 FS-08 同在工作区未提交，启动时注意区分——
+- ✅ `pages/home/home.wxss`：标题行数放宽 3→5 行（owner 确认，已生效待发版）
+- ✅ `newsCleaner.js`（refreshNews + getNewsDetail 两份）+ `juhe.js`/`tianxing.js`/`zhipuSearch.js`/`getNewsList`/`getNewsDetail`：`cleanTitle()` 标题 HTML 实体清洗（owner 确认）
+
+> — 全栈开发（FS） 2026-08-07 13:20
+ (feat(ai): 正文改为 AI 独立解读策略，规避新闻版权风险（暂缓部署）)
 
 ## [2026-08-07 10:42] ❌ FS-07 多平台分享面板回滚（owner 反馈设计差体验差） | 会话：[全栈开发(FS)]
 
