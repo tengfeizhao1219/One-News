@@ -1,3 +1,20 @@
+## [2026-08-07 09:52] ✅ FS-06 PAGE_SIZE 10→8 与每分类缓存一致 | 会话：[全栈开发(FS)]
+
+**owner 决策**（上线前讨论）：首页首屏 `PAGE_SIZE` 10→8，与 refreshNews 每分类生成条数（`PER_CATEGORY_COUNT=8`）保持一致。此前首屏请求 10 条但缓存仅 8 条 → 首屏少 2 条观感；改为 8 条正好拿满缓存。
+
+**改动**：
+- `utils/constants.js`：`PAGE_SIZE` 10→8（首屏 8 = 缓存 8；连续拉取累计上限 8+24=32）
+- `test/v10-regression-fe-c1-bugfix.js`：mock `PAGE_SIZE` 8 + 断言文案 10+8×3 → 8+8×3
+- `test/v7-regression-reading-mode-runtime.js`：mock `PAGE_SIZE` 8
+
+**生效范围**：首页首屏（home.js L651/720/807）、详情页跨分类预拉（reading-engine.js L15/173，每分类请求 8 条）、utils/request.js 默认 pageSize。
+
+**验证**：全量测试绿（v10 53/0、v7-runtime 预取 2 条 PASS）。
+
+**上线部署**：前端 `utils/constants.js` 随版本发布（后端无需改动——getNewsList 分页参数由前端传入）。
+
+> — 全栈开发（FS） 2026-08-07 09:52
+
 ## [2026-08-07 09:25] ✅ FS-04 清理死代码 font-panel 组件 | 会话：[全栈开发(FS)]
 
 **触发**：微信开发者工具代码质量扫描 → 「无使用或无依赖文件 · 组件：不应存在无使用的组件：components/font-panel/font-panel.json」。

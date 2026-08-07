@@ -22,7 +22,7 @@ var mockConstants = {
     // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
     { id: 'all', name: '全部' },
   ],
-  PAGE_SIZE: 10,
+  PAGE_SIZE: 8,
 }
 
 // Mock request: 每个分类返回模拟数据

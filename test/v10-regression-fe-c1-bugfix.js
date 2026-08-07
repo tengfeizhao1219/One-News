@@ -79,7 +79,7 @@ var mockConstants = {
   BOUNCE_ANIMATION_MS: 10,
   STATUS_BAR_HEIGHT: 20,
   PAGE_HEIGHT: 667,
-  PAGE_SIZE: 10,
+  PAGE_SIZE: 8,    // FS-06（2026-08-07）：10→8，与 utils/constants.js 同步
   MORE_PAGE_SIZE: 8,   // FS-01（2026-08-07）：5→8，与 utils/constants.js 同步
   MORE_PAGE_LIMIT: 3,
   refreshPageSize: function () {},
@@ -399,7 +399,7 @@ function testMarkup() {
   var home = fs.readFileSync(path.join(ROOT, 'pages/home/home.js'), 'utf8')
   check('home.js 内已无 _panelCache 实际引用',
     home.indexOf('this._panelCache') === -1 && home.indexOf('that._panelCache') === -1)
-  check('home.js 分页已升级为 10+8×3（PAGE_SIZE / MORE_PAGE_SIZE / MORE_PAGE_LIMIT，替代旧 MAX_NEWS=15）',
+  check('home.js 分页已升级为 8+8×3（PAGE_SIZE / MORE_PAGE_SIZE / MORE_PAGE_LIMIT，替代旧 MAX_NEWS=15）',
     /PAGE_SIZE/.test(home) && /MORE_PAGE_SIZE/.test(home) && /MORE_PAGE_LIMIT/.test(home) && !/MAX_NEWS\s*=\s*15/.test(home))
 }
 
