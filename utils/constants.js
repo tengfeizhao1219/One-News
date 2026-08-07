@@ -1,13 +1,15 @@
 // 常量定义
 // DG-03（2026-08-06 数据治理 · owner 决策）：all → 推荐分类（独立数据源，recommend 置顶）
+// RQ-20（2026-08-07 owner 决策）：恢复「全部」作为侧边栏聚合视图，置于推荐上方；
+//   推荐仍独立保留（首页默认 + AI 精选），all 为全分类聚合（后端 getNewsList all 分支本就保留）
 const CATEGORIES = [
+  { id: 'all', name: '全部' },
   { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
   { id: 'sports', name: '科学探索' },
   { id: 'life', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
-  // 注：getNewsList 的 all 分支保留不删（旧分享链接兼容），但前端不再请求
 ]
 
 const CATEGORY_MAP = {}
