@@ -42,7 +42,14 @@ Component({
       } catch (e) {
         this._px2rpx = 2
       }
-      this._activeIndex = 0
+      // BUG-20260807-002: 按 activeId 初始化选中索引，禁止硬编码 0。
+      // 微信组件 observers 可能在 attached 之前已按属性算出 _activeIndex；
+      // 硬编码 0 会覆盖正确值 → 面板首次打开时「内部选中=全部、视觉高亮=当前分类」错位，
+      // 往「全部」方向滑被判定为越界而不触发切换（需先乱滑一次矫正，即用户报告的"先下滑一下再上滑"）。
+      const cats = this.data.categories || []
+      const activeId = this.data.activeId || ''
+      const idx = cats.findIndex(c => c.id === activeId)
+      this._activeIndex = idx >= 0 ? idx : 0
       this._updateTranslate()
     },
   },
