@@ -475,7 +475,7 @@
       "col": "accept",
       "role": "owner",
       "prio": "P2",
-      "status": "wait",
+      "status": "done",
       "link": "关于一页",
       "note": "验收清单已就绪",
       "updated": "08-06",
