@@ -1,6 +1,29 @@
-## [2026-08-07 12:23] 🚀 PD 认领 · RQ-22-D 意见反馈留言板 UI/UX 设计 | 会话：[产品设计师(PD)]
+## [2026-08-07 13:03] 🔧 PD 按 owner 提供的 GitHub 解决方案文档修复推送 · 已成功 push + 沉淀脚本 | 会话：[产品设计师(PD)]
 
-owner 12:23 指派：「领取意见留言板的任务，其它的暂时不用管」。
+owner 13:01 提供 3 份 GitHub 连接解决方案文档（网盘）：「参考这几个文档作为解决方案去处理 github 的问题」。
+- **文档**：`GITHUB_PUSH_AI_MANUAL.md`（操作手册）+ `setup_github_dns.py`（dnsmasq 方案）+ `setup_github_dns_v3.1.sh`（curloptResolve 首选 + dnsmasq 兜底 + `--wrap` 重试）
+- **根因确认**（手册 §1）：sandbox-proxy 按 SNI 对 github.com **间歇性 TLS 拦截**；任何「钉 IP」手段只解决连对 IP，最终能否握手看代理放行窗口 → 需重试抓窗口
+- **执行结果**：`bash setup_github_dns_v3.1.sh --wrap "git -C /workspace/One-News push origin main"` → curloptResolve 探测到 **140.82.114.4** 可用 → `--wrap` 第 3 次尝试抓到窗口 → **push 成功**（`b1fc9c8..52e5ba1 main -> main`）
+- **沉淀**：3 份文档已复制到 `scripts/`（`setup_github_dns_v3.1.sh` / `setup_github_dns.py` / `GITHUB_PUSH_AI_MANUAL.md`），后续会话直接复用
+- **提醒**：IP 会漂移、代理窗口会变，push 失败时重跑 `bash scripts/setup_github_dns_v3.1.sh --wrap "git -C /workspace/One-News push origin main"`
+
+> — 产品设计师（PD） 2026-08-07 13:03
+
+---
+
+## [2026-08-07 12:56] ✅ PD 验证 · RQ-22 demo 已在 GitHub Pages 上线（此前为沙箱 DNS 误判）| 会话：[产品设计师(PD)]
+
+owner 12:56 反馈：「demo 没有放到 github 静态页面上」。
+- **排查结论**：demo **已在 GitHub Pages**，此前「部署失败」为沙箱 DNS 劫持误判。
+  - 仓库 `tengfeizhao1219/One-News` **Pages 早已启用**，服务源 = `main` 分支 `/docs` 目录
+  - `docs/demo/feedback-demo.html`（v1.0，commit `b1fc9c8` 已同步）正确映射为：
+  - **🌐 https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html** → HTTP 200，内容 = 最新 v1.0（21585 字节，含「一页君/仅我的回复/msg-foot」）
+  - 验证方法：沙箱内 `github.io` DNS 被劫持（198.18.0.35），改用 GitHub Pages 官方 Fastly IP（185.199.108~111.153）`--resolve` 强制解析通过
+- **后续部署规范（沉淀）**：静态 demo 统一放 `docs/demo/*.html` → push 后自动发布到 Pages（约 1-2 分钟生效），URL 规则 `https://<user>.github.io/<repo>/<路径相对 docs>`；沙箱内验证用 `curl --resolve <user>.github.io:443:<Fastly IP>`。
+
+> — 产品设计师（PD） 2026-08-07 12:56
+
+
 - 认领 **RQ-22-D**（UI/UX 设计）：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页），含暗色 token + 10 条 AC
 - 依据：`docs/02-产品设计/PRD-RQ22-意见反馈留言板.md`（v0.1）
 - 其他任务（BUG-20260807-003 收藏页增量等）暂停，本次只做 RQ-22-D
