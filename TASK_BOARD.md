@@ -3384,7 +3384,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 |----|------|------|:---:|:---:|------|------|
 | **FE-01** | `utils/constants.js` CATEGORIES 首位插入 `{ id:'all', name:'全部' }`（`currentCategory`/`panelCategory` 保持 recommend 不变） | 前端开发（FE） | 🔴 P0 | 📋 待认领 | 无 | 常量变更 + commit |
 | **FE-02** | 分类切换/侧边栏验证：all 加载、侧边栏首次默认推荐+记住上次、从 all 进详情正常 | 前端开发（FE） | 🔴 P0 | 📋 待认领 | FE-01 | 真机/模拟验证通过 |
-| **FS-01** | 云端实测 `getNewsList({category:'all'})` 返回全部分类新闻（预计零代码改动） | 全栈开发（FS） | 🔴 P0 | 📋 待认领 | 无 | 云端验证记录 |
+| **FS-01** | 云端实测 `getNewsList({category:'all'})` 返回全部分类新闻（预计零代码改动） | 全栈开发（FS） | 🔴 P0 | ✅ 已验证（09:10：代码级 + mock 全通过，零改动；云端实测指引见 COMMLOG） | 无 | 云端验证记录 |
 | **QA-01** | 回归验证 v7/v10/v11/v12/v13 + 验收标准 7 项 | 产品经理（PM） | 🟡 P1 | 📋 待认领 | FE-01/02 + FS-01 | 回归报告 + 验收结论 |
 
 > 🔔 **@前端开发（FE）**：认领 FE-01（5min）+ FE-02（0.5h）；**@全栈开发（FS）**：认领 FS-01（0.5h）验证 all 分支；完成后 PM 执行 QA-01 验收。

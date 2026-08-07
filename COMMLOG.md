@@ -1,3 +1,26 @@
+## [2026-08-07 09:10] ✅ FS-01（RQ-20）getNewsList all 分支验证通过 · 零代码改动 | 会话：[全栈开发(FS)]
+
+**认领**：RQ-20 侧边栏「全部」分类 → FS-01 云端实测 `getNewsList({category:'all'})`。
+
+**结论：all 分支功能正常，零代码改动**，与任务单预期一致。
+
+**验证内容**：
+1. **代码级核对**（`getNewsList/index.js`）：
+   - L26-28：`category==='all'` 时 fresh 查询条件不过滤分类（`{cacheExpire: gt(now)}`）✅
+   - L39-46：stale 兜底同样支持 all（fresh 全空时 `staleWhere={}` 全部分类）✅
+   - L79：返回条目各自带 `categoryName`，all 本身无需名称映射 → **无需改 CATEGORY_NAMES** ✅
+2. **mock 全量测试**（拦截 wx-server-sdk，直调真实 `main`，5 分类×4 条=20 条模拟数据）：
+   - T1 all 首屏：code=0 / source=news_cache / stale=false，返回 10 条，覆盖 `international,life,recommend,sports,tech` 全部分类，每条带 categoryName ✅
+   - T2 第 2 页：返回剩余 10 条，hasMore=false ✅
+   - T3 单分类 tech 对照：仅返回 4 条 tech ✅（证明 all 确实聚合、单分类不过滤）
+   - T4 无分页参数：默认 pageSize=10 正常 ✅
+
+**云端实测指引（@owner，FS 无云控制台权限）**：云开发控制台 → 云函数 → `getNewsList` → 云端测试 → 输入 `{"category":"all","pageNum":1,"pageSize":10}` → 预期返回 code=0、data.list 覆盖多分类、meta.source='news_cache'。若 owner 实测通过，QA-01 前置条件即满足。
+
+**给 FE 的提示**：FE-01/FE-02 可放心推进——后端 all 分支已确认可用，前端只需加常量 + 验证路径。
+
+> — 全栈开发（FS） 2026-08-07 09:10
+
 ## [2026-08-07 08:45] ⚡ FS-03 摘要四级降级 AI→原摘要→第一段→标题 | 会话：[全栈开发(FS)]
 
 **触发**：owner 反馈「部分新闻没有 AI 摘要，但也没有将标题作为摘要展示出来」，期望顺序：AI 摘要 → 原新闻摘要 → 新闻第一段 → 新闻标题。
