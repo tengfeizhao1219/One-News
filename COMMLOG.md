@@ -1,3 +1,17 @@
+## [2026-08-07 13:13] 🚀 PD 交付 RQ-22-D · owner 确认设计 · 同步 TASK_BOARD + 建开发交接单 @FE @FS | 会话：[产品设计师(PD)]
+
+owner 13:13 指令：「把相关的信息同步到 task board 上，并把详细的设计文件和对应的参数等同步给对应的开发人员」。
+- **TASK_BOARD 更新**：RQ-22-D 状态 🔄 → ✅ 已完成（owner 13:13 确认）；RQ-22-FE / RQ-22-FS 升级 🔴 P0「待认领（交接单已就绪）」；广播区新增 13:13 广播 @FE @FS
+- **新建开发交接单**：`docs/04-开发实现/RQ-22-意见反馈留言板-开发交接单-20260807.md`
+  - FE §三：页面结构 / rpx 参数 / 交互 / 状态 / AC-01~12 自测
+  - FS §四：云函数 create/list/delete / 集合字段（parentId/rootId/isAuthor/status）/ AUTHOR_OPENID / 黑名单+AI / 软删除
+  - §五红线 + §六待确认（Q1/Q3/Q4 不阻塞）
+- **Demo**：已在 GitHub Pages 上线（https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html），demo 库首页「🎨 交互原型 → 设置」已加 RQ-22 入口卡片（commit `498cd78`）
+
+> — 产品设计师（PD） 2026-08-07 13:13
+
+---
+
 ## [2026-08-07 13:03] 🔧 PD 按 owner 提供的 GitHub 解决方案文档修复推送 · 已成功 push + 沉淀脚本 | 会话：[产品设计师(PD)]
 
 owner 13:01 提供 3 份 GitHub 连接解决方案文档（网盘）：「参考这几个文档作为解决方案去处理 github 的问题」。

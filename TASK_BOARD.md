@@ -62,6 +62,30 @@
 > — 产品经理（PM）
 
 ---
+### 📢 2026-08-07 13:13 【PD · RQ-22-D 设计完成 owner 确认 · 建 FE/FS 开发任务 · @前端开发 @全栈开发】
+
+> **对象**：前端开发（FE，认领 RQ-22-FE）、全栈开发（FS，认领 RQ-22-FS）、owner（知悉）
+> **发布**：产品设计师（PD）
+
+**RQ-22 意见反馈留言板 UI/UX 设计已完成（owner 13:13 确认），可开工开发。**
+
+**一、交接文档（先读这两个）**
+- 开发交接单：`docs/04-开发实现/RQ-22-意见反馈留言板-开发交接单-20260807.md`（FE §三 / FS §四，全部参数+接口+AC+红线）
+- 设计规范：`docs/02-产品设计/D-02-增量-RQ22-意见反馈留言板-UIUX设计.md`（v1.0）
+- PRD：`docs/02-产品设计/PRD-RQ22-意见反馈留言板.md`（v1.0 已确认）
+- 交互 demo：**https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html**（1:1 参考实现）
+
+**二、分工**
+- **@前端开发（FE）** → **RQ-22-FE**：`pages/feedback/feedback.*` + `rules.*` + 设置页入口改 `navigateTo`（AC-01~12 自测）
+- **@全栈开发（FS）** → **RQ-22-FS**：`cloudfunctions/feedback/{create,list,delete}` + 关键词词库 + AI 审核（AUTHOR_OPENID 环境变量 / isAuthor 云端判定 / 软删除）
+
+**三、关键已确认决策**：作者识别 openid 白名单（单作者 owner）· 管理入口页面内动态渲染（isAuthor 驱动）· 删除按钮卡片右下角 · 筛选 nav-bar 右侧下拉（全部/仅违规标记/仅我的回复）· 作者昵称「一页君」· AI 失败仅黑名单兜底。
+
+**四、红线**：SOP v1.6 §15.4（WXS 纯 ES5 + touch 禁 return false）· 深色双套 token 禁硬编码 · icon 用 /assets/icons/*.svg。
+
+> — 产品设计师（PD） 2026-08-07 13:13
+
+---
 ### ❌ 2026-08-07 10:42 【FS-07 多平台分享面板 · 已回滚 · owner 反馈「设计差体验差」】
 
 > **对象**：owner（已回滚）、PM（知悉）
@@ -3502,13 +3526,15 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | ID | 任务 | 负责人 | 优先级 | 状态 | 依赖 | 交付物/验收 |
 |----|------|------|:---:|:---:|------|------|
 | **PM-01** | PRD 撰写（意见反馈留言板 v1.0 已确认） | 产品经理（PM） | 🔴 P0 | ✅ 已完成（`PRD-RQ22-意见反馈留言板.md` v1.0） | 无 | PRD 文档 |
-| **RQ-22-D** | **UI/UX 设计**：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页） | 产品设计师（PD） | 🔴 P0 | 🔄 **进行中（PD 12:23 认领 · 12:48 已对齐 PRD v1.0）** | PM-01 ✅ | D-02 增量文档（交互+视觉+暗色 token + **12 条 AC**） |
-| RQ-22-FE | 前端实现：留言板页 + 公约页 + 设置页入口改跳转 | 前端开发（FE） | ⏳ | 📋 待认领 | RQ-22-D | pages/feedback/* |
-| RQ-22-FS | 后端实现：feedback 云函数（create/list/delete）+ 关键词词库 + AI 审核 | 全栈开发（FS） | ⏳ | 📋 待认领 | RQ-22-D（接口对齐）| cloudfunctions/feedback* |
+| **RQ-22-D** | **UI/UX 设计**：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页） | 产品设计师（PD） | 🔴 P0 | ✅ **已完成（13:13 owner 确认 · 已建 FE/FS 交接）** | PM-01 ✅ | D-02 增量文档（交互+视觉+暗色 token + **12 条 AC**）+ 交接单 |
+| RQ-22-FE | 前端实现：留言板页 + 公约页 + 设置页入口改跳转 | 前端开发（FE） | 🔴 P0 | 📋 **待认领（交接单已就绪）** | RQ-22-D ✅ | pages/feedback/*（AC-01~12 自测） |
+| RQ-22-FS | 后端实现：feedback 云函数（create/list/delete）+ 关键词词库 + AI 审核 | 全栈开发（FS） | 🔴 P0 | 📋 **待认领（交接单已就绪）** | RQ-22-D ✅（接口对齐）| cloudfunctions/feedback* |
 | RQ-22-QA | 回归 + 验收标准 12 条 | 产品经理（PM） | 🟡 | 📋 待认领 | RQ-22-FE/FS | 验收报告 |
 
 > 🔔 **@产品设计师（PD）**：认领 **RQ-22-D**（UI/UX 设计）。依据 `docs/02-产品设计/PRD-RQ22-意见反馈留言板.md` §四（页面结构/关键流程）§六（验收标准）。红线：SOP v1.6 §15.4（WXS 纯 ES5 + touch 禁 return false）+ 深色模式双套 token + 与现有视觉语言（D-02 体系）一致。
-> 📄 PD 已输出（12:48 对齐 PRD v1.0）：`docs/02-产品设计/D-02-增量-RQ22-意见反馈留言板-UIUX设计.md`（v1.0）+ demo（`demo/feedback-demo.html` / `docs/demo/feedback-demo.html`）。关键对齐：删除按钮**卡片右下角** · 筛选 **nav-bar 右侧下拉**（全部/仅违规标记/仅我的回复）· 作者昵称「一页君」· AC **12 条**。待 owner 确认后建 FE 任务（RQ-22-FE）。
+> 📄 PD 已输出（v1.0，owner 13:13 确认）：设计规范 `docs/02-产品设计/D-02-增量-RQ22-意见反馈留言板-UIUX设计.md`（v1.0）+ demo（GitHub Pages：https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html）+ **开发交接单 `docs/04-开发实现/RQ-22-意见反馈留言板-开发交接单-20260807.md`**（FE §三 / FS §四，含全部 rpx 参数、接口字段、AC 12 条、红线）。
+> 🚀 **@前端开发（FE）** 认领 RQ-22-FE：按交接单 §三 + 设计文档 §3/§4/§7 实施，AC-01~12 自测。
+> 🚀 **@全栈开发（FS）** 认领 RQ-22-FS：按交接单 §四 + PRD §五 实施（AUTHOR_OPENID 环境变量 / 黑名单+AI / 软删除），接口字段对齐 parentId/rootId/isAuthor/status。
 
 ---
 
