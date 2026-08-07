@@ -24,6 +24,19 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ✅ 2026-08-07 15:33 【RQ-22-FS 云函数已推送 GitHub ✅ · @owner 待部署验证 + @QA 可联调】
+
+> **对象**：owner（部署验证）、PM（QA 联调）、FE（知悉）
+> **发布**：全栈开发（FS）
+
+**RQ-22-FS 已推送 GitHub ✅**：三个云函数（`feedback-create` / `feedback-list` / `feedback-delete`）+ 前端 `feedback.js` 调用名修正，已全部推送到 `main` 分支（commit `4863687`）。远端 `main` 已与本地一致（`git ls-remote` 已验证）。
+
+**owner 部署即可联调**：`git pull` → 微信开发者工具重启可见 `feedback-create/list/delete` → 创建 `feedback` 集合 + 索引 → 上传三个云函数 → 配置环境变量 `AUTHOR_OPENID` / `ZHIPU_API_KEY` / `DEEPSEEK_API_KEY` → 真机验证（详见下方 14:35 广播「部署步骤」）。
+
+> — 全栈开发（FS） 2026-08-07 15:33
+
+---
+
 ### ✅ 2026-08-07 14:35 【RQ-22-FS 云函数完成 · @owner 待部署 + @QA 可联调】
 
 > **对象**：owner（部署验证）、PM（QA 联调）、FE（知悉）
@@ -3626,7 +3639,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **PM-01** | PRD 撰写（意见反馈留言板 v1.1 已确认） | 产品经理（PM） | 🔴 P0 | ✅ 已完成（`PRD-RQ22-意见反馈留言板.md` v1.1） | 无 | PRD 文档 |
 | **RQ-22-D** | **UI/UX 设计**：留言板主页面 + 文明公约页 交互/视觉规范（留言列表/嵌套回复/作者角标/删除筛选/公约页） | 产品设计师（PD） | 🔴 P0 | ✅ **已完成（13:13 owner 确认 · 已建 FE/FS 交接）** | PM-01 ✅ | D-02 增量文档（交互+视觉+暗色 token + **12 条 AC**）+ 交接单 |
 | **RQ-22-FE** | 前端实现：留言板页 + 公约页 + 设置页入口改跳转（**严格按设计文件开发**） | 前端开发（FE） | 🔴 P0 | 📋 **待认领（任务已建 · 交接单已就绪）** | RQ-22-D ✅ | `pages/feedback/*` · 按交接单 §三 + 设计文档 §3/§4/§7 实施 · AC-01~12 自测 |
-| **RQ-22-FS** | 后端实现：feedback 云函数（create/list/delete）+ 关键词词库 + AI 审核（**严格按设计文件开发**） | 全栈开发（FS） | 🔴 P0 | 📋 **待认领（任务已建 · 交接单已就绪）** | RQ-22-D ✅（接口对齐）| `cloudfunctions/feedback*` · 按交接单 §四 + PRD §五 实施（AUTHOR_OPENID / 黑名单+AI / 软删除）|
+| **RQ-22-FS** | 后端实现：feedback 云函数（create/list/delete）+ 关键词词库 + AI 审核（**严格按设计文件开发**） | 全栈开发（FS） | 🔴 P0 | ✅ **已完成（15:33 已推送 GitHub · commit `4863687` · @owner 部署验证 + @QA 联调）** | RQ-22-D ✅（接口对齐）| `cloudfunctions/feedback-{create,list,delete}` · 按交接单 §四 + PRD §五 实施（AUTHOR_OPENID / 黑名单+AI / 软删除）|
 | RQ-22-QA | 回归 + 验收标准 12 条 | 产品经理（PM） | 🟡 | 📋 待认领 | RQ-22-FE/FS | 验收报告 |
 
 > 📄 PD 已输出（v1.0，owner 13:13 确认）：设计规范 `docs/02-产品设计/D-02-增量-RQ22-意见反馈留言板-UIUX设计.md`（v1.0）+ demo（GitHub Pages：https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html）+ **开发交接单 `docs/04-开发实现/RQ-22-意见反馈留言板-开发交接单-20260807.md`**（FE §三 / FS §四，含全部 rpx 参数、接口字段、AC 12 条、红线）。
