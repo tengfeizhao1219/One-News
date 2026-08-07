@@ -4,6 +4,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const db = cloud.database()
 const config = require('./config')
+const { cleanTitle } = require('./utils/newsCleaner')
 
 // ─── 分类名称映射（本地常量，无需 adapter）───
 // v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
@@ -74,7 +75,7 @@ async function queryCache(where, pageNum, pageSize) {
       return {
         list: res.data.map(item => ({
           id: item.id, _id: item._id,
-          title: item.title, summary: item.summary,
+          title: cleanTitle(item.title || ''), summary: item.summary,
           summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
@@ -147,7 +148,7 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
       return {
         list: res.data.map(item => ({
           id: item.id, _id: item._id,
-          title: item.title, summary: item.summary,
+          title: cleanTitle(item.title || ''), summary: item.summary,
           summarySource: item.summarySource || '', // v6.2：'ai' | 'desc' | 'title'
           category: item.category,
           categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',

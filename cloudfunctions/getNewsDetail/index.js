@@ -33,7 +33,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { cleanNewsContent, validateCleanedContent } = require('./utils/newsCleaner')
+const { cleanNewsContent, validateCleanedContent, cleanTitle } = require('./utils/newsCleaner')
 
 // 抓取原文超时时间（需 < 3 秒云函数限制）
 const FETCH_TIMEOUT_MS = 2500
@@ -500,6 +500,8 @@ exports.main = async (event) => {
   }
 
   const { doc, collection } = found
+  // 兜底清洗标题（防御数据库中历史脏数据含 HTML 实体）
+  doc.title = cleanTitle(doc.title || '')
   console.log(`[getNewsDetail] 命中集合: ${collection}, id=${doc._id}`)
 
   // ── 第 2 步：如果已有足够长的 content，直接返回 ──

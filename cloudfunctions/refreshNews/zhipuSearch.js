@@ -316,11 +316,13 @@ function parseNewsFromContent(content, category) {
     'bbc.com': 'BBC', 'apnews.com': '美联社', 'techcrunch.com': 'TechCrunch',
   }
 
+  const { cleanTitle } = require('./utils/newsCleaner')
+
   return rawList
     .filter(item => item != null && typeof item === 'object')
     .map((item, i) => ({
       id: `zhipu_${category}_${Date.now()}_${i}`,
-      title: String(item.title || '').trim(),
+      title: cleanTitle(String(item.title || '').trim()),
       summary: String(item.summary || item.content?.slice(0, 150) || '').trim(),
       content: String(item.content || item.summary || '').trim(),  // 🆕 完整正文
       category,

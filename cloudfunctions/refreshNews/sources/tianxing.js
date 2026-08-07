@@ -131,11 +131,11 @@ async function fetchTianNewsList(category, num = 10) {
  * @returns {Object}
  */
 function formatTianNewsItem(rawItem, category) {
-  const { cleanSummary } = require('../utils/newsCleaner')
+  const { cleanSummary, cleanTitle } = require('../utils/newsCleaner')
 
   return {
     id: `tian_${category}_${rawItem.uniq_id || rawItem.id || Date.now()}`,
-    title: rawItem.title || '',
+    title: cleanTitle(rawItem.title || ''),
     summary: cleanSummary(rawItem.description || rawItem.ctime || '', 150),
     category: category,
     categoryName: CATEGORY_NAMES[category] || category,

@@ -434,15 +434,23 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
   if (!concurrency || concurrency < 1) {
     concurrency = (config.rateLimit && config.rateLimit.enrichConcurrency) || 8
   }
-  const result = new Array(newsList.length)
+
+  // 先统一清洗标题（防御性：避免上游数据源遗漏 HTML 实体）
+  const { cleanTitle } = require('./newsCleaner')
+  const cleanedNewsList = newsList.map(item => ({
+    ...item,
+    title: cleanTitle(item.title || ''),
+  }))
+
+  const result = new Array(cleanedNewsList.length)
   let cursor = 0
 
   async function worker() {
-    while (cursor < newsList.length) {
+    while (cursor < cleanedNewsList.length) {
       // P0-2：剩余预算 < 3s 不再启动新条目（保写入，防整函数 60s 超时 0 写入）
       if (deadline && Date.now() + 3000 > deadline) break
       const idx = cursor++
-      const item = newsList[idx]
+      const item = cleanedNewsList[idx]
       try {
         // 1. 抓正文
         // DG-03 增强（owner 16:24 诉求「尽量返回原文」）：
@@ -520,7 +528,7 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, newsList.length) }, () => worker())
+  const workers = Array.from({ length: Math.min(concurrency, cleanedNewsList.length) }, () => worker())
   await Promise.all(workers)
   return result
 }

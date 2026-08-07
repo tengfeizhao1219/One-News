@@ -168,7 +168,7 @@ async function fetchJuheNewsList(category, pageSize = 10) {
  * @returns {Object}
  */
 function formatJuheNewsItem(rawItem, category) {
-  const { cleanSummary } = require('../utils/newsCleaner')
+  const { cleanSummary, cleanTitle } = require('../utils/newsCleaner')
 
   // 注意：聚合 API 头条接口不返回 description 字段，摘要用标题兜底
   // （详情页会按需抓正文，列表页摘要仅作展示）
@@ -176,7 +176,7 @@ function formatJuheNewsItem(rawItem, category) {
 
   return {
     id: `juhe_${category}_${rawItem.uniquekey || rawItem.id || Date.now()}`,
-    title: rawItem.title || '',
+    title: cleanTitle(rawItem.title || ''),
     summary: cleanSummary(summarySource, 150),
     category: category,
     categoryName: CATEGORY_NAMES[category] || category,

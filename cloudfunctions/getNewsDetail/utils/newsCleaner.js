@@ -356,6 +356,39 @@ function cleanNewsContent(rawContent, options = {}) {
 }
 
 /**
+ * 清洗标题：解码 HTML 实体 + 去除 HTML 标签 + 规范化空白
+ * 标题字段从各数据源（聚合/天行/智谱）入库前必须调用，避免 &quot; 等实体残留
+ * @param {string} rawTitle
+ * @param {number} [maxLength=120]  标题最大长度
+ * @returns {string}
+ */
+function cleanTitle(rawTitle, maxLength = 120) {
+  if (!rawTitle || typeof rawTitle !== 'string') return ''
+
+  let text = rawTitle
+
+  // 解码 HTML 实体（&quot; → " 等）
+  text = decodeHtmlEntities(text)
+
+  // 去除可能残留的 HTML 标签（如 <b>...</b>）
+  text = text.replace(/<[^>]+>/g, '')
+
+  // 规范化空白：全角空格、不间断空格、连续空格、换行
+  text = text
+    .replace(/\u3000/g, ' ')
+    .replace(/\u00A0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // 截断超长标题（新闻标题通常不超过 120 字）
+  if (text.length > maxLength) {
+    text = text.substring(0, maxLength).trim()
+  }
+
+  return text
+}
+
+/**
  * 快速清洗（用于摘要），比完整清洗轻量
  * 仅做 HTML 标签移除 + 实体解码 + 空白规范化
  */
@@ -421,4 +454,5 @@ module.exports = {
   removeNoiseLines,
   removeRedundantParagraphs,
   removeInlineBracketedMeta,
+  cleanTitle,
 }
