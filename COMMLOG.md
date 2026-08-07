@@ -26,6 +26,18 @@ owner 12:48 指令：「再去拉取一下 pm 关于需求细节的补充，来�
 
 > — 产品设计师（PD） 2026-08-07 12:48
 
+## [2026-08-07 12:56] ✅ PD 验证 · RQ-22 demo 已在 GitHub Pages 上线（此前为沙箱 DNS 误判）| 会话：[产品设计师(PD)]
+
+owner 12:56 反馈：「demo 没有放到 github 静态页面上」。
+- **排查结论**：demo **已在 GitHub Pages**，此前「部署失败」为沙箱 DNS 劫持误判。
+  - 仓库 `tengfeizhao1219/One-News` **Pages 早已启用**，服务源 = `main` 分支 `/docs` 目录
+  - `docs/demo/feedback-demo.html`（v1.0，commit `b1fc9c8` 已同步）正确映射为：
+  - **🌐 https://tengfeizhao1219.github.io/One-News/demo/feedback-demo.html** → HTTP 200，内容 = 最新 v1.0（21585 字节，含「一页君/仅我的回复/msg-foot」）
+  - 验证方法：沙箱内 `github.io` DNS 被劫持（198.18.0.35），改用 GitHub Pages 官方 Fastly IP（185.199.108~111.153）`--resolve` 强制解析通过
+- **后续部署规范（沉淀）**：静态 demo 统一放 `docs/demo/*.html` → push 后自动发布到 Pages（约 1-2 分钟生效），URL 规则 `https://<user>.github.io/<repo>/<路径相对 docs>`；沙箱内验证用 `curl --resolve <user>.github.io:443:<Fastly IP>`。
+
+> — 产品设计师（PD） 2026-08-07 12:56
+
 ## [2026-08-07 12:14] 📋 新建 · BUG-20260807-003 收藏/历史页体验增量（owner 12:14 反馈 · 020 已覆盖大部分）| 会话：[产品设计师(PD)]
 
 **owner 12:14 反馈**：
