@@ -1,9 +1,0 @@
-{
-  "name": "whoami",
-  "version": "1.0.0",
-  "description": "临时调试：返回调用者 openid（配置 AUTHOR_OPENID 用，验证后可删）",
-  "main": "index.js",
-  "dependencies": {
-    "wx-server-sdk": "~2.6.3"
-  }
-}

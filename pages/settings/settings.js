@@ -60,24 +60,6 @@ Page({
         this.setData({ followSystem: storedFollow, darkMode: storedDark })
       }
     } catch (e) {}
-
-    // === 临时调试（RQ-22 部署期）：打印当前用户 openid 到控制台 ===
-    // 用途：拿到自己的 openid 去配 feedback 云函数的 AUTHOR_OPENID 环境变量。
-    // 验证完成后可删除本段 + 删除 cloudfunctions/whoami 云函数。
-    try {
-      if (wx.cloud && typeof wx.cloud.callFunction === 'function') {
-        wx.cloud.callFunction({
-          name: 'whoami',
-          success: function (res) {
-            var oid = res && res.result && res.result.data && res.result.data.openid
-            console.log('[DEBUG] 当前用户 openid =', oid, '（用于配置 AUTHOR_OPENID 环境变量）')
-          },
-          fail: function (err) {
-            console.log('[DEBUG] whoami 调用失败（需先上传 whoami 云函数）：', err)
-          },
-        })
-      }
-    } catch (e) {}
   },
 
   /**
