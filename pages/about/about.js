@@ -7,7 +7,6 @@ Page({
     menuTop: 0,
     menuHeight: 32,
     navOffset: 0,  // D-09 v1.2（BUG-20260806-007）: 内容起始基准
-    appVersion: 'v6.3.0',
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
     // 我们坚持的事（2026-08-07 owner 裁定：删「永不空白」；「AI 为你提炼」→「AI加持」）
@@ -81,23 +80,4 @@ Page({
     })
   },
 
-  copyEmail: function () {
-    this._copy('ztengfei@hotmail.com', '邮箱')
-  },
-
-  copyWechat: function () {
-    this._copy('jiaowotengfei', '微信号')
-  },
-
-  _copy: function (text, label) {
-    wx.setClipboardData({
-      data: text,
-      success: function () {
-        wx.showToast({ title: label + '已复制', icon: 'none' })
-      },
-      fail: function () {
-        wx.showToast({ title: '复制失败，请手动输入：' + text, icon: 'none' })
-      },
-    })
-  },
 })

@@ -53,31 +53,6 @@
       </view>
     </view>
 
-    <!-- 联系与反馈 -->
-    <view class="section">
-      <view class="section-title">联系与反馈</view>
-      <view class="card">
-        <view class="contact-row" bindtap="copyEmail" hover-class="contact-row--hover">
-          <view>
-            <view class="row-label">邮箱</view>
-            <view class="contact-key">ztengfei@hotmail.com</view>
-          </view>
-          <view class="contact-copy">复制</view>
-        </view>
-        <view class="contact-row" bindtap="copyWechat" hover-class="contact-row--hover">
-          <view>
-            <view class="row-label">微信</view>
-            <view class="contact-key">jiaowotengfei</view>
-          </view>
-          <view class="contact-copy">复制</view>
-        </view>
-        <view class="contact-row">
-          <view class="row-label">版本</view>
-          <view class="row-val">{{appVersion}}</view>
-        </view>
-      </view>
-    </view>
-
     <view class="footer">一页 · 简单到极致</view>
 
   </scroll-view>

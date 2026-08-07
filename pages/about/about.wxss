@@ -138,49 +138,6 @@
   color: var(--text-body);
 }
 
-/* 联系 */
-.contact-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20rpx 4rpx;
-  border-radius: 12rpx;
-}
-
-.contact-row + .contact-row {
-  border-top: 1rpx solid var(--divider);
-}
-
-.contact-row--hover {
-  background-color: var(--bg-subtle);
-}
-
-.row-label {
-  font-size: 28rpx;
-  color: var(--text-primary);
-}
-
-.row-val {
-  font-size: 26rpx;
-  color: var(--text-secondary);
-}
-
-.contact-key {
-  margin-top: 4rpx;
-  font-size: 24rpx;
-  color: var(--text-secondary);
-}
-
-.contact-copy {
-  flex-shrink: 0;
-  font-size: 24rpx;
-  color: var(--primary);
-  background: var(--primary-subtle);
-  padding: 8rpx 24rpx;
-  border-radius: 24rpx;
-  font-weight: 500;
-}
-
 /* 页脚 */
 .footer {
   text-align: center;
