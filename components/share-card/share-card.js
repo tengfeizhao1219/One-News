@@ -199,13 +199,5 @@ Component({
       }
       return out + ellipsis
     },
-
-    /**
-     * 获取分类色（供外部引用）
-     */
-    getCategoryColor: function (category, isDark) {
-      var info = CATEGORY_MAP[category] || CATEGORY_MAP.all
-      return isDark ? info.dark : info.light
-    },
   },
 })

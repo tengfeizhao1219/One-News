@@ -888,13 +888,6 @@ Page({
     }
   },
 
-  /**
-   * 返回默认分类占位（无法使用 Canvas 时的 fallback）
-   */
-  _getDefaultPlaceholder: function (category, isDark) {
-    return ''
-  },
-
   // ============ 收藏（B-04：迁移到 localCache） ============
 
   /**

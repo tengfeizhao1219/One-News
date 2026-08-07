@@ -80,20 +80,4 @@ function report(op) {
   })
 }
 
-/**
- * 读取待同步队列中「收藏上云」相关操作（setUserFavorite favorited=true）
- * 用于收藏列表页标记「☁️ 待同步」角标（UI-13）。
- * @returns {string[]} 尚未成功上云的 newsId 列表
- */
-function getPendingFavorites() {
-  const q = loadQueue()
-  const ids = []
-  q.forEach((op) => {
-    if (op && op.name === 'setUserFavorite' && op.data && op.data.favorited === true && op.data.newsId) {
-      if (ids.indexOf(op.data.newsId) === -1) ids.push(op.data.newsId)
-    }
-  })
-  return ids
-}
-
-module.exports = { callCloudFunction, report, flushQueue, enqueue, getPendingFavorites }
+module.exports = { callCloudFunction, report, flushQueue, enqueue }

@@ -70,12 +70,6 @@ Component({
       return (this.data.anchorIndex - idx) * this.data.itemHeight
     },
 
-    /** 边界 clamp 计算（用于高亮/change，不用于位移） */
-    _clampIndex: function (idx) {
-      var len = (this.data.categories || []).length
-      return Math.max(0, Math.min(len - 1, idx))
-    },
-
     onTouchStart: function (e) {
       const touch = e.touches && e.touches[0]
       if (!touch) return
