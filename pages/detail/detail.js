@@ -65,6 +65,8 @@ Page({
     showBackButton: true,
     // DG-02（需求方案 4）：来源标识 'home'|'history'|'favorites'
     source: '',
+    // FS-07: 多平台分享面板显示状态
+    showSharePanel: false,
     // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
     showSwipeHint: true,
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
@@ -823,21 +825,103 @@ Page({
   },
 
   /**
-   * 微信原生分享（button open-type="share" 触发）
-   * 转发卡片：标题（≤30字）+ AI 摘要图（FS-02，替代原新闻图/分类占位图）+ path 可回看
-   * FS-02（owner 决策）：新闻中不含任何图片 → imageUrl 不再使用 news.picUrl，
-   * 一律用 Canvas 生成的 AI 摘要图（_placeholderCache）。
+   * FS-07: 打开多平台分享面板（底部「分享」按钮）
+   * 面板打开即算分享意图 → 上报 setNewsRetained(true) 触发 30 天保留
+   * （原在 onShareAppMessage 里，改版后微信转发/复制/保存任一入口都应保留）
    */
-  onShareAppMessage: function () {
+  onShareTap: function () {
     var news = this.data.news || {}
-    // TL-B13 / RQ-07：分享点击即算（owner 2026-08-03 拍板，微信无成功回调），
-    // 调用前上报 setNewsRetained(true) 触发 30 天保留；失败静默入队。
     if (news && news.id) {
       cloud.report({
         name: 'setNewsRetained',
         data: { newsId: news.id, retained: true, retainedBy: 'share' },
       })
     }
+    this.setData({ showSharePanel: true })
+  },
+
+  onCloseSharePanel: function () {
+    this.setData({ showSharePanel: false })
+  },
+
+  /**
+   * FS-07: 复制标题 + AI 摘要到剪贴板（可粘贴到微信/QQ/钉钉/邮件等任意平台）
+   */
+  onCopyShareText: function () {
+    var news = this.data.news || {}
+    var title = news.title || ''
+    var summary = news.summary || ''
+    var categoryName = news.categoryName || ''
+    var lines = ['【一页】' + title]
+    if (categoryName) lines.push('（' + categoryName + '）')
+    lines.push('')
+    if (summary && summary !== title) lines.push(summary)
+    lines.push('')
+    lines.push('—— 来自「一页」小程序')
+    var text = lines.join('\n')
+
+    var that = this
+    wx.setClipboardData({
+      data: text,
+      success: function () {
+        that.setData({ showSharePanel: false })
+        wx.showToast({ title: '内容已复制，可粘贴到任意平台', icon: 'none', duration: 2000 })
+      },
+      fail: function () {
+        wx.showToast({ title: '复制失败，请重试', icon: 'none' })
+      },
+    })
+  },
+
+  /**
+   * FS-07: 保存 AI 摘要图到相册（可发到任意平台）
+   * 相册权限：首次弹引导授权；拒绝后提示去设置页开启
+   */
+  onSaveShareImage: function () {
+    var that = this
+    var shareComp = this.selectComponent('#share-card')
+    if (!shareComp || typeof shareComp.exportTempFile !== 'function') {
+      wx.showToast({ title: '图片未就绪，请稍后再试', icon: 'none' })
+      return
+    }
+    shareComp.exportTempFile().then(function (tempPath) {
+      if (!tempPath) {
+        wx.showToast({ title: '图片生成失败，请重试', icon: 'none' })
+        return
+      }
+      wx.saveImageToPhotosAlbum({
+        filePath: tempPath,
+        success: function () {
+          that.setData({ showSharePanel: false })
+          wx.showToast({ title: '已保存到相册', icon: 'success' })
+        },
+        fail: function (err) {
+          // 首次需授权：弹引导；用户拒绝后跳设置页
+          if (err && (err.errMsg || '').indexOf('auth deny') >= 0) {
+            wx.showModal({
+              title: '需要相册权限',
+              content: '保存分享图到相册需要您的相册权限，请在设置中开启',
+              confirmText: '去设置',
+              success: function (res) {
+                if (res.confirm) wx.openSetting({})
+              },
+            })
+          } else {
+            wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+          }
+        },
+      })
+    })
+  },
+
+  /**
+   * 微信原生分享（button open-type="share" 触发，FS-07 分享面板「微信好友/群」项）
+   * 转发卡片：标题（≤30字）+ AI 摘要图（FS-02，替代原新闻图/分类占位图）+ path 可回看
+   * FS-02（owner 决策）：新闻中不含任何图片 → imageUrl 不再使用 news.picUrl，
+   * 一律用 Canvas 生成的 AI 摘要图（_placeholderCache）。
+   */
+  onShareAppMessage: function () {
+    var news = this.data.news || {}
 
     var title = news.title || '一页 · 新闻速览'
 

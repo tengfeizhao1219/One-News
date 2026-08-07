@@ -1,3 +1,23 @@
+## [2026-08-07 10:25] ✅ FS-07 多平台分享面板（微信+复制+保存图片） | 会话：[全栈开发(FS)]
+
+**owner 需求**：当前点分享只跳微信；期望用户可选择分享到其他平台/沟通工具。
+
+**微信生态限制分析**：小程序**无法编程调起**其他 App（QQ/钉钉/微博等）的分享面板；`open-type="share"` 仅微信原生转发。跨平台分享可行路径 = **剪贴板文本 + 相册图片**（用户粘贴/发送到任意平台）。
+
+**已实施**（`pages/detail/detail.wxml/js/wxss` + `components/share-card/share-card.js`）：
+1. 底部分享按钮 `open-type="share"` → 普通按钮 `bindtap="onShareTap"` → 弹自定义半屏分享面板（遮罩 + 淡入淡出动画；常驻渲染 + pointer-events 控制）
+2. 面板 3 选项：
+   - **微信好友/群**：`<button open-type="share">` 触发 `onShareAppMessage`（原生转发不变：标题 + AI 摘要图 + path）
+   - **复制内容**：`wx.setClipboardData` 复制「【一页】标题\n（分类）\n\nAI摘要\n\n—— 来自「一页」小程序」，toast「已复制，可粘贴到任意平台」
+   - **保存图片**：share-card 新增 `exportTempFile()`（`canvasToTempFilePath` 2x 导出）→ `saveImageToPhotosAlbum`；首次相册授权弹引导，拒绝跳 `openSetting`
+3. `setNewsRetained` 上报从 `onShareAppMessage` 移到 `onShareTap`（面板打开即算分享意图，任一方式都保留新闻 30 天）
+
+**验证**：v10 53/0、v7-reading-mode（onShareAppMessage 存在断言）通过；语法检查通过。
+
+**待真机验收**：面板弹出/动画、微信转发、复制粘贴、保存相册（含首次授权弹窗）。
+
+> — 全栈开发（FS） 2026-08-07 10:25
+
 ## [2026-08-07 09:52] ✅ FS-06 PAGE_SIZE 10→8 与每分类缓存一致 | 会话：[全栈开发(FS)]
 
 **owner 决策**（上线前讨论）：首页首屏 `PAGE_SIZE` 10→8，与 refreshNews 每分类生成条数（`PER_CATEGORY_COUNT=8`）保持一致。此前首屏请求 10 条但缓存仅 8 条 → 首屏少 2 条观感；改为 8 条正好拿满缓存。

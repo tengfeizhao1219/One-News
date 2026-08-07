@@ -24,6 +24,28 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-07 10:25 【FS-07 多平台分享面板 · 已实现 · @owner 前端发布】
+
+> **对象**：owner（前端随版本发布）、PM（知悉）
+> **发布**：全栈开发（FS）
+
+**owner 需求**：分享不局限于微信，用户可选择分享到其他平台/沟通工具。
+
+**微信生态限制**：小程序无法编程调起其他 App 分享面板；跨平台分享靠「剪贴板 + 相册图片」实现。
+
+**已实施**（`pages/detail/detail.wxml/js/wxss` + `components/share-card/share-card.js`）：
+1. 底部「分享」按钮改为普通按钮 → 弹出自定义分享面板（半屏弹层，遮罩+动画）
+2. 面板 3 个选项：
+   - **微信好友/群**（`open-type="share"` 原生转发，onShareAppMessage 不变）
+   - **复制内容**（`wx.setClipboardData` 复制「【一页】标题 + 分类 + AI 摘要 + 品牌尾」，可粘贴到微信/QQ/钉钉/邮件等任意平台）
+   - **保存图片**（share-card 新增 `exportTempFile()` → `wx.saveImageToPhotosAlbum` 保存 AI 摘要图到相册，可发任意平台；相册权限引导授权，拒绝跳设置页）
+3. `setNewsRetained` 上报从 onShareAppMessage 移到 `onShareTap`（面板打开即算分享意图，任一分享方式都保留新闻）
+
+**验证**：v10 53/0、v7-reading-mode 通过；语法检查通过。
+
+**真机验收**：点「分享」→ 面板弹出；微信好友/群转发正常；复制内容后粘贴；保存图片到相册。
+
+---
 ### ⚡ 2026-08-07 09:52 【FS-06 PAGE_SIZE 10→8 与每分类缓存一致 · 已实现 · @owner 前端发布】
 
 > **对象**：owner（前端随版本发布）、PM（知悉）
@@ -3239,6 +3261,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **FS-04** | **清理死代码 font-panel 组件**（代码质量扫描发现；home.json 声明但 wxml 未渲染，功能已被 settings 页内联字号选择器完全替代；删除 components/font-panel/ + home.json usingComponents 声明 + home.js 两个死方法 + app.js 注释更新 + v13 测试同步移除 font-panel 断言） | **全栈开发（FS）** | ✅ 已完成（09:25：5 个清理点 + v13 测试同步；v10 53/0；v13 唯一失败为预先存在的 --wheel-scale-active） | 代码质量扫描「无使用的组件 components/font-panel/font-panel.json」 | `components/font-panel/`(删) + `pages/home/home.json` + `pages/home/home.js` + `app.js` + `test/v13-fe-dark-visibility.js` |
 | **FS-05** | **上线前检查 — 测试全绿 + 死代码清理 + newsCleaner 同步**（修 5 个测试：v9/b02 路径、b02 TC06 语义、v4-validator 宽松来源、v7-runtime 预取、v13 wheel 值；删 plus.svg + 4 个过时测试；getNewsDetail newsCleaner 同步 refreshNews 38 行增强） | **全栈开发（FS）** | ✅ 已完成（09:45：全量测试绿） | 上线前整体检查 | `test/*` + `assets/icons/plus.svg`(删) + `cloudfunctions/getNewsDetail/utils/newsCleaner.js` + `cloudfunctions/refreshNews/validator.js` + `theme.json` |
 | **FS-06** | **PAGE_SIZE 10→8 与每分类缓存一致**（首屏请求 8 条 = 缓存 8 条；连续拉取累计上限 32；测试 mock 同步） | **全栈开发（FS）** | 🔄 已实现待发布（前端随版本发布） | owner 上线前决策「PAGE_SIZE 改为 8」 | `utils/constants.js` + `test/v10` + `test/v7-runtime` |
+| **FS-07** | **多平台分享面板**（分享按钮改弹面板：「微信好友/群」原生转发 +「复制内容」剪贴板 +「保存图片」相册；share-card 新增 exportTempFile；setNewsRetained 上报移到 onShareTap） | **全栈开发（FS）** | 🔄 已实现待发布（前端随版本发布；真机验收） | owner 需求「分享到其他平台/工具」 | `pages/detail/detail.wxml/js/wxss` + `components/share-card/share-card.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

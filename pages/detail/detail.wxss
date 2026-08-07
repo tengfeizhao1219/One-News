@@ -544,3 +544,81 @@
 /* ============ 暗色模式（D-08 方案 A：删除 BUG-20260805-002 硬编码兜底块）============
    D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），变量失效问题已解决；
    正常路径各选择器均已 var() 引用 → 兜底硬编码为纯冗余（双轨漂移风险源），整块删除。 */
+
+/* ============ FS-07: 多平台分享面板 ============ */
+.share-panel-mask {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;          /* 隐藏时不可点（配合无 wx:if 常驻渲染） */
+  transition: opacity 0.2s ease;
+}
+.share-panel-mask.show { opacity: 1; pointer-events: auto; }
+
+.share-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: var(--bg-card);
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 32rpx 0 calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 901;
+  transform: translateY(100%);
+  pointer-events: none;          /* 隐藏时不可点（配合无 wx:if 常驻渲染） */
+  transition: transform 0.25s ease;
+}
+.share-panel.show { transform: translateY(0); pointer-events: auto; }
+
+.share-panel-title {
+  font-size: calc(30rpx * var(--font-scale-meta));
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.share-panel-options {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 40rpx;
+}
+
+.share-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  border-radius: 0;
+}
+.share-option::after { border: none; }
+
+.share-option-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  color: #fff;
+  margin-bottom: 12rpx;
+}
+.share-option-icon--wechat { background: #07C160; }
+.share-option-icon--copy { background: #576B95; }
+.share-option-icon--img { background: #FF9500; }
+
+.share-option-label {
+  font-size: calc(24rpx * var(--font-scale-meta));
+  color: var(--text-primary);
+}
+
+.share-panel-cancel {
+  margin-top: 32rpx;
+  text-align: center;
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-secondary);
+  padding: 16rpx 0;
+}

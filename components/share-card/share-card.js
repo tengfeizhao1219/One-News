@@ -199,5 +199,31 @@ Component({
       }
       return out + ellipsis
     },
+
+    /**
+     * 导出当前画布为临时文件路径（FS-07：保存分享图到相册）
+     * 复用已绘制的 AI 摘要图；画布未就绪时回退 null
+     * @returns {Promise<string|null>} 临时图片路径
+     */
+    exportTempFile: function () {
+      var that = this
+      return new Promise(function (resolve) {
+        if (!that._canvasReady || !that._canvas) {
+          resolve(null)
+          return
+        }
+        wx.canvasToTempFilePath({
+          canvas: that._canvas,
+          x: 0, y: 0,
+          width: that.data.canvasWidth,
+          height: that.data.canvasHeight,
+          destWidth: that.data.canvasWidth * 2,
+          destHeight: that.data.canvasHeight * 2,
+          fileType: 'png',
+          success: function (res) { resolve(res.tempFilePath || null) },
+          fail: function () { resolve(null) },
+        })
+      })
+    },
   },
 })
