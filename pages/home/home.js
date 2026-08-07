@@ -459,15 +459,13 @@ Page({
       }
     }
 
-    // v6.2：三档摘要优先级 —— AI 摘要 > 正文摘要 > 标题兜底（摘要区留空）
+    // FS-03（owner 2026-08-07 裁定）：四级摘要降级 —— AI 摘要(ai) → 原摘要(desc) → 正文第一段(content) → 标题(title)
+    // 替代原 v6.2-fix（BUG-PD-018）「第三档不复用标题，摘要区留空」决策：
+    // 后端已把正文第一段兜底为 content 档，此处最后一档 title 直接展示标题，保证摘要区永不留白。
     var summarySource = item.summarySource || 'desc'
     var displaySummary = item.summary || ''
-
-    // v6.2-fix（PD 裁定 BUG-PD-018）：第三档不复用标题，摘要区留空
-    // 理由：.card-title 已渲染标题，摘要区重复同一段文字无增量价值，
-    // 且 PD 从未定义过 title 档视觉——未定义场景不得自行推断
     if (summarySource === 'title') {
-      displaySummary = ''
+      displaySummary = item.title || ''
     }
 
     return {

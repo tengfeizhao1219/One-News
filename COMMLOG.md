@@ -1,3 +1,21 @@
+## [2026-08-07 08:45] ⚡ FS-03 摘要四级降级 AI→原摘要→第一段→标题 | 会话：[全栈开发(FS)]
+
+**触发**：owner 反馈「部分新闻没有 AI 摘要，但也没有将标题作为摘要展示出来」，期望顺序：AI 摘要 → 原新闻摘要 → 新闻第一段 → 新闻标题。
+
+**根因**：`home.js` `buildCard` 的 v6.2-fix（BUG-PD-018 旧裁定）：`summarySource='title'` 时摘要区直接留空（不复用标题）→ 无 AI 摘要且无原摘要的新闻，卡片摘要区空白。且原实现只有三档（ai/desc/title），**缺少「正文第一段」档**。
+
+**已实施**：
+1. **后端**（`refreshNews/utils/contentFetcher.js` enrichNewsList）：新增「正文第一段」兜底——AI 摘要未生成且原摘要为空（仍为 title 档）且 content 有正文时，取第一个非空段落（截断 150 字）作为 summary，`summarySource='content'`；首段=标题或正文为空则维持 title 档。四级链路完整：`ai` → `desc` → `content` → `title`。
+2. **前端**（`pages/home/home.js` buildCard）：删除 `if (summarySource === 'title') { displaySummary = '' }`，改为 `displaySummary = item.title || ''`（最后一档显示标题，摘要区永不留白）；`isAiSummary` 仅 `ai` 为 true（content 档不显示 AI 胶囊）。
+
+**兜底验证**（6 断言全过）：AI/desc 已有时不动；title+有正文 → 取第一段；首段=标题不动（防重复）；正文空不动；长首段截断 150 字。
+
+**兼容性**：batchInsert 复用旧摘要逻辑不变（content 档按非 AI 处理，不覆盖旧 AI 摘要）；旧数据下一轮刷新后自动补齐 content 档（batchInsert update 已有记录）。
+
+**待部署**：`refreshNews`（云端安装依赖）+ 前端（`home.js`）随小程序发布。
+
+> — 全栈开发（FS） 2026-08-07 08:45
+
 ## [2026-08-07 08:10] ⚡ FS-02 分享卡片改 AI 摘要图 + 全链路去图片 | 会话：[全栈开发(FS)]
 
 **触发**：owner 反馈 ① 分享新闻时缩略图/空白区域展示 AI 摘要内容（现在是图片）、② 不想让新闻中有任何图片（获取新闻时也去掉）。

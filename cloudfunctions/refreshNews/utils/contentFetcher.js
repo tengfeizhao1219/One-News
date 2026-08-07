@@ -497,6 +497,21 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           }
         }
 
+        // FS-03（2026-08-07 owner 裁定）：四级摘要降级 —— AI 摘要 → 原摘要(desc) → 正文第一段(content) → 标题(title)
+        // 当 AI 摘要未生成且原摘要为空（summarySource 仍为 'title'）时，取正文第一段兜底，
+        // 避免列表卡片摘要区空白（替代原 BUG-PD-018「title 档留空」决策）。
+        // 第一段截断 150 字，标记 summarySource='content'（前端不显示 AI 胶囊）。
+        if (summarySource === 'title' && content && content.length > 10) {
+          const firstParagraph = content
+            .split('\n')
+            .map(function (s) { return s.trim() })
+            .filter(function (s) { return s.length > 0 })[0] || ''
+          if (firstParagraph && firstParagraph !== item.title) {
+            enriched.summary = firstParagraph.length > 150 ? firstParagraph.slice(0, 150) : firstParagraph
+            summarySource = 'content'
+          }
+        }
+
         enriched.summarySource = summarySource
         result[idx] = enriched
       } catch (err) {

@@ -24,6 +24,22 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ⚡ 2026-08-07 08:45 【FS-03 摘要四级降级 AI→原摘要→第一段→标题 · 已实现 · @owner 部署 refreshNews + 前端发布】
+
+> **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布 `home.js`）、PM（知悉）、所有角色
+> **发布**：全栈开发（FS）
+
+**问题**：部分新闻无 AI 摘要，摘要区却留白——根因是 `home.js` `buildCard` 的 v6.2-fix（BUG-PD-018 旧裁定）：`summarySource='title'` 时摘要区直接留空（不复用标题）。
+
+**owner 期望顺序**：AI 摘要 → 原新闻摘要 → 新闻第一段 → 新闻标题。
+
+**已实施**：
+1. **后端**（`contentFetcher.js` enrichNewsList）：新增「正文第一段」档——AI 摘要未生成且原摘要为空（title 档）时，取 content 第一个非空段落（截断 150 字）作为 summary，`summarySource='content'`。四级降级链路完整：`ai` → `desc` → `content` → `title`。
+2. **前端**（`home.js` buildCard）：去掉 title 档留空，改为显示 `item.title`（最后一档兜底），摘要区永不留白；`content` 档不显示 AI 胶囊（`isAiSummary` 仅 `ai`）。
+
+**验证**：部署 refreshNews 刷新一轮后，列表卡片无空摘要区；DB 中无 AI 摘要的记录 summary 为正文第一段（summarySource='content'），再无 AI 摘要的显示标题。
+
+---
 ### ⚡ 2026-08-07 08:10 【FS-02 分享卡片改 AI 摘要图 + 全链路去图片 · 已实现 · @owner 部署 refreshNews + 前端发布】
 
 > **对象**：owner（部署 `refreshNews` 云函数 + 小程序发布 `share-card.js`/`detail.js`）、PM（知悉）、所有角色
@@ -3180,6 +3196,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **DG-12** | **刷新改异步编排**（fire-and-forget 触发 5 worker + worker 自报配额原子自增 + 前端错峰重拉列表 8/20/40s + 修 qwen 超时遮蔽） | **全栈开发（FS）** | ✅ 已部署并验证（23:53 编排器 445ms 返回 async=true；前端发布待 owner 真机） | 23:41 编排器日志 | `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/config.js` + `pages/home/home.js` |
 | **FS-01** | **拉取数量 5→8 + 定时刷新可观测性增强**（PER_CATEGORY_COUNT 5→8、聚合/天行 5→8、MORE_PAGE_SIZE 5→8；编排/worker 打印触发 SOURCE + 定时器健康自检 >2h 警告；排查定时刷新不生效：最大嫌疑=数据源全故障，次=云端触发器缺失） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；观察日志 SOURCE=wx_trigger 是否每小时出现） | owner 反馈「5 条太少」+「定时刷新不生效」 | `cloudfunctions/refreshNews/zhipuSearch.js` + `cloudfunctions/refreshNews/index.js` + `utils/constants.js` |
 | **FS-02** | **分享卡片改 AI 摘要图 + 全链路去图片**（share-card 新增 generateShareImage 绘制标题+摘要；detail.js 分享不用 picUrl 改摘要图；后端 picUrl 置空 + newsCleaner 清洗 HTML/Markdown/裸图片 URL） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；真机验证分享缩略图显示摘要文字） | owner 反馈「分享展示 AI 摘要」「新闻中不要任何图片」 | `components/share-card/share-card.js` + `pages/detail/detail.js` + `cloudfunctions/refreshNews/index.js` + `cloudfunctions/refreshNews/sources/{juhe,tianxing}.js` + `cloudfunctions/refreshNews/utils/newsCleaner.js` |
+| **FS-03** | **摘要四级降级 AI→原摘要→第一段→标题**（后端 contentFetcher 新增 content 档：title 档且有正文时取第一段截断 150 字，summarySource='content'；前端 home.js 去掉 title 档留空改显示标题） | **全栈开发（FS）** | 🔄 已实现待部署（待 owner 部署 refreshNews + 前端发布；验证列表无空摘要区） | owner 反馈「部分新闻无摘要展示」+「期望四级顺序」 | `cloudfunctions/refreshNews/utils/contentFetcher.js` + `pages/home/home.js` |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 
