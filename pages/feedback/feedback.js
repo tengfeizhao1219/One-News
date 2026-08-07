@@ -131,7 +131,7 @@ Page({
   },
 
   _buildCard: function (t, replies, isAuthor) {
-    const tree = this._buildReplyTree(t._id, replies, 1)
+    const tree = this._buildReplyTree(t._id, replies, 1, isAuthor)
     return {
       id: t._id,
       nickname: t.nickname || '微信用户',
@@ -144,8 +144,10 @@ Page({
     }
   },
 
-  /** 递归组嵌套树，depth 封顶后收平（不再增加缩进） */
-  _buildReplyTree: function (parentId, list, depth) {
+  /** 递归组嵌套树，depth 封顶后收平（不再增加缩进）；深度达 MAX 后停止递归，防深链栈溢出 */
+  _buildReplyTree: function (parentId, list, depth, isAuthor) {
+    // 深度超过 MAX_REPLY_DEPTH 直接返回空，终止递归（防循环引用/深链无限递归）
+    if (depth > MAX_REPLY_DEPTH) return []
     const d = Math.min(depth, MAX_REPLY_DEPTH)
     return list
       .filter((r) => r.parentId === parentId)
@@ -158,7 +160,7 @@ Page({
         depth: d,
         deleted: r.status === 'deleted',
         showDelete: !!isAuthor && r.status !== 'deleted',
-        replies: this._buildReplyTree(r._id, list, d + 1),
+        replies: this._buildReplyTree(r._id, list, depth + 1, isAuthor),
       }))
   },
 
