@@ -499,7 +499,7 @@
       "col": "accept",
       "role": "PM",
       "prio": "P0",
-      "status": "doing",
+      "status": "done",
       "link": "交互标准",
       "note": "建议待翻页真机复测通过启动",
       "updated": "08-05",
