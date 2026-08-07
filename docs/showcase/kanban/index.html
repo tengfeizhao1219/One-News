@@ -61,6 +61,18 @@
   .board.linked .card.linked{opacity:1;filter:none;border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
   .board.linked .col-head{opacity:.5}
   .board.linked .col.has-linked .col-head{opacity:1}
+  /* ===== 列筛选：点击列头/统计条只显示该列 ===== */
+  .col.filtered-out{display:none!important}
+  .col-head.filter-active,.stat.active{
+    border-color:var(--accent)!important;background:color-mix(in srgb,var(--accent) 12%,var(--panel))!important;
+    box-shadow:0 0 0 1px var(--accent)
+  }
+  .stat{cursor:pointer;transition:.15s;border-radius:8px;padding:3px 10px}
+  .stat:hover{background:var(--chip)}
+  .stat.active{background:var(--accent);color:#fff}
+  #filterReset{display:none;font-size:11px;color:var(--sub);cursor:pointer;
+    padding:2px 10px;border:1px solid var(--line);border-radius:8px;align-self:center}
+  #filterReset:hover{border-color:var(--accent);color:var(--accent)}
   .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--sub);padding:0 22px 18px}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
@@ -132,6 +144,7 @@
     <div class="spacer"></div>
     <button id="refreshBtn" title="重新从仓库拉取任务数据">🔄 刷新</button>
     <button id="syncBtn" title="设置 GitHub Token 以在网页改状态并回写 git">🔧 同步</button>
+    <span id="filterReset">⊗ 显示全部</span>
     <button id="resetBtn" style="display:none">退出关联</button>
     <button id="themeBtn">🌙 暗色</button>
   </div>
@@ -349,6 +362,36 @@
     const dark=document.documentElement.getAttribute("data-theme")==="dark";
     document.documentElement.setAttribute("data-theme",dark?"light":"dark");
     themeBtn.textContent=dark?"🌙 暗色":"☀️ 亮色";
+  });
+
+  /* ===== 列筛选：点击列头或统计条只显示该列 ===== */
+  let filterCol=null;
+  const fReset=document.getElementById("filterReset");
+  function applyFilter(colKey){
+    filterCol=colKey;
+    document.querySelectorAll(".col").forEach(c=>{
+      const on=colKey===null||c.dataset.col===colKey;
+      c.classList.toggle("filtered-out",!on);
+      c.querySelector(".col-head")?.classList.toggle("filter-active",on&&colKey!==null);
+    });
+    document.querySelectorAll(".stat").forEach((s,i)=>{
+      s.classList.toggle("active",colKey!==null&&meta.columns[i]&&meta.columns[i].key===colKey);
+    });
+    fReset.style.display=colKey!==null?"":"none";
+  }
+  fReset.addEventListener("click",()=>applyFilter(null));
+  // 列头点击
+  board.addEventListener("click",e=>{
+    const h=e.target.closest(".col-head");
+    if(!h)return;
+    const col=h.closest(".col").dataset.col;
+    applyFilter(filterCol===col?null:col);
+  });
+  // 统计条点击
+  document.getElementById("stats").addEventListener("click",e=>{
+    const s=e.target.closest(".stat"); if(!s)return;
+    const idx=[...document.getElementById("stats").children].indexOf(s), c=meta.columns[idx];
+    if(c) applyFilter(filterCol===c.key?null:c.key);
   });
 
   /* ===== 刷新 / 同步按钮 ===== */

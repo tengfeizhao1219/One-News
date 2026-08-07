@@ -306,6 +306,18 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
   .kb-board.linked .kb-card.lkd{opacity:1;filter:none;border-color:var(--kb-accent);box-shadow:0 0 0 2px var(--kb-accent)}
   .kb-board.linked .kb-col-h{opacity:.5}
   .kb-board.linked .kb-col.has-lkd .kb-col-h{opacity:1}
+  /* ===== 列筛选：点击列头/统计条只显示该列 ===== */
+  .kb-col.filtered-out{display:none!important}
+  .kb-col-h.filter-active,.kb-stat.active{
+    border-color:var(--kb-accent)!important;background:color-mix(in srgb,var(--kb-accent) 12%,var(--kb-panel))!important;
+    box-shadow:0 0 0 1px var(--kb-accent)
+  }
+  .kb-stat{cursor:pointer;transition:.15s;border-radius:8px;padding:3px 10px}
+  .kb-stat:hover{background:var(--kb-chip)}
+  .kb-stat.active{background:var(--kb-accent);color:#fff}
+  #kb-filterReset{display:none;font-size:11px;color:var(--kb-sub);cursor:pointer;
+    padding:2px 10px;border:1px solid var(--kb-line);border-radius:8px;align-self:center}
+  #kb-filterReset:hover{border-color:var(--kb-accent);color:var(--kb-accent)}
   .kb-leg{display:flex;gap:9px;flex-wrap:wrap;font-size:10.5px;color:var(--kb-sub);padding:6px 0 2px}
   .kb-leg span{display:inline-flex;align-items:center;gap:4px}
   .kb-leg i{width:9px;height:9px;border-radius:3px;display:inline-block}
@@ -376,6 +388,7 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       <div class="kb-spacer"></div>
       <button class="kb-btn" id="kb-refreshBtn" title="重新从仓库拉取任务数据">🔄 刷新</button>
       <button class="kb-btn" id="kb-syncBtn" title="设置 GitHub Token 以在网页改状态并回写 git">🔧 同步</button>
+      <span id="kb-filterReset">⊗ 显示全部</span>
       <button class="kb-btn" id="kb-resetBtn" style="display:none">退出关联</button>
       <button class="kb-btn" id="kb-themeBtn">🌙 暗色</button>
     </div>
@@ -541,6 +554,36 @@ footer code{background:#e2e8f0;padding:1px 6px;border-radius:4px}
       const d=document.documentElement.getAttribute("data-theme")==="dark";
       document.documentElement.setAttribute("data-theme",d?"light":"dark");
       tBtn.textContent=d?"🌙 暗色":"☀️ 亮色";
+    });
+
+    /* ===== 列筛选：点击列头或统计条只显示该列 ===== */
+    let filterCol=null;
+    const fReset=$("kb-filterReset");
+    function applyFilter(colKey){
+      filterCol=colKey;
+      document.querySelectorAll(".kb-col").forEach(c=>{
+        const on=colKey===null||c.dataset.col===colKey;
+        c.classList.toggle("filtered-out",!on);
+        c.querySelector(".kb-col-h")?.classList.toggle("filter-active",on&&colKey!==null);
+      });
+      document.querySelectorAll(".kb-stat").forEach((s,i)=>{
+        s.classList.toggle("active",colKey!==null&&M.columns[i]&&M.columns[i].key===colKey);
+      });
+      fReset.style.display=colKey!==null?"":"none";
+    }
+    fReset.addEventListener("click",()=>applyFilter(null));
+    // 列头点击
+    board.addEventListener("click",e=>{
+      const h=e.target.closest(".kb-col-h");
+      if(!h)return;
+      const col=h.closest(".kb-col").dataset.col;
+      applyFilter(filterCol===col?null:col);
+    });
+    // 统计条点击
+    stEl.addEventListener("click",e=>{
+      const s=e.target.closest(".kb-stat"); if(!s)return;
+      const idx=[...stEl.children].indexOf(s), c=M.columns[idx];
+      if(c) applyFilter(filterCol===c.key?null:c.key);
     });
 
     /* ===== 刷新 / 同步按钮 ===== */
