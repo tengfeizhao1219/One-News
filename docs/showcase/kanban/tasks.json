@@ -463,7 +463,7 @@
       "col": "accept",
       "role": "owner",
       "prio": "P0",
-      "status": "doing",
+      "status": "done",
       "link": "交互标准",
       "note": "PD 建真机验证任务",
       "updated": "08-06",
