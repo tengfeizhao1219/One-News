@@ -1,3 +1,23 @@
+## [2026-08-07 10:42] ❌ FS-07 多平台分享面板回滚（owner 反馈设计差体验差） | 会话：[全栈开发(FS)]
+
+**回滚原因**：owner 实测反馈「设计太差、体验差」——半屏分享面板（微信/复制/保存三宫格）不符合预期，决定回滚，恢复微信原生分享（`open-type="share"` 一键转发）。
+
+**回滚操作**：4 个代码文件 `git checkout c75bbcc`：
+- `pages/detail/detail.wxml`：分享按钮恢复 `open-type="share"`，删除分享面板/mask
+- `pages/detail/detail.js`：删除 onShareTap/onCloseSharePanel/onCopyShareText/onSaveShareImage；`setNewsRetained` 上报恢复在 `onShareAppMessage`（点击即算）
+- `pages/detail/detail.wxss`：删除 share-panel* 样式块
+- `components/share-card/share-card.js`：删除 exportTempFile（保留 FE 清理后的 getCategoryColor 删除状态）
+
+**验证**：语法 ✓、v10 53/0 ✓、v7-reading-mode ✓、无 FS-07 残留（grep onShareTap/exportTempFile/share-panel 均为空）。
+
+**留档（供后续优化复用）**：
+- 微信生态限制：小程序**无法编程调起**其他 App 分享面板；跨平台分享只有「剪贴板文本 + 相册图片」两条路
+- 面板方案能力可行（复制内容/保存图片实现已验证），**问题在设计/交互**——若 owner 后续想再试，可参考：
+  - 更轻的交互：`wx.showActionSheet`（系统 ActionSheet）替代自定义面板，选项「复制内容 / 保存图片」+ 保留原生分享按钮
+  - 或分享按钮旁加次要入口「⋯」而非抢占主按钮
+
+> — 全栈开发（FS） 2026-08-07 10:42
+
 ## [2026-08-07 10:25] ✅ FS-07 多平台分享面板（微信+复制+保存图片） | 会话：[全栈开发(FS)]
 
 **owner 需求**：当前点分享只跳微信；期望用户可选择分享到其他平台/沟通工具。

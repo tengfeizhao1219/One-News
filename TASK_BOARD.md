@@ -24,6 +24,24 @@
 > **更新频率**：PM 每次巡检后更新。广播区只增不删，过期提醒由 PM 标记 `[已处理]`。
 
 ---
+### ❌ 2026-08-07 10:42 【FS-07 多平台分享面板 · 已回滚 · owner 反馈「设计差体验差」】
+
+> **对象**：owner（已回滚）、PM（知悉）
+> **发布**：全栈开发（FS）
+
+**回滚原因**：owner 实测反馈「设计太差、体验差」，决定回滚多平台分享面板，恢复为**微信原生分享**（`open-type="share"` 一键转发好友/群）。
+
+**已回滚**（4 个代码文件恢复至 `c75bbcc`）：
+- `pages/detail/detail.wxml`：分享按钮恢复 `open-type="share"`，删除分享面板
+- `pages/detail/detail.js`：删除 onShareTap/onCloseSharePanel/onCopyShareText/onSaveShareImage，`setNewsRetained` 上报恢复在 `onShareAppMessage`
+- `pages/detail/detail.wxss`：删除分享面板样式
+- `components/share-card/share-card.js`：删除 exportTempFile
+
+**验证**：语法 ✓、v10 53/0 ✓、v7-reading-mode ✓、无 FS-07 残留。
+
+**记录**：多平台分享（复制文本/保存图片）方案留档 COMMLOG，若后续优化交互可复用——核心问题在面板设计，不是能力不可行。
+
+---
 ### ⚡ 2026-08-07 10:25 【FS-07 多平台分享面板 · 已实现 · @owner 前端发布】
 
 > **对象**：owner（前端随版本发布）、PM（知悉）
@@ -3261,7 +3279,7 @@ sudo python3 setup_github_dns.py   # 探测真实 IP → 本地 dnsmasq 重写 g
 | **FS-04** | **清理死代码 font-panel 组件**（代码质量扫描发现；home.json 声明但 wxml 未渲染，功能已被 settings 页内联字号选择器完全替代；删除 components/font-panel/ + home.json usingComponents 声明 + home.js 两个死方法 + app.js 注释更新 + v13 测试同步移除 font-panel 断言） | **全栈开发（FS）** | ✅ 已完成（09:25：5 个清理点 + v13 测试同步；v10 53/0；v13 唯一失败为预先存在的 --wheel-scale-active） | 代码质量扫描「无使用的组件 components/font-panel/font-panel.json」 | `components/font-panel/`(删) + `pages/home/home.json` + `pages/home/home.js` + `app.js` + `test/v13-fe-dark-visibility.js` |
 | **FS-05** | **上线前检查 — 测试全绿 + 死代码清理 + newsCleaner 同步**（修 5 个测试：v9/b02 路径、b02 TC06 语义、v4-validator 宽松来源、v7-runtime 预取、v13 wheel 值；删 plus.svg + 4 个过时测试；getNewsDetail newsCleaner 同步 refreshNews 38 行增强） | **全栈开发（FS）** | ✅ 已完成（09:45：全量测试绿） | 上线前整体检查 | `test/*` + `assets/icons/plus.svg`(删) + `cloudfunctions/getNewsDetail/utils/newsCleaner.js` + `cloudfunctions/refreshNews/validator.js` + `theme.json` |
 | **FS-06** | **PAGE_SIZE 10→8 与每分类缓存一致**（首屏请求 8 条 = 缓存 8 条；连续拉取累计上限 32；测试 mock 同步） | **全栈开发（FS）** | 🔄 已实现待发布（前端随版本发布） | owner 上线前决策「PAGE_SIZE 改为 8」 | `utils/constants.js` + `test/v10` + `test/v7-runtime` |
-| **FS-07** | **多平台分享面板**（分享按钮改弹面板：「微信好友/群」原生转发 +「复制内容」剪贴板 +「保存图片」相册；share-card 新增 exportTempFile；setNewsRetained 上报移到 onShareTap） | **全栈开发（FS）** | 🔄 已实现待发布（前端随版本发布；真机验收） | owner 需求「分享到其他平台/工具」 | `pages/detail/detail.wxml/js/wxss` + `components/share-card/share-card.js` |
+| **FS-07** | **多平台分享面板**（分享按钮改弹面板：「微信好友/群」原生转发 +「复制内容」剪贴板 +「保存图片」相册；share-card 新增 exportTempFile；setNewsRetained 上报移到 onShareTap） | **全栈开发（FS）** | ❌ 已回滚（10:42 owner 反馈「设计差体验差」，恢复微信原生分享；方案留档可复用） | owner 需求「分享到其他平台/工具」 | `pages/detail/detail.wxml/js/wxss` + `components/share-card/share-card.js`（均回滚至 c75bbcc） |
 
 ### 🟡 QA 代码审查 Bug（来源：`Bug清单-阶段五代码审查.md` · Q-04.2 录入）
 

@@ -123,37 +123,12 @@
       <!-- BUG-20260805-004：移除 inline style 让"已收藏"文字保持默认色，仅 icon 红色 -->
       <text class="bottom-bar-label">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
-    <button class="bottom-bar-btn share-btn-reset" bindtap="onShareTap">
+    <button class="bottom-bar-btn share-btn-reset" open-type="share">
       <!-- BUG-20260806-027: 分享图标由文本「↗」改为 SVG image（与收藏一致，避免发灰；
            主题色跟随 currentColor，深色模式用白色版） -->
       <image class="bottom-bar-icon-img" src="/assets/icons/share{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="bottom-bar-label">分享</text>
     </button>
-  </view>
-
-  <!-- FS-07: 多平台分享面板（微信好友/群 + 复制内容 + 保存图片） -->
-  <!-- 始终渲染（不用 wx:if）→ show class 控制 opacity/transform，支持平滑淡入淡出 -->
-  <view class="share-panel-mask {{showSharePanel ? 'show' : ''}}" bindtap="onCloseSharePanel"></view>
-  <view class="share-panel {{showSharePanel ? 'show' : ''}}">
-    <view class="share-panel-title">分享到</view>
-    <view class="share-panel-options">
-      <!-- 微信好友/群：原生转发（open-type=share 触发 onShareAppMessage） -->
-      <button class="share-option share-option--wechat" open-type="share">
-        <view class="share-option-icon share-option-icon--wechat">微</view>
-        <text class="share-option-label">微信好友/群</text>
-      </button>
-      <!-- 复制内容：剪贴板，可粘贴到任意平台/工具 -->
-      <view class="share-option" bindtap="onCopyShareText">
-        <view class="share-option-icon share-option-icon--copy">文</view>
-        <text class="share-option-label">复制内容</text>
-      </view>
-      <!-- 保存图片：AI 摘要图到相册，可发到任意平台 -->
-      <view class="share-option" bindtap="onSaveShareImage">
-        <view class="share-option-icon share-option-icon--img">图</view>
-        <text class="share-option-label">保存图片</text>
-      </view>
-    </view>
-    <view class="share-panel-cancel" bindtap="onCloseSharePanel">取消</view>
   </view>
 
   <!-- 隐藏 Canvas（分享占位图预生成） -->
