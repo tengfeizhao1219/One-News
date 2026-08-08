@@ -1,0 +1,64 @@
+name: CI - 语法检查 + 回归测试
+
+# 外置验证门禁（协作机制 Review 2026-08-08 P1-1）
+# 目的：以自动化验证替代「AI 自查 AI」的同源盲区——每个 PR/推送触发，
+#       任何 JS 语法错误或回归失败立即亮红，防止 newsCleaner 类"代码完成≠可用"问题。
+#
+# 触发：push 到 main + 任意 PR
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  syntax-check:
+    name: 语法检查（node --check）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 全部 JS 语法检查
+        run: |
+          set -e
+          echo "=== 语法检查开始 ==="
+          # 收集所有 .js（排除 node_modules / .github）
+          find . -name "*.js" \
+            -not -path "./node_modules/*" \
+            -not -path "./.git/*" \
+            > /tmp/all_js.txt
+          echo "共 $(wc -l < /tmp/all_js.txt) 个 JS 文件"
+          # 逐个 node --check
+          while IFS= read -r f; do
+            node --check "$f" || { echo "❌ 语法错误: $f"; exit 1; }
+          done < /tmp/all_js.txt
+          echo "✅ 全部 JS 语法检查通过"
+
+  regression:
+    name: 回归测试（test/）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 运行回归测试
+        run: |
+          set -e
+          FAILED=0
+          for f in test/*.js; do
+            echo "--- $f ---"
+            if node "$f" > /tmp/test_out.txt 2>&1; then
+              echo "  ✅ 通过"
+            else
+              echo "  ❌ 失败 (exit $?)"
+              tail -20 /tmp/test_out.txt
+              FAILED=1
+            fi
+          done
+          if [ "$FAILED" = "1" ]; then
+            echo "❌ 存在失败的回归测试"
+            exit 1
+          fi
+          echo "✅ 全部回归测试通过"
