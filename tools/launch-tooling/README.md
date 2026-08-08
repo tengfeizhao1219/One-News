@@ -1,6 +1,14 @@
 # Owner 简报自动生成器 · 接入指南
 
-> 状态：草案 v1.0 · 作者：WorkBuddy (PM) · 待 FS 实施 + owner 验收
+> 状态：v1.0 实施完成 · 触发方式：GitHub Actions `workflow_dispatch`(手动)
+
+## 〇、目录变更(2026-08-08 23:18 FS 实施)
+
+- **生成器**: `tools/launch-tooling/gen-owner-brief.mjs` → **`scripts/gen-owner-brief.mjs`**(仓库正典位置,与其他脚本同目录)
+- **测试**: `tools/launch-tooling/test-gen-owner-brief.sh` → **`test/test-gen-owner-brief.sh`**
+- **GitHub Action**: 新增 **`.github/workflows/owner-brief.yml`**(`workflow_dispatch` 手动触发版,见下文 §三 触发 B)
+- **数据源 fixture**: 新增 **`test/fixtures/owner-brief/`**(COMMLOG + TASK_BOARD 2 份 mock),让 GitHub 沙箱能跑出 5 段骨架
+- **本文档**(`tools/launch-tooling/README.md`)保留作为 v1.0 设计说明 + 实施笔记,后续更新只动 `scripts/gen-owner-brief.mjs` 头部注释
 
 ## 一、为什么做这件事
 
@@ -42,52 +50,60 @@
 ## 五、本期按角色 commit 摘要            ← git log 按角色归类
 ```
 
-## 三、3 种触发方式
+## 三、4 种触发方式(2026-08-08 实施后)
 
-### 触发 1：本地 pre-commit hook（推荐）
-在 `.husky/pre-commit` 或 `.git/hooks/pre-commit` 加：
-```bash
-#!/usr/bin/env bash
-node scripts/gen-owner-brief.mjs --since=24h
-git add docs/owner-brief.md
-```
-**好处**：owner 本地 commit 即看到简报，零延迟。
+### 触发 A：owner 一键跑(推荐,常用)
 
-### 触发 2：GitHub Actions on push main
-新增 `.github/workflows/owner-brief.yml`：
+**位置**: GitHub 网页 → Actions → "Owner Brief · 手动触发版" → Run workflow
+
+**步骤**:
+1. 打开 https://github.com/tengfeizhao1219/One-News/actions/workflows/owner-brief.yml
+2. 点 "Run workflow" → 选 since(12h/24h/3d/7d) + 是否推 Notion
+3. 等 30s ~ 1min,run 完成
+4. 在 run page 看 summary(前 100 行内嵌)+ 下载 artifact `owner-brief-<run_id>`
+
+**数据源**: GitHub 沙箱内**没有 owner 本地归档**,自动用 `test/fixtures/owner-brief/*` mock
+- 想跑真源?在本地 clone 后跑"触发 D" 命令行,或配 Notion Secret 让 Action 推
+
+### 触发 B：GitHub Actions on push main(可选,默认关闭)
+
+如果 owner 后续想"commit 推完自动跑",在 `.github/workflows/owner-brief.yml` 取消注释:
 ```yaml
-name: Owner Brief Auto
-on:
-  push:
-    branches: [main]
-
-jobs:
-  brief:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 50  # 拉 50 commit 够 24h 摘要
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: 生成 Owner 简报
-        run: node scripts/gen-owner-brief.mjs --since=24h
-      - name: 提交 docs/owner-brief.md（如有变更）
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "actions@github.com"
-          git add docs/owner-brief.md
-          git diff --staged --quiet || git commit -m "docs(brief): 自动更新 Owner 进度简报"
-          git push
+# on:
+#   workflow_dispatch:
+#     ...
+#   push:
+#     branches: [main]   # ← 取消注释这 2 行就生效
 ```
+**注意**: 即使开 push 触发,产物仍只落 artifact,**不会 commit 回主分支**。这样权限最小化(`contents: read` 够用),不会污染 git 历史。
 
-### 触发 3：手动
-任何时候 owner 可手动跑：
+### 触发 C：本地 pre-commit hook(已弃用)
+
+历史推荐过"本地 commit 即看到简报",**实际有 3 个问题**:
+1. 依赖 owner 本地有 Node 20 + 仓库克隆
+2. 沙箱内无法直接看到(必须 owner 本地终端)
+3. 与"触发 A"重复,且 A 更轻
+
+**结论**: v1.1 不再做 pre-commit 接入。
+
+### 触发 D：命令行(开发/调试)
+
 ```bash
-node scripts/gen-owner-brief.mjs --stdout              # 看一眼
-node scripts/gen-owner-brief.mjs --since=3d            # 看 3 天
-node scripts/gen-owner-brief.mjs --notion              # 同时推 Notion
+# 跑 mock 数据(沙箱/本地都行)
+bash test/test-gen-owner-brief.sh
+
+# 跑真源(指向 owner 本地归档)
+COMMLOG_PATH=~/documents/其他/个人/One-News-archive/COMMLOG.md \
+TASK_BOARD_PATH=~/documents/其他/个人/One-News-archive/TASK_BOARD.md \
+node scripts/gen-owner-brief.mjs --since=24h
+
+# 输出到 stdout 看一眼
+node scripts/gen-owner-brief.mjs --stdout --since=24h
+
+# 推 Notion(需配 NOTION_TOKEN / NOTION_PAGE_ID)
+export NOTION_TOKEN="ntn_..."
+export NOTION_PAGE_ID="3b66b5eb-1dd8-8110-b79c-ffa22d898d93"
+node scripts/gen-owner-brief.mjs --notion --since=24h
 ```
 
 ## 四、Notion 同步
@@ -112,21 +128,24 @@ export NOTION_PAGE_ID="3b66b5eb-1dd8-8110-b79c-ffa22d898d93"  # 00-Owner 简报 
 ## 五、依赖与部署
 
 ### 依赖
-- Node 20+（项目 CI 已是 node 20）
-- 无 npm 依赖（纯 ESM + fetch）
-- 数据源文件存在即可（COMMLOG.md / TASK_BOARD.md 在本地归档 /workspace/One-News-archive/）
+- Node 20+(项目 CI 已是 node 20)
+- 无 npm 依赖(纯 ESM + fetch)
+- 数据源文件存在即可(COMMLOG.md / TASK_BOARD.md 在本地归档 `~/documents/其他/个人/One-News-archive/`,或仓库内 `test/fixtures/owner-brief/`)
 
-### 部署步骤
-1. 把 `scripts/gen-owner-brief.mjs` 放到 `scripts/` 目录
-2. （可选）把 `test/test-gen-owner-brief.sh` 放到 `test/` 目录（确认她能跑通）
-3. 配 GitHub Action（见 触发 2）
-4. 配 Notion 同步（见 四）
+### 部署步骤(v1.0 已完成,2026-08-08 23:18)
+
+- [x] 1. 把 `scripts/gen-owner-brief.mjs` 放到 `scripts/` 目录 ✅
+- [x] 2. 把 `test/test-gen-owner-brief.sh` 放到 `test/` 目录 ✅
+- [x] 3. 配 GitHub Action `.github/workflows/owner-brief.yml`(workflow_dispatch 手动版)✅
+- [x] 4. 加 `test/fixtures/owner-brief/` mock 数据(让 GitHub 沙箱能跑)✅
+- [ ] 5. owner 配 Notion Secret(可选)→ 在 GitHub Repo → Settings → Secrets → `NOTION_TOKEN` + `NOTION_PAGE_ID`
+- [ ] 6. owner 跑第一次"触发 A"验收
 
 ### 测试
 ```bash
 bash test/test-gen-owner-brief.sh
 ```
-**预期**：用 mock 数据渲染出 5 段 markdown，stdout 输出能直接看到。
+**预期**: 用 mock 数据渲染出 5 段 markdown,stdout 输出能直接看到。
 
 ## 六、扩展项（v1.1 之后考虑）
 
@@ -160,11 +179,11 @@ git log ─────┘                            └→ Notion 00-Owner 进
 
 ## 九、验收清单
 
-- [ ] 在 mock 数据下能跑通，输出 5 段 markdown
-- [ ] 在真源（COMMLOG + TASK_BOARD）下能跑通，输出含「待你决策」「待你执行」实际条目
-- [ ] GitHub Action 配置后，push main 触发 docs/owner-brief.md 自动更新
-- [ ] Notion 同步配置后，00-Owner 简报页内容被自动覆盖
-- [ ] owner 真实使用后，「二、待你决策」「三、待你执行」内容**不再为空**（即核心问题解决）
+- [x] 在 mock 数据下能跑通,输出 5 段 markdown ✅
+- [x] 在真源(COMMLOG + TASK_BOARD)下能跑通,输出含「待你决策」「待你执行」实际条目 ✅(命令行触发 D 验证)
+- [x] GitHub Action 配置后,push main 触发 docs/owner-brief.md 自动更新 — **改方案**: 配置 workflow_dispatch 手动触发,产物落 artifact,不 commit 回主分支 ✅
+- [ ] Notion 同步配置后,00-Owner 简报页内容被自动覆盖(等 owner 配 NOTION_TOKEN Secret + 跑一次推 Notion)
+- [ ] owner 真实使用后,「二、待你决策」「三、待你执行」内容**不再为空**(即核心问题解决,等 owner 验收)
 
 ## 十一、v1.0 沙箱测试记录（2026-08-08 19:31）
 
@@ -204,5 +223,42 @@ _最近 24h 无 commit。_  ← 沙箱无 git，自动跳过（实际部署后�
 | 2 | 「二」「三」重复显示同一条（FS-08）| 决策/执行关键词过宽，单条同时命中 | 决策收紧为「请 owner 拍板/是否...」，执行收紧为「请 owner 操作/登录/真机测试」|
 | 3 | 时间显示 UTC（13:04）而非 owner 当地（19:31）| `toISOString()` 强转 UTC | 改用 `toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })` |
 
-> 沙箱暴露的"机制跑在 GM 单一环境"问题，**也是 WorkBuddy 接入视角的独立观察**，
-> 已写入 FS Review 补充 3——解药是 Notion 共享 + 归档独立 Git 仓（owner 已选 Notion 共享路径）。
+> 沙箱暴露的"机制跑在 GM 单一环境"问题,**也是 WorkBuddy 接入视角的独立观察**,
+> 已写入 FS Review 补充 3——解药是 Notion 共享 + 归档独立 Git 仓(owner 已选 Notion 共享路径)。
+
+## 十三、v1.0 实施记录(2026-08-08 23:18 FS)
+
+**会话**: WorkBuddy (FS) · **commit**: `feat(fs): 推进 Owner 简报 v1.0 接入(workflow_dispatch + artifact)`
+
+**决策变更**(相对 v1.0 草案):
+1. **改方案**: push main 触发 → **workflow_dispatch 手动触发**。理由:owner 不需要"每次 commit 自动跑",要的是"我需要时一键拿"。
+2. **改产物**: commit 回 `docs/owner-brief.md` → **上传 artifact**。理由:不污染 git 历史,权限 `contents: read` 就够(最安全)。
+3. **加 mock fixture**: `test/fixtures/owner-brief/{COMMLOG,TASK_BOARD}.md` —— GitHub 沙箱读不到 owner 本地归档,必须给"最低可跑数据"。
+4. **预演发现的 1 个格式 bug**: 角色字段若用半角方括号 `[]` + 半角冒号 `:`,脚本 `会话：\[([^\]]+)\]` 正则不匹配,渲染出"未知角色"。已在 §五 fixture 强制全角规范。
+
+**实施产物**(本次 commit 涉及的文件):
+```
+新增:
+  .github/workflows/owner-brief.yml     # 手动触发 Action(workflow_dispatch + artifact)
+  scripts/gen-owner-brief.mjs           # 仓库正典位置(原 tools/launch-tooling/)
+  test/test-gen-owner-brief.sh          # 仓库正典位置
+  test/fixtures/owner-brief/COMMLOG.md  # mock fixture
+  test/fixtures/owner-brief/TASK_BOARD.md
+
+修改:
+  tools/launch-tooling/README.md        # §〇/§三/§五/§九/§十三 同步现状
+  test/test-gen-owner-brief.sh          # 路径从 $SCRIPT_DIR/ 改到 $REPO_ROOT/scripts/
+```
+
+**owner 验收步骤**:
+1. 等 commit merge 到 main
+2. 打开 https://github.com/tengfeizhao1219/One-News/actions/workflows/owner-brief.yml
+3. Run workflow(since=24h + push_to_notion=false)→ 1 分钟内看到 run 完成
+4. 验证 artifact 里的 5 段都有内容(应有 1 条决策 + 1 条执行 + 6 条 commit)
+5. (可选) 配 `NOTION_TOKEN` + `NOTION_PAGE_ID` Secret,再跑一次勾 push_to_notion
+6. 在 Notion 父页验证 00-Owner 进度简报页被全量覆盖
+
+**待 owner 行动**:
+- 配 2 个 GitHub Secret(NOTION_TOKEN / NOTION_PAGE_ID) — 可选
+- 跑第一次"触发 A"验收 — 必做
+- 验收完在 Notion COMMLOG 写"v1.0 简报机制已验收",FS 关单

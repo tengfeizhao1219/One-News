@@ -1,0 +1,128 @@
+name: Owner Brief · 手动触发版
+
+# 目的：让 owner 在 GitHub 网页一键生成「Owner 进度简报」(5 段 markdown)
+# 触发：手动 workflow_dispatch（不在 push/schedule 上自动跑）
+# 产物：上传为 artifact,owner 在 run page 直接看 / 下载,无需 commit 回主分支
+#
+# 用法：
+#   1. 打开 https://github.com/tengfeizhao1219/One-News/actions/workflows/owner-brief.yml
+#   2. 点 "Run workflow" → 选 since(默认 24h) + 是否同时推 Notion → Run
+#   3. 等 30s ~ 1min,run 完成点 "owner-brief-<run_id>" artifact 下载 md
+#      或在 run page 直接看 summary 里的内容
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "时间窗(传给生成器 --since)"
+        required: false
+        default: "24h"
+        type: choice
+        options:
+          - 12h
+          - 24h
+          - 3d
+          - 7d
+      push_to_notion:
+        description: "是否同时推送到 Notion 00-Owner 进度简报(需配 Secret)"
+        required: false
+        default: "false"
+        type: boolean
+
+# 最小权限:只读仓库 + 上传 artifact
+permissions:
+  contents: read
+
+jobs:
+  brief:
+    name: 生成 Owner 简报
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # 够 7d commit 摘要
+
+      - name: 设置 Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: 准备数据源目录
+        id: data
+        run: |
+          # 沙箱内仓库根不会有 COMMLOG.md / TASK_BOARD.md(它们在 owner 本地归档)
+          # 用仓库内的 test/fixtures/owner-brief/* mock 兜底
+          mkdir -p test/fixtures/owner-brief
+          if [ ! -f test/fixtures/owner-brief/COMMLOG.md ]; then
+            echo "⚠️ 仓库内无 mock,生成器将扫描空数据(仍会输出 5 段骨架)"
+          fi
+          if [ -f test/fixtures/owner-brief/COMMLOG.md ]; then
+            echo "has_mock=true" >> "$GITHUB_OUTPUT"
+            echo "✅ 使用仓库内 mock 数据"
+          else
+            echo "has_mock=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ 沙箱无数据源,产物将含「无数据」提示"
+          fi
+
+      - name: 生成简报(md)
+        id: gen
+        run: |
+          SINCE="${{ inputs.since }}"
+          ART_DIR="${{ runner.temp }}/owner-brief"
+          mkdir -p "$ART_DIR"
+
+          # 数据源优先级:仓库内 fixture > 沙箱内任意位置
+          if [ -f test/fixtures/owner-brief/COMMLOG.md ]; then
+            export COMMLOG_PATH="$GITHUB_WORKSPACE/test/fixtures/owner-brief/COMMLOG.md"
+          fi
+          if [ -f test/fixtures/owner-brief/TASK_BOARD.md ]; then
+            export TASK_BOARD_PATH="$GITHUB_WORKSPACE/test/fixtures/owner-brief/TASK_BOARD.md"
+          fi
+
+          node scripts/gen-owner-brief.mjs \
+            --since="$SINCE" \
+            --output="$ART_DIR/owner-brief.md"
+
+          echo "✅ 已生成: $ART_DIR/owner-brief.md"
+          wc -l "$ART_DIR/owner-brief.md"
+
+      - name: 推 Notion(可选)
+        if: inputs.push_to_notion == 'true'
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_PAGE_ID: ${{ secrets.NOTION_PAGE_ID }}
+        run: |
+          if [ -z "$NOTION_TOKEN" ] || [ -z "$NOTION_PAGE_ID" ]; then
+            echo "❌ 缺少 NOTION_TOKEN 或 NOTION_PAGE_ID Secret"
+            echo "   请在 Settings → Secrets and variables → Actions 配这两个"
+            exit 1
+          fi
+          ART_DIR="${{ runner.temp }}/owner-brief"
+          node scripts/gen-owner-brief.mjs \
+            --since="${{ inputs.since }}" \
+            --output="$ART_DIR/owner-brief.md" \
+            --notion
+
+      - name: 上传 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: owner-brief-${{ github.run_id }}
+          path: ${{ runner.temp }}/owner-brief/owner-brief.md
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: 简报预览(summary)
+        run: |
+          ART_DIR="${{ runner.temp }}/owner-brief"
+          echo "## 📄 Owner 进度简报(自动生成)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "时间窗：\`${{ inputs.since }}\` · 是否推 Notion：\`${{ inputs.push_to_notion }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "完整内容请下载下方 artifact,或在 run page 末尾查看。" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```markdown' >> "$GITHUB_STEP_SUMMARY"
+          head -100 "$ART_DIR/owner-brief.md" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
