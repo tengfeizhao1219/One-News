@@ -14,9 +14,7 @@
  *   JUHE_API_KEY   — 聚合数据（必填，当前主力数据源 v5.1）
  *   TIAN_API_KEY   — 天行数据（可选，备用 / 回滚 v5-tianxing）
  *   ZHIPU_API_KEY  — 智谱（已废弃 v5.0，保留配置以便回滚到 v3-ai-dual-engine）
- *   DEEPSEEK_API_KEY — DeepSeek（v6.6 智谱降级兜底数据源；优先读环境变量，config.js 仅作兜底）
-                       ⚠️ 安全提示：config.js 内联 key 会进入 git 历史，建议仅在环境变量未配置时临时使用，
-                          正式环境请改为云函数环境变量 DEEPSEEK_API_KEY 并清理此处、必要时轮换 key。
+ *   DEEPSEEK_API_KEY — DeepSeek（v6.6 智谱降级兜底数据源；**必须配置**，否则降级路径会失败）
  */
 
 module.exports = {
@@ -28,9 +26,8 @@ module.exports = {
   },
 
   // DeepSeek API（refreshNews 智谱降级兜底数据源）🆕
-  // 优先读环境变量 DEEPSEEK_API_KEY；环境变量未设置时回退到下方兜底 key（仅临时使用，建议迁移到环境变量）
   deepseek: {
-    apiKey: process.env.DEEPSEEK_API_KEY || 'sk-960ed0447c8849929b962aef64a00713',
+    apiKey: process.env.DEEPSEEK_API_KEY,
     model: 'deepseek-chat',
     timeout: 45000,
   },
