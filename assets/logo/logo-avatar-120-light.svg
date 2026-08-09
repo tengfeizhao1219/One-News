@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif">
+  <!-- 微信小程序头像 · 浅底 120×120（One 上 + 蓝线 + NEWS 紧贴蓝线右端） -->
+  <rect width="120" height="120" rx="22" fill="#FFFFFF"/>
+  <text x="60" y="60" text-anchor="middle" font-size="38" font-weight="900" fill="#0D0D0D" letter-spacing="-1">One</text>
+  <line x1="22" y1="80" x2="60" y2="80" stroke="#0A84FF" stroke-width="3" stroke-linecap="round"/>
+  <text x="66" y="85" text-anchor="start" font-size="13" font-weight="700" fill="#0D0D0D" letter-spacing="2">NEWS</text>
+</svg>
