@@ -114,7 +114,7 @@
     <!-- AB-01: dock 排列 — 关于一页置顶，设置末位 -->
     <view class="more-item" data-target="about" bindtap="onMoreMenuTap">
       <!-- Logo v1.0（PD 2026-08-09 终稿）：dock「关于一页」入口换 avatar-circle 圆头像，跟随深浅 -->
-      <image class="more-item-icon-img more-item-logo-img" src="/assets/logo/logo-avatar-circle{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+      <image class="more-item-icon-img" src="/assets/logo/logo-avatar-circle{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">关于一页</text>
     </view>
     <view class="more-item" data-target="history" bindtap="onMoreMenuTap">

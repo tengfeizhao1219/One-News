@@ -52,13 +52,16 @@ function check(name, cond, detail) {
   if (block) {
     const body = block[1]
     const dark = theme.dark
-    // 运行时变量（非颜色，JS 动态注入 style）跳过
-    const SKIP = ['--font-scale', '--font-scale-meta']
+    // 运行时变量（非颜色，JS 动态注入 style / fallback 由 theme.json 提供）跳过
+    const SKIP = [
+      '--font-scale', '--font-scale-meta',          // 字号缩放（JS setData 注入）
+      '--nav-offset', '--page-h', '--status-bar-height', '--menu-top', '--menu-height'  // 布局变量（wxml inline style 注入）
+    ]
     for (const [k, v] of Object.entries(dark)) {
       if (SKIP.includes(k)) continue
       check('包含 ' + k, body.includes(k + ':'))
     }
-    // 设置页专属变量（theme.json 无，但手动深色必需）
+    // 设置页专属变量已迁入 theme.json（scope: static），此处仅校验 app.wxss 已声明
     const extra = ['--preview-bg', '--seg-bg', '--seg-on-bg', '--seg-on-text', '--switch-off', '--switch-knob']
     for (const k of extra) check('包含 ' + k, body.includes(k + ':'))
   }
@@ -67,7 +70,10 @@ function check(name, cond, detail) {
 // 2) `.page--dark` 块值与 theme.json dark 分支逐项一致（防视觉漂移）
 {
   const block = appWxss.match(/\.page--dark \{([^}]*)\}/)[1]
-  const SKIP = ['--font-scale', '--font-scale-meta']
+  const SKIP = [
+    '--font-scale', '--font-scale-meta',            // JS 动态注入
+    '--nav-offset', '--page-h', '--status-bar-height', '--menu-top', '--menu-height'  // runtime 布局变量
+  ]
   for (const [k, v] of Object.entries(theme.dark)) {
     if (SKIP.includes(k)) continue
     const re = new RegExp(k.replace(/-/g, '\\-') + ':\\s*([^;]+);')
@@ -85,7 +91,7 @@ function check(name, cond, detail) {
 // 3) settings 开关 knob 走 CSS 变量（裸色收敛）
 {
   check('settings .switch-knob 用 var(--switch-knob)',
-    /\.switch-knob\s*\{[\s\S]*?background:\s*var\(--switch-knob,\s*#FFFFFF\)/.test(settingsWxss))
+    /\.switch-knob\s*\{[\s\S]*?background:\s*var\(--switch-knob\)/.test(settingsWxss))
 }
 
 console.log('\n==============================================')

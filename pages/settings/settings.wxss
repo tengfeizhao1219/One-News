@@ -113,7 +113,7 @@
   height: 58rpx;
   border-radius: 29rpx;
   position: relative;
-  background: var(--switch-off, #E9E9EA);
+  background: var(--switch-off);
   transition: background 0.22s;
   flex-shrink: 0;
 }
@@ -133,14 +133,11 @@
   border-radius: 50%;
   /* D-07 S3 #2（FE 2026-08-05）：#fff → var(--switch-knob)，深浅两态均白（iOS 规范），
      裸色收敛至 app.wxss 变量块 */
-  background: var(--switch-knob, #FFFFFF);
+  background: var(--switch-knob);
   box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.18);
   transition: left 0.22s;
 }
-/* D-07 S3（G-07）：knob 白色为深浅色通用（iOS 开关滑块惯例），显式声明防失配 */
-.page--dark .switch-knob {
-  background: #FFFFFF;
-}
+/* D-07 S3（G-07）：knob 白色已收敛至 theme.json --switch-knob（深浅两态均白，iOS 规范） */
 .switch.on .switch-knob {
   left: 42rpx;
 }
@@ -148,7 +145,7 @@
 /* 分段控制器 */
 .seg {
   display: flex;
-  background: var(--seg-bg, #E4E4E6);
+  background: var(--seg-bg);
   border-radius: 12rpx;
   padding: 4rpx;
   gap: 0;
@@ -164,8 +161,8 @@
   transition: all 0.15s;
 }
 .seg-item.on {
-  background: var(--seg-on-bg, #FFFFFF);
-  color: var(--seg-on-text, #1C1C1E);
+  background: var(--seg-on-bg);
+  color: var(--seg-on-text);
   box-shadow: 0 1rpx 4rpx rgba(0,0,0,0.12);
   font-weight: 600;
 }
@@ -181,7 +178,7 @@
   letter-spacing: 0.5rpx;
 }
 .preview-card {
-  background: var(--preview-bg, var(--bg-page));
+  background: var(--preview-bg);
   border: 1rpx solid var(--divider);
   border-radius: 18rpx;
   padding: 20rpx 26rpx;
