@@ -59,7 +59,7 @@
 
 .wheel-label {
   font-size: 24rpx;
-  color: var(--wheel-text-selected, rgba(0, 0, 0, 0.5));  /* idle 态用选中色（v2.2 颜色不加深） */
+  color: var(--wheel-text-selected);  /* idle 态用选中色（v2.2 颜色不加深） */
   font-weight: 500;
   padding: 0 8rpx;
   border-radius: 10rpx;
@@ -70,7 +70,7 @@
    背景高亮去除（不再使用 --wheel-bg-selected）。token 由 app.wxss .page--dark/.page--light 变量块注入，
    var() 穿透样式隔离；未定义时回退 var(--primary)。 */
 .wheel-label.active {
-  color: var(--wheel-text-selected-color, var(--primary, #007AFF));
+  color: var(--wheel-text-selected-color, var(--primary));
   font-size: 24rpx;
   font-weight: 500;
 }

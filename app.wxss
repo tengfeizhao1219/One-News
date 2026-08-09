@@ -19,6 +19,7 @@ page {
 .page--dark {
   --bg-page: #000000;
   --bg-card: #0D0D0D;
+  --overlay-surface: #1C1C1E;
   --bg-subtle: #1A1A1C;
   --text-primary: #FFFFFF;
   --text-secondary: #999999;
@@ -73,6 +74,7 @@ page {
 .page--light {
   --bg-page: #F5F3F0;
   --bg-card: #FAF9F7;
+  --overlay-surface: #FAF9F7;
   --bg-subtle: #F0EEEA;
   --text-primary: #1C1C1E;
   --text-secondary: #6B6B70;

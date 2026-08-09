@@ -58,6 +58,38 @@ const wxssFiles = files.filter(f => f.endsWith('.wxss'))
 // ---- 白名单:黑白蒙层 rgba(0,0,0,*) / rgba(255,255,255,*) / 透明黑(0,0,0,0) ----
 const RGBA_MONOCHROME = /rgba?\(\s*(0\s*,\s*0\s*,\s*0|255\s*,\s*255\s*,\s*255)\b/
 
+// ---- 属性白名单:这些 CSS 属性内的 px 是物理像素,不需要 rpx ----
+// box-shadow: offset-x offset-y blur spread
+// filter: blur(Npx) / drop-shadow(... Npx)
+// transform: translate(Npx) (极少用 px,但允许)
+// transition: ... Nms (不是 px,但也不该 rpx)
+const PX_WHITELIST_RE = /\b(box-shadow|filter|backdrop-filter|drop-shadow|transition)\b/
+// var(--xxx, Npx) 内的 fallback 也是合法的(用于 calc 默认值)
+const VAR_FALLBACK_PX_RE = /var\([^)]*,\s*\d+(?:\.\d+)?\s*px\s*\)/
+
+// ---- 注释检测 ----
+// CSS 注释 /* ... */ 跨行;小程序 wxss 也支持 // 单行注释
+// 需要跟踪 block comment 状态(开闭可以跨行)
+function makeCommentTracker() {
+  let inBlock = false
+  return function isComment(line) {
+    const trimmed = line.trim()
+    // 单行注释
+    if (trimmed.startsWith('//')) return true
+    // block: 已在块内
+    if (inBlock) {
+      if (trimmed.includes('*/')) inBlock = false
+      return true  // 整行都是注释的一部分
+    }
+    // block: 新开块
+    if (trimmed.startsWith('/*')) {
+      if (!trimmed.includes('*/')) inBlock = true  // 没在同一行闭合 → 进入块
+      return true
+    }
+    return false
+  }
+}
+
 // ---- 颜色字面量匹配 ----
 const HEX_RE = /#[0-9A-Fa-f]{3,8}\b/g
 const RGB_RE = /\brgba?\s*\([^)]+\)/g
@@ -98,14 +130,17 @@ for (const file of wxssFiles) {
 for (const file of wxssFiles) {
   const src = readFileSync(file, 'utf8')
   const lines = src.split('\n')
+  const isComment = makeCommentTracker()
 
   lines.forEach((line, i) => {
     const lineNo = i + 1
 
     // ① 硬编码颜色(排除纯注释行 / 排除黑白蒙层白名单)
-    if (!/^\s*\/\//.test(line) && !/^\s*\*/.test(line) && !/^\s*\/\*/.test(line)) {
-      // HEX
+    if (!isComment(line)) {
+      // HEX: 排除 var(--xxx, #fallback) 中的 fallback — 改由 ② 块报 redundant-fallback
       for (const m of line.matchAll(HEX_RE)) {
+        const before = line.slice(0, m.index)
+        if (/var\([^)]*$/.test(before)) continue
         record(file, lineNo, m.index + 1, 'error', 'hardcoded-hex',
           `硬编码颜色 ${m[0]} — 应改用 var(--xxx) 走 theme.json`)
       }
@@ -120,9 +155,22 @@ for (const file of wxssFiles) {
     // ② var(--xxx) 校验:必须存在于 theme.json
     //   - 完全未声明  → error
     //   - 仅在 wxss 内部 :root 声明但未进 theme.json → warning(提示集中到 theme.json)
+    //   - 已注册但有 fallback 字面量 → warning(redundant-fallback)
     for (const m of line.matchAll(VAR_RE)) {
       const name = m[1]
-      if (KNOWN_VARS.has(name)) continue
+      if (KNOWN_VARS.has(name)) {
+        // 检查是否有冗余 fallback var(--primary, #hex)
+        const after = line.slice(m.index)
+        const fbMatch = after.match(/^var\(\s*--[a-zA-Z][\w-]*\s*,\s*(.+?)\)/)
+        if (fbMatch) {
+          const fb = fbMatch[1].trim()
+          if (/#[0-9A-Fa-f]{3,8}\b/.test(fb) || /rgba?\s*\(/.test(fb)) {
+            record(file, lineNo, m.index + 1, 'warning', 'redundant-fallback',
+              `var(--${name}) 已在 theme.json 注册,无需 fallback(${fb}) — 建议删除保持单一数据源`)
+          }
+        }
+        continue
+      }
       if (wxssRootDecls.has(name)) {
         record(file, lineNo, m.index + 1, 'warning', 'var-in-wxss-root',
           `var(--${name}) 仅在 ${wxssRootDecls.get(name)} 的 :root 声明,未进 theme.json — 建议集中到 theme.json (scope: static)`)
@@ -132,14 +180,16 @@ for (const file of wxssFiles) {
       }
     }
 
-    // ③ px 误用:calc(var(--x, 0px)) 里的默认值允许;其他位置要警告
-    for (const m of line.matchAll(PX_RE)) {
-      // calc(var(--*, 0px)) 的默认值 — 合法
-      if (/\(\s*var\([^)]*,\s*0?\s*px\s*\)/.test(line)) continue
-      // 0px 单独出现(常见 0 默认) — 合法
-      if (m[1] === '0') continue
-      record(file, lineNo, m.index + 1, 'warning', 'px-instead-of-rpx',
-        `使用 ${m[1]}px — 小程序布局请改 rpx(750 设计稿 1rpx ≈ 0.5px)`)
+    // ③ px 误用:calc(var(--x, 0px)) 默认值允许;box-shadow/filter/blur 物理像素允许;
+    //    注释行不检查
+    if (!isComment(line)) {
+      for (const m of line.matchAll(PX_RE)) {
+        if (VAR_FALLBACK_PX_RE.test(line)) continue
+        if (m[1] === '0') continue
+        if (PX_WHITELIST_RE.test(line)) continue
+        record(file, lineNo, m.index + 1, 'warning', 'px-instead-of-rpx',
+          `使用 ${m[1]}px — 小程序布局请改 rpx(750 设计稿 1rpx ≈ 0.5px)`)
+      }
     }
   })
 }

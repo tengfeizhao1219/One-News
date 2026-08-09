@@ -209,7 +209,7 @@
 .author-badge {
   font-size: 22rpx;
   /* 主题色底固定白字（D-02 §6 角标规定，--primary 浅 #007AFF / 深 #0A84FF 下白字均清晰） */
-  color: #ffffff;
+  color: var(--chip-text);
   background-color: var(--primary);
   padding: 2rpx 10rpx;
   border-radius: 8rpx;
@@ -298,7 +298,7 @@
 .reply-send {
   flex-shrink: 0;
   font-size: 26rpx;
-  color: #ffffff;
+  color: var(--chip-text);
   background-color: var(--primary);
   padding: 12rpx 28rpx;
   border-radius: 32rpx;
@@ -351,7 +351,7 @@
   padding: 0 32rpx;
   border-radius: 36rpx;
   background-color: var(--primary);
-  color: #ffffff;
+  color: var(--chip-text);
   font-size: 30rpx;
   text-align: center;
 }

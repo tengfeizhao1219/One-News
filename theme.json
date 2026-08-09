@@ -2,6 +2,7 @@
   "light": {
     "--bg-page": "#F5F3F0",
     "--bg-card": "#FAF9F7",
+    "--overlay-surface": "#FAF9F7",
     "--text-primary": "#1C1C1E",
     "--text-secondary": "#6B6B70",
     "--text-body": "#5E5E60",
@@ -56,6 +57,7 @@
   "dark": {
     "--bg-page": "#000000",
     "--bg-card": "#0D0D0D",
+    "--overlay-surface": "#1C1C1E",
     "--text-primary": "#FFFFFF",
     "--text-secondary": "#999999",
     "--text-body": "#D4D4D4",

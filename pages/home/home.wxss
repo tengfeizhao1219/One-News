@@ -180,6 +180,16 @@
   letter-spacing: 0.5rpx;
 }
 
+/* category-tag: 卡片元信息中的分类小标签（复用 D-07 S3 tag-bg + tag-text + 圆角胶囊） */
+.category-tag {
+  color: var(--tag-text);
+  background-color: var(--tag-bg);
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  line-height: 1;
+}
+
 /* UI-B8：AI 摘要标识胶囊（内联于摘要首段行首，不撑高卡片） */
 .ai-chip {
   display: inline-block;
@@ -798,7 +808,7 @@
    保留以下深色专用覆盖（正常路径无等价 var() 或为特殊设计值）：
    - .more-item 浮层表面色 #1C1C1E + 阴影强化（比 --bg-card 亮一档，从蒙板"浮"出） */
 .page--dark .more-item {
-  background-color: #1C1C1E;
+  background-color: var(--overlay-surface);
   /* 暗色下原阴影在纯黑背景上不可见，加深一档强化悬浮感（box-shadow 豁免范畴） */
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
 }
