@@ -1,0 +1,16 @@
+<!-- Logo 组件（v1.0 · PD 2026-08-09 终稿）
+  用法：
+    <logo mode="wordmark" size="360" />        <!-- 主标：wordmark | avatar | avatar-circle | splash -->
+    <logo mode="avatar" size="120" />          <!-- 默认自动跟随系统深浅 -->
+    <logo mode="splash" size="600" dark />     <!-- dark 强制深底，缺省跟随系统 -->
+  属性：
+    mode  - 四种形态（wordmark/avatar/avatar-circle/splash）
+    size  - 宽度 rpx（等比缩放，高度按 SVG 比例自动）
+    dark  - Boolean，强制深底；缺省跟随 app.globalData.effectiveTheme
+-->
+<image
+  class="logo-img"
+  src="/assets/logo/logo-{{mode}}{{isDark ? '-dark' : ''}}.svg"
+  mode="widthFix"
+  style="width: {{size}}rpx;"
+></image>

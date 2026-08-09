@@ -20,6 +20,8 @@
 
     <!-- 品牌区 -->
     <view class="brand">
+      <!-- Logo v1.0（PD 2026-08-09 终稿）：wordmark 主标，跟随深浅模式反色 -->
+      <image class="brand-logo" src="/assets/logo/logo-wordmark{{isDark ? '-dark' : ''}}.svg" mode="widthFix"></image>
       <view class="brand-name">一页</view>
       <view class="brand-slogan">极简沉浸式新闻阅读 · 打开即读 · 零干扰</view>
     </view>

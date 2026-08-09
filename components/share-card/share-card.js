@@ -93,60 +93,120 @@ Component({
       var title = (opts.title || '').toString().trim()
       var summary = (opts.summary || '').toString().trim()
 
+      // 品牌小标：优先绘制 Logo 圆头像（PNG，canvas 场景必须用 PNG 而非 SVG）
+      // 分享图底为彩色主题色 → 固定用浅底版 avatar-circle；加载失败降级回文字「一页」
+      var that = this
+      var drawBrand = function (img) {
+        try {
+          if (img) {
+            // 圆头像 40×40，白色圆底自带圆形；加一圈白色描边增强在彩色底上的辨识度
+            ctx.save()
+            ctx.beginPath()
+            ctx.arc(24 + 20, 20 + 20, 20, 0, Math.PI * 2)
+            ctx.closePath()
+            ctx.clip()
+            ctx.drawImage(img, 24, 20, 40, 40)
+            ctx.restore()
+            ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.arc(24 + 20, 20 + 20, 20, 0, Math.PI * 2)
+            ctx.stroke()
+          } else {
+            // 降级：文字「一页」
+            ctx.fillStyle = '#FFFFFF'
+            ctx.globalAlpha = 0.9
+            ctx.font = 'bold 22px "PingFang SC", sans-serif'
+            ctx.textAlign = 'left'
+            ctx.textBaseline = 'top'
+            ctx.fillText('一页', 24, 20)
+            ctx.globalAlpha = 1.0
+          }
+        } catch (e) { /* 品牌绘制失败不阻断主流程 */ }
+      }
+
       try {
         // 背景
         ctx.fillStyle = bg
         ctx.fillRect(0, 0, w, h)
 
-        // 品牌小标（左上角）
-        ctx.fillStyle = '#FFFFFF'
-        ctx.globalAlpha = 0.9
-        ctx.font = 'bold 22px "PingFang SC", sans-serif'
-        ctx.textAlign = 'left'
-        ctx.textBaseline = 'top'
-        ctx.fillText('一页', 24, 20)
-        ctx.globalAlpha = 1.0
-
-        // 标题（≤2 行，超出省略）
-        if (title) {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.font = 'bold 26px "PingFang SC", sans-serif'
-          var titleLines = this._wrapText(ctx, title, w - 48, 34)
-          titleLines = titleLines.slice(0, TITLE_MAX_LINES)
-          titleLines.forEach(function (line, i) {
-            ctx.fillText(line, 24, 56 + i * 34)
-          })
+        // 异步加载 Logo 圆头像 PNG，加载完成后绘制品牌小标 + 标题 + 摘要 + 角标
+        var img = null
+        var canvas = this._canvas
+        if (canvas && typeof canvas.createImage === 'function') {
+          img = canvas.createImage()
+          img.onload = function () {
+            drawBrand(img)
+            that._drawContent(ctx, w, h, title, summary, info)
+            that._resolveDataUrl(resolve, reject)
+          }
+          img.onerror = function () {
+            drawBrand(null)
+            that._drawContent(ctx, w, h, title, summary, info)
+            that._resolveDataUrl(resolve, reject)
+          }
+          img.src = '/assets/logo/png/logo-avatar-circle-light@2x.png'
+        } else {
+          // 低版本无 createImage：降级文字品牌
+          drawBrand(null)
+          this._drawContent(ctx, w, h, title, summary, info)
+          this._resolveDataUrl(resolve, reject)
         }
+      } catch (e) {
+        reject(e)
+      }
+    },
 
-        // AI 摘要（≤6 行，超出省略号）
-        if (summary) {
-          ctx.fillStyle = '#FFFFFF'
-          ctx.globalAlpha = 0.92
-          ctx.font = '18px "PingFang SC", sans-serif'
-          var summaryStartY = (title ? 56 + Math.min(titleLines.length, TITLE_MAX_LINES) * 34 + 10 : 60)
-          var summaryLines = this._wrapText(ctx, summary, w - 48, 26)
-          summaryLines = summaryLines.slice(0, SUMMARY_MAX_LINES)
-          var that = this
-          summaryLines.forEach(function (line, i) {
-            var display = line
-            if (i === summaryLines.length - 1 && that._overflow(ctx, summary, w - 48, 26, SUMMARY_MAX_LINES)) {
-              display = that._truncateWithEllipsis(ctx, line, w - 48)
-            }
-            ctx.fillText(display, 24, summaryStartY + i * 26)
-          })
-          ctx.globalAlpha = 1.0
-        }
-
-        // 分类角标（右下角）
+    /**
+     * 绘制标题（≤2 行）+ AI 摘要（≤6 行）+ 分类角标（右下角）
+     * 品牌小标已由调用方绘制，本方法只画正文内容。
+     */
+    _drawContent: function (ctx, w, h, title, summary, info) {
+      // 标题（≤2 行，超出省略）
+      if (title) {
         ctx.fillStyle = '#FFFFFF'
-        ctx.globalAlpha = 0.7
-        ctx.font = '16px "PingFang SC", sans-serif'
-        ctx.textAlign = 'right'
-        ctx.textBaseline = 'bottom'
-        ctx.fillText('· ' + info.name + ' ·', w - 24, h - 16)
-        ctx.globalAlpha = 1.0
+        ctx.font = 'bold 26px "PingFang SC", sans-serif'
+        var titleLines = this._wrapText(ctx, title, w - 48, 34)
+        titleLines = titleLines.slice(0, TITLE_MAX_LINES)
+        titleLines.forEach(function (line, i) {
+          ctx.fillText(line, 24, 56 + i * 34)
+        })
+      }
 
-        // 导出
+      // AI 摘要（≤6 行，超出省略号）
+      if (summary) {
+        ctx.fillStyle = '#FFFFFF'
+        ctx.globalAlpha = 0.92
+        ctx.font = '18px "PingFang SC", sans-serif'
+        var summaryStartY = (title ? 56 + Math.min(titleLines.length, TITLE_MAX_LINES) * 34 + 10 : 60)
+        var summaryLines = this._wrapText(ctx, summary, w - 48, 26)
+        summaryLines = summaryLines.slice(0, SUMMARY_MAX_LINES)
+        var that = this
+        summaryLines.forEach(function (line, i) {
+          var display = line
+          if (i === summaryLines.length - 1 && that._overflow(ctx, summary, w - 48, 26, SUMMARY_MAX_LINES)) {
+            display = that._truncateWithEllipsis(ctx, line, w - 48)
+          }
+          ctx.fillText(display, 24, summaryStartY + i * 26)
+        })
+        ctx.globalAlpha = 1.0
+      }
+
+      // 分类角标（右下角）
+      ctx.fillStyle = '#FFFFFF'
+      ctx.globalAlpha = 0.7
+      ctx.font = '16px "PingFang SC", sans-serif'
+      ctx.textAlign = 'right'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText('· ' + info.name + ' ·', w - 24, h - 16)
+      ctx.globalAlpha = 1.0
+    },
+
+    /**
+     * 导出 PNG dataUrl 并 resolve
+     */
+    _resolveDataUrl: function (resolve, reject) {
+      try {
         var dataUrl = this._canvas.toDataURL('image/png')
         resolve(dataUrl)
       } catch (e) {

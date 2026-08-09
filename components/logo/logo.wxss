@@ -1,0 +1,4 @@
+/* Logo 组件样式（v1.0） */
+.logo-img {
+  display: block;
+}
