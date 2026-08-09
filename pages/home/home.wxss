@@ -128,16 +128,26 @@
 
 .card-body {
   flex: 1;
-  /* BUG-20260806-004: nav 与胶囊对齐，减少顶部留白 */
-  padding: 100rpx 64rpx 48rpx;
+  /* 顶部安全距离：避开 fixed-top-bar（menuTop + menuHeight + 12px ≈ 88-98px）。
+     原 padding-top:100rpx(≈50px) < fixed-top-bar 底部，flex-start 排布下标题顶部被
+     高 z-index 的 fixed-top-bar 背景盖住（FE-20260810-001）。
+     改为 calc(menu-top + menu-height + 40rpx)（≈100-110px），内容超高从顶部排时
+     标题也永远在 fixed-top-bar 之下，完整可见。 */
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 40rpx) 64rpx 48rpx;
   display: flex;
   flex-direction: column;
-  /* FE-20260809: 原 justify-content:center 在内容超高时上下两端同时被裁，
-     标题顶部可能被切掉。改 flex-start —— 内容从顶部排，超高只裁底部摘要区，标题永远完整。 */
-  justify-content: flex-start;
+  /* FE-20260810-001: 垂直居中改用「margin auto」方案（替代 444d2f9 的 flex-start）：
+     空间充足时 .card-title 的 margin-top:auto 与 .card-summary 的 margin-bottom:auto
+     平分剩余空间 → 内容整体垂直居中（恢复 owner 预期视觉）；
+     空间不足（极端小屏+超大字体+超长内容）时 auto margin 收缩为 0，
+     内容从 padding-top 顶部开始排 —— 只裁底部摘要区，标题永远完整，
+     优于 justify-content:center（超高时上下两端同时被裁）。 */
 }
 
 .card-title {
+  /* FE-20260810-001: margin-top:auto —— 空间充足时吸收上方剩余空间（居中）；
+     空间不足时收缩为 0，标题从 padding-top 顶部排，始终完整可见 */
+  margin-top: auto;
   /* BUG-20260806-004: 使用相对尺寸 52rpx */
   font-size: 52rpx;
   font-weight: 700;
@@ -157,7 +167,9 @@
 }
 
 .card-summary {
-  margin-bottom: 48rpx;
+  /* FE-20260810-001: margin-bottom:auto —— 与 .card-title 的 margin-top:auto 平分
+     剩余空间实现垂直居中；底部 48rpx 间距由 .card-body padding-bottom 承担 */
+  margin-bottom: auto;
   margin-top: 28rpx;
 }
 
@@ -169,13 +181,10 @@
   line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
   letter-spacing: 1rpx;
-  /* FE-20260809: 摘要最多 4 行，超出省略号 —— 内容再长也不撑高卡片，保证标题完整。
-     与后端 150 字截断 + 前端 js 兜底截断形成三道防线。 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
+  /* FE-20260810-001: 移除 444d2f9 加的 -webkit-line-clamp:4 —— owner 反馈 AI 摘要
+     展示不全、内容被截断。摘要完整展示，不再省略号截断。
+     防超高由前端 150 字截断（home.js MAX_SUMMARY_CHARS）+ 标题 5 行 clamp 兜底，
+     极端场景（小屏+超大字体）超高时只裁底部摘要区（margin auto 方案），标题完整。 */
   word-break: break-word;
 }
 
