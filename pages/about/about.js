@@ -80,4 +80,26 @@ Page({
     })
   },
 
+  // ============ 分享（RQ-2026-08-09 owner：关于页支持发送给朋友 + 分享朋友圈） ============
+
+  /**
+   * 发送给朋友：固定卡片文案，path 指向关于页。
+   */
+  onShareAppMessage: function () {
+    return {
+      title: '一页 One-News · 极简新闻速览',
+      path: '/pages/about/about',
+    }
+  },
+
+  /**
+   * 分享到朋友圈（单页模式）：关于页为纯内容展示（承诺/理念），
+   * 符合单页模式「纯内容场景」定位；无自定义封面，微信使用页面截图。
+   */
+  onShareTimeline: function () {
+    return {
+      title: '一页 One-News · 极简新闻速览',
+    }
+  },
+
 })

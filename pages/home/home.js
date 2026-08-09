@@ -934,6 +934,60 @@ Page({
     })
   },
 
+  // ============ 分享（RQ-2026-08-09 owner：首页支持发送给朋友 + 分享朋友圈） ============
+
+  /**
+   * 分享首页当前正在阅读的新闻卡片（有数据时）→ 跳详情页；无数据时分享首页本身。
+   * 发送给朋友：title（≤30 字）+ path 直达详情；imageUrl 用新闻图（如有），否则默认。
+   */
+  onShareAppMessage: function () {
+    const { currentIndex, newsList, currentCategory } = this.data
+    const news = (newsList && newsList[currentIndex]) || null
+
+    if (news && news.id) {
+      var title = '一页 | ' + (news.title || '新闻速览')
+      if (title.length > 30) {
+        var chars = Array.from(title)
+        title = chars.slice(0, 29).join('') + '\u2026'
+      }
+      return {
+        title: title,
+        path: `/pages/detail/detail?id=${news.id}&index=${currentIndex}&category=${currentCategory}`,
+        imageUrl: news.picUrl || undefined,
+      }
+    }
+
+    // 数据未就绪：分享首页入口
+    return {
+      title: '一页 · 极简新闻速览',
+      path: '/pages/home/home',
+    }
+  },
+
+  /**
+   * 分享到朋友圈（单页模式）：不支持自定义 path，仅 query 定位。
+   * 首页作为纯内容聚合页，朋友圈打开后进入首页单页模式（场景值 1154），
+   * 顶部固定导航 + 底部「前往小程序」，页面内容正常展示。
+   */
+  onShareTimeline: function () {
+    const { currentIndex, newsList, currentCategory } = this.data
+    const news = (newsList && newsList[currentIndex]) || null
+
+    var title = news && news.title ? '一页 | ' + news.title : '一页 · 极简新闻速览'
+    if (title.length > 30) {
+      var chars = Array.from(title)
+      title = chars.slice(0, 29).join('') + '\u2026'
+    }
+
+    return {
+      title: title,
+      query: news && news.id
+        ? 'id=' + encodeURIComponent(news.id) + '&index=' + currentIndex + '&category=' + encodeURIComponent(currentCategory)
+        : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
+      imageUrl: (news && news.picUrl) || undefined,
+    }
+  },
+
   // ============ 侧边栏 ============
 
   /**

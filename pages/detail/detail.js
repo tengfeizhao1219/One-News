@@ -865,6 +865,41 @@ Page({
   },
 
   /**
+   * RQ-2026-08-09（owner）：详情页支持「分享到朋友圈」。
+   * 朋友圈打开为「单页模式」：不支持自定义 path（页面固定为当前页），仅 query 定位；
+   * title 与 onShareAppMessage 一致（一页 | 标题 ≤30 字），封面复用 AI 摘要图缓存。
+   * 单页模式下 wx.login 等不可用，云函数上报 setNewsRetained 依赖云开发「未登录访问」
+   * 配置，失败静默（cloud.report 内部有容错），不阻断分享。
+   */
+  onShareTimeline: function () {
+    var news = this.data.news || {}
+    var title = news.title || '一页 · 新闻速览'
+    title = '一页 | ' + title
+    if (title.length > 30) {
+      var chars = Array.from(title)
+      title = chars.slice(0, 29).join('') + '\u2026'
+    }
+
+    // TL-B13：朋友圈分享同样计入 30 天保留（分享点击即算；失败静默入队）
+    if (news && news.id) {
+      try {
+        cloud.report({
+          name: 'setNewsRetained',
+          data: { newsId: news.id, retained: true, retainedBy: 'shareTimeline' },
+        })
+      } catch (e) { /* 静默 */ }
+    }
+
+    return {
+      title: title,
+      query: 'id=' + encodeURIComponent(news.id || '') +
+             '&index=' + (this.data.currentIndex || 0) +
+             '&category=' + encodeURIComponent(this.data.category || 'recommend'),
+      imageUrl: this._placeholderCache || undefined,
+    }
+  },
+
+  /**
    * BUG-002: 同步兜底 — 当 Canvas 预缓存未就绪时，
    * 返回 undefined（微信使用默认图标，优于显示错误占位）
    * 正常情况下 _pregenShareImage 会在首次分享前完成（150ms vs 用户操作延迟 >1s）。
