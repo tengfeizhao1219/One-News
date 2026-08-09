@@ -10,7 +10,7 @@
 -->
 <image
   class="logo-img"
-  src="/assets/logo/logo-{{mode}}{{isDark ? '-dark' : ''}}.svg"
+  src="/assets/logo/logo-{{mode}}{{isDark ? '-dark' : '-light'}}.svg"
   mode="widthFix"
   style="width: {{size}}rpx;"
 ></image>

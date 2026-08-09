@@ -45,7 +45,6 @@
       { "type": "folder", "value": "test" },
       { "type": "folder", "value": "docs" },
       { "type": "folder", "value": "demo" },
-      { "type": "folder", "value": "config" },
       { "type": "folder", "value": "node_modules" },
       { "type": "folder", "value": ".github" },
       { "type": "folder", "value": ".github-scripts" },
