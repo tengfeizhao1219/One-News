@@ -80,6 +80,20 @@ module.exports = {
     summaryMaxChars: 150,
   },
 
+  // 混元大模型（云开发内置，无需 API Key — 微信AI小程序成长计划免费额度）
+  // FS-06（2026-08-09 owner 拍板）：接入混元 hy3 作为摘要主力（免费10亿Token），
+  // 经 cloud.ai().createModel('cloudbase').generateText() 调用，平台托管鉴权、零密钥。
+  // ⚠️ 前置：owner 需在 CloudBase 控制台 AI+ → 生文模型 勾选 hy3 并报名成长计划；
+  // 未启用时 code 侧 dynamic require 失败 → 自动降级到原 智谱/Qwen/DeepSeek 链，零影响。
+  hunyuan: {
+    enabled: true,
+    model: 'hy3',
+    timeout: 8000,
+    maxInputChars: 2000,
+    summaryMaxChars: 150,
+    concurrency: 5, // 体验模型单环境并发上限 5
+  },
+
   // 缓存配置（v7 / TL-B12：数据保留分级策略）
   //   - 普通记录：7 天（RQ-16，原 65 分钟）
   //   - retained 记录（收藏/分享）：30 天

@@ -357,8 +357,10 @@ function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
   // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
   // FS-04（2026-08-09）：补全 DeepSeek 引擎 —— OpenAI 兼容协议，与 Qwen 模式一致
-  const engines = []
+  // FS-06（2026-08-09）：混元引擎前置 —— 云开发内置免费额度（无密钥），成功后不再消耗外部 Key
+  const hunyuanCfg = (config.hunyuan || {})
   const zhipuCfg = (config.zhipuSummary || {})
+  const engines = []
   if (zhipuCfg.apiKey) {
     engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
   }
@@ -373,13 +375,69 @@ function summarizeWithZhipu(content, title) {
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
   }
-  if (engines.length === 0) {
-    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU/DASHSCOPE/DEEPSEEK），跳过 AI 摘要')
-    return Promise.resolve(null)
-  }
   // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)
   const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
+
+  // FS-06：混元引擎 —— 云开发内置，无需 API Key（微信AI小程序成长计划免费额度）
+  // 经 cloud.ai().createModel('cloudbase').generateText() 调用，平台托管鉴权。
+  // ⚠️ dynamic require：本地沙箱/未部署云环境时无 wx-server-sdk → try/catch 静默跳过，
+  //    完全不影响原 智谱/Qwen/DeepSeek 链。前置：owner 在 CloudBase 控制台 AI+ 勾选 hy3。
+  function tryHunyuan() {
+    if (!hunyuanCfg.enabled) return Promise.resolve(null)
+    return new Promise((resolve) => {
+      let cloud
+      try {
+        cloud = require('wx-server-sdk')
+        if (!cloud || typeof cloud.init !== 'function' || typeof cloud.ai !== 'function') {
+          console.warn('[summarize] wx-server-sdk 版本过低或无 cloud.ai()，跳过混元')
+          resolve(null); return
+        }
+        cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV, timeout: 60000 })
+      } catch (e) {
+        console.warn('[summarize] 无法加载 wx-server-sdk（本地/沙箱环境），跳过混元引擎：' + e.message)
+        resolve(null); return
+      }
+      const prompt = '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-300 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。'
+      const userContent = `新闻标题：${title || ''}\n\n新闻正文：\n${input}`
+      const model = cloud.ai().createModel('cloudbase')
+      const timeoutMs = hunyuanCfg.timeout || 8000
+      const timer = setTimeout(() => { console.warn('[summarize] 混元摘要超时，降级下一引擎'); resolve(null) }, timeoutMs)
+      model.generateText({
+        model: hunyuanCfg.model || 'hy3',
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: userContent },
+        ],
+      }).then((result) => {
+        clearTimeout(timer)
+        const summary = (result && result.text ? result.text : '').trim()
+        if (summary && summary.length >= 30) {
+          console.log(`[summarize] 混元摘要成功（${summary.length}字）`)
+          resolve(summary)
+        } else {
+          console.warn('[summarize] 混元摘要为空/过短，降级下一引擎')
+          resolve(null)
+        }
+      }).catch((err) => {
+        clearTimeout(timer)
+        console.warn(`[summarize] 混元引擎调用失败：${err && err.message ? err.message : err}，降级下一引擎`)
+        resolve(null)
+      })
+    })
+  }
+
+  if (engines.length === 0 && !hunyuanCfg.enabled) {
+    console.warn('[summarize] 未配置任何摘要引擎（混元未启用 + 无外部 Key），跳过 AI 摘要')
+    return Promise.resolve(null)
+  }
+
+  // 混元优先（免费额度），成功即返回；失败继续走外部引擎链
+  return tryHunyuan().then((hySummary) => {
+    if (hySummary) return hySummary
+    if (engines.length === 0) return null
+    return new Promise((resolve) => { tryEngine(0).then(resolve) })
+  })
 
   // 顺序尝试各引擎（智谱 → Qwen → DeepSeek），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
   function tryEngine(idx) {

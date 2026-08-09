@@ -453,6 +453,39 @@ async function main() {
     process.env.DEEPSEEK_API_KEY = savedKeys.DS || 'mock_deepseek_key'
   })
 
+  // ── 5.5b FS-06：混元引擎（云开发内置，无密钥）降级兼容 ──
+  // 本地/沙箱无 wx-server-sdk → dynamic require 失败 → 混元优雅跳过，
+  // 不影响原 智谱/Qwen/DeepSeek 链（仍能正常返回外部引擎摘要）。
+  console.log('\n── 5.5b 混元引擎兼容（FS-06） ──')
+  await test('FS-06·沙箱无 wx-server-sdk 时混元跳过并降级外部链', async () => {
+    // 配置全 key，模拟生产（混元启用但沙箱无 sdk）
+    process.env.ZHIPU_API_KEY = 'mock_zhipu_key'
+    process.env.DASHSCOPE_API_KEY = 'mock_dash_key'
+    process.env.DEEPSEEK_API_KEY = 'mock_deepseek_key'
+    delete require.cache[require.resolve(REFRESH_DIR + '/config')]
+    delete require.cache[require.resolve(REFRESH_DIR + '/utils/contentFetcher')]
+    const cfHy = require(REFRESH_DIR + '/utils/contentFetcher')
+    const calls = []
+    mockHttps.setResponder((req) => {
+      calls.push(req.path || '')
+      // 智谱失败走降级，DeepSeek 成功兜底
+      if (req.path && req.path.includes('/api/paas/v4')) {
+        return { statusCode: 400, body: JSON.stringify({ error: { message: 'x' } }) }
+      }
+      if (req.path && req.path.includes('/compatible-mode')) {
+        return { statusCode: 403, body: JSON.stringify({ error: 'quota' }) }
+      }
+      if (req.path && req.path.includes('/v1/chat/completions')) {
+        return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: '这是DeepSeek降级生成的中文新闻摘要内容足够长用于通过校验测试' } }] }) }
+      }
+      return { statusCode: 500, body: '{}' }
+    })
+    const summary = await cfHy.summarizeWithZhipu('正文内容足够长用于测试摘要生成，重复填充。重复填充。', '测试标题')
+    assert(summary && summary.includes('DeepSeek'), '沙箱无混元 sdk 时仍应降级拿到 DeepSeek 摘要')
+    const dsCalls = calls.filter(p => p.includes('/v1/chat/completions')).length
+    assert(dsCalls >= 1, 'DeepSeek 兜底被调用')
+  })
+
   // ── 5.6. FS-05：聚合接口"假 desc"识别 + 兜底扩展（8/9 owner 拍板） ──
   // Bug 场景：聚合接口返回 rawSummary="2026-08-09 14:23" / "澎湃新闻" / "。" 等无效内容
   // 原判定 rawSummary === item.title 才判 title 兜底，对"假 desc"无效 → 前端展示日期。
