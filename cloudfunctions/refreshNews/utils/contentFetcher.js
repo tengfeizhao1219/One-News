@@ -303,6 +303,33 @@ async function fetchContentForItem(item) {
   return ''
 }
 
+/**
+ * FS-05 v2（2026-08-09 owner 拍板）：判定"假 desc"
+ * 聚合接口常返回日期/来源名/几个标点，长度可能 20-50 字符，原 `summary === title` 漏判。
+ * 严格规则：空 / 等于标题 / 长度<20 / 剥数字标点后中文<5 / 等于来源名 → 一律视为无效。
+ * 提到顶层 + 导出，供 index.js 写库逻辑复用（防止老假 desc 赢过新首段）。
+ * @param {string} s
+ * @param {object} ctx - { title, source }
+ * @returns {boolean}
+ */
+function isInvalidDesc(s, ctx) {
+  if (!s) return true
+  if (ctx && ctx.title && s === ctx.title) return true
+  if (s.length < 20) return true
+  // 剥数字/标点/空白/常见日期字符后,剩余中文 < 5 → 视为日期/标点
+  const stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
+  if (stripped.length < 5) return true
+  if (ctx && ctx.source && s === ctx.source) return true
+  return false
+}
+
+/**
+ * FS-05 v2:首段二次校验（content 兜底用）= 假 desc 反义
+ */
+function isValidParagraph(s, ctx) {
+  return !isInvalidDesc(s, ctx)
+}
+
 module.exports = {
   enrichNewsList,
   fetchContentForItem,
@@ -311,6 +338,8 @@ module.exports = {
   extractContentFromHtml,
   parseJuheKey,
   summarizeWithZhipu,
+  isInvalidDesc,    // FS-05 v2:导出供 index.js 写库逻辑复用
+  isValidParagraph, // FS-05 v2:导出供 index.js 写库逻辑复用
 }
 
 /**
@@ -478,19 +507,10 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         // FS-05（2026-08-09 owner 拍板）：聚合接口常返回"假 desc"（日期/来源名/几个标点），
         // 原判定 `rawSummary === item.title` 只过滤"== 标题"，对"假 desc"无效。
         // 修复：增加"内容质量"判定 —— 长度 < 20 / 仅日期 / 仅标点 / 等于来源 → 视为无效，summarySource='title' 走首段兜底。
+        // FS-05 v2:改为调顶层 isInvalidDesc(item, { title, source })
         const rawSummary = (item.summary || '').trim()
-        const isInvalIdesc = (s) => {
-          if (!s) return true
-          if (s === item.title) return true
-          if (s.length < 20) return true
-          // 仅日期/数字/标点：去掉数字 - / : 空格 . 之后剩余中文字符 < 5
-          const stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
-          if (stripped.length < 5) return true
-          // 等于来源名（item.source 形如"澎湃新闻"）
-          if (item.source && s === item.source) return true
-          return false
-        }
-        let summarySource = isInvalIdesc(rawSummary) ? 'title' : 'desc'
+        const descCtx = { title: item.title, source: item.source }
+        let summarySource = isInvalidDesc(rawSummary, descCtx) ? 'title' : 'desc'
 
         // 3. AI 摘要（v6.6：skipAiSummary 时跳过——智谱已内联 summary，标记为 'ai'）
         if (skipAiSummary) {
@@ -527,16 +547,8 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
             .map(function (s) { return s.trim() })
             .filter(function (s) { return s.length > 0 })[0] || ''
           // 防御：首段也不能是"假 desc"（极端情况：content 本身第一段就是日期）
-          const isValidParagraph = (s) => {
-            if (!s) return false
-            if (s === item.title) return false
-            if (s.length < 20) return false
-            const stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
-            if (stripped.length < 5) return false
-            if (item.source && s === item.source) return false
-            return true
-          }
-          if (isValidParagraph(firstParagraph)) {
+          // FS-05 v2:复用顶层 isValidParagraph
+          if (isValidParagraph(firstParagraph, descCtx)) {
             enriched.summary = firstParagraph.length > 150 ? firstParagraph.slice(0, 150) : firstParagraph
             summarySource = 'content'
           } else {

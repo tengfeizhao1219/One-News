@@ -534,6 +534,19 @@ async function main() {
     assertEqual(out[0].summary, item.title, '应展示标题')
   })
 
+  await test('FS-05 v2·isInvalidDesc 顶层导出 + 老假 desc 判定', () => {
+    const cfExported = require(REFRESH_DIR + '/utils/contentFetcher')
+    assert(typeof cfExported.isInvalidDesc === 'function', 'isInvalidDesc 应被导出')
+    const ctx = { title: '某条足够长的标题文字用于测试判定', source: '澎湃新闻' }
+    // 老假 desc:日期 / 来源名 / 短串 / 仅标点 → 全被判无效
+    assert(cfExported.isInvalidDesc('2026-08-09 14:23', ctx) === true, '纯日期应判为假 desc')
+    assert(cfExported.isInvalidDesc('澎湃新闻', ctx) === true, '来源名应判为假 desc')
+    assert(cfExported.isInvalidDesc('短', ctx) === true, '短串应判为假 desc')
+    assert(cfExported.isInvalidDesc(',,,,。。', ctx) === true, '仅标点应判为假 desc')
+    // 有效 desc(>20 字且含实质中文)→ 判为有效
+    assert(cfExported.isInvalidDesc('这是一段足够长的有效摘要文字，超过二十个字能够用于展示新闻的核心内容要点。', ctx) === false, '有效长摘要应判为合格')
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')

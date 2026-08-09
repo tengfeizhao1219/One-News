@@ -32,7 +32,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const config = require('./config')
-const { enrichNewsList } = require('./utils/contentFetcher')
+const { enrichNewsList, isInvalidDesc } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 
@@ -211,20 +211,22 @@ async function batchInsert(newsList) {
         const newIsAi = summarySource === 'ai'
         const oldSource = existed.summarySource || (existed.summary && existed.summary !== existed.title ? 'desc' : 'title')
         const oldIsAi = oldSource === 'ai'
-        const oldHasQuality = existed.summary && existed.summary.length >= 30 && existed.summary !== existed.title
-
+        // FS-05 v2（2026-08-09 owner 拍板）：老 summary 也要过假 desc 校验,
+        // 否则"老假 desc"（20-50 字日期/来源名）会赢过新首段,前端继续展示垃圾。
+        const descCtx = { title: item.title, source: item.source }
+        const oldIsFake = !existed.summary
+          || isInvalidDesc(existed.summary, descCtx)
+        const oldHasQuality = !oldIsFake && existed.summary !== item.title
         if (oldIsAi && !newIsAi) {
           // 旧值已是 AI 摘要，新值非 AI → 保留旧 AI
           summary = existed.summary
           summarySource = 'ai'
-        } else if (!oldIsAi && !newIsAi) {
-          // 双方均非 AI → 保留更长的旧 description（若有）
-          if (oldHasQuality && (existed.summary.length > summary.length)) {
-            summary = existed.summary
-            summarySource = 'desc'
-          }
+        } else if (!oldIsAi && !newIsAi && oldHasQuality && (existed.summary.length > summary.length)) {
+          // FS-05 v2: 双方均非 AI 且老值真合格(过假 desc 校验)且更长 → 保留老
+          summary = existed.summary
+          summarySource = 'desc'
         }
-        // 其余情况（新 AI 覆盖旧非 AI / 新 AI 覆盖旧 AI）→ 使用新 AI 摘要
+        // 其余情况（新 AI 覆盖旧非 AI / 新 AI 覆盖旧 AI / 老假 desc）→ 使用新摘要
       }
 
       // v7（TL-B12 / RQ-16 D2）：保留策略

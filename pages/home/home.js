@@ -538,11 +538,34 @@ Page({
     }
 
     // FS-03（owner 2026-08-07 裁定）：四级摘要降级 —— AI 摘要(ai) → 原摘要(desc) → 正文第一段(content) → 标题(title)
-    // 替代原 v6.2-fix（BUG-PD-018）「第三档不复用标题，摘要区留空」决策：
-    // 后端已把正文第一段兜底为 content 档，此处最后一档 title 直接展示标题，保证摘要区永不留白。
+    // FS-05（2026-08-09 owner 拍板）：兜底条件扩展 —— 任何"无 AI 摘要 + 有正文"都走首段,
+    // 不再要求 summarySource === 'title'。修复场景：聚合接口返回"假 desc"（日期/来源名/标点）,
+    // 原本被判为有效 desc → 跳过兜底 → 前端直接展示假 desc。
+    // FS-05 v2:兼容老 DB 记录 summarySource 字段缺失(标 undefined),按 'desc' 走首段兜底逻辑。
     var summarySource = item.summarySource || 'desc'
     var displaySummary = item.summary || ''
-    if (summarySource === 'title') {
+    // 假 desc 防御(前端兜底,后端已写 summarySource='content' 或 'title',但老数据可能没标)
+    var isFakeDesc = function(s) {
+      if (!s) return true
+      if (s === item.title) return true
+      if (s.length < 20) return true
+      var stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
+      if (stripped.length < 5) return true
+      if (item.source && s === item.source) return true
+      return false
+    }
+    if (summarySource === 'title' || (summarySource !== 'ai' && isFakeDesc(displaySummary) && item.content && item.content.length > 10)) {
+      // 走首段兜底
+      var firstParagraph = (item.content || '').split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length > 0})[0] || ''
+      if (firstParagraph.length >= 20 && firstParagraph !== item.title) {
+        displaySummary = firstParagraph.length > 150 ? firstParagraph.slice(0, 150) : firstParagraph
+        summarySource = 'content'
+      } else {
+        // 首段也不合格 → 退到 title 档
+        displaySummary = item.title || ''
+        summarySource = 'title'
+      }
+    } else if (summarySource === 'title') {
       displaySummary = item.title || ''
     }
 
