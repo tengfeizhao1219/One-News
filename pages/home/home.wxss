@@ -132,7 +132,9 @@
   padding: 100rpx 64rpx 48rpx;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* FE-20260809: 原 justify-content:center 在内容超高时上下两端同时被裁，
+     标题顶部可能被切掉。改 flex-start —— 内容从顶部排，超高只裁底部摘要区，标题永远完整。 */
+  justify-content: flex-start;
 }
 
 .card-title {
@@ -167,6 +169,14 @@
   line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 24rpx;
   letter-spacing: 1rpx;
+  /* FE-20260809: 摘要最多 4 行，超出省略号 —— 内容再长也不撑高卡片，保证标题完整。
+     与后端 150 字截断 + 前端 js 兜底截断形成三道防线。 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  word-break: break-word;
 }
 
 .card-meta {

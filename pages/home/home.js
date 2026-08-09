@@ -569,6 +569,13 @@ Page({
       displaySummary = item.title || ''
     }
 
+      // FE-20260809：AI/正文/来源摘要统一截到一屏可容纳长度（约 150 字）。
+      // 后端 prompt 已改 150 字上限，但老数据 + 兜底首段可能仍超长，前端兜底二次截断。
+      var MAX_SUMMARY_CHARS = 150
+      if (displaySummary && displaySummary.length > MAX_SUMMARY_CHARS) {
+        displaySummary = displaySummary.slice(0, MAX_SUMMARY_CHARS)
+      }
+
     return {
       ...item,
       summary: displaySummary,

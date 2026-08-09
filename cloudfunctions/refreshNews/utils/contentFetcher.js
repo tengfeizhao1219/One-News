@@ -449,7 +449,7 @@ function summarizeWithZhipu(content, title) {
         messages: [
           {
             role: 'system',
-            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-300 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
+            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
           },
           {
             role: 'user',
@@ -585,7 +585,10 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
             ])
             if (aiSummary && aiSummary.length >= 30) {
-              enriched.summary = aiSummary
+              // FE-20260809：AI 摘要统一截断到 summaryMaxChars（150 字），确保一屏展示得下。
+              // 原 prompt 允许 100-300 字、max_tokens=600，摘要可冲到 300 字撑爆单卡高度。
+              const maxSummaryChars = (config.hunyuan && config.hunyuan.summaryMaxChars) || 150
+              enriched.summary = aiSummary.length > maxSummaryChars ? aiSummary.slice(0, maxSummaryChars) : aiSummary
               summarySource = 'ai'
             }
           } else {
