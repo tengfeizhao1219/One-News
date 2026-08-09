@@ -317,6 +317,9 @@ module.exports = {
  * 调用智谱 GLM-4-Flash 生成新闻摘要（v6.2：从百炼 DashScope 切换为智谱）
  * 未配置 ZHIPU_API_KEY 时返回 null。
  * 正文长度门槛降至 10 字（v6.2：提高 AI 摘要覆盖率）。
+ * FS-04（2026-08-09 owner 拍板）：三级摘要降级 —— 智谱 → Qwen → DeepSeek
+ *  8/9 08:00 跑批 life/international 摘要缺失根因：智谱超时 + Qwen 403 配额耗尽 + DeepSeek 402 余额不足。
+ *  原代码只挂 2 引擎，搜索阶段降级 DeepSeek 但摘要阶段没接 → 现补全为 3 引擎，DeepSeek 补位。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
  * @returns {Promise<string|null>} 100-300 字中文摘要
@@ -324,6 +327,7 @@ module.exports = {
 function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
   // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
+  // FS-04（2026-08-09）：补全 DeepSeek 引擎 —— OpenAI 兼容协议，与 Qwen 模式一致
   const engines = []
   const zhipuCfg = (config.zhipuSummary || {})
   if (zhipuCfg.apiKey) {
@@ -333,15 +337,22 @@ function summarizeWithZhipu(content, title) {
   if (dashKey) {
     engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen-turbo', timeout: 8000 })
   }
+  // FS-04：DeepSeek 摘要引擎（OpenAI 兼容协议，与 search 链共用同一个 Key + base）
+  // 8/9 凌晨根因：搜索阶段能降级到 DeepSeek，但摘要函数未挂 → AI 摘要永远走不到 DeepSeek。
+  // 现补上：DeepSeek 在前两个都失败时接管，避免再次出现"AI 摘要无结果"。
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
+  if (deepseekKey) {
+    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+  }
   if (engines.length === 0) {
-    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU/DASHSCOPE），跳过 AI 摘要')
+    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU/DASHSCOPE/DEEPSEEK），跳过 AI 摘要')
     return Promise.resolve(null)
   }
   // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)
   const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
 
-  // 顺序尝试各引擎（智谱 → Qwen），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
+  // 顺序尝试各引擎（智谱 → Qwen → DeepSeek），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
   function tryEngine(idx) {
     return new Promise((resolve) => {
       if (idx >= engines.length) { resolve(null); return }

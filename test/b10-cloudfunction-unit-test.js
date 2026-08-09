@@ -371,6 +371,88 @@ async function main() {
     assert(out.every(x => x.summarySource), '每条应有 summarySource 标记')
   })
 
+  // ── 5.5. FS-04：DeepSeek 摘要引擎补全（8/9 凌晨根因） ──
+  console.log('\n── 5.5 summarizeWithZhipu DeepSeek 引擎降级（FS-04） ──')
+
+  // 配置环境变量 + 清理 require 缓存，确保 summarizeWithZhipu 读到新 env
+  const savedKeys = { ZHIPU: process.env.ZHIPU_API_KEY, DASH: process.env.DASHSCOPE_API_KEY, DS: process.env.DEEPSEEK_API_KEY }
+  process.env.ZHIPU_API_KEY = 'mock_zhipu_key'
+  process.env.DASHSCOPE_API_KEY = 'mock_dash_key'
+  process.env.DEEPSEEK_API_KEY = 'mock_deepseek_key'
+  delete require.cache[require.resolve(REFRESH_DIR + '/config')]
+  delete require.cache[require.resolve(REFRESH_DIR + '/utils/contentFetcher')]
+  const cf = require(REFRESH_DIR + '/utils/contentFetcher')
+
+  await test('FS-04·DeepSeek 兜底：智谱+Qwen 失败时 DeepSeek 顶上', async () => {
+    // 记录请求路径，验证降级链
+    const calls = []
+    mockHttps.setResponder((req) => {
+      calls.push(req.path || '')
+      // 智谱域：返回 400 让它 3 次尝试都失败
+      if (req.path && req.path.includes('/api/paas/v4')) {
+        return { statusCode: 400, body: JSON.stringify({ error: { message: '智谱超时' } }) }
+      }
+      // Qwen 域：返回 403 配额耗尽
+      if (req.path && req.path.includes('/compatible-mode')) {
+        return { statusCode: 403, body: JSON.stringify({ error: 'Free quota exhausted' }) }
+      }
+      // DeepSeek 域：成功返回摘要（content 长度 >30 字通过摘要校验）
+      if (req.path && req.path.includes('/v1/chat/completions')) {
+        return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: '这是 DeepSeek 生成的中文新闻摘要内容足够长用于通过校验测试' } }] }) }
+      }
+      return { statusCode: 500, body: '{}' }
+    })
+    const summary = await cf.summarizeWithZhipu('正文内容足够长用于测试摘要生成，重复填充。重复填充。重复填充。', '测试标题')
+    assert(summary && summary.length > 0, '应拿到 DeepSeek 生成的摘要')
+    assert(summary.includes('DeepSeek'), '摘要应来自 DeepSeek 响应')
+    // 验证请求路径降级顺序：智谱先调（3 次）→ Qwen 调（≤3 次）→ DeepSeek 调（1 次成功）
+    const dsCalls = calls.filter(p => p.includes('/v1/chat/completions')).length
+    assert(dsCalls >= 1, 'DeepSeek 至少被调用 1 次')
+    const zhipuCalls = calls.filter(p => p.includes('/api/paas/v4')).length
+    assert(zhipuCalls >= 1, '智谱应先被尝试')
+  })
+
+  await test('FS-04·引擎顺序：智谱成功时不调 DeepSeek', async () => {
+    let deepseekCalled = false
+    let zhipuCalls = 0
+    mockHttps.setResponder((req) => {
+      // 智谱直接成功（content 长度 >30 字通过摘要校验）
+      if (req.path && req.path.includes('/api/paas/v4')) {
+        zhipuCalls++
+        return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: '智谱生成的中文新闻摘要内容足够长用于通过摘要长度校验测试通过' } }] }) }
+      }
+      // 兜底监控：DeepSeek 不应被调用
+      if (req.path && req.path.includes('/v1/chat/completions')) {
+        deepseekCalled = true
+        return { statusCode: 500, body: '{}' }
+      }
+      return { statusCode: 500, body: '{}' }
+    })
+    const summary = await cf.summarizeWithZhipu('正文内容足够长用于测试摘要生成，重复填充。重复填充。', '测试标题')
+    assert(summary && summary.length > 0, '应拿到智谱摘要')
+    assert(summary.includes('智谱'), '摘要应来自智谱')
+    assertEqual(deepseekCalled, false, '智谱成功后不应再调 DeepSeek')
+  })
+
+  await test('FS-04·无 key 配置时直接返回 null 不发请求', async () => {
+    // 临时清掉所有 key
+    process.env.ZHIPU_API_KEY = ''
+    process.env.DASHSCOPE_API_KEY = ''
+    process.env.DEEPSEEK_API_KEY = ''
+    delete require.cache[require.resolve(REFRESH_DIR + '/config')]
+    delete require.cache[require.resolve(REFRESH_DIR + '/utils/contentFetcher')]
+    const cfEmpty = require(REFRESH_DIR + '/utils/contentFetcher')
+    let called = false
+    mockHttps.setResponder(() => { called = true; return { statusCode: 200, body: '{}' } })
+    const summary = await cfEmpty.summarizeWithZhipu('正文内容足够长用于测试摘要生成，重复填充。', '测试标题')
+    assertEqual(summary, null, '无 key 时应返回 null')
+    assertEqual(called, false, '无 key 时不应发任何网络请求')
+    // 恢复 key
+    process.env.ZHIPU_API_KEY = savedKeys.ZHIPU || 'mock_zhipu_key'
+    process.env.DASHSCOPE_API_KEY = savedKeys.DASH || 'mock_dash_key'
+    process.env.DEEPSEEK_API_KEY = savedKeys.DS || 'mock_deepseek_key'
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')
