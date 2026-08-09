@@ -453,6 +453,87 @@ async function main() {
     process.env.DEEPSEEK_API_KEY = savedKeys.DS || 'mock_deepseek_key'
   })
 
+  // ── 5.6. FS-05：聚合接口"假 desc"识别 + 兜底扩展（8/9 owner 拍板） ──
+  // Bug 场景：聚合接口返回 rawSummary="2026-08-09 14:23" / "澎湃新闻" / "。" 等无效内容
+  // 原判定 rawSummary === item.title 才判 title 兜底，对"假 desc"无效 → 前端展示日期。
+  // 修复：增加 isInvalIdesc 内容质量判定 + 兜底条件扩为 summarySource !== 'ai'。
+  console.log('\n── 5.6 假 desc 识别 + 兜底扩展（FS-05） ──')
+
+  // enrichNewsList 需要 mock fetchContentForItem 走内容（content 需 > 10 字）
+  // 但 enrichNewsList 内部直接调 fetchContentForItem(item)，不通过 https。
+  // 测试策略：构造一个 content 已经存在于 item 的 fake item（skipFetch=true 路径），
+  // 这样能直接验 rawSummary 处理 + 兜底逻辑，不需要 mock 抓取。
+
+  await test('FS-05·纯日期 desc 被识别为无效 → 走首段兜底', async () => {
+    const item = {
+      id: 'test-fs05-1',
+      title: '测试新闻标题足够长这样才不会被误判成短标题',
+      source: '澎湃新闻',
+      summary: '2026-08-09 14:23',  // 假 desc
+      content: '这是正文第一段，足够长的中文内容用于通过首段校验测试。继续填充确保长度大于20字。\n这是第二段，测试用。',
+    }
+    const out = await cf.enrichNewsList([item], 1, /* skipFetch */ true, /* skipAiSummary */ true)
+    assert(out.length === 1, '应有 1 条结果')
+    assertEqual(out[0].summarySource, 'content', '假 desc → 应降级为 content 档')
+    assert(out[0].summary.includes('这是正文第一段'), '摘要应为正文第一段')
+    assert(!out[0].summary.includes('2026-08-09'), '不应展示日期')
+  })
+
+  await test('FS-05·来源名作 desc → 走首段兜底', async () => {
+    const item = {
+      id: 'test-fs05-2',
+      title: '某条国际新闻标题足够长以避免被误判成短标题',
+      source: 'BBC News',
+      summary: 'BBC News',  // 假 desc = 来源名
+      content: 'BBC 报道了一则国际新闻，正文内容足够长用于通过首段校验测试。\n第二段。',
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out[0].summarySource, 'content', '来源名作 desc → 应降级为 content 档')
+    assert(out[0].summary.includes('BBC 报道了'), '摘要应为正文首段而非"来源名"')
+  })
+
+  await test('FS-05·短 desc（< 20 字）→ 走首段兜底', async () => {
+    const item = {
+      id: 'test-fs05-3',
+      title: '某科技新闻标题足够长以避免被误判成短标题',
+      source: '36氪',
+      summary: '本文介绍了',  // 14 字，< 20
+      content: '本文详细介绍了某项新技术的核心原理和应用场景，正文内容足够长。\n第二段。',
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out[0].summarySource, 'content', '短 desc → 应降级为 content 档')
+    assert(out[0].summary.includes('本文详细介绍了'), '摘要应为正文首段')
+  })
+
+  await test('FS-05·有效 desc（>= 20 字且非假 desc）→ 保留 desc 档', async () => {
+    const item = {
+      id: 'test-fs05-4',
+      title: '某生活新闻标题足够长以避免被误判成短标题',
+      source: '新京报',
+      summary: '本报道详细分析了某城市最近的交通改善措施及其对市民出行的影响。',
+      content: '不应被使用的正文内容。\n第二段。',
+    }
+    // skipAiSummary=true: 智谱 prompt 已内联 summary → 视为 'ai' 档（v6.6 语义）
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out[0].summarySource, 'ai', 'skipAiSummary=true 时有效 desc → 标 ai 档')
+    assert(out[0].summary.includes('交通改善'), '应展示原 desc')
+  })
+
+  await test('FS-05·首段也是日期（极端 case）→ 退到 title 档', async () => {
+    const item = {
+      id: 'test-fs05-5',
+      title: '某条体育新闻标题足够长以避免被误判成短标题',
+      source: '虎扑',
+      summary: '',  // 空
+      content: '2026-08-09 14:23 比赛开始。\n第二段足够长的内容用于测试。',  // 首段是日期
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    // 首段"2026-08-09 比赛开始" → 含日期 → stripped 中文字符太少 → isValidParagraph=false
+    // 退到 title 档
+    assertEqual(out[0].summarySource, 'title', '首段为假内容 → 退到 title 档')
+    assertEqual(out[0].summary, item.title, '应展示标题')
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')

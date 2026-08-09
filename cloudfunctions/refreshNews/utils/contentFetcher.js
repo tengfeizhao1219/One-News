@@ -475,8 +475,22 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         const enriched = { ...item, content, contentSource: item.contentSource || 'fetched' }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）
+        // FS-05（2026-08-09 owner 拍板）：聚合接口常返回"假 desc"（日期/来源名/几个标点），
+        // 原判定 `rawSummary === item.title` 只过滤"== 标题"，对"假 desc"无效。
+        // 修复：增加"内容质量"判定 —— 长度 < 20 / 仅日期 / 仅标点 / 等于来源 → 视为无效，summarySource='title' 走首段兜底。
         const rawSummary = (item.summary || '').trim()
-        let summarySource = (!rawSummary || rawSummary === item.title) ? 'title' : 'desc'
+        const isInvalIdesc = (s) => {
+          if (!s) return true
+          if (s === item.title) return true
+          if (s.length < 20) return true
+          // 仅日期/数字/标点：去掉数字 - / : 空格 . 之后剩余中文字符 < 5
+          const stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
+          if (stripped.length < 5) return true
+          // 等于来源名（item.source 形如"澎湃新闻"）
+          if (item.source && s === item.source) return true
+          return false
+        }
+        let summarySource = isInvalIdesc(rawSummary) ? 'title' : 'desc'
 
         // 3. AI 摘要（v6.6：skipAiSummary 时跳过——智谱已内联 summary，标记为 'ai'）
         if (skipAiSummary) {
@@ -502,17 +516,33 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         }
 
         // FS-03（2026-08-07 owner 裁定）：四级摘要降级 —— AI 摘要 → 原摘要(desc) → 正文第一段(content) → 标题(title)
-        // 当 AI 摘要未生成且原摘要为空（summarySource 仍为 'title'）时，取正文第一段兜底，
-        // 避免列表卡片摘要区空白（替代原 BUG-PD-018「title 档留空」决策）。
-        // 第一段截断 150 字，标记 summarySource='content'（前端不显示 AI 胶囊）。
-        if (summarySource === 'title' && content && content.length > 10) {
+        // FS-05（2026-08-09 owner 拍板）：兜底条件扩展 —— 任何"无 AI 摘要 + 有正文"都走首段，
+        // 不再要求 summarySource === 'title'。修复场景：聚合接口返回"假 desc"（日期/来源名/标点），
+        // 原本被判为有效 desc → 跳过兜底 → 前端直接展示假 desc。
+        // 现在：summarySource !== 'ai' 且有 content → 一律取首段。
+        // 首段二次校验：不能等于日期/标点/标题，长度 >= 20 才算合格。
+        if (summarySource !== 'ai' && content && content.length > 10) {
           const firstParagraph = content
             .split('\n')
             .map(function (s) { return s.trim() })
             .filter(function (s) { return s.length > 0 })[0] || ''
-          if (firstParagraph && firstParagraph !== item.title) {
+          // 防御：首段也不能是"假 desc"（极端情况：content 本身第一段就是日期）
+          const isValidParagraph = (s) => {
+            if (!s) return false
+            if (s === item.title) return false
+            if (s.length < 20) return false
+            const stripped = s.replace(/[\d\s\-/:.\u3000,，。、年月日时分秒]+/g, '')
+            if (stripped.length < 5) return false
+            if (item.source && s === item.source) return false
+            return true
+          }
+          if (isValidParagraph(firstParagraph)) {
             enriched.summary = firstParagraph.length > 150 ? firstParagraph.slice(0, 150) : firstParagraph
             summarySource = 'content'
+          } else {
+            // 首段也不合格（极端情况）→ 退到 title 档，由前端展示标题
+            enriched.summary = item.title || ''
+            summarySource = 'title'
           }
         }
 
