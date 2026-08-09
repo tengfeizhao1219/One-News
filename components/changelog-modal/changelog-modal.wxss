@@ -1,0 +1,151 @@
+/* changelog-modal v1.0 · 品牌弹窗（FS 2026-08-09）
+   品牌色 #0A84FF / 主标黑 #0D0D0D / 副标灰 #8E8E93
+   全部走 CSS 变量（--bg-card / --text-*），深浅模式自动跟随 */
+
+/* 遮罩层 */
+.cm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background-color: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+.cm-overlay.cm-show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 弹窗卡片 */
+.cm-card {
+  width: 600rpx;
+  max-height: 80vh;
+  background-color: var(--bg-card);
+  border-radius: 24rpx;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+.cm-overlay.cm-fade .cm-card {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* 头部 */
+.cm-header {
+  padding: 36rpx 40rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.cm-version {
+  margin-top: 14rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 1rpx;
+}
+.cm-date {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  letter-spacing: 1rpx;
+}
+
+/* 分割线 */
+.cm-divider {
+  height: 1rpx;
+  background-color: var(--divider);
+  margin: 0 40rpx;
+}
+
+/* 滚动正文 */
+.cm-body {
+  flex: 1;
+  min-height: 0;
+  max-height: 520rpx;
+  padding: 8rpx 40rpx 8rpx;
+}
+
+/* 区块标题（新功能=品牌蓝 / 优化=副标灰 / 修复=副标灰） */
+.cm-section-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  margin: 24rpx 0 14rpx;
+}
+.cm-feature {
+  color: var(--primary);
+}
+.cm-optimization,
+.cm-fix {
+  color: var(--text-secondary);
+}
+
+/* 条目 */
+.cm-item {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 18rpx;
+}
+.cm-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  margin-top: 12rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.cm-dot--feature {
+  background-color: var(--primary);
+}
+.cm-dot--optimization,
+.cm-dot--fix {
+  background-color: var(--text-tertiary);
+}
+.cm-item-body {
+  flex: 1;
+}
+.cm-item-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.45;
+}
+.cm-item-desc {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: var(--text-body);
+  line-height: 1.55;
+}
+
+/* 底部按钮 */
+.cm-footer {
+  padding: 12rpx 40rpx 32rpx;
+}
+.cm-btn {
+  height: 80rpx;
+  border-radius: 40rpx;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+.cm-btn--hover {
+  opacity: 0.85;
+}

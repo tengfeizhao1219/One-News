@@ -1,6 +1,7 @@
 // 设置页 — UI-B9 独立全屏页（字号 + 主题 + 关于）
 
 var app = getApp()
+var changelog = require('../../config/changelog')
 
 var scaleMap = [1, 1.15, 1.3, 1.5]
 var META_SCALE_CAP = 1.15
@@ -17,9 +18,12 @@ Page({
     darkMode: false,
     manualDark: false,
     contactOpen: false,
-    appVersion: 'v6.2.0',
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
+    // 2026-08-09：从 changelog.js 读当前版本，点击弹出日志弹窗
+    appVersion: changelog.currentVersion,
+    latestChangelog: changelog.versions[0] || null,
+    showChangelog: false,
     tiers: [
       { value: 0, label: '标准' },
       { value: 1, label: '大' },
@@ -145,6 +149,17 @@ Page({
       wx.setStorageSync('settings_followSystem', this.data.followSystem)
       wx.setStorageSync('settings_darkMode', this.data.darkMode)
     } catch (e) {}
+  },
+
+  /**
+   * 版本日志弹窗（2026-08-09 owner 需求）：点击版本号打开更新日志。
+   */
+  onTapVersion: function () {
+    this.setData({ showChangelog: true })
+  },
+
+  onCloseChangelog: function () {
+    this.setData({ showChangelog: false })
   },
 
   /**

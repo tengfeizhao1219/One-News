@@ -80,6 +80,9 @@
 .row + .row {
   border-top: 1rpx solid var(--divider);
 }
+.row--hover {
+  background-color: var(--bg-subtle);
+}
 .row--block {
   display: block;
   padding-bottom: 26rpx;
@@ -96,6 +99,9 @@
 .row-val {
   font-size: 28rpx;
   color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
 }
 .row-chev {
   font-size: 34rpx;

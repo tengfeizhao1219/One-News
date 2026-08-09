@@ -1,4 +1,6 @@
 {
   "navigationStyle": "custom",
-  "usingComponents": {}
+  "usingComponents": {
+    "changelog-modal": "/components/changelog-modal/changelog-modal"
+  }
 }

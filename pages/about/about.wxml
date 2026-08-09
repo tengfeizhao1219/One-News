@@ -24,7 +24,12 @@
       <image class="brand-logo" src="/assets/logo/logo-wordmark{{isDark ? '-dark' : ''}}.svg" mode="widthFix"></image>
       <view class="brand-name">一页</view>
       <view class="brand-slogan">极简沉浸式新闻阅读 · 打开即读 · 零干扰</view>
+      <!-- 版本号点击触发更新日志弹窗（2026-08-09） -->
+      <view class="brand-version" bindtap="onTapVersion">{{appVersion}}</view>
     </view>
+
+    <!-- 更新日志弹窗（品牌 wordmark + 当前版本日志） -->
+    <changelog-modal visible="{{showChangelog}}" latest="{{latestChangelog}}" bind:close="onCloseChangelog"></changelog-modal>
 
     <!-- 我们的初衷 -->
     <!-- 2026-08-07 owner 亲笔介绍：替换原 v1 文案（上线前寄语） -->

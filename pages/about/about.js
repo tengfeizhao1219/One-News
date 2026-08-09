@@ -1,6 +1,7 @@
 // 关于一页 — dock「扩展位」改造（AB-01 · owner 2026-08-05 确认文案）
 
 var app = getApp()
+var changelog = require('../../config/changelog')
 
 Page({
   data: {
@@ -9,6 +10,10 @@ Page({
     navOffset: 0,  // D-09 v1.2（BUG-20260806-007）: 内容起始基准
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
+    // 版本日志弹窗（2026-08-09）：点击版本号触发
+    appVersion: changelog.currentVersion,
+    latestChangelog: changelog.versions[0] || null,
+    showChangelog: false,
     // 我们坚持的事（2026-08-07 owner 裁定：删「永不空白」；「AI 为你提炼」→「AI加持」）
     commitments: [
       { title: '纯文字阅读', desc: '无图、无视频，把注意力还给文字本身' },
@@ -59,6 +64,17 @@ Page({
     } catch (e) {
       return false
     }
+  },
+
+  /**
+   * 版本日志弹窗（2026-08-09 owner 需求）：点击版本号打开更新日志弹窗。
+   */
+  onTapVersion: function () {
+    this.setData({ showChangelog: true })
+  },
+
+  onCloseChangelog: function () {
+    this.setData({ showChangelog: false })
   },
 
   /**

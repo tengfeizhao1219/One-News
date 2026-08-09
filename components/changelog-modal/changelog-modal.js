@@ -1,0 +1,108 @@
+// changelog-modal v1.0（FS 2026-08-09 · 代码层联动 PD Logo v1.0）
+// 用法：<changelog-modal visible="{{showModal}}" latest="{{latest}}" bindclose="onClose" />
+// 属性：
+//   visible  - Boolean，是否展示弹窗
+//   latest   - Object，当前版本日志对象 {version,date,sections}（可选，缺省显示 currentVersion）
+// 事件：close - 用户点击遮罩 / 知道了
+
+var app = getApp()
+var changelog = require('../../config/changelog')
+
+Component({
+  options: {
+    styleIsolation: 'apply-shared',
+  },
+
+  properties: {
+    visible: {
+      type: Boolean,
+      value: false,
+    },
+    latest: {
+      type: Object,
+      value: null,
+    },
+  },
+
+  data: {
+    // 弹窗内容
+    version: '',
+    date: '',
+    sections: [],
+    isDark: false,
+    // 动画
+    animShow: false,
+  },
+
+  observers: {
+    // visible 变化 → 入场 / 离场动画
+    visible: function (v) {
+      var self = this
+      if (v) {
+        this.setData({ isDark: this._isSystemDark() })
+        var latest = this.data.latest || {
+          version: changelog.currentVersion,
+        }
+        // 如果 latest 只有 version 字段，补全日期 + sections
+        if (!latest.sections) {
+          var found = changelog.versions.find(function (item) {
+            return item.version === latest.version
+          }) || null
+          if (found) {
+            latest = found
+          }
+        }
+        this.setData({
+          version: latest.version,
+          date: latest.date || '',
+          sections: latest.sections || [],
+          animShow: true,
+        })
+        // 延迟一帧后触发滚动监听（防抖）
+        setTimeout(function () {
+          if (self.data.scrollHeight) {
+            self.setData({ showScrollTip: false })
+          }
+        }, 300)
+      } else {
+        this.setData({ animShow: false })
+      }
+    },
+    latest: function () {
+      if (this.data.visible) this.setData({})
+    },
+  },
+
+  methods: {
+    _isSystemDark: function () {
+      try {
+        if (app && app.globalData && app.globalData.effectiveTheme) {
+          return app.globalData.effectiveTheme === 'dark'
+        }
+        var info = wx.getSystemInfoSync()
+        return info.theme === 'dark'
+      } catch (e) {
+        return false
+      }
+    },
+
+    // 点击遮罩关闭（阻止冒泡在卡片上）
+    onOverlayTap: function () {
+      this.triggerEvent('close')
+    },
+
+    onCardTap: function (e) {
+      // 阻止冒泡 → 卡片点击不关闭
+      e.stopPropagation ? e.stopPropagation() : null
+    },
+
+    onKnowTap: function () {
+      this.triggerEvent('close')
+    },
+
+    // 刷新主题（页面从设置页返回时调用）
+    refreshTheme: function () {
+      this.setData({ isDark: this._isSystemDark() })
+    },
+  },
+})

@@ -1,0 +1,35 @@
+<!-- changelog-modal v1.0 · 品牌弹窗（FS 2026-08-09）
+     依赖 logo 组件渲染 wordmark 主标（自动跟随深浅模式）
+     数据源 config/changelog.js，由 properties.latest 传入或自动取 currentVersion -->
+<view class="cm-overlay {{visible ? 'cm-show' : ''}} {{animShow ? 'cm-fade' : ''}}" bindtap="onOverlayTap">
+  <view class="cm-card" catchtap="onCardTap">
+
+    <!-- 头部：wordmark logo（品牌标识） -->
+    <view class="cm-header">
+      <logo mode="wordmark" size="200"></logo>
+      <view class="cm-version">{{version}}</view>
+      <view class="cm-date" wx:if="{{date}}">{{date}}</view>
+    </view>
+
+    <view class="cm-divider"></view>
+
+    <!-- 滚动日志内容 -->
+    <scroll-view scroll-y class="cm-body" enhanced show-scrollbar="{{false}}">
+      <block wx:for="{{sections}}" wx:key="label" wx:for-item="section">
+        <view class="cm-section-title cm-{{section.type}}">{{section.label}}</view>
+        <view class="cm-item" wx:for="{{section.items}}" wx:key="title" wx:for-item="item">
+          <view class="cm-dot cm-dot--{{section.type}}"></view>
+          <view class="cm-item-body">
+            <view class="cm-item-title">{{item.title}}</view>
+            <view class="cm-item-desc" wx:if="{{item.desc}}">{{item.desc}}</view>
+          </view>
+        </view>
+      </block>
+    </scroll-view>
+
+    <!-- 底部：知道了按钮 -->
+    <view class="cm-footer">
+      <view class="cm-btn" hover-class="cm-btn--hover" hover-stay-time="100" bindtap="onKnowTap">知道了</view>
+    </view>
+  </view>
+</view>

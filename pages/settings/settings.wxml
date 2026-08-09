@@ -83,9 +83,12 @@
     <view class="group">
       <view class="group-label">关于</view>
       <view class="card">
-        <view class="row">
+        <view class="row" bindtap="onTapVersion" hover-class="row--hover">
           <view class="row-label">版本</view>
-          <view class="row-val">{{appVersion}}</view>
+          <view class="row-val">
+            <text>{{appVersion}}</text>
+            <text class="row-chev">›</text>
+          </view>
         </view>
         <view class="row" bindtap="onFeedback">
           <view class="row-label">意见反馈</view>
@@ -115,4 +118,7 @@
     </view>
 
   </scroll-view>
+
+  <!-- 更新日志弹窗（2026-08-09） -->
+  <changelog-modal visible="{{showChangelog}}" latest="{{latestChangelog}}" bind:close="onCloseChangelog"></changelog-modal>
 </view>
