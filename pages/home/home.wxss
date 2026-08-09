@@ -196,6 +196,29 @@
   color: var(--primary);
   background-color: var(--primary-subtle);
 }
+
+/* summarySource 非 AI 档角标（PM 2026-08-09 诊断诉求）：
+   desc/content/title 档统一灰色弱化，视觉退后——避免与 AI 档争抢注意力；
+   title 档（仅标题兜底）再弱一档半透明显示。 */
+.src-chip {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 12rpx 0 0;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: var(--text-tertiary);
+  background-color: var(--bg-subtle);
+  border: 1rpx solid var(--divider);
+}
+.src-chip--weak {
+  color: var(--text-tertiary);
+  opacity: 0.75;
+}
 .fixed-swipe-hint {
   position: absolute;
   left: 0;

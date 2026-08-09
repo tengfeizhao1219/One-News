@@ -76,9 +76,14 @@
         <view class="card-summary">
           <!-- BUG-FIX-20260806: 内层 wx:for 显式命名 para，避免遮蔽外层卡片 item
                （遮蔽时 item.isAiSummary 取字符串属性=undefined → AI 胶囊永不显示） -->
+          <!-- summarySource 角标（PM 2026-08-09 诊断诉求）：四档显隐区分，
+               ai=AI摘要(蓝) / desc=来源摘要(灰) / content=正文摘要(灰) / title=标题摘要(灰弱) -->
           <block wx:for="{{item.summaryParagraphs}}" wx:for-item="para" wx:key="*this" wx:for-index="pIdx">
             <view class="summary-p">
-              <text wx:if="{{pIdx === 0 && item.isAiSummary}}" class="ai-chip">AI 摘要</text>{{para}}
+              <text wx:if="{{pIdx === 0 && item.summarySource === 'ai'}}" class="ai-chip">AI 摘要</text>
+              <text wx:elif="{{pIdx === 0 && item.summarySource === 'desc'}}" class="src-chip">来源摘要</text>
+              <text wx:elif="{{pIdx === 0 && item.summarySource === 'content'}}" class="src-chip">正文摘要</text>
+              <text wx:elif="{{pIdx === 0 && item.summarySource === 'title'}}" class="src-chip src-chip--weak">标题摘要</text>{{para}}
             </view>
           </block>
         </view>
