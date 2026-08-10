@@ -601,20 +601,32 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         // 不再要求 summarySource === 'title'。修复场景：聚合接口返回"假 desc"（日期/来源名/标点），
         // 原本被判为有效 desc → 跳过兜底 → 前端直接展示假 desc。
         // 现在：summarySource !== 'ai' 且有 content → 一律取首段。
-        // 首段二次校验：不能等于日期/标点/标题，长度 >= 20 才算合格。
+        // FS-09（2026-08-10 owner 反馈）：首段不合格时不能直接退 title ——
+        // 很多新闻正文第一段是日期/来源/导语（如"2026年8月10日"、"本报讯"、"（记者 XXX）"），
+        // 被判无效后应继续扫描后续段落，取第一个合格段落作为 content 档；
+        // 只有所有段落都不合格才退 title 档。否则"有足够正文却展示标题"。
         if (summarySource !== 'ai' && content && content.length > 10) {
-          const firstParagraph = content
+          const paragraphs = content
             .split('\n')
             .map(function (s) { return s.trim() })
-            .filter(function (s) { return s.length > 0 })[0] || ''
-          // 防御：首段也不能是"假 desc"（极端情况：content 本身第一段就是日期）
-          // FS-05 v2:复用顶层 isValidParagraph
-          if (isValidParagraph(firstParagraph, descCtx)) {
+            .filter(function (s) { return s.length > 0 })
+          // FS-09（2026-08-10 owner 反馈）：首段不合格时不能直接退 title ——
+          // 很多新闻正文第一段是日期/来源/导语（如"2026年8月10日"、"本报讯"、"（记者 XXX）"），
+          // 被判无效后应继续扫描后续段落，取第一个合格段落作为 content 档；
+          // 只有所有段落都不合格才退 title 档。否则"有足够正文却展示标题"。
+          let contentParagraph = ''
+          for (let pi = 0; pi < paragraphs.length; pi++) {
+            if (isValidParagraph(paragraphs[pi], descCtx)) {
+              contentParagraph = paragraphs[pi]
+              break
+            }
+          }
+          if (contentParagraph) {
             // FE-20260810-003：移除 150 字硬截断 —— 首段完整写库展示（句子不中途断裂）
-            enriched.summary = firstParagraph
+            enriched.summary = contentParagraph
             summarySource = 'content'
           } else {
-            // 首段也不合格（极端情况）→ 退到 title 档，由前端展示标题
+            // 所有段落都不合格（极端情况）→ 退到 title 档，由前端展示标题
             enriched.summary = item.title || ''
             summarySource = 'title'
           }

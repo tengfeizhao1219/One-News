@@ -555,15 +555,22 @@ Page({
       return false
     }
     if (summarySource === 'title' || (summarySource !== 'ai' && isFakeDesc(displaySummary) && item.content && item.content.length > 10)) {
-      // 走首段兜底
-      var firstParagraph = (item.content || '').split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length > 0})[0] || ''
-      if (firstParagraph.length >= 20 && firstParagraph !== item.title) {
+      // 走首段兜底（FS-09：首段不合格时继续扫描后续段落，取第一个合格段落）
+      var paragraphs = (item.content || '').split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length > 0})
+      var contentParagraph = ''
+      for (var pi = 0; pi < paragraphs.length; pi++) {
+        if (paragraphs[pi].length >= 20 && paragraphs[pi] !== item.title) {
+          contentParagraph = paragraphs[pi]
+          break
+        }
+      }
+      if (contentParagraph) {
         // FE-20260810-003：移除 150 字硬截断 —— 完整展示首段（句子不中途断裂）。
         // 内容超高由布局整体居中 + 物理溢出兜底（FE-20260810-002）。
-        displaySummary = firstParagraph
+        displaySummary = contentParagraph
         summarySource = 'content'
       } else {
-        // 首段也不合格 → 退到 title 档
+        // 所有段落都不合格 → 退到 title 档
         displaySummary = item.title || ''
         summarySource = 'title'
       }

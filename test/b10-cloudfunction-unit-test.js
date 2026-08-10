@@ -552,18 +552,31 @@ async function main() {
     assert(out[0].summary.includes('交通改善'), '应展示原 desc')
   })
 
-  await test('FS-05·首段也是日期（极端 case）→ 退到 title 档', async () => {
+  await test('FS-09·首段是日期但第二段合格 → 取第二段为 content 档', async () => {
     const item = {
-      id: 'test-fs05-5',
+      id: 'test-fs09-1',
       title: '某条体育新闻标题足够长以避免被误判成短标题',
       source: '虎扑',
       summary: '',  // 空
-      content: '2026-08-09 14:23 比赛开始。\n第二段足够长的内容用于测试。',  // 首段是日期
+      content: '2026-08-09 14:23 比赛开始。\n第二段足够长的正文内容用于测试，这段文字超过二十个字能够通过首段校验判定。',  // 首段是日期，第二段是正文
     }
     const out = await cf.enrichNewsList([item], 1, true, true)
-    // 首段"2026-08-09 比赛开始" → 含日期 → stripped 中文字符太少 → isValidParagraph=false
-    // 退到 title 档
-    assertEqual(out[0].summarySource, 'title', '首段为假内容 → 退到 title 档')
+    // 首段"2026-08-09 比赛开始" → 含日期 → isValidParagraph=false
+    // 但第二段合格 → 应取第二段为 content 档，而非退 title
+    assertEqual(out[0].summarySource, 'content', '首段为日期但第二段合格 → 应取第二段为 content 档')
+    assert(out[0].summary.includes('第二段足够长的正文内容'), '摘要应为第二段正文而非标题')
+  })
+
+  await test('FS-09·所有段落都不合格 → 才退到 title 档', async () => {
+    const item = {
+      id: 'test-fs09-2',
+      title: '某条新闻标题足够长以避免被误判成短标题',
+      source: '虎扑',
+      summary: '',
+      content: '2026-08-09 14:23\n2026-08-10 09:00',  // 全是日期，无合格段落
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out[0].summarySource, 'title', '所有段落都不合格 → 退到 title 档')
     assertEqual(out[0].summary, item.title, '应展示标题')
   })
 
