@@ -323,7 +323,7 @@ function parseNewsFromContent(content, category) {
     .map((item, i) => ({
       id: `zhipu_${category}_${Date.now()}_${i}`,
       title: cleanTitle(String(item.title || '').trim()),
-      summary: String(item.summary || item.content?.slice(0, 150) || '').trim(),
+      summary: String(item.summary || item.content || '').trim(),
       content: String(item.content || item.summary || '').trim(),
       contentSource: 'ai_interpretation',  // 标记 AI 独立解读（版权策略：非原文复述）
       category,

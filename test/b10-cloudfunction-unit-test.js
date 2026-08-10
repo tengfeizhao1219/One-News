@@ -580,9 +580,9 @@ async function main() {
     assert(cfExported.isInvalidDesc('这是一段足够长的有效摘要文字，超过二十个字能够用于展示新闻的核心内容要点。', ctx) === false, '有效长摘要应判为合格')
   })
 
-  // ── 5.6b FE-20260809：AI 摘要截断到一屏可容纳长度 ──
-  console.log('\n── 5.6b AI 摘要截断（FE-20260809，150 字上限） ──')
-  await test('FE-20260809·AI 摘要超 150 字 → 截断到 150 字', async () => {
+  // ── 5.6b FE-20260810-003：AI 摘要完整保留（移除 150 字硬截断） ──
+  console.log('\n── 5.6b AI 摘要完整保留（FE-20260810-003，不再 150 字硬截断） ──')
+  await test('FE-20260810·AI 摘要超长 → 完整保留不截断', async () => {
     // mock 混元/智谱返回超长摘要（300 字）
     const longSummary = Array(30).fill('这是一段很长很长的中文新闻摘要内容用于测试屏幕展示容量上限截断功能是否生效。').join('')
     mockHttps.setResponder((req) => {
@@ -591,8 +591,8 @@ async function main() {
     const content = '这是新闻正文第一段，内容足够长超过十个字的门槛能够进入 AI 摘要生成流程。' + Array(20).fill('这是补充正文内容确保输入足够长以便触发摘要。').join('')
     const out = await cf.enrichNewsList([{ id: 'test-fe-1', title: '测试标题足够长避免误判为短标题', content: content }], 1, true, false)
     assert(out.length === 1, '应有 1 条结果')
-    assert(out[0].summarySource === 'ai', '超长摘要应标为 ai 档')
-    assert(out[0].summary.length <= 150, `AI 摘要应截断到 ≤150 字，实际 ${out[0].summary.length} 字`)
+    assert(out[0].summarySource === 'ai', '摘要应标为 ai 档')
+    assert(out[0].summary === longSummary, `AI 摘要应完整保留（不再 slice 硬截断），实际长度 ${out[0].summary.length} 字`)
   })
 
   // ── 6. zhipuSearch：降级链（B-12） ──

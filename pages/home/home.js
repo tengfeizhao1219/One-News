@@ -558,7 +558,9 @@ Page({
       // 走首段兜底
       var firstParagraph = (item.content || '').split('\n').map(function(s){return s.trim()}).filter(function(s){return s.length > 0})[0] || ''
       if (firstParagraph.length >= 20 && firstParagraph !== item.title) {
-        displaySummary = firstParagraph.length > 150 ? firstParagraph.slice(0, 150) : firstParagraph
+        // FE-20260810-003：移除 150 字硬截断 —— 完整展示首段（句子不中途断裂）。
+        // 内容超高由布局整体居中 + 物理溢出兜底（FE-20260810-002）。
+        displaySummary = firstParagraph
         summarySource = 'content'
       } else {
         // 首段也不合格 → 退到 title 档
@@ -568,13 +570,6 @@ Page({
     } else if (summarySource === 'title') {
       displaySummary = item.title || ''
     }
-
-      // FE-20260809：AI/正文/来源摘要统一截到一屏可容纳长度（约 150 字）。
-      // 后端 prompt 已改 150 字上限，但老数据 + 兜底首段可能仍超长，前端兜底二次截断。
-      var MAX_SUMMARY_CHARS = 150
-      if (displaySummary && displaySummary.length > MAX_SUMMARY_CHARS) {
-        displaySummary = displaySummary.slice(0, MAX_SUMMARY_CHARS)
-      }
 
     return {
       ...item,
