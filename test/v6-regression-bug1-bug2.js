@@ -10,9 +10,17 @@
  * v5.9 更新：touch.wxs 已删除，卡片页改为 JS 线程 flick-only 手势。
  *   Bug1 防护（WXS isDragging 顺序）已不适用，改为 JS 层防护：
  *     - onTouchEnd 首行 `if (this._isAnimating) return`（动画锁）
- *     - loadMoreNews/refreshCurrentCategory 首行 `if (this.data.loadingMore) return`（重入锁）
+ *     - loadMoreNews 首行 `if (this.data.loadingMore) return`（加载锁）
+ *     - refreshCurrentCategory 首行 `if (this.data.isRefreshing) return`（重入锁，FS-CF3 升级）
  *     - _animateSwipeNext/Prev 内 finally 等效：setTimeout 链最后 `_isAnimating = false`
  *   Bug2 防护保留：边界路由 -> loadMoreNews/refreshCurrentCategory 断言不变。
+ *
+ * FS-CF3（2026-08-10）下拉刷新改造为分批增量（先快返回+逐条写库+getNewsDelta 短轮询）：
+ *   - refreshCurrentCategory 改薄封装，直接调 _refreshWithIncrement；不再用 loadingMore 预置
+ *     （避免与 _refreshWithIncrement 的 loadingMore 短路冲突），统一由 isRefreshing 守门。
+ *   - currentPage 不在 refreshCurrentCategory 重置（增量刷新只 prepend 新条，currentPage
+ *     是翻页用的"已读页码"，与首行刷新无关）；currentPage 重置职责只属于切分类（loadCategory
+ *     /loadNews）。
  *
  * 本测试从"架构不变量"层面锁死修复，防止同类问题复发。
  * 运行：node test/v6-regression-bug1-bug2.js
@@ -75,9 +83,12 @@ console.log('\n【静态】home.js v5.9 JS flick-only 手势架构不变量（Bu
     'loadMoreNews 首行必须 if (this.data.loadingMore) return')
 
   // Bug1 防护 3: 加载锁 —— refreshCurrentCategory 重入保护
-  check('refreshCurrentCategory 首行加载锁 loadingMore',
-    /async refreshCurrentCategory\(\)\s*\{[\s\S]*?if\s*\(this\.data\.loadingMore\)\s*return/.test(js),
-    'refreshCurrentCategory 首行必须 if (this.data.loadingMore) return')
+  // FS-CF3 (2026-08-10): refreshCurrentCategory 改薄封装直接调 _refreshWithIncrement,
+  // 统一由 isRefreshing 守门（避免 loadingMore 双重锁短路），首行应含 isRefreshing 拦截
+  // （允许与 loadingMore 复合判断：if (this.data.loadingMore || this.data.isRefreshing) return）
+  check('refreshCurrentCategory 首行加载锁 isRefreshing',
+    /async refreshCurrentCategory\(\)\s*\{[\s\S]*?if\s*\([^)]*this\.data\.isRefreshing[^)]*\)\s*return/.test(js),
+    'refreshCurrentCategory 首行必须含 if (this.data.isRefreshing) return（FS-CF3 升级）')
 
   // Bug1 防护 4: 动画结束解锁 _isAnimating = false
   const animUnlockCount = (js.match(/_isAnimating = false/g) || []).length
@@ -118,7 +129,11 @@ console.log('\n【静态】home.js 架构不变量（Bug2 边界路由防护）'
   }
   check('loadCategory 重置 currentPage', resetsCurrentPage('loadCategory'))
   check('loadNews 重置 currentPage', resetsCurrentPage('async loadNews'))
-  check('refreshCurrentCategory 重置 currentPage', resetsCurrentPage('async refreshCurrentCategory'))
+  // FS-CF3 (2026-08-10): refreshCurrentCategory 改薄封装调 _refreshWithIncrement,
+  // 增量刷新只 prepend 新条，currentPage（已读页码）不应在首行刷新时重置。
+  check('refreshCurrentCategory 不重置 currentPage（FS-CF3 升级）',
+    !resetsCurrentPage('async refreshCurrentCategory'),
+    'refreshCurrentCategory 不应重置 currentPage（增量刷新与 currentPage 无关）')
 }
 
 // ===== 静态检查：编码合规 =====
