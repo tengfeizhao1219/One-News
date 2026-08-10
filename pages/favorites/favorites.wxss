@@ -276,3 +276,23 @@
 .page--dark .fav-item:active {
   background-color: rgba(255, 255, 255, 0.06);
 }
+
+/* 底部品牌 splash logo（与设置页样式一致） */
+.brand-footer {
+  margin-top: 24rpx;
+  padding: 0 32rpx 40rpx;
+}
+.brand-card {
+  /* 与收藏列表项左右留白对齐（margin:0 32rpx） */
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: 18rpx;
+  overflow: hidden;
+}
+.brand-text {
+  margin-top: 20rpx;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  letter-spacing: 2rpx;
+  text-align: center;
+}

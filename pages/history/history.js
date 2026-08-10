@@ -51,6 +51,9 @@ Page({
       // BUG-FS-20260805-001: onShow 同步刷新（从设置页切换主题返回时更新 icon 颜色）
       isDark: this._isSystemDark(),
     })
+    // 刷新底部 splash logo 主题（手动切换深色模式后）
+    var histLogo = this.selectComponent('#hist-logo')
+    if (histLogo && histLogo.refreshTheme) histLogo.refreshTheme()
     this._load()
   },
 

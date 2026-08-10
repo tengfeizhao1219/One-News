@@ -52,5 +52,14 @@
         </view>
       </view>
     </view>
+
+    <!-- 底部品牌 splash logo -->
+    <view class="brand-footer">
+      <view class="brand-card">
+        <logo id="hist-logo" mode="splash" fluid></logo>
+      </view>
+      <view class="brand-text">一页 · 简单到极致</view>
+    </view>
+
   </scroll-view>
 </view>
