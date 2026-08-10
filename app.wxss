@@ -105,6 +105,11 @@ page {
   --seg-on-bg: #FFFFFF;
   --seg-on-text: #1C1C1E;
   --switch-off: #E9E9EA;
+  /* D-08 v2.1（2025-08-10 fix）: —page--light 缺少 —switch-knob 声明，
+     导致 switch-knob background var 仅依赖 theme.json fallback，fallback 不可靠时
+     knob 透明 → 蓝色 switch.on 背景透出 → 现象：'整个按钮变蓝'。
+     深色模式没问题因为 .page--dark 显式声明了 —switch-knob。浅色补齐使两者一致。 */
+  --switch-knob: #FFFFFF;
   --wheel-opacity-idle: 0.35;
   --wheel-opacity-active: 0.92;
   --wheel-text-idle: rgba(0, 0, 0, 0.12);
