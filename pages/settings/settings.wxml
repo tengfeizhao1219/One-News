@@ -122,6 +122,7 @@
       <view class="brand-card">
         <logo id="settings-logo" mode="splash" fluid></logo>
       </view>
+      <view class="brand-text">一页 · 简单到极致</view>
     </view>
 
   </scroll-view>

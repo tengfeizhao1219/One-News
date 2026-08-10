@@ -292,3 +292,10 @@
   border-radius: 18rpx;
   overflow: hidden;
 }
+.brand-text {
+  margin-top: 20rpx;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  letter-spacing: 2rpx;
+  text-align: center;
+}
