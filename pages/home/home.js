@@ -905,8 +905,10 @@ Page({
       this.renderCards(merged, oldLen)
       // BUG-20260802-004: 新增页也要进侧栏，否则又出现卡片有、侧栏没有
       this._syncPanelList(merged, oldLen)
+      // FS-CF2：翻页只是读取数据库既有分页内容（非抓取新新闻），提示不得虚报条数，
+      // 统一改为「已加载更多」（另「已加载新内容」亦不实——因为新内容来自后台刷新而非本操作）。
       setTimeout(() => {
-        wx.showToast({ title: '已加载 ' + newItems.length + ' 条', icon: 'none' })
+        wx.showToast({ title: '已加载更多', icon: 'none' })
       }, 400)
     } catch (err) {
       wx.showToast({ title: handleApiError(err.errorCode, err.message), icon: 'none' })
@@ -916,14 +918,41 @@ Page({
   },
 
   /**
-   * DG-03（方案 5 改动 C）：到达列表开头继续下滑 -> 刷新当前分类（toast 统一）
+   * DG-03（方案 5 改动 C）+ FS-CF2（2026-08-10）：到达列表开头继续下滑 -> 刷新
+   * 修复「假刷新」bug：旧实现只是重读数据库并谎报“已更新 X 条”。
+   * 新逻辑：先真调 refreshNews 云函数固定刷「推荐」分类（工人模式，同步返回真实 inserted），
+   * 再重拉当前浏览分类第 1 页整页替换展示，并按真实抓取结果诚实提示。
    */
   async refreshCurrentCategory() {
     if (this.data.loadingMore) return
     this.setData({ loadingMore: true })
     wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
+    let message = ''
     try {
-      // RQ-20：'all'（全部）→ 并行聚合各分类首页；其余分类保持单请求
+      // ① 真刷「推荐」分类（固定，无论用户当前停在哪页）——传 category 走工人模式，同步返回真实 inserted
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'refreshNews',
+          data: { category: 'recommend' },
+        })
+        if (res.result && res.result.code === 0) {
+          const inserted = Number(res.result.inserted) || 0
+          const failed = res.result.engine === 'error' || res.result.skipped === true
+          if (failed) {
+            message = '刷新未完成，请稍后下拉重试'
+          } else if (inserted > 0) {
+            message = '已更新 ' + inserted + ' 条'
+          } else {
+            message = '暂无新增'
+          }
+        } else {
+          message = '刷新未完成，请稍后下拉重试'
+        }
+      } catch (e) {
+        // 云函数异常不阻断本地重拉列表，列表照常展示，仅提示需重试
+        message = '刷新未完成，请稍后重试'
+      }
+      // ② 重拉当前浏览分类第 1 页，整体替换展示（聚合分类走并行，单分类走单请求）
       const list = this.data.currentCategory === 'all'
         ? await this._loadAllAggregated()
         : (await getNewsList({ category: this.data.currentCategory, pageNum: 1, pageSize: PAGE_SIZE })).list || []
@@ -931,9 +960,10 @@ Page({
       this.renderCards(list, 0)
       // BUG-20260802-004: 刷新后侧栏随卡片一起更新
       this._syncPanelList(list, 0)
-      if (list.length > 0) {
+      // ③ 诚实提示：基于云函数真实结果，绝不虚报条数
+      if (message) {
         setTimeout(() => {
-          wx.showToast({ title: '已更新 ' + list.length + ' 条', icon: 'none' })
+          wx.showToast({ title: message, icon: 'none' })
         }, 400)
       }
     } catch (err) {
