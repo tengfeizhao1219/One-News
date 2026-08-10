@@ -1,12 +1,12 @@
-<!-- Logo 组件（v1.0 · PD 2026-08-09 终稿）
-  用法：
-    <logo mode="wordmark" size="360" />        <!-- 主标：wordmark | avatar | avatar-circle | splash -->
-    <logo mode="avatar" size="120" />          <!-- 默认自动跟随系统深浅 -->
-    <logo mode="splash" size="600" dark />     <!-- dark 强制深底，缺省跟随系统 -->
+<!-- Logo 组件 v1.0（PD 2026-08-09 终稿）
+  用法：<logo mode="wordmark" size="360" /> 主标 / <logo mode="avatar" /> 头像 / <logo mode="splash" dark /> 启动屏
   属性：
     mode  - 四种形态（wordmark/avatar/avatar-circle/splash）
     size  - 宽度 rpx（等比缩放，高度按 SVG 比例自动）
     dark  - Boolean，强制深底；缺省跟随 app.globalData.effectiveTheme
+  注意：注释内不再嵌套 HTML 注释（避免 WXML 解析器在第一个 --> 处提前关闭，
+  导致注释外的伪属性文档被当作文本节点渲染到弹窗顶部——本组件根节点为 <image>，
+  之前案例：changelog-modal 顶部出现「属性：mode...」代码字串）
 -->
 <image
   class="logo-img"

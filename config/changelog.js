@@ -5,11 +5,12 @@
 
 module.exports = {
   // 当前线上版本号（与小程序后台提交审核时填写的版本号保持一致）
-  currentVersion: '1.0.1',
+  // 全版本统一加 v 前缀（关于页/设置页/分享文案/弹窗头部均显示 vX.Y.Z）
+  currentVersion: 'v1.0.1',
 
   versions: [
     {
-      version: '1.0.1',
+      version: 'v1.0.1',
       date: '2026-08-09',
       sections: [
         {

@@ -115,18 +115,27 @@
 }
 .cm-item-body {
   flex: 1;
+  /* flex 子项默认 min-width: auto，会按内容撑开导致长文本不换行；
+     显式 min-width: 0 允许其收缩到容器宽度以内，word-break 才生效 */
+  min-width: 0;
 }
 .cm-item-title {
   font-size: 28rpx;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.45;
+  /* 长标题/无空格长串也能正常换行 */
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .cm-item-desc {
   margin-top: 4rpx;
   font-size: 24rpx;
   color: var(--text-body);
   line-height: 1.55;
+  /* 长描述/无空格长串也能正常换行（避免被容器右边缘硬切） */
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* 底部按钮 */
