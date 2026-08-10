@@ -538,6 +538,9 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
   // 语义：每完成一条 enrich（成功态）立即 await onEnriched(enriched)，用于"边抓边单条写库"，
   // 让前端短轮询按 createdAt 增量读到逐条新数据。失败/被跳过条目不回调（不写库）。
   // 缺省时行为与旧版完全一致（不回调，enrichNewsList 仍为纯函数），向后兼容。
+  // B-COMPLIANCE-1 S1（2026-08-10 owner 拍板）：透传 references 字段（智谱/AI 搜索链返回的来源 URL 列表），
+  // 用于详情页"原文回源"展示（详见 PRD §3.2 / getNewsDetail index.js L589 透传）。
+  // 缺省/非 AI 源（聚合/天行）时 references 为空数组，详情页"原文回源"按钮自动隐藏。
 
   // B-14: 并发数可配置（默认 8，防外部 API 压力 + 拖慢首屏）
   if (!concurrency || concurrency < 1) {
@@ -574,6 +577,11 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           ])
         }
         const enriched = { ...item, content, contentSource: item.contentSource || 'fetched' }
+        // B-COMPLIANCE-1 S1：透传 references（智谱/AI 搜索链的来源 URL 列表）到 enriched，
+        // 写库时由 batchInsert 写入 news_cache.references 字段，详情页 getNewsDetail 读出供前端展示。
+        if (Array.isArray(item.references) && item.references.length > 0) {
+          enriched.references = item.references
+        }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）
         // FS-05（2026-08-09 owner 拍板）：聚合接口常返回"假 desc"（日期/来源名/几个标点），
@@ -602,8 +610,20 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               // FE-20260810-003：移除 150 字硬截断 —— AI 摘要完整写库展示。
               // prompt 已收紧为 100-150 字自然收尾，从源头控制长度；
               // 老数据超长由前端布局整体居中 + 物理溢出兜底（不再 slice 断句）。
-              enriched.summary = aiSummary
-              summarySource = 'ai'
+              // B-COMPLIANCE-1 R4（2026-08-10 owner 拍板）：摘要比例硬校验 0.3 ——
+              // AI 摘要太短（< 正文 30%）视为不健康（如智谱偶发返回 30 字假摘要），
+              // 降级走首段/标题兜底（不浪费列表 1 行 + 详情缓存命中仍依赖 content）。
+              // 0.3 阈值依据：100-150 字 prompt + 中文 ~2 token/字 → 期望摘要 50-80 字起算，
+              // 30% 是给"长正文"留的"摘要应至少 30%"健康线，< 30% 多为引擎早停/截断。
+              const minSummaryRatio = 0.3
+              const ratio = content.length > 0 ? aiSummary.length / content.length : 0
+              if (ratio < minSummaryRatio) {
+                console.warn(`[enrich] ${item.id || ''} AI 摘要比例不达标（${(ratio * 100).toFixed(1)}% < 30%），降级兜底`)
+                // 不写入 summary，让后续 4 级降级链走首段/标题
+              } else {
+                enriched.summary = aiSummary
+                summarySource = 'ai'
+              }
             }
           } else {
             console.warn(`[enrich] ${item.id || ''} 预算不足跳过 AI 摘要（保留 content，summarySource=${summarySource}）`)

@@ -636,6 +636,64 @@ async function main() {
     assert(out[0].id === 'cf3-b', '结果正确返回')
   })
 
+  // ── 5.6d B-COMPLIANCE-1 R4（2026-08-10 owner 拍板）：AI 摘要比例 < 0.3 降级 ──
+  console.log('\n── 5.6d AI 摘要比例 0.3 硬校验（B-COMPLIANCE-1 R4） ──')
+  await test('B-COMPLIANCE-1 R4·AI 摘要过短（< 正文 30%）→ 降级走首段/标题', async () => {
+    // mock 智谱返回过短摘要（< 正文 30%）
+    const shortSummary = '短摘要。' // 5 字
+    mockHttps.setResponder((req) => {
+      return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: shortSummary } }] }) }
+    })
+    // 正文 500 字 → 摘要 < 30% (150字) → 应降级
+    const longContent = '这是新闻正文第一段，足够长通过门槛。' + Array(15).fill('继续补充正文内容确保总长超过五百字以触发比例硬校验。').join('')
+    const out = await cf.enrichNewsList(
+      [{ id: 'r4-1', title: '测试标题足够长用于摘要比例校验测试用例', content: longContent }],
+      1, true, false
+    )
+    assertEqual(out.length, 1, '应有 1 条结果')
+    assert(out[0].summarySource !== 'ai', `摘要过短应降级（summarySource != 'ai'），实际 ${out[0].summarySource}`)
+  })
+
+  await test('B-COMPLIANCE-1 R4·AI 摘要健康（≥ 正文 30%）→ 正常采用', async () => {
+    // mock 智谱返回健康摘要（≥ 正文 30%）
+    const healthySummary = '这是健康的中文新闻摘要，核心事件为某科技公司发布新产品，引起市场广泛关注和讨论。' // ~40 字
+    mockHttps.setResponder((req) => {
+      return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: healthySummary } }] }) }
+    })
+    // 正文 100 字 → 摘要 40 字 → 40% ≥ 30% → 应采用
+    const shortContent = '新闻正文内容，用于摘要比例校验，确保摘要比例达标。'
+    const out = await cf.enrichNewsList(
+      [{ id: 'r4-2', title: '健康摘要测试标题足够长', content: shortContent }],
+      1, true, false
+    )
+    assertEqual(out.length, 1, '应有 1 条结果')
+    assertEqual(out[0].summary, healthySummary, '健康摘要应完整采用')
+    assertEqual(out[0].summarySource, 'ai', '应标记为 ai 档')
+  })
+
+  // ── 5.6e B-COMPLIANCE-1 S1（2026-08-10 owner 拍板）：references 透传 ──
+  console.log('\n── 5.6e references 字段透传（B-COMPLIANCE-1 S1） ──')
+  await test('B-COMPLIANCE-1 S1·references 数组原样透传到 enriched', async () => {
+    const item = {
+      id: 's1-1',
+      title: '测试 references 透传标题足够长',
+      content: '正文内容足够长通过成功分支测试，用于验证 references 字段透传功能。',
+      references: ['https://example.com/news/1', 'https://example.com/news/2'],
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true) // skipAiSummary 跳过 AI 摘要走快速路径
+    assertEqual(out.length, 1)
+    assert(Array.isArray(out[0].references), 'references 应是数组')
+    assertEqual(out[0].references.length, 2, 'references 应有 2 条')
+    assertEqual(out[0].references[0], 'https://example.com/news/1')
+  })
+
+  await test('B-COMPLIANCE-1 S1·references 缺省时为 undefined（不强制空数组）', async () => {
+    const item = { id: 's1-2', title: '无 references 测试标题足够长', content: '正文内容足够长通过成功分支。' }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out.length, 1)
+    assert(!out[0].references, '无 references 输入时输出不应有 references 字段')
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')

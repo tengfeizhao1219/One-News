@@ -40,6 +40,41 @@ const FETCH_TIMEOUT_MS = 2500
 // 单次抓取最大字节数（防止异常大页面拖垮云函数）
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 
+// B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：读取端 content_mode 拦截
+// 默认 = 'ai_first'。含义：详情页只返回 AI 摘要/解读，不返回抓取的全文（防版权侵权）。
+// 拦截范围：缓存命中 (L510) + 实时抓取 (L589) 两处，凡 contentSource 不是 'ai_interpretation'
+// （即 'cached' / 'fetched_and_cleaned' / 'juhe_content_api' / 'summary_fallback' 等历史全文本）
+// 一律清空 doc.content，前端只看到 summary + title + contentSource 标记。
+// 标记为 'r1_blocked_fulltext' → 前端可识别并展示"已合规降级"提示。
+// ⚠️ 不挂全局开关（content_mode 全局开关属"需要讨论"项，待 owner 拍板再补）。本常量即默认。
+const READ_CONTENT_MODE_DEFAULT = 'ai_first'
+// R1 拦截掉的 contentSource 应被前端识别为"已合规降级"
+const R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
+
+/**
+ * R1 拦截：根据 read_content_mode 判断是否清空 content（保留 summary/title/references）
+ * @param {Object} doc - 详情文档
+ * @param {string} originalContentSource - 原始 contentSource（如 'cached' / 'fetched_and_cleaned'）
+ * @returns {Object} { content, contentSource, blocked }
+ */
+function applyR1Filter(doc, originalContentSource) {
+  if (READ_CONTENT_MODE_DEFAULT !== 'ai_first') {
+    // 默认非 ai_first 模式不拦截（占位，留给未来挂全局开关）
+    return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
+  }
+  // ai_first 模式：除 'ai_interpretation' 外的所有全文本一律清空
+  // 'ai_interpretation' 标记 = refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
+  // —— 才是 ai_first 模式下允许展示的"AI 解读"内容。
+  if (originalContentSource === 'ai_interpretation') {
+    return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
+  }
+  return {
+    content: '', // 清空全文本，仅保留 summary/title
+    contentSource: R1_BLOCKED_CONTENT_SOURCE, // 前端可识别降级态
+    blocked: true,
+  }
+}
+
 // 浏览器 UA（模拟真实浏览器，避免新闻站反爬拦截无 UA 的数据中心请求）
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
@@ -508,15 +543,30 @@ exports.main = async (event) => {
   // DG-03（owner 16:24 诉求「尽量返回原文」）：阈值 30 → 200 字——
   // content 过短（如旧数据/抓取失败回退的摘要）时继续第 3 步尝试抓 sourceUrl 原文
   if (doc.content && doc.content.trim().length > 200) {
-    console.log(`[getNewsDetail] 命中缓存 content (${doc.content.length} 字符)`)
+    // B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：缓存命中拦截
+    // 即使 doc.content 已有全文，若 contentSource 不是 'ai_interpretation'（说明是历史
+    // cached 全文 / 抓取 / 聚合接口原文）→ 同样按 R1 清空，仅返回 summary + title。
+    // ⚠️ meta.contentSource 仍保留原值供排查，但 data.content 为空，前端不再展示全文。
+    const r1 = applyR1Filter(doc, doc.contentSource || 'cached')
+    console.log(`[getNewsDetail] 命中缓存 content (${doc.content.length} 字符), R1=${r1.blocked ? '拦截' : '放行'}`)
 
     // 阅读数+1（非阻塞）
     bumpViewCount(collection, doc._id)
 
     return {
       code: 0,
-      data: doc,
-      meta: { source: collection, contentSource: 'cached', engine: 'juhe' },
+      data: {
+        ...doc,
+        content: r1.content,
+        contentSource: r1.contentSource,
+      },
+      meta: {
+        source: collection,
+        contentSource: doc.contentSource || 'cached',
+        engine: 'juhe',
+        r1Blocked: r1.blocked,
+        readContentMode: READ_CONTENT_MODE_DEFAULT,
+      },
     }
   }
 
@@ -593,16 +643,35 @@ exports.main = async (event) => {
   // ── 第 6 步：阅读数+1 + 返回 ──
   bumpViewCount(collection, doc._id)
 
+  // B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：实时抓取点拦截
+  // 若 contentSource 是 'fetched_and_cleaned' / 'juhe_content_api' / 'fallback'（非 AI 解读），
+  // 一律清空 content 仅返回 summary + title。
+  // 注意：缓存写库（cacheDoc）仍写完整 finalContent，**不阻断** content 字段的预热
+  // （未来若 R1 升级为可放行即可直接命中）。这里只对"返回给前端"做拦截。
+  const r1 = applyR1Filter({ content: finalContent }, contentSource)
+  if (r1.blocked) {
+    console.log(`[getNewsDetail] R1 拦截实时抓取 (contentSource=${contentSource})，仅返回 summary`)
+  }
+
   const result = {
     ...doc,
-    content: finalContent,
+    content: r1.content, // R1 拦截后可能为空字符串
     summary: doc.summary || doc.title || '',
-    contentSource: doc.contentSource || contentSource,  // 优先 DB 中的值，兜底按需抓取的类型
+    contentSource: r1.contentSource, // 优先 R1 标记值（含 blocked 时为 r1_blocked_fulltext）
+    // B-COMPLIANCE-1 S1：透传 references（智谱/AI 搜索链的来源 URL 列表），
+    // 前端详情页"原文回源"按钮根据此数组显示/隐藏（PRD §3.2）。
+    references: Array.isArray(doc.references) ? doc.references : [],
   }
 
   return {
     code: 0,
     data: result,
-    meta: { source: collection, contentSource, engine: 'juhe' },
+    meta: {
+      source: collection,
+      contentSource,
+      engine: 'juhe',
+      r1Blocked: r1.blocked,
+      readContentMode: READ_CONTENT_MODE_DEFAULT,
+    },
   }
 }
