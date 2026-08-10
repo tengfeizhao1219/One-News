@@ -129,25 +129,20 @@
 .card-body {
   flex: 1;
   /* 顶部安全距离：避开 fixed-top-bar（menuTop + menuHeight + 12px ≈ 88-98px）。
-     原 padding-top:100rpx(≈50px) < fixed-top-bar 底部，flex-start 排布下标题顶部被
-     高 z-index 的 fixed-top-bar 背景盖住（FE-20260810-001）。
-     改为 calc(menu-top + menu-height + 40rpx)（≈100-110px），内容超高从顶部排时
-     标题也永远在 fixed-top-bar 之下，完整可见。 */
+     原 padding-top:100rpx(≈50px) < fixed-top-bar 底部，内容超高整体居中上移时
+     标题顶部会被高 z-index 的 fixed-top-bar 背景盖住（FE-20260810-001）。
+     改为 calc(menu-top + menu-height + 40rpx)（≈100-110px），给居中上移留出安全余量。 */
   padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 40rpx) 64rpx 48rpx;
   display: flex;
   flex-direction: column;
-  /* FE-20260810-001: 垂直居中改用「margin auto」方案（替代 444d2f9 的 flex-start）：
-     空间充足时 .card-title 的 margin-top:auto 与 .card-summary 的 margin-bottom:auto
-     平分剩余空间 → 内容整体垂直居中（恢复 owner 预期视觉）；
-     空间不足（极端小屏+超大字体+超长内容）时 auto margin 收缩为 0，
-     内容从 padding-top 顶部开始排 —— 只裁底部摘要区，标题永远完整，
-     优于 justify-content:center（超高时上下两端同时被裁）。 */
+  /* FE-20260810-002（owner 反馈）：标题与摘要正文「整体居中」——
+     内容正常时整块垂直居中；内容过长时标题上移、摘要下移，保持整体居中。
+     即 justify-content:center 的标准行为（owner 明确期望，接受超高时标题上移），
+     替代 margin-auto 方案（超高时标题钉在顶部，不符合「整体居中」预期）。 */
+  justify-content: center;
 }
 
 .card-title {
-  /* FE-20260810-001: margin-top:auto —— 空间充足时吸收上方剩余空间（居中）；
-     空间不足时收缩为 0，标题从 padding-top 顶部排，始终完整可见 */
-  margin-top: auto;
   /* BUG-20260806-004: 使用相对尺寸 52rpx */
   font-size: 52rpx;
   font-weight: 700;
@@ -167,9 +162,7 @@
 }
 
 .card-summary {
-  /* FE-20260810-001: margin-bottom:auto —— 与 .card-title 的 margin-top:auto 平分
-     剩余空间实现垂直居中；底部 48rpx 间距由 .card-body padding-bottom 承担 */
-  margin-bottom: auto;
+  margin-bottom: 48rpx;
   margin-top: 28rpx;
 }
 
@@ -183,8 +176,9 @@
   letter-spacing: 1rpx;
   /* FE-20260810-001: 移除 444d2f9 加的 -webkit-line-clamp:4 —— owner 反馈 AI 摘要
      展示不全、内容被截断。摘要完整展示，不再省略号截断。
-     防超高由前端 150 字截断（home.js MAX_SUMMARY_CHARS）+ 标题 5 行 clamp 兜底，
-     极端场景（小屏+超大字体）超高时只裁底部摘要区（margin auto 方案），标题完整。 */
+     防超高由前端 150 字截断（home.js MAX_SUMMARY_CHARS）+ 标题 5 行 clamp 兜底；
+     极端场景（小屏+超大字体）超高时整体居中、上下两端自然溢出
+     （FE-20260810-002，顶部由 padding-top 安全距离缓冲）。 */
   word-break: break-word;
 }
 
