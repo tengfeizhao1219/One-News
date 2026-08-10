@@ -357,7 +357,8 @@ function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
   // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
   // FS-04（2026-08-09）：补全 DeepSeek 引擎 —— OpenAI 兼容协议，与 Qwen 模式一致
-  // FS-06（2026-08-09）：混元引擎前置 —— 云开发内置免费额度（无密钥），成功后不再消耗外部 Key
+  // FS-06（2026-08-09）：混元引擎初版前置 —— 云开发内置免费额度（无密钥）
+  // FS-CF1（2026-08-10 owner 指示）：混元降级到最后一位（外部 Key 链 → 混元兜底），省 10亿 免费额度
   const hunyuanCfg = (config.hunyuan || {})
   const zhipuCfg = (config.zhipuSummary || {})
   const engines = []
@@ -379,7 +380,7 @@ function summarizeWithZhipu(content, title) {
   if (!content || content.trim().length < 10) return Promise.resolve(null)
   const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
 
-  // FS-06：混元引擎 —— 云开发内置，无需 API Key（微信AI小程序成长计划免费额度）
+  // FS-06：混元引擎 —— 云开发内置，无需 API Key（微信AI小程序成长计划免费额度），现为最后兜底
   // 经 cloud.ai().createModel('cloudbase').generateText() 调用，平台托管鉴权。
   // ⚠️ dynamic require：本地沙箱/未部署云环境时无 wx-server-sdk → try/catch 静默跳过，
   //    完全不影响原 智谱/Qwen/DeepSeek 链。前置：owner 在 CloudBase 控制台 AI+ 勾选 hy3。
@@ -432,11 +433,19 @@ function summarizeWithZhipu(content, title) {
     return Promise.resolve(null)
   }
 
-  // 混元优先（免费额度），成功即返回；失败继续走外部引擎链
-  return tryHunyuan().then((hySummary) => {
-    if (hySummary) return hySummary
-    if (engines.length === 0) return null
-    return new Promise((resolve) => { tryEngine(0).then(resolve) })
+  // 外部引擎链优先（智谱 → Qwen → DeepSeek），全部失败后用混元兜底（免费额度）
+  // 排序依据：外部 Key 引擎可走 HTTP API，混元走平台托管鉴权费用最省，
+  // 作为最后兜底，避免每天正常跑批也消耗 10亿 免费额度。
+  if (engines.length === 0) {
+    // 无外部 Key，直接走混元兜底
+    return tryHunyuan()
+  }
+  return new Promise((resolve) => {
+    tryEngine(0).then((engSummary) => {
+      if (engSummary) { resolve(engSummary); return }
+      // 外部引擎全部失败 → 混元兜底
+      tryHunyuan().then(resolve)
+    })
   })
 
   // 顺序尝试各引擎（智谱 → Qwen → DeepSeek），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
