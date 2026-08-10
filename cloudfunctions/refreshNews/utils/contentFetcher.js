@@ -533,7 +533,12 @@ const summarizeWithDashscope = summarizeWithZhipu
  *   剩余 <3s 时不再启动新条目，确保整函数 60s 内必有写入。
  * @returns {Promise<Array<Object>>} 每项追加 content / 更新 summary / 标记 summarySource
  */
-async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSummary = false, deadline = 0) {
+async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSummary = false, deadline = 0, onEnriched) {
+  // FS-CF3（2026-08-10 owner 确认方案A「先快返回+分批增量」）：新增可选 onEnriched 回调。
+  // 语义：每完成一条 enrich（成功态）立即 await onEnriched(enriched)，用于"边抓边单条写库"，
+  // 让前端短轮询按 createdAt 增量读到逐条新数据。失败/被跳过条目不回调（不写库）。
+  // 缺省时行为与旧版完全一致（不回调，enrichNewsList 仍为纯函数），向后兼容。
+
   // B-14: 并发数可配置（默认 8，防外部 API 压力 + 拖慢首屏）
   if (!concurrency || concurrency < 1) {
     concurrency = (config.rateLimit && config.rateLimit.enrichConcurrency) || 8
@@ -643,8 +648,17 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
 
         enriched.summarySource = summarySource
         result[idx] = enriched
+        // FS-CF3：成功项回调 → 调用方可立即单条写库（分批增量通道）
+        if (typeof onEnriched === 'function') {
+          try {
+            await onEnriched(enriched)
+          } catch (cbErr) {
+            // 回调失败不阻断流水线（写库异常由 batchInsert 内部兜底计数）
+            console.warn(`[enrich] ${item.id || ''} onEnriched 回调失败:`, cbErr && cbErr.message || cbErr)
+          }
+        }
       } catch (err) {
-        result[idx] = { ...item, summarySource: 'title' } // 失败保留原样
+        result[idx] = { ...item, summarySource: 'title' } // 失败保留原样（不入库，不回调）
       }
     }
   }

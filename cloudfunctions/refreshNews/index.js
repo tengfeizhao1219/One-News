@@ -405,13 +405,39 @@ async function runCategoryPipeline(category, quotaBaseline) {
   // 不再按 12s/条串行顶爆 60s；预算不足自动跳过 AI 摘要保正文（详情页缓存命中依赖 content）。
   const enrichStart = Date.now()
   const enrichDeadline = catStart + 55000
-  const enriched = await enrichNewsList(secPassed, 8, skipFetch, skipAiSummary, enrichDeadline)
+  // FS-CF3（2026-08-10 owner 确认方案A「先快返回+分批增量」）：
+  // 传 onEnriched 回调 → 每完成一条成功 enrich 立即单条写库（createdAt = 各自完成时刻），
+  // 供前端短轮询 getNewsDelta 按 createdAt 增量读到"逐条新数据"，实现"列表逐条增加"。
+  // 失败/被跳过条目不回调（不入库，避免无正文壳文档）。兜底见下。
+  let incrementalInserted = 0
+  let incrementalFailed = 0
+  const writtenIds = new Set() // 已由回调单条写库成功的 id 集合
+  const enriched = await enrichNewsList(
+    secPassed, 8, skipFetch, skipAiSummary, enrichDeadline,
+    async (item) => {
+      // 单条写库：batchInsert 内部按 id 幂等（已存在 update 保留 _id / retained，新记录 add）
+      const r = await batchInsert([item])
+      incrementalInserted += r.inserted
+      incrementalFailed += r.failed
+      if (r.inserted > 0) writtenIds.add(item.id) // 仅成功项才标记已写，避免兜底重复
+    }
+  )
   const enrichedCount = enriched.filter(it => it.content && it.content.length > 30).length
   const aiSummaryCount = enriched.filter(it => it.summary && it.summary !== it.title && it.summary.length >= 30).length
-  console.log(`[refreshNews][${category}] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms`)
+  console.log(`[refreshNews][${category}] 正文抓取: ${enrichedCount}/${enriched.length} 条, AI 摘要: ${aiSummaryCount} 条, 耗时 ${Date.now() - enrichStart}ms, 增量单条写入 ${incrementalInserted}/${incrementalFailed}`)
 
-  // 6. 按分类写入 news_cache
-  const { inserted, failed } = await batchInsert(enriched)
+  // 6. 写入 news_cache：已成功回调的写库项不再重复；仅未写成功的（漏写/临时 DB 故障）走整批兜底，
+  //    避免全分类写库失败后 clearOldCacheExcept 把旧缓存清空（分类空页）。兜底项 createdAt 为整批时刻，仍 ≥ since 可被增量读到。
+  const pendingForBatch = enriched.filter(it => !writtenIds.has(it.id))
+  let inserted = incrementalInserted
+  let failed = incrementalFailed
+  if (pendingForBatch.length > 0) {
+    const r2 = await batchInsert(pendingForBatch)
+    inserted += r2.inserted
+    failed += r2.failed
+  }
+  // 兜底整批写过的 id 也计入已写集合（供 clearOldCacheExcept 判断，语义见第 7 步）
+  pendingForBatch.forEach(it => writtenIds.add(it.id))
 
   // 7. 清理该分类旧缓存（保留新 ids）
   const newIds = enriched.map(it => it.id)

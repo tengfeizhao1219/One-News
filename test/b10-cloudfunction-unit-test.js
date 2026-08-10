@@ -608,6 +608,34 @@ async function main() {
     assert(out[0].summary === longSummary, `AI 摘要应完整保留（不再 slice 硬截断），实际长度 ${out[0].summary.length} 字`)
   })
 
+  // ── 5.6c FS-CF3（2026-08-10 方案A）：enrich 逐条回调（onEnriched）──
+  console.log('\n── 5.6c onEnriched 逐条回调（FS-CF3 分批增量） ──')
+  await test('FS-CF3·成功项按序触发 onEnriched 回调，参数为主富化条目', async () => {
+    const items = [
+      { id: 'cf3-1', title: '第一条新闻标题足够长用于测试回调触发', content: '第一条新闻的正文内容，足够长超过十个字门槛可以进入成功分支。' },
+      { id: 'cf3-2', title: '第二条新闻标题足够长用于测试回调触发', content: '第二条新闻的正文内容，足够长超过十个字门槛可以进入成功分支。' },
+    ]
+    const called = []
+    await cf.enrichNewsList(items, 1, true, true, 0, async (enriched) => {
+      called.push(enriched.id)
+      // 断言回调参数是完整的 enriched 条目（含 id / title / content）
+      assert(enriched && enriched.id, '回调参数应有 id')
+      assert(enriched.content, '回调参数应有 content')
+    })
+    // 并发=1 时严格按序：cf3-1 先完成，cf3-2 后完成
+    assertEqual(called.length, 2, '两个成功项都应触发回调')
+    assertEqual(called[0], 'cf3-1', '第一条应先回调')
+    assertEqual(called[1], 'cf3-2', '第二条后回调')
+  })
+
+  await test('FS-CF3·缺省 onEnriched 时行为不变（向后兼容）', async () => {
+    const item = { id: 'cf3-b', title: '兼容性测试标题足够长避免误判', content: '兼容性正文，足够长用于通过成功分支测试。' }
+    // 不传第 6 参
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out.length, 1, '仍返回 1 条')
+    assert(out[0].id === 'cf3-b', '结果正确返回')
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')

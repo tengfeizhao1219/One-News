@@ -1,0 +1,9 @@
+{
+  "name": "getNewsDelta",
+  "version": "1.0.0",
+  "description": "获取增量新闻（按 createdAt >= since 读取 refreshNews 逐条写库的新记录）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

@@ -54,6 +54,35 @@ function getNewsDetail(newsId) {
   })
 }
 
+/**
+ * 获取增量新闻（FS-CF3 · 2026-08-10 owner 确认方案A「先快返回+分批增量」）
+ * 下拉刷新后短轮询：按 createdAt >= since 读回 refreshNews 逐条写库的新记录，实现列表逐条增加。
+ * 根因：getNewsList 按 publishTime desc 排序，读不到刚刷新写入（publishTime 偏旧）的记录。
+ * @param {Object} params
+ * @param {string} params.category 分类ID（默认 recommend）
+ * @param {number} params.since    本轮刷新启动时刻（ms 时间戳），createdAt >= since 视为本轮新增
+ * @param {number} [params.max]    单次返回条数上限（默认 10）
+ * @returns {Promise<{list: Array, total: number}>}
+ */
+function getNewsDelta({ category = 'recommend', since = 0, max = 10 } = {}) {
+  return wx.cloud.callFunction({
+    name: 'getNewsDelta',
+    data: { category, since, max }
+  }).then(res => {
+    if (res.result.code !== 0) {
+      const err = new Error(res.result.message || '获取增量新闻失败')
+      err.errorCode = res.result.errorCode
+      throw err
+    }
+    const list = (res.result.data.list || []).map(item => {
+      const fmt = formatNewsItem(item)
+      fmt.createdAt = item.createdAt // 透传写入时刻（前端按序 prepend 需用）
+      return fmt
+    })
+    return { list, total: res.result.data.total }
+  })
+}
+
 // ============ 错误码映射 ============
 
 /**
@@ -99,5 +128,6 @@ function formatNewsItem(item, includeContent = false) {
 module.exports = {
   getNewsList,
   getNewsDetail,
+  getNewsDelta,
   handleApiError
 }
