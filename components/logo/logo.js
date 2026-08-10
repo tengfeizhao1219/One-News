@@ -28,6 +28,11 @@ Component({
       type: Boolean,
       value: false,
     },
+    // 流体宽度（true 时 width:100% 铺满父容器，忽略 size）
+    fluid: {
+      type: Boolean,
+      value: false,
+    },
   },
 
   data: {

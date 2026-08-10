@@ -152,10 +152,19 @@
 /* 页脚 */
 .footer {
   text-align: center;
-  padding: 48rpx 0 56rpx;
+  /* 32rpx 水平 padding → logo 卡片宽度与上方 .section 卡片一致 */
+  padding: 48rpx 32rpx 56rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+/* Logo 卡片：宽度/圆角与 .card 保持一致 (20rpx + border) */
+.footer-logo-card {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 20rpx;
+  overflow: hidden;
 }
 .footer-text {
   margin-top: 20rpx;

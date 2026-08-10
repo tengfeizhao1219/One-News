@@ -59,7 +59,9 @@
     </view>
 
     <view class="footer">
-      <logo id="about-logo" mode="wordmark" size="400"></logo>
+      <view class="footer-logo-card">
+        <logo id="about-logo" mode="splash" fluid></logo>
+      </view>
       <view class="footer-text">一页 · 简单到极致</view>
     </view>
 

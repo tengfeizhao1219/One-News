@@ -10,5 +10,5 @@
   class="logo-img"
   src="/assets/logo/logo-{{mode}}{{isDark ? '-dark' : '-light'}}.svg"
   mode="widthFix"
-  style="width: {{size}}rpx;"
+  style="{{fluid ? 'width:100%;' : 'width:' + size + 'rpx;'}}"
 ></image>

@@ -119,7 +119,9 @@
 
     <!-- 底部品牌 splash logo -->
     <view class="brand-footer">
-      <logo id="settings-logo" mode="splash" size="400"></logo>
+      <view class="brand-card">
+        <logo id="settings-logo" mode="splash" fluid></logo>
+      </view>
     </view>
 
   </scroll-view>
