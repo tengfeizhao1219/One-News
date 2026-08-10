@@ -58,14 +58,58 @@ const wxssFiles = files.filter(f => f.endsWith('.wxss'))
 // ---- 白名单:黑白蒙层 rgba(0,0,0,*) / rgba(255,255,255,*) / 透明黑(0,0,0,0) ----
 const RGBA_MONOCHROME = /rgba?\(\s*(0\s*,\s*0\s*,\s*0|255\s*,\s*255\s*,\s*255)\b/
 
-// ---- 属性白名单:这些 CSS 属性内的 px 是物理像素,不需要 rpx ----
-// box-shadow: offset-x offset-y blur spread
-// filter: blur(Npx) / drop-shadow(... Npx)
-// transform: translate(Npx) (极少用 px,但允许)
-// transition: ... Nms (不是 px,但也不该 rpx)
-const PX_WHITELIST_RE = /\b(box-shadow|filter|backdrop-filter|drop-shadow|transition)\b/
-// var(--xxx, Npx) 内的 fallback 也是合法的(用于 calc 默认值)
-const VAR_FALLBACK_PX_RE = /var\([^)]*,\s*\d+(?:\.\d+)?\s*px\s*\)/
+// ---- px 物理像素白名单(value-scoped,而非旧版整行 line-scoped) ----
+// 旧版 PX_WHITELIST_RE/test(line) 存在缺陷: 若一行含 box-shadow 又含 padding:8px,
+// 整行被 box-shadow 掩盖,8px 逃过检查。改为 per-value 判断,只豁免落在白名单
+// 属性/函数内的 px 值。
+// 合法情况:
+//  ① box-shadow/filter/backdrop-filter/-webkit-* 内的 blur/spread/radius → 物理像素
+//  ② blur()/drop-shadow() 函数内的 px → 物理像素
+//  ③ var(--xxx, Npx) 的 fallback 值 → 运行时缺省,合法
+const PX_WHITELIST_PROPS = new Set([
+  'box-shadow', 'filter', 'backdrop-filter',
+  '-webkit-backdrop-filter', '-webkit-filter', 'transform',
+])
+const PX_WHITELIST_FUNCS = new Set(['blur', 'drop-shadow'])
+
+/**
+ * 判断某个 px 匹配(位于 line 的 pxIdx,即 PX_RE 命中位置)是否落在合法白名单范围内。
+ * 算法:从 px 位置向前扫描追踪()嵌套深度:
+ *  - depth===0 时遇到的第一个函数名,若为 var 则看是否有逗号(fallback);
+ *    若为 blur/drop-shadow 则豁免;
+ *  - 若无直接包围函数,取最近的':'之前的属性名,若在 PX_WHITELIST_PROPS 则豁免。
+ */
+function pxIsWhitelisted(line, pxIdx) {
+  const before = line.slice(0, pxIdx)
+  let depth = 0
+  for (let i = pxIdx - 1; i >= 0; i--) {
+    const c = before[i]
+    if (c === ')') depth++
+    else if (c === '(') {
+      if (depth === 0) {
+        // 直接包围该 px 的函数
+        const kw = before.slice(0, i).match(/([-\w-]+)\s*$/)
+        if (kw) {
+          const fn = kw[1]
+          if (fn === 'var') {
+            // var(--xxx, fallback):含逗号即为 fallback 值,合法
+            return before.slice(i + 1).includes(',')
+          }
+          if (PX_WHITELIST_FUNCS.has(fn)) return true
+        }
+        return false // 非白名单函数(var 除外),需报告
+      }
+      depth--
+    }
+  }
+  // 无直接包围函数 → 检查所属属性名
+  const colonIdx = before.lastIndexOf(':')
+  if (colonIdx !== -1) {
+    const prop = before.slice(0, colonIdx).match(/([-\w-]+)\s*$/)
+    if (prop && PX_WHITELIST_PROPS.has(prop[1])) return true
+  }
+  return false
+}
 
 // ---- 注释检测 ----
 // CSS 注释 /* ... */ 跨行;小程序 wxss 也支持 // 单行注释
@@ -180,13 +224,13 @@ for (const file of wxssFiles) {
       }
     }
 
-    // ③ px 误用:calc(var(--x, 0px)) 默认值允许;box-shadow/filter/blur 物理像素允许;
-    //    注释行不检查
+    // ③ px 误用:value-scoped 白名单判断(不再整行豁免)
+    //   合法:var(--xxx, Npx) fallback / box-shadow/filter/blur 物理像素
+    //   注释行不检查
     if (!isComment(line)) {
       for (const m of line.matchAll(PX_RE)) {
-        if (VAR_FALLBACK_PX_RE.test(line)) continue
         if (m[1] === '0') continue
-        if (PX_WHITELIST_RE.test(line)) continue
+        if (pxIsWhitelisted(line, m.index)) continue
         record(file, lineNo, m.index + 1, 'warning', 'px-instead-of-rpx',
           `使用 ${m[1]}px — 小程序布局请改 rpx(750 设计稿 1rpx ≈ 0.5px)`)
       }
