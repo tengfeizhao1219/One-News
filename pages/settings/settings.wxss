@@ -279,3 +279,11 @@
    D-07 S1-S4 后变量注入已改为 app.wxss 显式变量块（class 注入），变量失效问题已解决；
    正常路径各选择器均已 var() 引用（--seg-bg/--seg-on-bg/--switch-off 等 token 已存在）
    → 兜底硬编码为纯冗余（双轨漂移风险源），整块删除。 */
+
+/* 底部品牌 splash logo */
+.brand-footer {
+  margin-top: 24rpx;
+  padding: 0 32rpx;
+  display: flex;
+  justify-content: center;
+}

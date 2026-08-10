@@ -49,6 +49,13 @@ Page({
       // BUG-20260806-003: onShow 同步 isDark（从设置页切换主题返回时刷新 icon）
       isDark: this._isSystemDark(),
     })
+    // 刷新底部 logo 组件主题（手动切换主题后从设置页返回时 logo 可能滞留旧值）
+    try {
+      var logoComp = this.selectComponent('#about-logo')
+      if (logoComp && typeof logoComp.refreshTheme === 'function') {
+        logoComp.refreshTheme()
+      }
+    } catch (e) { /* ignore */ }
   },
 
   /**

@@ -40,6 +40,13 @@ Component({
       var self = this
       if (v) {
         this.setData({ isDark: this._isSystemDark() })
+        // 刷新 logo 组件主题：modal 常驻 DOM，attached 只执行一次。
+        // 手动切换主题后打开弹窗时，logo 内部 isDark 可能滞留旧值，
+        // 主动调用 refreshTheme 让其重新读取 app.globalData.effectiveTheme。
+        var logoComp = this.selectComponent('#modal-logo')
+        if (logoComp && typeof logoComp.refreshTheme === 'function') {
+          logoComp.refreshTheme()
+        }
         var latest = this.data.latest || {
           version: changelog.currentVersion,
         }

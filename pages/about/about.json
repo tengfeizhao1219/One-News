@@ -1,6 +1,7 @@
 {
   "navigationStyle": "custom",
   "usingComponents": {
-    "changelog-modal": "/components/changelog-modal/changelog-modal"
+    "changelog-modal": "/components/changelog-modal/changelog-modal",
+    "logo": "/components/logo/logo"
   }
 }

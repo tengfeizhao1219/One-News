@@ -117,6 +117,11 @@
       </view>
     </view>
 
+    <!-- 底部品牌 splash logo -->
+    <view class="brand-footer">
+      <logo id="settings-logo" mode="splash" size="400"></logo>
+    </view>
+
   </scroll-view>
 
   <!-- 更新日志弹窗（2026-08-09） -->

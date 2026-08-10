@@ -4,9 +4,9 @@
 <view class="cm-overlay {{visible ? 'cm-show' : ''}} {{animShow ? 'cm-fade' : ''}}" bindtap="onOverlayTap">
   <view class="cm-card" catchtap="onCardTap">
 
-    <!-- 头部：wordmark logo（品牌标识） -->
+    <!-- 头部：wordmark logo（品牌标识，跟随深浅模式） -->
     <view class="cm-header">
-      <logo mode="wordmark" size="200"></logo>
+      <logo id="modal-logo" mode="wordmark" size="200"></logo>
       <view class="cm-version">{{version}}</view>
       <view class="cm-date" wx:if="{{date}}">{{date}}</view>
     </view>

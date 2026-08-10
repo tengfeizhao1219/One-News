@@ -66,6 +66,16 @@ Page({
     } catch (e) {}
   },
 
+  onShow: function () {
+    // 刷新底部 logo 组件主题（页面可能从其他页面返回后主题已变）
+    try {
+      var logoComp = this.selectComponent('#settings-logo')
+      if (logoComp && typeof logoComp.refreshTheme === 'function') {
+        logoComp.refreshTheme()
+      }
+    } catch (e) { /* ignore */ }
+  },
+
   /**
    * UI-B9: 字体档位切换
    */
@@ -126,6 +136,13 @@ Page({
       if (typeof app.applyTheme === 'function') app.applyTheme()
       // BUG-20260806-003: 主题切换后立即刷新主页 icon（applyTheme 同步更新 effectiveTheme）
       this.setData({ isDark: this._isSystemDark() })
+      // 刷新底部 splash logo 组件主题
+      try {
+        var logoComp = this.selectComponent('#settings-logo')
+        if (logoComp && typeof logoComp.refreshTheme === 'function') {
+          logoComp.refreshTheme()
+        }
+      } catch (e) { /* ignore */ }
     }
   },
 
