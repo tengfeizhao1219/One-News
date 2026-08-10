@@ -75,6 +75,9 @@
   min-height: 0;
   max-height: 520rpx;
   padding: 8rpx 40rpx 8rpx;
+  width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* 区块标题（新功能=品牌蓝 / 优化=副标灰 / 修复=副标灰） */
@@ -97,6 +100,7 @@
   display: flex;
   align-items: flex-start;
   margin-bottom: 18rpx;
+  width: 100%;
 }
 .cm-dot {
   width: 12rpx;
@@ -118,6 +122,7 @@
   /* flex 子项默认 min-width: auto，会按内容撑开导致长文本不换行；
      显式 min-width: 0 允许其收缩到容器宽度以内，word-break 才生效 */
   min-width: 0;
+  width: 0;
 }
 .cm-item-title {
   font-size: 28rpx;
