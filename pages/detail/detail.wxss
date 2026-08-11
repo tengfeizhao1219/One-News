@@ -316,22 +316,23 @@
 }
 
 /* ============ AI 解读标识（详情页正文顶部） ============ */
-/* 版权策略：AI 独立解读 ≠ 原文复述，需显著标识满足法规要求 */
+/* 版权策略：AI 独立解读 ≠ 原文复述，需标识满足法规要求；
+   D-04 v0.2 修订：弱化为中性灰低饱和徽标，不抢正文注意力 */
 .ai-interpretation-badge {
   display: flex;
   align-items: center;
   gap: 12rpx;
   margin-bottom: 28rpx;
   padding: 16rpx 24rpx;
-  background-color: var(--primary-subtle);
+  background-color: var(--bg-subtle);
   border-radius: 16rpx;
-  border-left: 6rpx solid var(--primary);
+  border-left: 6rpx solid var(--divider);
 }
 
-/* R1 合规降级标识：用警示色调与 AI 解读徽标区分 */
+/* R1 合规降级标识：与 AI 解读徽标形态一致，仅左边框用极淡琥珀区分 */
 .ai-interpretation-badge.ai-badge--compliance {
-  background-color: var(--color-warning-subtle);
-  border-left-color: var(--color-warning);
+  background-color: var(--bg-subtle);
+  border-left-color: var(--color-warning-subtle);
 }
 
 .ai-interpretation-badge .ai-chip {
@@ -342,13 +343,13 @@
   font-weight: 500;
   line-height: 1.4;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  color: var(--chip-text);
-  background-color: var(--primary);
+  color: var(--text-secondary);
+  background-color: var(--tag-bg);
 }
 
 .ai-badge--compliance .ai-chip {
-  background-color: var(--color-warning);
-  color: var(--chip-text);
+  background-color: var(--color-warning-subtle);
+  color: var(--text-secondary);
 }
 
 .ai-interpretation-badge .ai-badge-desc {
