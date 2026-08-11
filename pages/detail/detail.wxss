@@ -358,23 +358,19 @@
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
-/* ============ 查看原文：元信息行尾纯文字弱入口（D-02 v0.2 §2.2） ============
-   v0.2 废弃独立卡，压成 meta 行内一个文字入口：同字号/同灰弱色，不带图标，不抢正文注意力。
-   个人主体 web-view 不可用，交互仍走「复制链接 + 引导外部浏览器打开」 */
+/* ============ 查看原文：AI 解读标识内的高亮内联入口（D-02 v0.2 §2.2） ============
+   置于 AI 解读/AI 摘录提示语之后（非独立成行），用 --text-link 蓝链色相对高亮，
+   与灰提示语形成对比但不过分抢眼；个人主体 web-view 不可用，交互走「复制链接+引导外部浏览器打开」 */
 .meta-source-link {
   color: var(--text-link);
-  font-size: 24rpx;
+  font-size: 22rpx;
   font-weight: 500;
-  margin-left: 8rpx;
+  margin-left: 12rpx;
+  align-self: center;
 }
 
 .meta-source-link:active {
   color: var(--primary);
-}
-
-/* 「查看原文」移出元信息行、置于 AI 解读标识之后的行容器（D-02 v0.2 §2.2 调整） */
-.source-link-row {
-  margin-bottom: 28rpx;
 }
 
 /* ============ 底部应用来源归属（11:45 新增） ============ */

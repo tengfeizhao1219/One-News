@@ -103,17 +103,15 @@
           <view class="ai-interpretation-badge" wx:if="{{news.contentSource === 'ai_interpretation'}}">
             <text class="ai-chip">AI 解读</text>
             <text class="ai-badge-desc">本文由 AI 独立解读生成，仅供参考</text>
+            <!-- D-02 v0.2 §2.2：「查看原文」高亮内联于提示语之后（非独立成行），交互走「复制链接+引导外部浏览器打开」 -->
+            <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">查看原文 ›</text>
           </view>
           <!-- R1 合规降级标识（PRD §2.2/§2.5）: contentSource 被标记为 r1_blocked_fulltext 时
                说明后端拦截了抓取的全文，前端只显示 AI 摘要，明确向用户说明非原文 -->
           <view class="ai-interpretation-badge ai-badge--compliance" wx:if="{{news.contentSource === 'r1_blocked_fulltext'}}">
             <text class="ai-chip">AI 摘录</text>
             <text class="ai-badge-desc">已依版权合规策略过滤原文全文，仅显示 AI 摘要</text>
-          </view>
-          <!-- D-02 v0.2 §2.2：「查看原文」纯文字弱入口，置于 AI 解读标识之后更顺阅读流；
-               个人主体 web-view 不可用，交互走「复制链接 + 引导外部浏览器打开」 -->
-          <view class="source-link-row" wx:if="{{news.sourceUrl}}">
-            <text class="meta-source-link" bindtap="onCopySourceUrl">查看原文 ›</text>
+            <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">查看原文 ›</text>
           </view>
           <block wx:for="{{paragraphs}}" wx:key="*this">
             <view class="text-p">{{item}}</view>
