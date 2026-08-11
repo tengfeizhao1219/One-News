@@ -46,8 +46,11 @@ const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 // （即 'cached' / 'fetched_and_cleaned' / 'juhe_content_api' / 'summary_fallback' 等历史全文本）
 // 一律清空 doc.content，前端只看到 summary + title + contentSource 标记。
 // 标记为 'r1_blocked_fulltext' → 前端可识别并展示"已合规降级"提示。
-// ⚠️ 不挂全局开关（content_mode 全局开关属"需要讨论"项，待 owner 拍板再补）。本常量即默认。
-const READ_CONTENT_MODE_DEFAULT = 'ai_first'
+// PRD §2.3 全局开关（2026-08-11 owner 拍板）：通过云函数环境变量 READ_CONTENT_MODE 切换
+//   - ai_first（默认）：拦截全文本，仅返回 AI 摘要/解读（防版权侵权）
+//   - fetch_full：回滚旧行为，详情页返回完整正文（仅合规审查期/灰度回滚使用）
+// 环境变量未设置时默认 ai_first（安全默认值，与上线版语义一致）
+const READ_CONTENT_MODE_DEFAULT = process.env.READ_CONTENT_MODE || 'ai_first'
 // R1 拦截掉的 contentSource 应被前端识别为"已合规降级"
 const R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
 
@@ -58,11 +61,11 @@ const R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
  * @returns {Object} { content, contentSource, blocked }
  */
 function applyR1Filter(doc, originalContentSource) {
-  if (READ_CONTENT_MODE_DEFAULT !== 'ai_first') {
-    // 默认非 ai_first 模式不拦截（占位，留给未来挂全局开关）
+  if (READ_CONTENT_MODE_DEFAULT === 'fetch_full') {
+    // fetch_full 模式：不拦截，回滚旧行为（合规审查期/紧急回滚使用）
     return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
   }
-  // ai_first 模式：除 'ai_interpretation' 外的所有全文本一律清空
+  // ai_first 模式（默认）：除 'ai_interpretation' 外的所有全文本一律清空
   // 'ai_interpretation' 标记 = refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
   // —— 才是 ai_first 模式下允许展示的"AI 解读"内容。
   if (originalContentSource === 'ai_interpretation') {

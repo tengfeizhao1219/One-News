@@ -18,5 +18,11 @@
   "themeLocation": "theme.json",
   "sitemapLocation": "sitemap.json",
   "style": "v2",
-  "lazyCodeLoading": "requiredComponents"
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.writeClipboard": {
+      "desc": "用于复制新闻原文链接到剪贴板，方便你在浏览器中查看完整内容"
+    }
+  },
+  "__usePrivacyCheck__": true
 }

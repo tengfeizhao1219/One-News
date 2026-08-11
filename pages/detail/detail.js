@@ -391,8 +391,10 @@ Page({
     }
     // BUG-20260806-002：单篇模式 — 禁用跨分类翻页（引擎仍存在，但 total=1 边界挡住 goNext/goPrev）
     that._singleMode = !!isExpiredEntry
-    getNewsDetail(newsId).then(function (news) {
-      var text = news.content || news.summary || ''
+    getNewsDetail(newsId).then(function (raw) {
+      // PRD §八 R2：单篇模式拆分点收敛到 reading-engine 公共函数（保持与详情列表一致）
+      var news = ReadingEngine.normalizeDetail(raw)
+      var text = ReadingEngine.resolveContentText(news)
       var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
         that.setData({
           news: news,

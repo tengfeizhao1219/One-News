@@ -101,6 +101,11 @@
           <block wx:for="{{paragraphs}}" wx:key="*this">
             <view class="text-p">{{item}}</view>
           </block>
+          <!-- PRD §2.5：paragraphs 为空时 inline 空态（AI 解读/摘要皆无时兜底） -->
+          <view class="inline-empty" wx:if="{{paragraphs.length === 0 && news.contentSource}}">
+            <text class="inline-empty-icon">·</text>
+            <text class="inline-empty-text">内容暂不可用</text>
+          </view>
           <!-- PRD §2.5 S5：档位一「只显摘要」落差治理 —— 摘要下方即刻提供原文回源入口 -->
           <view class="source-origin-card {{!news.sourceUrl ? 'source-origin-card--no-url' : ''}}"
                 wx:if="{{news.contentSource === 'r1_blocked_fulltext' || news.contentSource === 'ai_interpretation'}}"

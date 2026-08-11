@@ -22,6 +22,62 @@ for (var i = 0; i < CATEGORIES.length; i++) {
   }
 }
 
+// B-COMPLIANCE-1 R2（PRD §八）：4 处 content||summary 拆分点统一收敛
+// 按 contentSource 决定正文渲染来源，杜绝缓存命中路径仍渲染被 R1 拦截的全文。
+// - 'ai_interpretation'  → 渲染 content（AI 独立解读，独立作品）
+// - 'r1_blocked_fulltext' → 渲染 summary（R1 已拦截全文，仅留 AI 摘要；前端不应再取 content）
+// - 其他历史全文本（'cached' / 'fetched_and_cleaned' 等）→ 降级渲染 summary
+// - 兜底无 contentSource → 优先 summary
+// ⚠️ FS R1（commit eb12834）已保证 ai_first 模式下非 ai_interpretation 的 content 字段已清空；
+//   本函数是**前端最后一道闸门**，即使后端拦截漏网也只展示 summary。
+var ALLOWED_RENDER_CONTENT_SOURCE = 'ai_interpretation'
+var R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
+
+/**
+ * R2 公共函数：按 contentSource 决定详情正文文本
+ * @param {Object} news 详情对象（含 content / summary / contentSource / references）
+ * @returns {string} 用于 paragraphs 切分的文本
+ */
+function resolveContentText(news) {
+  if (!news) return ''
+  var source = news.contentSource || ''
+  if (source === ALLOWED_RENDER_CONTENT_SOURCE) {
+    return news.content || news.summary || ''
+  }
+  // r1_blocked_fulltext / 其他历史全文本 / 兜底：只取 summary
+  return news.summary || ''
+}
+
+/**
+ * R2 辅助：把任意来源对象规范化为前端使用的"详情文档"
+ * 兜底（降级摘要、缓存命中、AI 解读三种路径）一律产出结构一致的 shape，
+ * 避免不同路径下字段缺失导致 wxml 渲染分支走错。
+ * @param {Object} raw 任意来源的详情/兜底对象
+ * @returns {Object} 规范化后的详情
+ */
+function normalizeDetail(raw) {
+  if (!raw) return null
+  var normalized = {
+    id: raw.id || raw._id || '',
+    title: raw.title || '',
+    summary: raw.summary || '',
+    content: raw.content || '',
+    contentSource: raw.contentSource || '',
+    category: raw.category || '',
+    categoryName: raw.categoryName || '',
+    source: raw.source || '',
+    sourceUrl: raw.sourceUrl || '',
+    references: Array.isArray(raw.references) ? raw.references : [],
+    picUrl: raw.picUrl || '',
+    publishTime: raw.publishTime || raw.time || '',
+  }
+  // 兜底场景下若 contentSource 为空，视为 AI 解读（与 R5 兜底语义一致）
+  if (!normalized.contentSource && normalized.summary) {
+    normalized.contentSource = 'ai_interpretation'
+  }
+  return normalized
+}
+
 /**
  * 阅读引擎构造函数
  * @param {Object} options
@@ -417,7 +473,8 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     try {
       var cachedDetail = that._cache.get('newsDetail:' + cur.id)
       if (cachedDetail) {
-        var text = cachedDetail.content || cachedDetail.summary || ''
+        // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
+        var text = resolveContentText(cachedDetail)
         var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
         that._onDetailReady(cachedDetail, paragraphs)
         return Promise.resolve({ news: cachedDetail, paragraphs: paragraphs, fromCache: true })
@@ -426,7 +483,8 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   }
 
   return getNewsDetail(cur.id).then(function (detail) {
-    var text = detail.content || detail.summary || ''
+    // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
+    var text = resolveContentText(detail)
     var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
     that._onDetailReady(detail, paragraphs)
 
@@ -440,10 +498,8 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     return { news: detail, paragraphs: paragraphs, fromCache: false }
   }).catch(function () {
     // 降级：用列表摘要
-    var text = cur.summary || ''
-    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
     // R5（PRD §八）：兜底对象补 contentSource，保证 AI 解读徽标正确显示
-    var fallback = {
+    var fallback = normalizeDetail({
       id: cur.id,
       _id: cur.id,
       title: cur.title,
@@ -457,7 +513,10 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
       references: cur.references || [],
       picUrl: cur.picUrl,
       publishTime: cur.publishTime,
-    }
+    })
+    // R2（PRD §八）：兜底同样走 resolveContentText（fallback.contentSource='ai_interpretation'，取 content）
+    var text = resolveContentText(fallback)
+    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
     that._onDetailReady(fallback, paragraphs)
     return { news: fallback, paragraphs: paragraphs }
   })
@@ -565,3 +624,7 @@ ReadingEngine.prototype.getCategoryName = function (categoryId) {
 }
 
 module.exports = ReadingEngine
+
+// PRD §八 R2：公共函数挂到 ReadingEngine 上，detail.js 单篇模式可直接复用
+ReadingEngine.resolveContentText = resolveContentText
+ReadingEngine.normalizeDetail = normalizeDetail

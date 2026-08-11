@@ -388,6 +388,28 @@
   opacity: 0.7;
 }
 
+/* ============ inline-empty：paragraphs 为空时兜底（PRD §2.5） ============ */
+.inline-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64rpx 32rpx;
+  margin-top: 24rpx;
+  border-radius: 16rpx;
+  background-color: var(--bg-subtle);
+}
+.inline-empty-icon {
+  font-size: 48rpx;
+  color: var(--text-tertiary);
+  line-height: 1;
+  margin-bottom: 16rpx;
+}
+.inline-empty-text {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+}
+
 /* ============ references 参考来源卡片（PRD §2.4 S1） ============ */
 .references-card {
   margin-top: 32rpx;
