@@ -112,6 +112,26 @@ module.exports = {
     maxPageSize: 50,
   },
 
+  // ── 统一多源聚合 · 条数规格（Phase 4 共享规格，供 qualityGate/AI 加工消费）──
+  // 与「统一按 rssFetcher→筛选→AI加工→落库」模式对齐（owner 拍板 recommend=15/其他=8/每源每类抓20）。
+  // ⚠️ 三种条数语义不同，勿混用：
+  //   a) fetchPerFeedPerCategory：官方RSS 每源每类原始抓取量（rssFetcher 输入侧 → 落瞬时 news_ingest）
+  //   b) selectRecommend / selectOther：qualityGate 精选后落 news_cache 展示的最终条数（recommend 精选 15，其他分类 8）
+  //   c) aiSearchPerCall：保留 8（❗超时红线，勿改）。智谱 web_search 单次生成 >10 条实测 50s 超时
+  //      （zhipuSearch.js DG-01 注释实证 10 条即 50s），放大即超时回归。AI 搜索只是「抓取」候选，
+  //      精选由 qualityGate 从多源聚合池池中挑满 b) 条数，不由 AI 单次生成量决定。
+  counts: {
+    // a) 官方 RSS 每源每类原始抓取量（rssFetcher 抓取量；qualityGate 输入池大小基线）
+    fetchPerFeedPerCategory: 20,
+    // b) qualityGate 精选输出规格（落 news_cache 展示条数）
+    selectRecommend: 15,
+    selectOther: 8,
+    // c) AI 搜索单次生成量 —— 勿改（超时红线：10 条即 50s）
+    aiSearchPerCall: 8,
+    // feedMeta 单源条数上限兜底（避免单源灌爆聚合池）
+    maxPerFeed: 30,
+  },
+
   // 内容安全审核（B-02 / P0-Q1 降级放行）
   // ⚠️ 个人主体小程序无法调用微信 msgSecCheck（-501001 invalid access_token 属预期，非配置错误）。
   //    设 SECURITY_CHECK_ENABLED=false 可跳过安全检测，避免每次刷新空打失败请求 + 日志噪音。

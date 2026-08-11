@@ -233,14 +233,12 @@ function httpsRequest({ hostname, path, method, headers, body, timeout = 45000 }
 
 // ─── 分类 Prompt 模板（每分类 N 条，含 content 正文）──
 
-const PER_CATEGORY_COUNT = 8  // FS-01（2026-08-07）：5→8，用户反馈 5 条太少。
-                              // 健康态下智谱 web_search 3s 内完成（8 条 prompt 实测 ~5s），
-                              // DG-11 预算 30s 仍余量充足；仅故障态（1301/超时）才耗满预算并走聚合/天行兜底 8 条。
-                              // 与 RECOMMEND_COUNT=8 对齐，全分类统一每轮 8 条。
-const RECOMMEND_COUNT = 8     // DG-01 调整（2026-08-06 16:05）：recommend 抓取量 10→8 条/轮
-                              // 实证：10 条 prompt 智谱 web_search 50s 超时（ZHIPU_TIMEOUT），
-                              // 总耗时 56.8s 逼近 60s 云函数上限 → 折中 8 条（~45s 内完成，
-                              // 降级链余量充足）；首页首屏 10 条由 DG-03 用「8+翻底拉取」适配（PM 口径确认）
+// ⚠️ AI 搜索单次生成量 —— 统一读 config.counts.aiSearchPerCall（默认 8），勿在本处放大。
+//    超时红线：智谱 web_search 单次生成 >10 条实测 50s 超时（DG-01 实证 10 条即 50s），
+//    放大即超时回归。精选 15/8 由 qualityGate 从聚合池精选（config.counts.selectRecommend/selectOther），
+//    不由 AI 单次生成量决定。本处只是「抓取候选生成量」，非最终展示条数。
+const PER_CATEGORY_COUNT = config.counts?.aiSearchPerCall || 8
+const RECOMMEND_COUNT = config.counts?.aiSearchPerCall || 8
 
 /**
  * 生成分类搜索 Prompt（统一要求 content 正文）
