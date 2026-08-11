@@ -92,8 +92,9 @@
         <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
-          <text wx:if="{{news.source}}">{{news.source}}</text>
-          <text wx:if="{{news.source && news.time}}">·</text>
+          <!-- 官方源：来源名由下方「出处」归因块承载，meta 行不重复显示（轻量化） -->
+          <text wx:if="{{news.source && news.contentSource !== 'official_rss'}}">{{news.source}}</text>
+          <text wx:if="{{news.source && news.contentSource !== 'official_rss' && news.time}}">·</text>
           <text>{{news.time}}</text>
         </view>
 
@@ -112,6 +113,13 @@
             <text class="ai-chip">AI 摘录</text>
             <text class="ai-badge-desc">已依版权合规策略过滤原文全文，仅显示 AI 摘要</text>
             <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">查看原文 ›</text>
+          </view>
+          <!-- 官方源归因标识（版权红线：只跳源站 H5，不显正文；contentSource==='official_rss' 时渲染；
+               与 AI 解读/AI 摘录徽标平行占位，语义区分：官方源 ≠ AI 生成） -->
+          <view class="source-attribution-badge" wx:if="{{news.contentSource === 'official_rss'}}">
+            <text class="source-chip">{{news.sourceName || news.source}}</text>
+            <text class="source-badge-desc">内容整理自官方源</text>
+            <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">出处 ↗</text>
           </view>
           <block wx:for="{{paragraphs}}" wx:key="*this">
             <view class="text-p">{{item}}</view>
@@ -144,7 +152,7 @@
       <!-- 底部应用来源归属（11:45 新增） -->
       <view class="detail-app-source">
         <view class="app-source-line"></view>
-        <text class="app-source-text">内容由 AI 整理生成 · 一页 One News</text>
+        <text class="app-source-text">{{news.contentSource === 'official_rss' ? '内容整理自官方源 · 一页 One News' : '内容由 AI 整理生成 · 一页 One News'}}</text>
       </view>
     </view>
   </scroll-view>

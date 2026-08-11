@@ -68,6 +68,8 @@ function normalizeDetail(raw) {
     category: raw.category || '',
     categoryName: raw.categoryName || '',
     source: raw.source || '',
+    // #35 接口 v1 字段：官方源来源名（sourceName），兜底取 source
+    sourceName: raw.sourceName || raw.source || '',
     sourceUrl: raw.sourceUrl || '',
     references: Array.isArray(raw.references) ? raw.references : [],
     picUrl: raw.picUrl || '',

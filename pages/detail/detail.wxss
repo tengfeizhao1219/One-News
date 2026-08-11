@@ -373,6 +373,39 @@
   color: var(--primary);
 }
 
+/* ============ 官方源归因标识（contentSource==='official_rss'） ============
+   与 AI 解读/AI 摘录徽标平行占位，但用中性灰调区分「官方源 ≠ AI 生成」；
+   版权红线：只跳源站 H5（复制链接+引导外部浏览器），不显正文。
+   来源名做中性 pill（--bg-card，非 AI 蓝），desc 灰文，出处 ↗ 复用 .meta-source-link 蓝链高亮 */
+.source-attribution-badge {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 28rpx;
+  padding: 16rpx 24rpx;
+  background-color: var(--bg-subtle);
+  border-radius: 16rpx;
+  border-left: 6rpx solid var(--divider);
+}
+
+.source-attribution-badge .source-chip {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: var(--text-primary);
+  background-color: var(--bg-card);
+}
+
+.source-attribution-badge .source-badge-desc {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
 /* ============ 底部应用来源归属（11:45 新增） ============ */
 .detail-app-source {
   display: flex;
