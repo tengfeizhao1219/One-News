@@ -1,0 +1,112 @@
+[
+  {
+    "_id": "zhongxin_finance",
+    "name": "中新网",
+    "sourceName": "中新网",
+    "baseUrl": "https://www.chinanews.com.cn/rss/finance.xml",
+    "category": "finance",
+    "pollSeconds": 1800,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "zhongxin_edu",
+    "name": "中新网",
+    "sourceName": "中新网",
+    "baseUrl": "https://www.chinanews.com.cn/rss/edu.xml",
+    "category": "edu",
+    "pollSeconds": 1800,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "renmin_tech",
+    "name": "人民网",
+    "sourceName": "人民网",
+    "baseUrl": "http://www.people.com.cn/rss/it.xml",
+    "category": "tech",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "renmin_finance",
+    "name": "人民网",
+    "sourceName": "人民网",
+    "baseUrl": "http://www.people.com.cn/rss/finance.xml",
+    "category": "finance",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "renmin_edu",
+    "name": "人民网",
+    "sourceName": "人民网",
+    "baseUrl": "http://www.people.com.cn/rss/edu.xml",
+    "category": "edu",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "cctv_finance",
+    "name": "央视网",
+    "sourceName": "央视网",
+    "baseUrl": "http://www.cctv.com/program/rss/02/04/index.xml",
+    "category": "finance",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "cctv_edu",
+    "name": "央视网",
+    "sourceName": "央视网",
+    "baseUrl": "http://www.cctv.com/program/rss/02/06/index.xml",
+    "category": "edu",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "xinhua_finance",
+    "name": "新华网",
+    "sourceName": "新华网",
+    "baseUrl": "http://www.xinhuanet.com/finance/news_finance.xml",
+    "category": "finance",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "xinhua_tech",
+    "name": "新华网",
+    "sourceName": "新华网",
+    "baseUrl": "http://www.xinhuanet.com/tech/news_tech.xml",
+    "category": "tech",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  },
+  {
+    "_id": "xinhua_edu",
+    "name": "新华网",
+    "sourceName": "新华网",
+    "baseUrl": "http://www.xinhuanet.com/edu/news_edu.xml",
+    "category": "edu",
+    "pollSeconds": 3600,
+    "enabled": false,
+    "errorStreak": 0,
+    "status": "active"
+  }
+]
