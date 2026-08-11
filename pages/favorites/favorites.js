@@ -3,6 +3,7 @@
 // DG-03: 统一全局单例 localCache（detail/favorites/history 同源）
 var localCache = require('../../utils/localCache').localCache
 var { formatRelativeTime } = require('../../utils/util')
+var ALL_CATEGORIES = require('../../utils/constants').CATEGORIES
 var app = getApp()
 
 // 全局缓存单例（与首页侧边栏、详情页同源，可读到 detail 写入的 favorites）
@@ -11,13 +12,10 @@ var _cache = localCache
 // 收藏 TTL：30 天（owner 决策，纯本地）
 var FAVORITES_TTL = 30 * 24 * 60 * 60 * 1000
 
-// UI-B10: 分类筛选胶囊（与 reading-engine 跨分类顺序一致；去掉「全部」，默认展示全部）
-var CATEGORIES = [
-  { id: 'tech', name: '科技' },
-  { id: 'international', name: '世界' },
-  { id: 'sports', name: '体育' },
-  { id: 'life', name: '生活' },
-]
+// UI-B10: 分类筛选胶囊（与 constants.js 标准分类统一，去掉「全部」；默认展示全部）
+// 原硬编码分类名（世界/体育/生活）与标准分类（国际/科学探索/社会）不一致、
+// 且缺 recommend —— 统一从 constants.js 派生，与 home.js CONTENT_CATEGORIES / reading-engine READING_CATEGORIES 口径一致。
+var CATEGORIES = ALL_CATEGORIES.filter(function (c) { return c.id !== 'all' })
 
 
 Page({
