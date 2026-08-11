@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "share-card": "../../components/share-card/share-card"
+    "share-card": "../../components/share-card/share-card",
+    "logo": "../../components/logo/logo"
   },
   "navigationStyle": "custom"
 }

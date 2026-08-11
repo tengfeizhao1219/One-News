@@ -38,20 +38,33 @@
     </view>
   </view>
 
-  <!-- 骨架屏（加载中） -->
+  <!-- 骨架屏（加载中）· D-04 v0.2 §4.1：复用版式骨架三段式——
+       标题区 2 行灰块 + 元信息行细灰条 + 正文 4-5 段灰条，首段前留「AI 解读生成中，请稍后」弱提示 -->
   <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
+    <!-- 标题区：2 行灰块 -->
     <view class="sk-block sk-title"></view>
-    <view class="sk-block sk-line" style="width: 80%"></view>
-    <view class="sk-block sk-line" style="width: 65%"></view>
-    <view class="sk-block sk-line" style="width: 90%"></view>
-    <view class="sk-block sk-line" style="width: 50%"></view>
+    <view class="sk-block sk-title sk-title--second"></view>
+    <!-- 元信息行占位（代替 科技 | InfoQ · 时间 的 meta 行） -->
+    <view class="sk-block sk-meta"></view>
+    <!-- 正文区：首段前弱提示 + 4 段灰条 -->
+    <view class="skeleton-ai-tip">AI 解读生成中，请稍后</view>
+    <view class="sk-block sk-line" style="width: 100%"></view>
+    <view class="sk-block sk-line" style="width: 92%"></view>
+    <view class="sk-block sk-line" style="width: 96%"></view>
+    <view class="sk-block sk-line" style="width: 78%"></view>
+    <view class="sk-block sk-line" style="width: 88%"></view>
   </view>
 
-  <!-- 错误 / 空状态 -->
+  <!-- 空态 / 错误态 · D-04 v0.2 §4.2：去按钮、温和文案、居中 logo-avatar-circle。
+       整体只有 logo + 主文案 + 副文案 三个元素，零操作负担（用户用顶部导航自决去留） -->
   <view class="state-container" wx:if="{{pageState === 'error' || pageState === 'empty'}}">
-    <view class="state-icon">{{pageState === 'empty' ? '-' : '!'}}</view>
-    <view class="state-message">{{errorMessage || '加载失败，请返回重试'}}</view>
-    <view class="state-retry" bindtap="goBack">返回</view>
+    <view class="state-avatar">
+      <logo mode="avatar-circle" size="128" />
+    </view>
+    <view class="state-title" wx:if="{{pageState === 'empty'}}">这条内容不见了</view>
+    <view class="state-title" wx:else>网络开了个小差</view>
+    <view class="state-sub" wx:if="{{pageState === 'empty'}}">可能是发布方撤下了，不用着急，看看别的吧</view>
+    <view class="state-sub" wx:else>等信号好的时候再回来，随时都在的</view>
   </view>
 
   <!-- 内容 -->
