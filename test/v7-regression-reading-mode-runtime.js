@@ -239,10 +239,16 @@ function runTests() {
       check('paragraphs 数量 > 0', detailResult.paragraphs.length > 0)
       check('paragraphs 经 split 和 filter 处理', detailResult.paragraphs.every(function (p) { return p.trim().length > 0 }))
 
-      // --- 缓存命中 ---
+      // --- 当前新闻强制刷新（B-COMPLIANCE-1 R2）---
       console.log('\n【运行时】详情缓存（二次加载）')
       return engine.loadCurrentDetail().then(function (detailResult2) {
-        check('二次 loadCurrentDetail 命中缓存', detailResult2.fromCache === true)
+        // B-COMPLIANCE-1 R2：入口/当前新闻必须强制走 getNewsDetail，不能优先命中旧缓存，
+        // 否则 R1 拦截后的 contentSource / references 不会更新到页面
+        check('二次 loadCurrentDetail 强制走网络（不命中缓存）', detailResult2.fromCache === false)
+        // 网络返回后应把合规字段回写 mergedList
+        var cur = engine.getCurrent()
+        check('mergedList 当前条目携带 contentSource', typeof cur.contentSource === 'string')
+        check('mergedList 当前条目携带 references', Array.isArray(cur.references))
 
         // --- 分类列表缓存 ---
         console.log('\n【运行时】分类列表缓存')

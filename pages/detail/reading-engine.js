@@ -179,6 +179,10 @@ ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedC
       sourceUrl: item.sourceUrl || '',
       picUrl: item.picUrl || '',
       time: item.time || '',
+      // B-COMPLIANCE-1 FE-2: 首页透传列表也要带合规字段，
+      // 避免 mergedList 条目缺失 contentSource/references 导致详情页 UI 不渲染
+      contentSource: item.contentSource || '',
+      references: Array.isArray(item.references) ? item.references : [],
     }
     merged.push(entry)
     if (nid === that._entryNewsId) {
@@ -271,6 +275,9 @@ ReadingEngine.prototype._buildMergedList = function (results) {
         sourceUrl: item.sourceUrl || '',
         picUrl: item.picUrl || '',
         publishTime: item.publishTime || item.time,
+        // B-COMPLIANCE-1 R2：非首页入口路径（直接进详情/跨分类补拉）也要带合规字段
+        contentSource: item.contentSource || '',
+        references: Array.isArray(item.references) ? item.references : [],
       }
       merged.push(entry)
 
@@ -396,6 +403,9 @@ ReadingEngine.prototype.loadNextCategory = function () {
         sourceUrl: item.sourceUrl || '',
         picUrl: item.picUrl || '',
         publishTime: item.publishTime || item.time,
+        // B-COMPLIANCE-1 R2：跨分类补拉也要带合规字段
+        contentSource: item.contentSource || '',
+        references: Array.isArray(item.references) ? item.references : [],
       })
       added++
     }
@@ -468,35 +478,48 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   // 预取窗口 ±2
   that._prefetchWindow()
 
-  // B-06: 先尝试读缓存（DG-08：TTL 30min → 24h，新闻正文 24h 内几乎不变，提升回看命中率）
-  if (that._cache) {
-    try {
-      var cachedDetail = that._cache.get('newsDetail:' + cur.id)
-      if (cachedDetail) {
-        // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
-        var text = resolveContentText(cachedDetail)
-        var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-        that._onDetailReady(cachedDetail, paragraphs)
-        return Promise.resolve({ news: cachedDetail, paragraphs: paragraphs, fromCache: true })
-      }
-    } catch (e) { /* 缓存读取失败，继续网络请求 */ }
-  }
-
+  // B-COMPLIANCE-1 R2：当前新闻强制走 getNewsDetail，确保入口新闻拿到最新合规字段
+  // （旧 localCache 可能存的是 R1 部署前的全文数据，若先读缓存会导致前端 UI 不变化）
   return getNewsDetail(cur.id).then(function (detail) {
-    // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
-    var text = resolveContentText(detail)
-    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-    that._onDetailReady(detail, paragraphs)
+    // 规范化：保证 contentSource / references / sourceUrl 等字段一定有值
+    var normalized = normalizeDetail(detail)
 
-    // B-06: 写入缓存（DG-08：TTL 30min → 24h）
+    // 把网络返回的合规字段回写到 mergedList 当前条目，
+    // 后续翻页/返回/分享图都能拿到一致的 contentSource / references
+    if (normalized && that._mergedList[that._globalIndex]) {
+      that._mergedList[that._globalIndex].contentSource = normalized.contentSource
+      that._mergedList[that._globalIndex].references = normalized.references
+      that._mergedList[that._globalIndex].sourceUrl = normalized.sourceUrl || that._mergedList[that._globalIndex].sourceUrl
+    }
+
+    // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
+    var text = resolveContentText(normalized)
+    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
+    that._onDetailReady(normalized, paragraphs)
+
+    // B-06: 写入缓存（DG-08：TTL 30min → 24h），覆盖旧数据
     if (that._cache) {
       try {
-        that._cache.set('newsDetail:' + cur.id, detail, { ttl: 24 * 60 * 60 * 1000 })
+        that._cache.set('newsDetail:' + cur.id, normalized, { ttl: 24 * 60 * 60 * 1000 })
       } catch (e) { /* 缓存写入失败不阻塞 */ }
     }
 
-    return { news: detail, paragraphs: paragraphs, fromCache: false }
+    return { news: normalized, paragraphs: paragraphs, fromCache: false }
   }).catch(function () {
+    // 网络失败时，才回退读本地缓存（避免旧数据导致完全空白）
+    if (that._cache) {
+      try {
+        var cachedDetail = that._cache.get('newsDetail:' + cur.id)
+        if (cachedDetail) {
+          var cachedNormalized = normalizeDetail(cachedDetail)
+          var text = resolveContentText(cachedNormalized)
+          var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
+          that._onDetailReady(cachedNormalized, paragraphs)
+          return Promise.resolve({ news: cachedNormalized, paragraphs: paragraphs, fromCache: true })
+        }
+      } catch (e) { /* 缓存读取失败，继续兜底 */ }
+    }
+
     // 降级：用列表摘要
     // R5（PRD §八）：兜底对象补 contentSource，保证 AI 解读徽标正确显示
     var fallback = normalizeDetail({
