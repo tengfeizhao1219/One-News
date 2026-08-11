@@ -69,7 +69,7 @@
     "_id": "cctv_edu",
     "name": "央视网",
     "sourceName": "央视网",
-    "baseUrl": "http://www.cctv.com/program/rss/02/06/index.xml",
+    "baseUrl": "http://www.cctv.com/program/rss/02/05/index.xml",
     "category": "edu",
     "pollSeconds": 3600,
     "enabled": false,
