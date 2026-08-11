@@ -93,8 +93,8 @@
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
           <text wx:if="{{news.source}}">{{news.source}}</text>
-          <text wx:if="{{news.source && news.time}}">·</text>
-          <text>{{news.time}}</text>
+          <text wx:if="{{news.source && news.publishTime}}">·</text>
+          <text>{{news.publishTime}}</text>
           <!-- D-02 v0.2 §2.2：元信息行尾「查看原文」纯文字弱入口（废弃 v0.1 独立卡，不抢注意力） -->
           <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">· 查看原文</text>
         </view>
@@ -138,6 +138,12 @@
         </view>
 
         <!-- 底部返回已移除 -->
+      </view>
+
+      <!-- 底部应用来源归属（11:45 新增） -->
+      <view class="detail-app-source">
+        <view class="app-source-line"></view>
+        <text class="app-source-text">内容由 AI 整理生成 · 一页 One News</text>
       </view>
     </view>
   </scroll-view>

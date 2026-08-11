@@ -317,22 +317,22 @@
 
 /* ============ AI 解读标识（详情页正文顶部） ============ */
 /* 版权策略：AI 独立解读 ≠ 原文复述，需标识满足法规要求；
-   D-04 v0.2 修订：弱化为中性灰低饱和徽标，不抢正文注意力 */
+   原版（v1.0）蓝高饱和醒目徽标；owner 11:45 推翻 10:54 弱化，恢复醒目蓝 */
 .ai-interpretation-badge {
   display: flex;
   align-items: center;
   gap: 12rpx;
   margin-bottom: 28rpx;
   padding: 16rpx 24rpx;
-  background-color: var(--bg-subtle);
+  background-color: var(--primary-subtle);
   border-radius: 16rpx;
-  border-left: 6rpx solid var(--divider);
+  border-left: 6rpx solid var(--primary);
 }
 
 /* R1 合规降级标识：与 AI 解读徽标形态一致，仅左边框用极淡琥珀区分 */
 .ai-interpretation-badge.ai-badge--compliance {
-  background-color: var(--bg-subtle);
-  border-left-color: var(--color-warning-subtle);
+  background-color: var(--color-warning-subtle);
+  border-left-color: var(--color-warning);
 }
 
 .ai-interpretation-badge .ai-chip {
@@ -343,13 +343,13 @@
   font-weight: 500;
   line-height: 1.4;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  color: var(--text-secondary);
-  background-color: var(--tag-bg);
+  color: var(--chip-text);
+  background-color: var(--primary);
 }
 
 .ai-badge--compliance .ai-chip {
-  background-color: var(--color-warning-subtle);
-  color: var(--text-secondary);
+  background-color: var(--color-warning);
+  color: var(--chip-text);
 }
 
 .ai-interpretation-badge .ai-badge-desc {
@@ -362,13 +362,35 @@
    v0.2 废弃独立卡，压成 meta 行内一个文字入口：同字号/同灰弱色，不带图标，不抢正文注意力。
    个人主体 web-view 不可用，交互仍走「复制链接 + 引导外部浏览器打开」 */
 .meta-source-link {
-  color: var(--text-secondary);
+  color: var(--text-link);
   font-size: 24rpx;
+  font-weight: 500;
   margin-left: 8rpx;
 }
 
 .meta-source-link:active {
-  color: var(--text-primary);
+  color: var(--primary);
+}
+
+/* ============ 底部应用来源归属（11:45 新增） ============ */
+.detail-app-source {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 48rpx;
+  padding-top: 32rpx;
+  padding-bottom: 40rpx;
+}
+.app-source-line {
+  width: 64rpx;
+  height: 1rpx;
+  background-color: var(--divider);
+  margin-bottom: 20rpx;
+}
+.app-source-text {
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
 /* ============ inline-empty：paragraphs 为空时兜底（PRD §2.5） ============ */
