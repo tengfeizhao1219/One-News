@@ -95,7 +95,8 @@
           <text wx:if="{{news.source}}">{{news.source}}</text>
           <text wx:if="{{news.source && news.time}}">·</text>
           <text>{{news.time}}</text>
-          <!-- S7: owner 2026-08-02 决策，删除原文链接入口 -->
+          <!-- D-02 v0.2 §2.2：元信息行尾「查看原文」纯文字弱入口（废弃 v0.1 独立卡，不抢注意力） -->
+          <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">· 查看原文</text>
         </view>
 
         <!-- 正文 -->
@@ -118,13 +119,6 @@
           <view class="inline-empty" wx:if="{{paragraphs.length === 0 && news.contentSource}}">
             <text class="inline-empty-icon">·</text>
             <text class="inline-empty-text">内容暂不可用</text>
-          </view>
-          <!-- PRD §2.5 S5：档位一「只显摘要」落差治理 —— 摘要下方即刻提供原文回源入口 -->
-          <view class="source-origin-card {{!news.sourceUrl ? 'source-origin-card--no-url' : ''}}"
-                wx:if="{{news.contentSource === 'r1_blocked_fulltext' || news.contentSource === 'ai_interpretation'}}"
-                bindtap="onCopySourceUrl">
-            <text class="source-origin-label">查看原文</text>
-            <text class="source-origin-hint">复制链接到剪贴板，在浏览器中打开</text>
           </view>
           <!-- PRD §2.4 S1：references 参考来源折叠卡片 -->
           <view class="references-card" wx:if="{{news.references && news.references.length > 0}}">

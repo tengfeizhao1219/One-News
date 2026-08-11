@@ -357,35 +357,17 @@
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
-/* ============ 原文回源卡片（PRD §2.5 S5 / §2.2） ============
-   个人主体 web-view 不可用，采用「复制链接 + 引导外部浏览器打开」方案 */
-.source-origin-card {
-  margin-top: 32rpx;
-  padding: 24rpx 28rpx;
-  background-color: var(--bg-subtle);
-  border-radius: 16rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-}
-
-.source-origin-card--no-url {
-  opacity: 0.6;
-}
-
-.source-origin-label {
-  font-size: 26rpx;
-  font-weight: 600;
-  color: var(--text-link);
-}
-
-.source-origin-hint {
-  font-size: 22rpx;
+/* ============ 查看原文：元信息行尾纯文字弱入口（D-02 v0.2 §2.2） ============
+   v0.2 废弃独立卡，压成 meta 行内一个文字入口：同字号/同灰弱色，不带图标，不抢正文注意力。
+   个人主体 web-view 不可用，交互仍走「复制链接 + 引导外部浏览器打开」 */
+.meta-source-link {
   color: var(--text-secondary);
+  font-size: 24rpx;
+  margin-left: 8rpx;
 }
 
-.source-origin-card:active {
-  opacity: 0.7;
+.meta-source-link:active {
+  color: var(--text-primary);
 }
 
 /* ============ inline-empty：paragraphs 为空时兜底（PRD §2.5） ============ */
