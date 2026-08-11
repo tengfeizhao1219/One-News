@@ -1085,6 +1085,26 @@ Page({
     })
   },
 
+  // ============ 官方源「出处 ↗」回源（v1.0 §6.2，镜像 detail.onCopySourceUrl） ============
+  // 个人主体 web-view 不可用，采用「复制链接 + 引导外部浏览器打开」方案。
+  // 列表卡片整卡 bindtap=onCardTap 会跳详情，故 wxml 用 catchtap 阻止冒泡，点击此处只复制源站链接。
+  onCopySourceUrl(e) {
+    const url = e.currentTarget.dataset.url
+    if (!url) {
+      wx.showToast({ title: '该源暂不支持查看', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({
+      data: url,
+      success: () => {
+        wx.showToast({ title: '链接已复制，粘贴到浏览器中打开', icon: 'none', duration: 2500 })
+      },
+      fail: () => {
+        wx.showToast({ title: '复制失败，请稍后再试', icon: 'none' })
+      }
+    })
+  },
+
   // ============ 分享（RQ-2026-08-09 owner：首页支持发送给朋友 + 分享朋友圈） ============
 
   /**

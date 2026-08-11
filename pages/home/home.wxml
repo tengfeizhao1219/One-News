@@ -68,11 +68,14 @@
           <!-- 元信息（owner 直连：移至标题下方，与详情页布局一致） -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
-            <!-- 官方源（contentSource==='official_rss'）：克制「可溯源」中性小标（非角标、去饱和），
-                 来源名并入元信息行；语义上官方源≠AI，故不显示 AI 摘要芯片（评审 §五 3.4） -->
-            <text wx:if="{{item.contentSource === 'official_rss'}}" class="source-trace-pill">可溯源</text>
-            <text wx:if="{{item.metaSource}}">{{item.metaSource}}</text>
-            <text wx:if="{{item.metaSource && item.time}}">·</text>
+            <!-- 官方源（contentSource==='official_rss'）v1.0 §6.2：来源名 + ↗ 内联元信息行，
+                 整条可点跳源站 H5（个人主体无 web-view，复用 onCopySourceUrl 复制链接+引导浏览器）；
+                 语义统一「出处」，判定=official_rss 且 sourceUrl 非空才显示，否则按 AI 摘要常规标识 -->
+            <block wx:if="{{item.contentSource === 'official_rss'}}">
+              <text wx:if="{{item.sourceUrl}}" class="meta-source-link" catchtap="onCopySourceUrl" data-url="{{item.sourceUrl}}">{{item.metaSource}} ↗</text>
+            </block>
+            <text wx:elif="{{item.metaSource}}">{{item.metaSource}}</text>
+            <text wx:if="{{item.time && (item.contentSource === 'official_rss' ? item.sourceUrl : item.metaSource)}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
         <!-- 摘要 -->
