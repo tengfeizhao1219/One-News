@@ -338,8 +338,151 @@ module.exports = {
   extractContentFromHtml,
   parseJuheKey,
   summarizeWithZhipu,
+  interpretNews,    // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道，供降级源（聚合/天行）补 content 解读
   isInvalidDesc,    // FS-05 v2:导出供 index.js 写库逻辑复用
   isValidParagraph, // FS-05 v2:导出供 index.js 写库逻辑复用
+}
+
+/**
+ * B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读（非摘要）
+ * 目的：聚合/天行等"降级源"（无 AI 搜索、只抓到原文全文）的新闻，详情页被 R1 拦截后是空卡。
+ *       这里对抓到的原文 content 再做一次"AI 独立解读"，产出 200-500 字解读写回 content，
+ *       并标记 contentSource='ai_interpretation'，让 R1 放行、详情页出真解读（而非"卡片搬运"）。
+ * 与 summarizeWithZhipu 的区别：解读≠摘要 —— 不复述原文、需基于事实组织重写、可加背景/影响分析，
+ * 长度 200-500 字（摘要仅 100-150 字）。
+ * 成本：仅降级源（聚合/天行）才调用，AI 源（智谱搜索）已自带 ai_interpretation content，不重复。
+ * 失败兜底：返回 null → 调用方不写 content 的 ai_interpretation 标记 → 走 R1 拦截返回 summary。
+ * 引擎链：智谱 → Qwen → DeepSeek（外部 Key）→ 混元兜底（免费额度，最后才用）。
+ * @param {string} content - 抓到的原文全文（聚合/天行源）
+ * @param {string} title - 新闻标题
+ * @param {Array<{title,source,url}>} [references] - 可选信源 URL 列表，辅助解读可溯源
+ * @returns {Promise<string|null>} 200-500 字中文解读；失败/无配置返回 null
+ */
+function interpretNews(content, title, references) {
+  const hunyuanCfg = (config.hunyuan || {})
+  const engines = []
+  // 复用与摘要一致的引擎链：智谱 → Qwen → DeepSeek → 混元兜底
+  const zhipuCfg = (config.zhipuSummary || {})
+  if (zhipuCfg.apiKey) {
+    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
+  }
+  const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
+  if (dashKey) {
+    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: (config.qwen && config.qwen.timeout) || 8000 })
+  }
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
+  if (deepseekKey) {
+    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+  }
+  // 解读输入门槛：正文太短（< 50 字）不值得解读
+  if (!content || content.trim().length < 50) return Promise.resolve(null)
+  const input = content.slice(0, (config.zhipuSummary && config.zhipuSummary.maxInputChars) || 2000)
+
+  const INTERPRET_PROMPT =
+    '你是专业的新闻解读编辑。基于用户提供的新闻原文，撰写一篇独立的中文解读，而非复述原文。' +
+    '要求：解读应包含事件背景、关键事实、各方反应与影响分析；用自己的语言组织、可加客观观点；' +
+    '全文 200-500 字，分段用空行分隔，以句号自然收尾。禁止逐字复述或高度相似地改写原文段落；' +
+    '禁止出现"据报道""据悉""记者了解到"等套话；禁止编造原文中不存在的事实。'
+
+  // 混元兜底（云开发内置，免费额度；与摘要共用同一 createModel 通道）
+  function tryHunyuan() {
+    if (!hunyuanCfg.enabled) return Promise.resolve(null)
+    return new Promise((resolve) => {
+      let cloud
+      try {
+        cloud = require('wx-server-sdk')
+        if (!cloud || typeof cloud.init !== 'function' || typeof cloud.ai !== 'function') {
+          resolve(null); return
+        }
+        cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV, timeout: 60000 })
+      } catch (e) {
+        resolve(null); return
+      }
+      const userContent = `新闻标题：${title || ''}\n\n新闻原文：\n${input}`
+      const model = cloud.ai().createModel('cloudbase')
+      const timeoutMs = hunyuanCfg.timeout || 8000
+      const timer = setTimeout(() => { resolve(null) }, timeoutMs)
+      model.generateText({
+        model: hunyuanCfg.model || 'hy3',
+        messages: [
+          { role: 'system', content: INTERPRET_PROMPT },
+          { role: 'user', content: userContent },
+        ],
+      }).then((result) => {
+        clearTimeout(timer)
+        const txt = (result && result.text ? result.text : '').trim()
+        if (txt && txt.length >= 150) resolve(txt); else resolve(null)
+      }).catch(() => { clearTimeout(timer); resolve(null) })
+    })
+  }
+
+  if (engines.length === 0 && !hunyuanCfg.enabled) {
+    console.warn('[interpret] 未配置任何解读引擎，跳过 AI 独立解读')
+    return Promise.resolve(null)
+  }
+  if (engines.length === 0) return tryHunyuan()
+  return new Promise((resolve) => {
+    tryEngine(0).then((txt) => {
+      if (txt) { resolve(txt); return }
+      tryHunyuan().then(resolve)
+    })
+  })
+
+  function tryEngine(idx) {
+    return new Promise((resolve) => {
+      if (idx >= engines.length) { resolve(null); return }
+      const eng = engines[idx]
+      const body = JSON.stringify({
+        model: eng.model,
+        messages: [
+          { role: 'system', content: INTERPRET_PROMPT },
+          { role: 'user', content: `新闻标题：${title || ''}\n\n新闻原文：\n${input}` },
+        ],
+        max_tokens: 800,  // 200-500 字解读（中文 ~2 token/字）
+        temperature: 0.4, // 解读允许适度发挥，但保持一致事实基调
+      })
+      const doRequest = () => new Promise((r) => {
+        const https = require('https')
+        const url = new URL(eng.baseUrl)
+        const req = https.request({
+          hostname: url.hostname,
+          path: url.pathname + url.search,
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${eng.apiKey}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout: eng.timeout,
+        }, (res) => {
+          let data = ''
+          res.on('data', chunk => { data += chunk })
+          res.on('end', () => {
+            try {
+              const resp = JSON.parse(data)
+              const txt = resp.choices && resp.choices[0] && resp.choices[0].message
+                ? resp.choices[0].message.content.trim()
+                : null
+              r(txt)
+            } catch (e) { r(null) }
+          })
+        })
+        req.on('error', () => r(null))
+        req.on('timeout', () => { req.destroy(); r(null) })
+        req.write(body)
+        req.end()
+      })
+      ;(async () => {
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const txt = await doRequest()
+          if (txt && txt.length >= 150) { resolve(txt); return }
+          if (attempt < 1) await new Promise(res => setTimeout(res, 500))
+        }
+        console.warn(`[interpret] ${eng.name} 解读失败，尝试下一引擎`)
+        tryEngine(idx + 1).then(resolve)
+      })()
+    })
+  }
 }
 
 /**
@@ -581,6 +724,25 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         // 写库时由 batchInsert 写入 news_cache.references 字段，详情页 getNewsDetail 读出供前端展示。
         if (Array.isArray(item.references) && item.references.length > 0) {
           enriched.references = item.references
+        }
+        // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道
+        // 触发条件 = content 不是 AI 解读来源（enriched.contentSource !== 'ai_interpretation'），
+        // 即：AI 源（智谱搜索）content 自带 'ai_interpretation' → 跳过（已解读）；
+        //     降级源/原文（聚合/天行/抓取的全文 contentSource='fetched' 等）→ 对原文 interpretNews
+        //     产出独立解读，成功则覆盖 content + 标记 'ai_interpretation'，让详情页 R1 放行出真解读
+        //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
+        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
+          const interpretation = await Promise.race([
+            interpretNews(content, item.title, enriched.references),
+            new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
+          ])
+          if (interpretation && interpretation.length >= 150) {
+            enriched.content = interpretation
+            enriched.contentSource = 'ai_interpretation'
+            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.length}字）`)
+          } else {
+            console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)
+          }
         }
 
         // 2. 判断原始 summary 来源（description 或标题兜底）

@@ -694,6 +694,57 @@ async function main() {
     assert(!out[0].references, '无 references 输入时输出不应有 references 字段')
   })
 
+  // ── 5.6f B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道（降级源补解读）──
+  console.log('\n── 5.6f AI 独立解读通道（B-COMPLIANCE-1 A，降级源补解读） ──')
+  await test('A·原文源（非 AI 解读）→ interpret 成功 → contentSource=ai_interpretation', async () => {
+    // mock 智谱返回 ≥150 字解读（interpret 与摘要共用同一 https 通道；文本需明确 >150 字）
+    const interpretation = '这是一段超过一百五十字的AI独立新闻解读。该事件反映出行业在当前阶段面临的结构性挑战，相关部门持续关注并推动规范化发展与制度建设。从产业链看，上游供给、中游制造与下游应用正在加速协同，市场各方对此反应整体积极，分析人士认为这有助于行业长期健康运行并修复此前积累的结构性矛盾。未来须在监管完善、企业自律与用户权益保护之间寻求动态平衡，只有多方协同才能实现可持续增长与多方共赢的良性循环。这既是行业走向成熟的必经阶段，也是各方共同面对的长期课题与责任所在。'
+    mockHttps.setResponder((req) => {
+      return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: interpretation } }] }) }
+    })
+    // 原文源（content 是抓到的原文全文，未标 ai_interpretation）→ 应触发 interpret 产出解读并标记
+    const rawContent = '这是聚合源抓到的新闻原文第一段。' + Array(30).fill('这是原文的第二段正文，包含若干关键事实信息，用于测试AI独立解读通道能否正确触发并产出解读。').join('')
+    const out = await cf.enrichNewsList(
+      [{ id: 'a-int-1', title: '解读通道测试标题足够长以避免误判', content: rawContent, source: '测试源' }],
+      1, true, true, // skipFetch=true（已带原文 content），skipAiSummary=true（跳过摘要，只测解读）
+      0
+    )
+    assertEqual(out.length, 1, '应有 1 条结果')
+    assertEqual(out[0].contentSource, 'ai_interpretation', '原文产出解读后应标记 ai_interpretation')
+    assert(out[0].content && out[0].content.length >= 150, 'content 应是被替换的 AI 解读')
+  })
+
+  await test('A·AI 源（contentSource=ai_interpretation）已自带解读 → 不重复跑 interpret', async () => {
+    // AI 源 item 自带 ai_interpretation content，即使 mock 能返解读也不应被触发（不重复烧 LLM）
+    const item = {
+      id: 'a-int-2',
+      title: 'AI源解读标记测试标题足够长',
+      content: '智谱AI搜索自带的中文AI解读正文。'.repeat(10), // ~150字
+      contentSource: 'ai_interpretation',
+      references: ['https://example.com/news/3'],
+    }
+    const out = await cf.enrichNewsList([item], 1, true, true)
+    assertEqual(out.length, 1)
+    assertEqual(out[0].contentSource, 'ai_interpretation', 'AI 源应保持 ai_interpretation 标记')
+    // contentSource='ai_interpretation' 时 interpret 不触发 → content 不被替换为 mock 数据
+    assert(out[0].content.includes('智谱AI搜索自带'), 'AI 源解读 content 不应被覆盖')
+  })
+
+  await test('A·原文源 interpret 返回过短 → contentSource 保持 fetched，走 R1 兜底', async () => {
+    // mock 返回过短文本 → interpret 失败 → content 不替换，contentSource 保持 fetched
+    mockHttps.setResponder((req) => {
+      return { statusCode: 200, body: JSON.stringify({ choices: [{ message: { content: '太短了' } }] }) }
+    })
+    const rawContent = '这是聚合源抓到的原文。' + Array(30).fill('正文补充，确保超过50字以触发interpret判定。').join('')
+    const out = await cf.enrichNewsList(
+      [{ id: 'a-int-3', title: '解读失败兜底测试标题足够长', content: rawContent, source: '测试源' }],
+      1, true, true, 0
+    )
+    assertEqual(out.length, 1)
+    assertEqual(out[0].contentSource, 'fetched', 'interpret 失败应保持 fetched（由 R1 拦截返回 summary）')
+    assert(out[0].content.includes('聚合源抓到的原文'), 'interpret 失败时不应替换 content')
+  })
+
   // ── 6. zhipuSearch：降级链（B-12） ──
   console.log('\n── 6. zhipuSearch 降级链（B-12） ──')
   const zhipuSearch = require(REFRESH_DIR + '/zhipuSearch')
