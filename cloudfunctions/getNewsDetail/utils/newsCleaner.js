@@ -135,6 +135,14 @@ function removeNoiseLines(text) {
     /^[-=*_#]{5,}$/,
     /^[·•●○◎◇◆□■△▲※]{3,}$/,
 
+    // ── 推荐项 CTA / 跳转（推荐新闻条目内常见）──
+    /点击(查看|进入|阅读|详情|全文)/i,
+    /查看(原文|全文|详情|更多)/i,
+    /阅读原文/i,
+    />>\s*(全文|详情|阅读|更多)/i,
+    /海量(资讯|视频|图文)/i,
+    /^(更多|查看)(资讯|视频|新闻|报道)/i,
+
     // ── 评论引导 ──
     /^(评论|留言)[\s\S]{0,20}(评论|留言|说两句)/i,
     /^以上(为|是|内容)/i,
@@ -292,6 +300,74 @@ function removeRedundantParagraphs(text, options = {}) {
  * @param {boolean} [options.preserveParagraphs=true]  是否保留段落结构
  * @param {string} [options.title]  新闻标题（用于去除标题重复段落）
  * @param {string} [options.source]  新闻来源（用于去除来源元信息）
+/**
+ * 删除"推荐/相关新闻"块（标题+简介列表型脏数据）
+ * ============================================================
+ * 场景（owner 2026-08-11 反馈）：聚合/第三方接口返回的正文里，主体新闻
+ * 结束后常跟一堆"其他新闻的标题 + 一句简介"，这些不属于当前新闻。
+ * 两种形态：
+ *   ① 带弱标签：热点 / 最新 / 大家都在看 / 看了还看 / 小编推荐 / 热榜 ...
+ *   ② 无标签：连续多组"短标题段 + 简介段"堆砌（juhe 内容接口常见）
+ * 推荐块一定在文末，故检测到起点即截断其后全部内容。
+ */
+function stripRelatedNewsBlocks(text) {
+  if (!text) return ''
+  const lines = text.split('\n')
+  const n = lines.length
+  if (n < 4) return text
+
+  // 主体正文是否已出现（抑制把短文开头误判为推荐块）
+  const hasBody = (idx) => lines.slice(0, idx).some(l => {
+    const t = l.trim()
+    return t.length > 60 && /[。！？]/.test(t)
+  })
+
+  // 弱标签集合（比 removeTrailingNoise 更宽，覆盖无"阅读"二字的推荐标题）
+  const weakHeaders = /^(热点|最新|专题|大家都在看|看了还看|小编推荐|热门|头条|快讯|更多新闻|相关|精选|猜你|推荐|热榜|排行|聚焦|话题|爆料|热议|关注|看点|延展|深度|解读|一图|秒读|三分钟读|划重点)/i
+
+  // 标题-like：短、无标点，像新闻标题
+  const isHeadlineLike = (s) => {
+    const t = s.trim()
+    if (t.length < 6 || t.length > 42) return false
+    if (/[。；：:，！？!?]/.test(t)) return false
+    return true
+  }
+  // 简介-like：中等长度、含句号，像一句话简介
+  const isSummaryLike = (s) => {
+    const t = s.trim()
+    if (t.length < 12 || t.length > 90) return false
+    if (!/[。！？.!?]/.test(t)) return false
+    return true
+  }
+
+  let cut = -1
+  for (let i = 0; i < n; i++) {
+    const cur = lines[i].trim()
+    if (!cur) continue
+    // ① 弱标签命中 → 截断点
+    if (weakHeaders.test(cur)) { cut = i; break }
+    // ② 结构型：仅在主体正文已出现后，检测连续 (标题+简介) 组 / 标题段
+    if (!hasBody(i)) continue
+    let pairs = 0, titles = 0
+    for (let j = i; j < Math.min(i + 14, n); j++) {
+      const a = lines[j].trim()
+      if (!a) continue
+      if (isHeadlineLike(a)) {
+        titles++
+        const b = (j + 1 < n) ? lines[j + 1].trim() : ''
+        if (b && isSummaryLike(b)) pairs++
+      }
+    }
+    if (pairs >= 3 || titles >= 4) { cut = i; break }
+  }
+
+  if (cut < 0) return text
+  const kept = lines.slice(0, cut)
+  while (kept.length && !kept[kept.length - 1].trim()) kept.pop()
+  return kept.join('\n')
+}
+
+/**
  * @returns {string}  清洗后的纯文本正文
  */
 function cleanNewsContent(rawContent, options = {}) {
@@ -316,6 +392,10 @@ function cleanNewsContent(rawContent, options = {}) {
 
   // 第 5 层：尾部噪音删除
   text = removeTrailingNoise(text)
+
+  // 第 5.1 层（2026-08-11 owner 反馈）：删除"推荐/相关新闻"标题+简介块
+  // 处理 juhe 等内容接口在文末堆砌的其他新闻（无"推荐阅读"标签的结构型脏数据）
+  text = stripRelatedNewsBlocks(text)
 
   // 第 5.2 层（v5.10 新增）：行内括号包裹元信息清理
   // 处理 "正文内容（责任编辑：王五）" 这类嵌在段落中的噪音
@@ -454,5 +534,6 @@ module.exports = {
   removeNoiseLines,
   removeRedundantParagraphs,
   removeInlineBracketedMeta,
+  stripRelatedNewsBlocks,
   cleanTitle,
 }
