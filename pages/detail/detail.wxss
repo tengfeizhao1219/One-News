@@ -308,11 +308,13 @@
 .text-p {
   font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
-  /* UI-B11: 正文行高 2.0、段间距 36rpx，与 demo 一致 */
-  line-height: calc(2.0 * var(--font-scale));
+  /* UI-B11: 正文行高 1.9、段间距 36rpx、两端对齐，长解读更透气易读 */
+  line-height: calc(1.9 * var(--font-scale));
   margin-bottom: 36rpx;
   letter-spacing: 1rpx;
   text-indent: 2em;
+  text-align: justify;
+  text-justify: inter-ideograph;
 }
 
 /* ============ AI 解读标识（详情页正文顶部） ============ */

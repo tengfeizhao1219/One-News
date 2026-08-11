@@ -356,7 +356,7 @@ module.exports = {
  * @param {string} content - 抓到的原文全文（聚合/天行源）
  * @param {string} title - 新闻标题
  * @param {Array<{title,source,url}>} [references] - 可选信源 URL 列表，辅助解读可溯源
- * @returns {Promise<string|null>} 200-500 字中文解读；失败/无配置返回 null
+ * @returns {Promise<string|null>} 200-600 字中文解读（随原文长度伸缩，上限约 600）；失败/无配置返回 null
  */
 function interpretNews(content, title, references) {
   const hunyuanCfg = (config.hunyuan || {})
@@ -378,11 +378,25 @@ function interpretNews(content, title, references) {
   if (!content || content.trim().length < 50) return Promise.resolve(null)
   const input = content.slice(0, (config.zhipuSummary && config.zhipuSummary.maxInputChars) || 2000)
 
+  // 解读长度随原文长度伸缩，上限约 600 字
+  const srcLen = (content || '').trim().length
+  let tMin, tMax
+  if (srcLen < 300) { tMin = 180; tMax = 280 }
+  else if (srcLen < 800) { tMin = 300; tMax = 430 }
+  else if (srcLen < 1600) { tMin = 450; tMax = 580 }
+  else { tMin = 520; tMax = 600 }
+  const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
+
   const INTERPRET_PROMPT =
-    '你是专业的新闻解读编辑。基于用户提供的新闻原文，撰写一篇独立的中文解读，而非复述原文。' +
-    '要求：解读应包含事件背景、关键事实、各方反应与影响分析；用自己的语言组织、可加客观观点；' +
-    '全文 200-500 字，分段用空行分隔，以句号自然收尾。禁止逐字复述或高度相似地改写原文段落；' +
-    '禁止出现"据报道""据悉""记者了解到"等套话；禁止编造原文中不存在的事实。'
+    '你是「一页」的新闻解读人，不是复读机。基于用户给的新闻原文，写一篇有观点、读着不累的独立解读。\n' +
+    '写法：\n' +
+    '1. 开场用一句话点出"这事和读者有什么关系"，别端着；\n' +
+    '2. 中间讲清来龙去脉与关键事实，挑读者最该知道的讲，不注水、不堆砌；\n' +
+    '3. 可有克制的个人视角或轻类比，但绝不编造原文没有的事实；\n' +
+    '4. 结尾来一句让人记得住的话（金句/反差/小提醒均可）；\n' +
+    '5. 分段用空行分隔，段间自然过渡；\n' +
+    '6. 禁止"据报道""据悉""记者从…获悉"等套话，禁止逐字复述或高度相似改写原文。\n' +
+    `原文约 ${srcLen} 字，你的解读控制在 ${tMin}-${tMax} 字（随原文长度增减，最多不超过 600 字），以句号自然收尾。`
 
   // 混元兜底（云开发内置，免费额度；与摘要共用同一 createModel 通道）
   function tryHunyuan() {
@@ -438,8 +452,8 @@ function interpretNews(content, title, references) {
           { role: 'system', content: INTERPRET_PROMPT },
           { role: 'user', content: `新闻标题：${title || ''}\n\n新闻原文：\n${input}` },
         ],
-        max_tokens: 800,  // 200-500 字解读（中文 ~2 token/字）
-        temperature: 0.4, // 解读允许适度发挥，但保持一致事实基调
+        max_tokens: maxTokens,  // 解读长度随原文伸缩，上限约 600 字（中文 ~2.3 token/字）
+        temperature: 0.7, // 解读需有观点、可读性强，适度放开创造性
       })
       const doRequest = () => new Promise((r) => {
         const https = require('https')
