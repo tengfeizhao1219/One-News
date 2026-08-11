@@ -50,7 +50,7 @@ function parse(xmlText) {
   if (doc.rss) {
     const channel = doc.rss.channel
     if (!channel) return out
-    out.channelTitle = channel.title ? channel.title.trim() : null
+    out.channelTitle = cleanStr(channel.title) || null
     const rawItems = toArray(channel.item)
     out.items = rawItems
       .map((it) => ({
