@@ -442,16 +442,19 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     // 降级：用列表摘要
     var text = cur.summary || ''
     var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
+    // R5（PRD §八）：兜底对象补 contentSource，保证 AI 解读徽标正确显示
     var fallback = {
       id: cur.id,
       _id: cur.id,
       title: cur.title,
       summary: cur.summary,
       content: cur.summary,
+      contentSource: 'ai_interpretation', // 降级摘要视为 AI 解读兜底，徽标不错位
       category: cur.category,
       categoryName: cur.categoryName,
       source: cur.source,
       sourceUrl: cur.sourceUrl,
+      references: cur.references || [],
       picUrl: cur.picUrl,
       publishTime: cur.publishTime,
     }

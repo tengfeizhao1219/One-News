@@ -70,6 +70,8 @@ Page({
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
     statusPillShow: false,
     statusPillText: '',
+    // PRD §2.4 S1：references 参考来源折叠状态
+    referencesExpanded: false,
   },
 
   // 引擎实例
@@ -791,6 +793,7 @@ Page({
     var cat = (news && news.category) || this.data.category || 'recommend'  // DG-03: 默认 all → recommend
     var isDark = this._isSystemDark()
     var title = (news && news.title) || ''
+    // R6（PRD §八）：分享图只取 AI 解读/摘要，不取被 R1 拦截的全文（防分享图泄露原文）
     var summary = (news && news.summary) || ''
 
     // BUG-002 追修: 延迟缩短至 150ms（Canvas 组件在 wxml 已渲染，仅需 attach 时间）
@@ -897,6 +900,65 @@ Page({
              '&category=' + encodeURIComponent(this.data.category || 'recommend'),
       imageUrl: this._placeholderCache || undefined,
     }
+  },
+
+  // ============ 合规回源 & references 来源卡片（PRD §2.2/§2.4/§2.5） ============
+
+  /**
+   * PRD §2.2 / §2.5：点击「查看原文」卡片 → 复制 sourceUrl 到剪贴板
+   * 个人主体 web-view 不可用，采用「复制链接 + 引导外部浏览器打开」方案（S4）
+   */
+  onCopySourceUrl: function () {
+    var news = this.data.news || {}
+    var url = news.sourceUrl || (news.references && news.references.length > 0 && news.references[0].url)
+    if (!url) {
+      wx.showToast({ title: '该源暂不支持查看', icon: 'none' })
+      return
+    }
+    wx.setClipboardData({
+      data: url,
+      success: function () {
+        wx.showToast({ title: '链接已复制，粘贴到浏览器中打开', icon: 'none', duration: 2500 })
+      },
+      fail: function () {
+        // S4 兜底：复制失败 → modal 告诉用户手动复制
+        wx.showModal({
+          title: '复制失败',
+          content: '请手动复制以下链接：\n' + url,
+          showCancel: false,
+        })
+      },
+    })
+  },
+
+  /**
+   * PRD §2.4 S1：展开/收起 references 参考来源卡片
+   */
+  onToggleReferences: function () {
+    var expanded = !this.data.referencesExpanded
+    this.setData({ referencesExpanded: expanded })
+  },
+
+  /**
+   * PRD §2.4 S1：点击单个 references 来源 → 复制链接到剪贴板
+   */
+  onCopyRefUrl: function (e) {
+    var url = e.currentTarget.dataset.url
+    var title = e.currentTarget.dataset.title || '参考来源'
+    if (!url) return
+    wx.setClipboardData({
+      data: url,
+      success: function () {
+        wx.showToast({ title: title + ' 链接已复制', icon: 'none' })
+      },
+      fail: function () {
+        wx.showModal({
+          title: '复制失败',
+          content: '请手动复制以下链接：\n' + url,
+          showCancel: false,
+        })
+      },
+    })
   },
 
   /**

@@ -328,6 +328,12 @@
   border-left: 6rpx solid var(--primary);
 }
 
+/* R1 合规降级标识：用警示色调与 AI 解读徽标区分 */
+.ai-interpretation-badge.ai-badge--compliance {
+  background-color: var(--color-warning-subtle);
+  border-left-color: var(--color-warning);
+}
+
 .ai-interpretation-badge .ai-chip {
   display: inline-block;
   padding: 4rpx 16rpx;
@@ -340,10 +346,104 @@
   background-color: var(--primary);
 }
 
+.ai-badge--compliance .ai-chip {
+  background-color: var(--color-warning);
+  color: var(--chip-text);
+}
+
 .ai-interpretation-badge .ai-badge-desc {
   font-size: 22rpx;
   color: var(--text-secondary);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+/* ============ 原文回源卡片（PRD §2.5 S5 / §2.2） ============
+   个人主体 web-view 不可用，采用「复制链接 + 引导外部浏览器打开」方案 */
+.source-origin-card {
+  margin-top: 32rpx;
+  padding: 24rpx 28rpx;
+  background-color: var(--bg-subtle);
+  border-radius: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.source-origin-card--no-url {
+  opacity: 0.6;
+}
+
+.source-origin-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-link);
+}
+
+.source-origin-hint {
+  font-size: 22rpx;
+  color: var(--text-secondary);
+}
+
+.source-origin-card:active {
+  opacity: 0.7;
+}
+
+/* ============ references 参考来源卡片（PRD §2.4 S1） ============ */
+.references-card {
+  margin-top: 32rpx;
+  border-radius: 16rpx;
+  background-color: var(--bg-subtle);
+  overflow: hidden;
+}
+
+.references-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 28rpx;
+}
+
+.references-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.references-toggle {
+  font-size: 22rpx;
+  color: var(--text-link);
+}
+
+.references-list {
+  padding: 0 28rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.reference-item {
+  padding: 16rpx 20rpx;
+  background-color: var(--bg-card);
+  border-radius: 12rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.reference-item:active {
+  opacity: 0.7;
+}
+
+.reference-title {
+  font-size: 24rpx;
+  color: var(--text-body);
+  line-height: 1.4;
+}
+
+.reference-url {
+  font-size: 20rpx;
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
 /*  back-bottom 已移除 */
