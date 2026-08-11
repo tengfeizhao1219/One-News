@@ -1,0 +1,10 @@
+{
+  "name": "rssFetcher",
+  "version": "1.0.0",
+  "description": "官方 RSS 源直连抓取 v1.0 (#35 FS) — 单小时 trigger 编排器 + 每源 pollSeconds 频率，栏目白名单过滤 + urlFp/titleFp 双去重 + errorStreak 状态机告警。版权红线：只存 title/url/summary 不存正文。",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest",
+    "fast-xml-parser": "^4.4.0"
+  }
+}

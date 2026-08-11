@@ -65,10 +65,12 @@ function applyR1Filter(doc, originalContentSource) {
     // fetch_full 模式：不拦截，回滚旧行为（合规审查期/紧急回滚使用）
     return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
   }
-  // ai_first 模式（默认）：除 'ai_interpretation' 外的所有全文本一律清空
-  // 'ai_interpretation' 标记 = refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
-  // —— 才是 ai_first 模式下允许展示的"AI 解读"内容。
-  if (originalContentSource === 'ai_interpretation') {
+  // ai_first 模式（默认）：仅放行以下 contentSource，其余全文本一律清空
+  // - 'ai_interpretation'：refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
+  // - 'official_rss'：官方 RSS 源直连，版权红线只存 summary 不存正文（v1.1 #35）
+  //   content 为 summary 兜底值，非侵权全文，前端展示「出处↗」跳转源站 H5
+  const allowedSources = ['ai_interpretation', 'official_rss']
+  if (allowedSources.includes(originalContentSource)) {
     return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
   }
   return {
@@ -278,6 +280,17 @@ async function findNewsDoc(newsId) {
     }
   } catch (e) {
     // 忽略：可能不是合法 _id
+  }
+
+  // 4. news_raw_official 集合（官方 RSS 源直连，v1.1 #35）
+  // id 格式 official_<urlFp>，前端传参主键即 _id
+  try {
+    const res = await db.collection('news_raw_official').doc(newsId).get()
+    if (res.data && res.data._id) {
+      return { doc: res.data, collection: 'news_raw_official' }
+    }
+  } catch (e) {
+    // 忽略：可能不是合法 _id 或集合未创建
   }
 
   return null
@@ -541,6 +554,29 @@ exports.main = async (event) => {
   // 兜底清洗标题（防御数据库中历史脏数据含 HTML 实体）
   doc.title = cleanTitle(doc.title || '')
   console.log(`[getNewsDetail] 命中集合: ${collection}, id=${doc._id}`)
+
+  // ── 官方 RSS 源直连短路（v1.1 #35）──
+  // 版权红线：news_raw_official 只存 summary 不存正文全文，不抓取源站 HTML。
+  // 直接返回 summary + sourceUrl/sourceName/category，前端展示「出处↗」跳转源站 H5。
+  if (collection === 'news_raw_official') {
+    bumpViewCount(collection, doc._id)
+    return {
+      code: 0,
+      data: {
+        ...doc,
+        content: doc.summary || doc.content || '',       // official_rss 无正文，兜底 summary
+        contentSource: 'official_rss',
+        sourceUrl: doc.url,
+        sourceName: doc.sourceName,
+        category: doc.category,
+      },
+      meta: {
+        source: collection,
+        contentSource: 'official_rss',
+        engine: 'rss',
+      },
+    }
+  }
 
   // ── 第 2 步：如果已有足够长的 content，直接返回 ──
   // DG-03（owner 16:24 诉求「尽量返回原文」）：阈值 30 → 200 字——
