@@ -697,6 +697,11 @@ Page({
       displaySummary = item.title || ''
     }
 
+    // 官方 RSS 源（contentSource==='official_rss'）：来源名取 sourceName（落库字段），
+    // 与普通源 item.source 区分；元信息行直接并入，不另起角标（PD+PE 评审 §五 3.1）。
+    var isOfficialSource = item.contentSource === 'official_rss'
+    var metaSource = isOfficialSource ? (item.sourceName || item.source || '') : (item.source || '')
+
     return {
       ...item,
       summary: displaySummary,
@@ -706,6 +711,8 @@ Page({
         : [],
       isAiSummary: summarySource === 'ai',
       summarySource: summarySource,
+      isOfficialSource: isOfficialSource,
+      metaSource: metaSource,
       state: position === 0 ? 'active' : (position < 0 ? 'above' : 'below'),
       animClass: animClass || ''
     }

@@ -68,8 +68,11 @@
           <!-- 元信息（owner 直连：移至标题下方，与详情页布局一致） -->
           <view class="card-meta">
             <view class="category-tag">{{item.categoryName}}</view>
-            <text wx:if="{{item.source}}">{{item.source}}</text>
-            <text wx:if="{{item.source && item.time}}">·</text>
+            <!-- 官方源（contentSource==='official_rss'）：克制「可溯源」中性小标（非角标、去饱和），
+                 来源名并入元信息行；语义上官方源≠AI，故不显示 AI 摘要芯片（评审 §五 3.4） -->
+            <text wx:if="{{item.contentSource === 'official_rss'}}" class="source-trace-pill">可溯源</text>
+            <text wx:if="{{item.metaSource}}">{{item.metaSource}}</text>
+            <text wx:if="{{item.metaSource && item.time}}">·</text>
             <text wx:if="{{item.time}}">{{item.time}}</text>
           </view>
         <!-- 摘要 -->
@@ -80,7 +83,7 @@
                ai=AI摘要(蓝) / desc=来源摘要(灰) / content=正文摘要(灰) / title=标题摘要(灰弱) -->
           <block wx:for="{{item.summaryParagraphs}}" wx:for-item="para" wx:key="*this" wx:for-index="pIdx">
             <view class="summary-p">
-              <text wx:if="{{pIdx === 0 && item.summarySource === 'ai'}}" class="ai-chip">AI 摘要</text>
+              <text wx:if="{{pIdx === 0 && item.summarySource === 'ai' && item.contentSource !== 'official_rss'}}" class="ai-chip">AI 摘要</text>
               <text wx:elif="{{pIdx === 0 && item.summarySource === 'desc'}}" class="src-chip">来源摘要</text>
               <text wx:elif="{{pIdx === 0 && item.summarySource === 'content'}}" class="src-chip">正文摘要</text>
               <text wx:elif="{{pIdx === 0 && item.summarySource === 'title'}}" class="src-chip src-chip--weak">标题摘要</text>{{para}}
