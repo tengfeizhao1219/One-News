@@ -6,6 +6,31 @@ const { CATEGORIES } = require('./utils/constants')
  */
 const META_SCALE_CAP = 1.15
 
+// ===== 云环境隔离（方案 A · 2026-08-11 FS 实施）=====
+// 微信云开发「部署即生效」：前端若写死生产 env，开发期上传云函数会直冲生产库，
+// 导致未发布的新后端逻辑立即影响投产 APP。这里按小程序运行身份路由环境：
+//   release = 生产版  → 生产环境（投产 APP 安全）
+//   develop/trial    → 开发/体验版 → 预览环境（开发/测试不污染生产库）
+// 预览环境需在云开发控制台新建（如 cloud1-preview），并把下方 CLOUD_ENV_PREVIEW
+// 替换为真实 env id；新建后记得把集合结构（news_cache / news 等）同步到预览环境，
+// 否则预览链路会报「集合不存在」。云函数端无需改动——DYNAMIC_CURRENT_ENV 会自动
+// 使用其部署所在环境，只要预览环境的云函数单独部署即可。
+const CLOUD_ENV_PROD = 'cloud1-1g9313w0bb791de0'
+const CLOUD_ENV_PREVIEW = 'cloud1-preview-REPLACE_ME' // TODO(FS): 替换为真实预览环境 env id
+
+// 解析当前应使用的云环境 id（非生产版默认走预览；预览未配置时回退生产，避免初始化失败）
+function resolveCloudEnv() {
+  try {
+    var info = wx.getAccountInfoSync()
+    var ver = info.miniProgram && info.miniProgram.envVersion // 'develop' | 'trial' | 'release'
+    if (ver && ver !== 'release') {
+      var previewReady = CLOUD_ENV_PREVIEW && CLOUD_ENV_PREVIEW.indexOf('REPLACE_ME') === -1
+      return previewReady ? CLOUD_ENV_PREVIEW : CLOUD_ENV_PROD
+    }
+  } catch (e) { /* 低版本无 API，回退生产 */ }
+  return CLOUD_ENV_PROD
+}
+
 App({
   globalData: {
     currentCategory: 'all',
@@ -28,10 +53,10 @@ App({
       this.globalData.categoryNames[c.id] = c.name
     })
 
-    // 初始化云开发
+    // 初始化云开发（环境隔离：非生产版走预览环境，开发/测试不污染生产库）
     if (wx.cloud) {
       wx.cloud.init({
-        env: 'cloud1-1g9313w0bb791de0',
+        env: resolveCloudEnv(),
         traceUser: false
       })
     }
