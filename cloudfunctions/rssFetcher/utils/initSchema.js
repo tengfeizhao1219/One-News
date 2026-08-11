@@ -85,12 +85,16 @@ async function ensureFeedMeta() {
 
 /**
  * 一键初始化全部 schema（幂等，可多次调用）。
+ * 含 news_raw_official + feed_meta + news_ingest（瞬时 staging 共享底座）。
  */
 function ensureSchema() {
   if (!_ensurePromise) {
+    // 延迟 require，避免 initSchema 与 newsIngestStore 在启动期互相污染（newsIngestStore 不引用本模块）
+    const { ensureNewsIngest } = require('./newsIngestStore')
     _ensurePromise = (async () => {
       await ensureNewsRawOfficial()
       await ensureFeedMeta()
+      await ensureNewsIngest()
     })()
   }
   return _ensurePromise
