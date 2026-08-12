@@ -368,17 +368,19 @@ function interpretNews(content, title, references, signals) {
   const hunyuanCfg = (config.hunyuan || {})
   const engines = []
   // 复用与摘要一致的引擎链：智谱 → Qwen → DeepSeek → 混元兜底
+  // 2026-08-12 修订：解读超时从 8s 提到 12s——解读 prompt 要求 200-600 字独立成文，
+  // 8s 太短（三引擎全挂日志密集的根因之一），12s 与 ITEM_TIMEOUT_MS 对齐。
   const zhipuCfg = (config.zhipuSummary || {})
   if (zhipuCfg.apiKey) {
-    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
+    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 12000 })
   }
   const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
   if (dashKey) {
-    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: (config.qwen && config.qwen.timeout) || 8000 })
+    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 12000 })
   }
   const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
   if (deepseekKey) {
-    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 12000 })
   }
   // 解读输入门槛：正文太短（< 50 字）不值得解读
   if (!content || content.trim().length < 50) return Promise.resolve(null)
@@ -401,7 +403,10 @@ function interpretNews(content, title, references, signals) {
   tMax = plan.tMax
   const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
   // 合格门槛随读法浮动：速览只要 120-180 字，固定 150 会误杀合格速览
-  const minAccept = Math.max(100, Math.round(tMin * 0.7))
+  // 2026-08-12 修订：门槛从 max(100, tMin*0.7) 下调为 max(70, tMin*0.6)——
+  // 实测解读失败率高（三引擎全挂日志密集），一个重要原因是 minAccept 偏高
+  // + 8s 超时太短，模型输出 70-90 字的合格速览也被判失败 → 详情页只剩摘要。
+  const minAccept = Math.max(70, Math.round(tMin * 0.6))
 
   const INTERPRET_PROMPT = plan.prompt
 

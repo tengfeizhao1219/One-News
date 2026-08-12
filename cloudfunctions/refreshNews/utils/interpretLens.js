@@ -56,17 +56,19 @@ const UNSETTLED_SIGNALS = [
 // lengthFactor: 字数系数（速览天然该短，省 token 也省成本）
 // ─────────────────────────────────────────────────────────
 const LENSES = {
-  // 速览：只讲清楚发生了什么，绝不评判。用于低价值/软新闻/敏感题材
+  // 速览：最简讲清"发生了什么 + 为什么值得知道"，不评判。用于低价值/软新闻/敏感题材
+  // 2026-08-12 修订：补"为什么值得知道"——即使速览也不能等于摘要复述，要有一句解读增量
   brief: {
     id: 'brief',
     name: '速览',
     allowOpinion: false,
     lengthFactor: 0.6,
-    persona: '你是「一页」的新闻速览员，任务是让读者 30 秒内知道发生了什么。',
+    persona: '你是「一页」的新闻速览员，任务是让读者 30 秒内知道发生了什么、为什么值得知道。',
     body: [
       '第一句直接给最核心的事实（谁、做了什么、结果如何），不要铺垫；',
       '随后补必要的时间、地点、数字等关键信息，只留读者真正需要的；',
-      '语言干净、短句为主，不抒情、不评判、不做延伸推测。',
+      '用一两句点出这件事为什么值得知道（对谁有影响/意味着什么），但保持克制，不做延伸推测；',
+      '语言干净、短句为主，不抒情、不评判。',
     ],
     openings: [
       '开头用一句陈述句把最关键的结论摆出来。',
@@ -181,11 +183,17 @@ const LENSES = {
 
 // ─────────────────────────────────────────────────────────
 // 三、门禁阈值
+// 2026-08-12 修订（owner 反馈"解读≈摘要"）：读法路由改以 qualityScore（内容质量）为主信号，
+// 不再用 finalScore——finalScore = 0.6·Quality + 0.4·Heat，热度分对单条新闻极低，
+// 导致三方源 finalScore 全在 23-31、官方源 41-47，全部 < 50 门槛 → 全员落「速览」，
+// 而速览 prompt = "30秒知道发生了什么" → 产出天然像摘要。
+// 改用 qualityScore（质量门已保证 ≥40 才入库，官方源 58-67）后，高质量新闻能正确落到
+// 深一度/冷思考（真解读：讲背景、影响、为什么重要），低质仍速览。
 // ─────────────────────────────────────────────────────────
 const ROUTE = {
-  coldMinScore: 70,   // 冷思考（观点最重）：FinalScore 门槛
-  depthMinScore: 50,  // 深一度：FinalScore 门槛
-  opinionMinScore: 50, // 低于此分不加【一页说】观点段（不值得占篇幅）
+  coldMinScore: 65,   // 冷思考（观点最重）：qualityScore 门槛（原 finalScore 70）
+  depthMinScore: 45,  // 深一度：qualityScore 门槛（原 finalScore 50）
+  opinionMinScore: 40, // 低于此分不加【一页说】观点段（原 finalScore 50）
 }
 
 // 硬新闻类目（适合 depth/cold）
@@ -243,7 +251,11 @@ function detectUnsettled(item) {
  */
 function routeLens(item) {
   const it = item || {}
-  const score = typeof it.finalScore === 'number' ? it.finalScore : 50
+  // 2026-08-12：路由信号从 finalScore 改为 qualityScore（内容质量）。
+  // finalScore 掺了热度权重（0.4·Heat），单条新闻热度分极低 → 官方/三方源全 < 50 落速览。
+  // qualityScore 由质量门保证 ≥40 才入库，能正确区分「高质量(深一度/冷思考) vs 低质(速览)」。
+  const score = typeof it.qualityScore === 'number' ? it.qualityScore
+    : (typeof it.finalScore === 'number' ? it.finalScore : 50)
   const category = it.category || ''
   const variant = stableHash(it.title || it.id || '')
 
