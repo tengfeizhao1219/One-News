@@ -13,7 +13,7 @@
 const { cleanNewsContent, validateCleanedContent } = require('./newsCleaner')
 const config = require('../config')
 // 读法路由（轻量路线，2026-08-12 owner 拍板）：把 qualityScorer 落库信号 → 解读读法 + 是否加【一页说】
-const { resolveInterpretPlan } = require('./interpretLens')
+const { resolveInterpretPlan, splitOpinionFromText } = require('./interpretLens')
 
 // 抓取超时（refreshNews 有 60s 预算，单条抓取给 6s）
 const FETCH_TIMEOUT_MS = 6000
@@ -360,8 +360,9 @@ module.exports = {
  * @param {Array<{title,source,url}>} [references] - 可选信源 URL 列表，辅助解读可溯源
  * @param {Object} [signals] - 可选评分信号（qualityScorer 落库字段：finalScore/category/title/summary），
  *                             用于「读法路由」决定解读风格与是否加【一页说】观点段。缺省 → depth 读法（不退化）。
- * @returns {Promise<{text:string,lensId:string,lensName:string,withOpinion:boolean,routeReason:string,tMin:number,tMax:number}|null>}
- *          成功返回解读对象（text=正文，其余为读法路由元信息，供日志/可观测）；失败/过短/无配置返回 null。
+ * @returns {Promise<{text:string,aiOpinion:string,lensId:string,lensName:string,withOpinion:boolean,routeReason:string,tMin:number,tMax:number}|null>}
+ *          成功返回解读对象：text=正文（已剥离【一页说】内联标记），aiOpinion=【一页说】观点独立字段（无观点时为空串），
+ *          其余为读法路由元信息，供日志/可观测；失败/过短/无配置返回 null。
  */
 function interpretNews(content, title, references, signals) {
   const hunyuanCfg = (config.hunyuan || {})
@@ -432,7 +433,15 @@ function interpretNews(content, title, references, signals) {
         clearTimeout(timer)
         const txt = (result && result.text ? result.text : '').trim()
         if (txt && txt.length >= minAccept) {
-          resolve({ text: txt, lensId: plan.lensId, lensName: plan.lensName, withOpinion: plan.withOpinion, routeReason: plan.routeReason, tMin: plan.tMin, tMax: plan.tMax })
+          // 切出【一页说】观点成独立字段 aiOpinion，正文剥离内联标记（owner 8/12 拍板：观点卡独立呈现）
+          const { body, opinion } = splitOpinionFromText(txt)
+          resolve({
+            text: body,
+            aiOpinion: plan.withOpinion ? opinion : '',
+            lensId: plan.lensId, lensName: plan.lensName,
+            withOpinion: plan.withOpinion, routeReason: plan.routeReason,
+            tMin: plan.tMin, tMax: plan.tMax,
+          })
         } else resolve(null)
       }).catch(() => { clearTimeout(timer); resolve(null) })
     })
@@ -497,7 +506,18 @@ function interpretNews(content, title, references, signals) {
       ;(async () => {
         for (let attempt = 0; attempt < 2; attempt++) {
           const txt = await doRequest()
-          if (txt && txt.length >= minAccept) { resolve({ text: txt, lensId: plan.lensId, lensName: plan.lensName, withOpinion: plan.withOpinion, routeReason: plan.routeReason, tMin: plan.tMin, tMax: plan.tMax }); return }
+          if (txt && txt.length >= minAccept) {
+            // 切出【一页说】观点成独立字段 aiOpinion，正文剥离内联标记
+            const { body, opinion } = splitOpinionFromText(txt)
+            resolve({
+              text: body,
+              aiOpinion: plan.withOpinion ? opinion : '',
+              lensId: plan.lensId, lensName: plan.lensName,
+              withOpinion: plan.withOpinion, routeReason: plan.routeReason,
+              tMin: plan.tMin, tMax: plan.tMax,
+            })
+            return
+          }
           if (attempt < 1) await new Promise(res => setTimeout(res, 500))
         }
         console.warn(`[interpret] ${eng.name} 解读失败，尝试下一引擎`)
@@ -761,6 +781,8 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           if (interpretation && interpretation.text) {
             enriched.content = interpretation.text
             enriched.contentSource = 'ai_interpretation'
+            // owner 8/12 拍板：把【一页说】观点拆成独立字段，供前端做独立卡片
+            enriched.aiOpinion = interpretation.aiOpinion || ''
             console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}）`)
           } else {
             console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)

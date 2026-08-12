@@ -366,6 +366,37 @@ function resolveInterpretPlan(item, opts = {}) {
   }
 }
 
+/**
+ * 从解读正文切出【一页说】观点段，返回干净的「正文」与独立的「观点」字段。
+ *
+ * 用途（owner 2026-08-12 拍板）：前端要把【一页说】作为独立小卡片/胶囊呈现，
+ * 不应混在正文当普通段落。故生成侧把观点从 text 切出成独立字段 aiOpinion，
+ * 正文 text 同时剥离内联标记，避免前端重复渲染。
+ *
+ * @param {string} text - 模型返回的解读全文
+ * @returns {{body:string, opinion:string}}
+ *   body   去掉【一页说】段后的正文（前端当普通段落渲染，已无内联标记）
+ *   opinion 观点文本本体（不含「【一页说】」标签前缀）；无可切出则为 ''
+ */
+function splitOpinionFromText(text) {
+  if (!text) return { body: '', opinion: '' }
+  const markers = ['【一页说】', '一页说']
+  let idx = -1
+  let markerLen = 0
+  for (const m of markers) {
+    const i = text.indexOf(m)
+    if (i !== -1) { idx = i; markerLen = m.length; break }
+  }
+  if (idx === -1) return { body: text, opinion: '' }
+  let opinion = text.slice(idx + markerLen).trim()
+  // 去掉观点段开头可能的分隔符（—— / ： / : / 换行 / 全角空格）
+  opinion = opinion.replace(/^[\s　:：—\-·]+/, '')
+  let body = text.slice(0, idx).trim()
+  // 去掉正文中观点段之前的残留分隔符（换行 / —— / · 等）
+  body = body.replace(/[\s　—\-·]+$/, '')
+  return { body, opinion }
+}
+
 module.exports = {
   LENSES,
   ROUTE,
@@ -377,4 +408,5 @@ module.exports = {
   routeLens,
   buildPrompt,
   resolveInterpretPlan,
+  splitOpinionFromText,
 }

@@ -274,6 +274,9 @@ async function batchInsert(newsList) {
         eventId: item.eventId || '',
         noiseRatio: typeof item.noiseRatio === 'number' ? item.noiseRatio : null,
         gatedReason: item._gated || (item._gatedReason || ''),  // 写入时已经过质量门，此处仅为留痕
+        // owner 2026-08-12 拍板：把【一页说】观点拆为独立字段，前端做独立卡片。
+        // 仅 AI 独立解读通道（contentSource='ai_interpretation'）且 withOpinion=true 时非空；其余一律 ''。
+        aiOpinion: typeof item.aiOpinion === 'string' ? item.aiOpinion : '',
       }
 
       // v7（TL-B12）：已有记录则 update（保留 _id，避免重复插入相同 id 文档导致数据分叉），
