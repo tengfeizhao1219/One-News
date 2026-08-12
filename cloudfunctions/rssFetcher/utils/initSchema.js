@@ -52,6 +52,8 @@ async function ensureNewsRawOfficial() {
     { key: { fetchTime: 1 }, name: 'fetchTime', unique: false },
     { key: { sourceId: 1 }, name: 'sourceId', unique: false },
     { key: { status: 1 }, name: 'status', unique: false },
+    // 质量分排序（读源/精选页按 finalScore 倒序）
+    { key: { finalScore: -1 }, name: 'finalScore', unique: false },
   ]
   for (const idx of indexes) {
     try {

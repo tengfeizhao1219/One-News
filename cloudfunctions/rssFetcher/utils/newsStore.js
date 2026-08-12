@@ -8,6 +8,7 @@
 
 const cloud = require('wx-server-sdk')
 const { sha256 } = require('./validator')
+const qualityScorer = require('./qualityScorer')
 
 function col() {
   return cloud.database().collection('news_raw_official')
@@ -70,15 +71,30 @@ async function filterDuplicates(items) {
 
 /**
  * 批量写入新增项（每次 add，云数据库单次最多写一批；失败可忽略并计数）。
+ * 质量门：写入前逐条调用 qualityScorer.attachScore；qualityPassed=false 的不落库（rejected），
+ *   并附加 qualityScore/finalScore/heatScore/qualityDetail 字段到已通过条目。
  * @param {Array<Object>} items
- * @returns {Promise<{written:number, failed:number}>}
+ * @returns {Promise<{written:number, failed:number, rejectedCount:number, rejected:Array<string>}>}
  */
 async function batchInsert(items) {
   let written = 0
   let failed = 0
-  if (!items || !items.length) return { written, failed }
+  let rejectedCount = 0
+  const rejected = []
+  if (!items || !items.length) return { written, failed, rejectedCount, rejected }
 
   for (const it of items) {
+    // 质量门（⑥ 合规 + 质量分门控）：未通过 → 跳过落库
+    const scored = qualityScorer.attachScore(it)
+    if (scored.qualityPassed === false) {
+      rejectedCount++
+      rejected.push(scored.title ? scored.title.substring(0, 30) : '(untitled)')
+      if (rejected.length <= 5) {
+        console.log(`[newsStore] ${scored.sourceId} 质量门拦截: ${scored.rejectReason || scored.gated} → ${(scored.title || '').substring(0, 30)}`)
+      }
+      continue
+    }
+
     const doc = Object.assign({}, it, {
       _id: `official_${it.urlFp}`,
       content_mode: 'official_rss',
@@ -98,7 +114,7 @@ async function batchInsert(items) {
       }
     }
   }
-  return { written, failed }
+  return { written, failed, rejectedCount, rejected }
 }
 
 module.exports = { filterDuplicates, batchInsert, sha256 }

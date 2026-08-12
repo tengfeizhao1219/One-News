@@ -128,11 +128,17 @@ async function runWorker(feed, now) {
   // 5. 去重（urlFp/titleFp）
   const { inserts, duplicates, dupSamples } = await newsStore.filterDuplicates(candidates)
 
-  // 6. 批量写库
+  // 6. 批量写库（含质量门：未过门不落库）
   let written = 0
+  let qualityRejected = 0
+  const qualityRejectedSamples = []
   if (inserts.length) {
     const wr = await newsStore.batchInsert(inserts)
     written = wr.written
+    if (wr.rejectedCount) {
+      qualityRejected = wr.rejectedCount
+      qualityRejectedSamples.push(...(wr.rejected || []).slice(0, 3))
+    }
   }
 
   // 7. 更新 feed_meta（统计 + 缓存头 + errorStreak）
@@ -150,6 +156,7 @@ async function runWorker(feed, now) {
     lastCount: total,
     insertedCount: written,
     duplicateCount: duplicates,
+    gateRejectedCount: qualityRejected,
     errorStreak: newStreak,
     lastModified: fetchRes.lastModified || feed.lastModified,
     etag: fetchRes.etag || feed.etag,
@@ -178,6 +185,15 @@ async function runWorker(feed, now) {
     alerts.push('bulk-insert')
   }
 
-  console.log(`[worker] ${sourceId} 完成: total=${total} written=${written} duplicates=${duplicates} filtered=${filtered} invalid=${invalid} streak=${newStreak}`)
-  return summarize({ sourceId, status: 'ok', parsed: total, written, duplicates, filtered, invalid, streak: newStreak, alerts })
+  // 8d. 质量门拦截率过高（>30% 或 >50 条）→ 告警，疑似源站异常/口径误伤
+  const gatedTotal = qualityRejected
+  if (gatedTotal > 0 && (gatedTotal / Math.max(1, total) > 0.3 || gatedTotal >= 50)) {
+    await sendAlert(`源 **${sourceId}** 本轮质量门拦截 ${gatedTotal}/${total} 条（${
+      (gatedTotal / Math.max(1, total) * 100).toFixed(0)
+    }%）。样条：${qualityRejectedSamples.join('；').slice(0, 120) || '无'}`, { dedupKey: `rss-gate-${sourceId}` })
+    alerts.push('high-quality-reject')
+  }
+
+  console.log(`[worker] ${sourceId} 完成: total=${total} written=${written} duplicates=${duplicates} filtered=${filtered} invalid=${invalid} gateRejected=${qualityRejected} streak=${newStreak}`)
+  return summarize({ sourceId, status: 'ok', parsed: total, written, duplicates, filtered, invalid, gateRejected: qualityRejected, streak: newStreak, alerts })
 }
