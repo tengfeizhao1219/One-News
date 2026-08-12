@@ -117,6 +117,15 @@ function formatNewsItem(item, includeContent = false) {
     category: item.category,
     categoryName: item.categoryName || CATEGORY_MAP[item.category] || item.category,
     source: item.source,
+    // v1.2 路线1：官方源字段透传（此前丢失导致前端无法识别 official_rss）
+    // 1) contentSource：官方源标记（首页「出处 ↗」/详情页官方源归因块依赖）
+    // 2) sourceName：官方源来源名（落库字段，前端 metaSource 取它）
+    // 3) references：参考来源（详情页折叠卡依赖）
+    // 4) aiOpinion：一页说 AI 独立观点（详情页观点卡依赖，仅非空渲染）
+    contentSource: item.contentSource || '',
+    sourceName: item.sourceName || item.source || '',
+    references: Array.isArray(item.references) ? item.references : [],
+    aiOpinion: item.aiOpinion || '',
     sourceUrl: item.sourceUrl || item._url || '',
     picUrl: item.picUrl || '',
     time: formatRelativeTime(item.publishTime || item.time),
