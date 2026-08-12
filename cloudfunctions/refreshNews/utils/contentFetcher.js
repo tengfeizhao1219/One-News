@@ -830,15 +830,16 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               // FE-20260810-003：移除 150 字硬截断 —— AI 摘要完整写库展示。
               // prompt 已收紧为 100-150 字自然收尾，从源头控制长度；
               // 老数据超长由前端布局整体居中 + 物理溢出兜底（不再 slice 断句）。
-              // B-COMPLIANCE-1 R4（2026-08-10 owner 拍板）：摘要比例硬校验 0.3 ——
-              // AI 摘要太短（< 正文 30%）视为不健康（如智谱偶发返回 30 字假摘要），
-              // 降级走首段/标题兜底（不浪费列表 1 行 + 详情缓存命中仍依赖 content）。
-              // 0.3 阈值依据：100-150 字 prompt + 中文 ~2 token/字 → 期望摘要 50-80 字起算，
-              // 30% 是给"长正文"留的"摘要应至少 30%"健康线，< 30% 多为引擎早停/截断。
-              const minSummaryRatio = 0.3
+              // B-COMPLIANCE-1 R4（2026-08-10 owner 拍板）：摘要比例硬校验 ——
+              // AI 摘要太短视为不健康（如智谱偶发返回 30 字假摘要），降级走首段/标题兜底。
+              // 2026-08-12 owner 拍板方案 B：阈值 0.3 → 0.2 放宽 ——
+              // 实测三方源（天行）正文偏短（200-500 字），AI 摘要 100 字左右占比 20-28%，
+              // 0.3 阈值大量误伤（差 1-5 个百分点），导致三方源 AI 摘要覆盖不足。
+              // 放宽到 0.2：保留"防 30 字假摘要"底线，同时放行短正文源的正常 AI 摘要。
+              const minSummaryRatio = 0.2
               const ratio = content.length > 0 ? aiSummary.length / content.length : 0
               if (ratio < minSummaryRatio) {
-                console.warn(`[enrich] ${item.id || ''} AI 摘要比例不达标（${(ratio * 100).toFixed(1)}% < 30%），降级兜底`)
+                console.warn(`[enrich] ${item.id || ''} AI 摘要比例不达标（${(ratio * 100).toFixed(1)}% < 20%），降级兜底`)
                 // 不写入 summary，让后续 4 级降级链走首段/标题
               } else {
                 enriched.summary = aiSummary
