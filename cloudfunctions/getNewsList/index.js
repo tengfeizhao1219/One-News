@@ -1,4 +1,7 @@
-// 获取新闻列表云函数 v4.2 — 纯智谱/DeepSeek，不降级不兜底，全是真实数据
+// 获取新闻列表云函数 v7.2 — FinalScore 质量排序 — 纯智谱/DeepSeek，不降级不兜底，全是真实数据
+// v7.2（FS-质量把控 v2, 2026-08-12）：news_cache 排序改为 orderBy('finalScore','desc').orderBy('publishTime','desc')
+//   FinalScore 由 refreshNews qualityScorer 落库（0-100），质量+热度融合排序；未评分旧数据沉底。
+//   backup 层保留 publishTime 排序（历史快照一般无 finalScore），但附加评分字段与主路径对齐。
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -60,8 +63,14 @@ async function getFromDbCache(category, pageNum, pageSize) {
  */
 async function queryCache(where, pageNum, pageSize) {
   try {
+    // FS-质量把控 v2（2026-08-12）：排序 FinalScore 优先（质量+热度），同分按发布时间。
+    //   - finalScore 由 refreshNews qualityScorer 落库（0-100 整数）；未评分的旧数据 finalScore=null。
+    //   - ⚠️ 部署前置：news_cache 需建组合索引 (finalScore desc, publishTime desc)，
+    //     否则链式 orderBy 可能查询失败或退化为单字段排序（见 .workbuddy/reports/FS-SSH-push通道修复经验-2026-08-12.md 旁 FS-质量把控 交接）。
+    //     回滚：删除此行注释回到单 orderBy('publishTime','desc') 即可恢复原行为。
     const res = await db.collection('news_cache')
       .where(where)
+      .orderBy('finalScore', 'desc')
       .orderBy('publishTime', 'desc')
       .skip((pageNum - 1) * pageSize)
       .limit(pageSize)
@@ -80,6 +89,11 @@ async function queryCache(where, pageNum, pageSize) {
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
           isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态
+          // FS-质量把控 v2：附加评分字段（前端可选，用于排序标识/后续展示评分）
+          finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
+          qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
+          heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
+          eventId: item.eventId || '',
         })),
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,
@@ -155,6 +169,11 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
           source: item.source, sourceUrl: item.sourceUrl || '',
           publishTime: item.publishTime,
           isRetained: item.isRetained === true,
+          // FS-质量把控 v2：附加评分字段（备份为历史快照，一般无 finalScore，值与主路径对齐便于前端）
+          finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
+          qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
+          heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
+          eventId: item.eventId || '',
         })),
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,
@@ -174,7 +193,7 @@ exports.main = async (event) => {
   const pageNum = Math.max(1, parseInt(event.pageNum) || 1)
   const pageSize = Math.min(config.pagination.maxPageSize, Math.max(1, parseInt(event.pageSize) || config.pagination.defaultPageSize))
 
-  console.log(`[getNewsList] v7.1 category=${category} page=${pageNum} size=${pageSize}`)
+  console.log(`[getNewsList] v7.2 category=${category} page=${pageNum} size=${pageSize}`)
 
   // ── L1：云数据库 news_cache（正常路径 + stale 兜底）──
   const dbCached = await getFromDbCache(category, pageNum, pageSize)
