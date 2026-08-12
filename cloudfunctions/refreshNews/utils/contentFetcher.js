@@ -88,6 +88,8 @@ function fetchWebPage(url) {
  */
 function locateBodyHtml(html) {
   const patterns = [
+    // 中新网（chinanews.com.cn）正文容器
+    /<div[^>]*class=["'][^"']*content_maincontent_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     // 优先：严格语义标签
     /<article[^>]*>([\s\S]*?)<\/article>/i,
     // IT之家 / 聚合数据 特定容器
@@ -754,19 +756,46 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
       const idx = cursor++
       const item = cleanedNewsList[idx]
       // v8 路线1：官方源（contentSource='official_rss'）特殊处理
-      //   - content 由 rssFetcher 双写进 news_ingest 时已自带（A.4/A.5 允许官方 RSS 抓正文作 AI 加工源）
-      //   - 不再 fetchContentForItem 抓源站 HTML（版权红线 + 省预算）
-      //   - 跳过 interpretNews 独立解读（避免覆盖 contentSource 导致前端「出处 ↗」丢失）
+      //   - RSS content ≥ 200 字 → 直接用作 AI 解读输入（部分源 RSS 带 content:encoded 全文）
+      //   - RSS content < 200 字（通常只有 description 导语）→ 按 sourceUrl 抓源站 HTML 提取正文补全（A2 方案）
       //   - AI 摘要照常（owner 拍板摘要优先级：AI > 源摘要 > 首段 > 标题）
-      //   - 落库前 content 清空（news_cache 不缓存官方正文全文，仅 summary + sourceUrl）
+      //   - 落库前原文清空（news_cache 不缓存官方正文全文，仅 summary + sourceUrl + AI 加工产物）
       const isOfficialRss = item.contentSource === 'official_rss'
       try {
         // 1. 抓正文
         // AI 独立解读模式（skipFetch=true）：直接使用 AI 生成的 content，不再抓原文覆盖
         // （版权策略：AI 解读 ≠ 原文复述，抓原文覆盖会破坏版权规避效果）
         let content
-        if (skipFetch || isOfficialRss) {
+        if (skipFetch) {
           content = item.content || ''
+        } else if (isOfficialRss) {
+          // A2 方案（2026-08-12 owner 拍板）：官方源 RSS 通常只有短导语（description），
+          // 无 content:encoded 全文 → AI 解读输入不足 → 解读质量差/跳过。
+          // 解决：content ≥ 200 字视为有足够正文（部分源 RSS 带全文），直接用；
+          //       content < 200 字 → 按 sourceUrl 抓取源站 HTML 提取正文补全。
+          // 版权合规：抓到的正文仅作 AI 加工源数据（interpretNews 输入），
+          //           AI 加工产物（解读正文）可落库展示；原文不缓存、不落 news_cache。
+          const rssContent = (item.content || '').trim()
+          if (rssContent.length >= 200) {
+            content = rssContent
+          } else {
+            console.log(`[enrich] ${item.id || ''} 官方源 content 过短（${rssContent.length}字），按 sourceUrl 抓源站正文补全：${item.sourceUrl || ''}`)
+            try {
+              content = await Promise.race([
+                fetchContentForItem(item),
+                new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
+              ])
+              if (!content || content.trim().length < 50) {
+                console.warn(`[enrich] ${item.id || ''} 源站正文抓取失败/过短（${(content||'').length}字），回退 RSS 导语`)
+                content = rssContent
+              } else {
+                console.log(`[enrich] ${item.id || ''} 源站正文抓取成功（${content.length}字），用于 AI 解读`)
+              }
+            } catch (fetchErr) {
+              console.warn(`[enrich] ${item.id || ''} 源站正文抓取异常，回退 RSS 导语:`, fetchErr && fetchErr.message)
+              content = rssContent
+            }
+          }
         } else {
           content = await Promise.race([
             fetchContentForItem(item),
