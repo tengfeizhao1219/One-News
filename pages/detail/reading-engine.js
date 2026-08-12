@@ -71,6 +71,8 @@ function normalizeDetail(raw) {
     // #35 接口 v1 字段：官方源来源名（sourceName），兜底取 source
     sourceName: raw.sourceName || raw.source || '',
     sourceUrl: raw.sourceUrl || '',
+    // 一页说：AI 独立观点（owner 2026-08-12 拍板方案 C；FS 经 getNewsDetail 返回，仅非空时前端渲染）
+    aiOpinion: raw.aiOpinion || '',
     references: Array.isArray(raw.references) ? raw.references : [],
     picUrl: raw.picUrl || '',
     publishTime: raw.publishTime || raw.time || '',

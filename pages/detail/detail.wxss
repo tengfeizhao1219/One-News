@@ -363,6 +363,106 @@
 /* ============ 查看原文：AI 解读标识内的高亮内联入口（D-02 v0.2 §2.2） ============
    置于 AI 解读/AI 摘录提示语之后（非独立成行），用 --text-link 蓝链色相对高亮，
    与灰提示语形成对比但不过分抢眼；个人主体 web-view 不可用，交互走「复制链接+引导外部浏览器打开」 */
+
+/* ============ 一页说：AI 独立观点卡（owner 2026-08-12 拍板方案 C） ============
+   整卡浅蓝底（--primary-subtle），最轻量形态；与顶部「AI 解读」醒目徽标区分角色：
+   AI 解读=合规免责感，一页说=主蓝洞察感。点击「关于一页说」就地展开说明（中性灰底 --bg-subtle），不引新 hex */
+.yiyieshuo-card {
+  margin: 8rpx 0 4rpx;
+  padding: 22rpx 24rpx;
+  background-color: var(--primary-subtle);
+  border-radius: 20rpx;
+}
+
+.yiyieshuo-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.yiyieshuo-chip {
+  display: inline-block;
+  padding: 4rpx 18rpx;
+  border-radius: 22rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--primary);
+  background-color: transparent;
+  border: 1rpx solid var(--primary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.yiyieshuo-sub {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: var(--text-link);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.yiyieshuo-text {
+  display: block;
+  font-size: calc(28rpx * var(--font-scale));
+  line-height: 1.65;
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.yiyieshuo-info-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.yiyieshuo-info-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26rpx;
+  height: 26rpx;
+  border: 1rpx solid var(--text-tertiary);
+  border-radius: 50%;
+  font-size: 20rpx;
+  font-style: italic;
+  line-height: 1;
+}
+
+.yiyieshuo-chev {
+  font-size: 20rpx;
+}
+
+.yiyieshuo-disclosure {
+  margin-top: 14rpx;
+}
+
+.yiyieshuo-disclosure-box {
+  padding: 20rpx 22rpx;
+  background-color: var(--bg-subtle);
+  border-radius: 18rpx;
+}
+
+.yiyieshuo-disclosure-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10rpx;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
+.yiyieshuo-disclosure-desc {
+  display: block;
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+}
+
 .meta-source-link {
   color: var(--text-link);
   font-size: 22rpx;

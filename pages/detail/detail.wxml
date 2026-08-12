@@ -129,6 +129,25 @@
             <text class="inline-empty-icon">·</text>
             <text class="inline-empty-text">内容暂不可用</text>
           </view>
+          <!-- 一页说：AI 独立观点卡（owner 2026-08-12 拍板方案 C；字段 aiOpinion 由 FS 返回，仅非空渲染） -->
+          <view class="yiyieshuo-card" wx:if="{{news.aiOpinion}}">
+            <view class="yiyieshuo-head">
+              <text class="yiyieshuo-chip">一页说</text>
+              <text class="yiyieshuo-sub">AI 独立见解</text>
+            </view>
+            <text class="yiyieshuo-text">{{news.aiOpinion}}</text>
+            <view class="yiyieshuo-info-entry" bindtap="onToggleOpinionInfo">
+              <text class="yiyieshuo-info-ic">i</text>
+              <text class="yiyieshuo-info-label">关于一页说</text>
+              <text class="yiyieshuo-chev">{{opinionInfoExpanded ? '▴' : '▾'}}</text>
+            </view>
+            <view class="yiyieshuo-disclosure" wx:if="{{opinionInfoExpanded}}">
+              <view class="yiyieshuo-disclosure-box">
+                <text class="yiyieshuo-disclosure-title">关于「一页说」</text>
+                <text class="yiyieshuo-disclosure-desc">这是 AI 根据最近相关新闻的汇总与分析生成的独立观点，可能存在不准确或偏差，仅供参考，不构成任何投资、决策或专业建议。请以官方权威信源为准。</text>
+              </view>
+            </view>
+          </view>
           <!-- PRD §2.4 S1：references 参考来源折叠卡片 -->
           <view class="references-card" wx:if="{{news.references && news.references.length > 0}}">
             <view class="references-header" bindtap="onToggleReferences" data-expanded="{{referencesExpanded}}">

@@ -72,6 +72,8 @@ Page({
     statusPillText: '',
     // PRD §2.4 S1：references 参考来源折叠状态
     referencesExpanded: false,
+    // 一页说：关于一页说说明展开状态（owner 2026-08-12 拍板方案 C）
+    opinionInfoExpanded: false,
   },
 
   // 引擎实例
@@ -939,6 +941,14 @@ Page({
   onToggleReferences: function () {
     var expanded = !this.data.referencesExpanded
     this.setData({ referencesExpanded: expanded })
+  },
+
+  /**
+   * 一页说：展开/收起「关于一页说」说明（owner 2026-08-12 拍板方案 C）
+   */
+  onToggleOpinionInfo: function () {
+    var expanded = !this.data.opinionInfoExpanded
+    this.setData({ opinionInfoExpanded: expanded })
   },
 
   /**
