@@ -67,6 +67,9 @@ exports.main = async (event) => {
       category: item.category,
       categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
       source: item.source, sourceUrl: item.sourceUrl || '',
+      // v1.2 路线1：透传 contentSource/sourceName（官方源「出处 ↗」识别）
+      contentSource: item.contentSource || '',
+      sourceName: item.sourceName || '',
       publishTime: item.publishTime,
       isRetained: item.isRetained === true,
       createdAt: item.createdAt,

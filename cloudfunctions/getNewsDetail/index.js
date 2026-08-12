@@ -578,6 +578,31 @@ exports.main = async (event) => {
     }
   }
 
+  // ── 官方源已汇入 news_cache（v1.2 路线1）──
+  // 官方源在 news_cache 中 content=''（版权红线：不缓存正文全文），contentSource='official_rss'。
+  // 命中 news_cache 时同样短路：直接返回 summary + 出处，不进入第 3 步网页抓取（禁止抓官方正文）。
+  if (doc.contentSource === 'official_rss') {
+    bumpViewCount(collection, doc._id)
+    return {
+      code: 0,
+      data: {
+        ...doc,
+        content: doc.summary || doc.content || '',       // 无正文，兜底 summary
+        contentSource: 'official_rss',
+        sourceUrl: doc.sourceUrl || doc.url || '',
+        sourceName: doc.sourceName || doc.source || '',
+        category: doc.category,
+      },
+      meta: {
+        source: collection,
+        contentSource: 'official_rss',
+        engine: 'rss',
+        r1Blocked: false,
+        readContentMode: READ_CONTENT_MODE_DEFAULT,
+      },
+    }
+  }
+
   // ── 第 2 步：如果已有足够长的 content，直接返回 ──
   // DG-03（owner 16:24 诉求「尽量返回原文」）：阈值 30 → 200 字——
   // content 过短（如旧数据/抓取失败回退的摘要）时继续第 3 步尝试抓 sourceUrl 原文

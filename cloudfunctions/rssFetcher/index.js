@@ -118,7 +118,7 @@ async function runWorker(feed, now) {
     })
     if (!fCheck.pass) { filtered++; continue }
     const vRes = validator.validate(
-      { title: raw.title, url: raw.url, pubDate: raw.pubDate, summary: raw.desc },
+      { title: raw.title, url: raw.url, pubDate: raw.pubDate, summary: raw.desc, content: raw.content },
       meta,
     )
     if (!vRes.ok) { invalid++; continue }
@@ -129,15 +129,27 @@ async function runWorker(feed, now) {
   const { inserts, duplicates, dupSamples } = await newsStore.filterDuplicates(candidates)
 
   // 6. 批量写库（含质量门：未过门不落库）
+  // v1.2 路线1 双写：
+  //   a) news_raw_official —— 归档双写（保留，仅 title/url/summary，无 content）
+  //   b) news_ingest —— 统一 staging（sourceType=official_rss，status=pending，含 content 供 AI 加工），
+  //      由 refreshNews 消费 → qualityGate → AI 摘要 → 汇入 news_cache 主列表
   let written = 0
   let qualityRejected = 0
   const qualityRejectedSamples = []
+  let ingestWritten = 0
   if (inserts.length) {
     const wr = await newsStore.batchInsert(inserts)
     written = wr.written
     if (wr.rejectedCount) {
       qualityRejected = wr.rejectedCount
       qualityRejectedSamples.push(...(wr.rejected || []).slice(0, 3))
+    }
+    // 双写 news_ingest（失败不阻断主流程，归档仍完成）
+    try {
+      const ig = await newsStore.batchInsertToIngest(inserts)
+      ingestWritten = ig.written || 0
+    } catch (ingestErr) {
+      console.warn(`[worker] ${sourceId} news_ingest 双写失败（归档不受影响）:`, ingestErr.message)
     }
   }
 
@@ -194,6 +206,6 @@ async function runWorker(feed, now) {
     alerts.push('high-quality-reject')
   }
 
-  console.log(`[worker] ${sourceId} 完成: total=${total} written=${written} duplicates=${duplicates} filtered=${filtered} invalid=${invalid} gateRejected=${qualityRejected} streak=${newStreak}`)
-  return summarize({ sourceId, status: 'ok', parsed: total, written, duplicates, filtered, invalid, gateRejected: qualityRejected, streak: newStreak, alerts })
+  console.log(`[worker] ${sourceId} 完成: total=${total} written=${written} ingest=${ingestWritten} duplicates=${duplicates} filtered=${filtered} invalid=${invalid} gateRejected=${qualityRejected} streak=${newStreak}`)
+  return summarize({ sourceId, status: 'ok', parsed: total, written, ingestWritten, duplicates, filtered, invalid, gateRejected: qualityRejected, streak: newStreak, alerts })
 }

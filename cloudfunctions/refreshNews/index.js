@@ -1,5 +1,16 @@
-// 新闻自动刷新云函数 v7 — 拆分架构（按分类并行云函数，彻底绕开 60s 限制）
+// 新闻自动刷新云函数 v8 — 拆分架构（按分类并行云函数，彻底绕开 60s 限制）
 // ============================================================
+// v8 改造（2026-08-12，路线1 统一数据源）：owner 拍板「不再用 AI 抓取新闻」。
+//   ① 删除智谱 AI 搜索作为数据源（zhipuSearch 不再用于抓取）；
+//   ② juhe + 天行并行抓取（原"AI 搜索主力→聚合/天行兜底"反转为主力并行）；
+//   ③ 官方 RSS（中新/人民/央视/新华）由 rssFetcher 独立抓取 → news_ingest staging →
+//      refreshNews 消费 → qualityGate + AI 摘要/解读 → 汇入 news_cache 主列表；
+//   ④ 前端首页/详情/新闻列表统一展示"最终筛选后的高质量数据源"。
+//   数据流：三方接口统一抓取 → news_ingest → qualityGate → AI 统一处理 → news_cache。
+//   摘要优先级（owner 拍板）：AI 摘要 > 源摘要 > 正文第一段 > 标题。
+//   版权红线（A.4/A.5）：官方源正文仅作 AI 加工源数据，落库 news_cache 只存 summary，
+//   content=''，contentSource='official_rss'，详情页跳源站 H5。
+//
 // v7 改造（2026-08-05）：拆分云函数架构
 //   将"全分类在单次 60s 调用内串行完成"改为"每个分类独立占用一次 60s 调用、5 个并行"。
 //   实现方式：refreshNews 自扇出（self-fan-out）—— 同一函数既是"编排器"也是"单分类工人"，
@@ -18,7 +29,8 @@
 // v6.0（已并入）：owner 将 refreshNews 超时从 3s 调至 60s，函数内直接抓取正文 + AI 摘要。
 // v5.9（已并入）：双数据源降级 + 续期；getNewsList stale 兜底。
 //
-// 数据源：智谱 AI 搜索（主）+ DeepSeek（智谱降级）+ 聚合 API（备）+ 天行 API（兜底）
+// 数据源（v8）：聚合 API（juhe）+ 天行 API（tianxing）并行 + 官方 RSS（news_ingest 消费）
+// AI 角色：仅统一后处理（正文抓取清洗 + AI 摘要 + 独立解读 + 观点卡），不再负责抓取新闻
 // 写入集合：news_cache（列表 + content + AI 摘要）
 //
 // 触发方式：
@@ -40,6 +52,15 @@ const qualityScorer = require('./utils/qualityScorer')
 // ─── 分类列表（聚合支持的分类）───
 // v7（TL-B11）：与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
 const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life']
+
+// v8 路线1：分类中文名映射（官方源汇入 news_cache 时 categoryName 展示用，与前端 CATEGORY_MAP 一致）
+const CATEGORY_NAMES = {
+  recommend: '推荐',
+  tech: '科技',
+  sports: '科学探索',
+  international: '国际',
+  life: '社会',
+}
 
 // 单分类流水线写库阈值：通过校验+安全审核的有效条数 ≥ 此值才覆盖该分类旧缓存；
 // 否则视为该分类本次刷新偏弱，保留旧缓存（不清旧、不写入），不影响其他分类。
@@ -256,6 +277,7 @@ async function batchInsert(newsList) {
         category: item.category,
         categoryName: item.categoryName,
         source: item.source,
+        sourceName: item.sourceName || '',   // v8 路线1：官方源来源名（前端 metaSource 用）
         sourceUrl: item.sourceUrl || '',
         publishTime: item.publishTime,
         // FS-02（2026-08-07 owner 决策）：新闻中不含任何图片 → picUrl 一律置空，不再入库
@@ -303,83 +325,98 @@ async function batchInsert(newsList) {
 // @param {string} category - 分类 ID
 // @param {object} quotaBaseline - 编排器传入的当日配额基线 {zhipuCalls, deepseekCalls}
 // @returns {Promise<object>} 该分类统计 {category, inserted, engine, skipped, quotaDelta, elapsedMs}
+
+/**
+ * juhe 抓取包装（带 label，供 Promise.allSettled 判定来源）
+ * v8 路线1：juhe 从"兜底"变为主力源之一（与天行并行，不再等 AI 搜索失败）。
+ */
+async function juheFetch(category) {
+  const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
+  const r = await fetchAllJuhe([category], 8)
+  return r
+}
+juheFetch.label = 'juhe'
+
+/**
+ * 天行抓取包装（带 label）
+ */
+async function tianFetch(category) {
+  const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
+  const r = await fetchAllTian([category], 8)
+  return r
+}
+tianFetch.label = 'tianxing'
 async function runCategoryPipeline(category, quotaBaseline) {
   const catStart = Date.now()
   const baseZ = (quotaBaseline && quotaBaseline.zhipuCalls) || 0
   const baseD = (quotaBaseline && quotaBaseline.deepseekCalls) || 0
   const quotaRef = { zhipuCalls: baseZ, deepseekCalls: baseD }
 
-  // 1. 搜索（按分类降级：智谱/DeepSeek → 聚合 → 天行）
+  // 1. 统一抓取（v8 路线1：不再用 AI 搜索抓数据，全部三方接口 + 官方 RSS）
+  //    - juhe + tianxing 并行抓取（原"智谱搜索主力→聚合/天行兜底"已废除）
+  //    - 官方源：从 news_ingest 消费（rssFetcher 每小时写入，status=pending）
   let news = []
   let engine = 'none'
   let skipFetch = false
   let skipAiSummary = false
+  let ingestIds = [] // 已消费的 news_ingest _id（成功后删除，A.5 处理即删）
 
-  // DG-03：任一 AI 搜索 key（智谱/通义）即可进搜索分支（内部含三级降级：智谱→Qwen→DeepSeek）
-  const aiKey = process.env.ZHIPU_API_KEY || config.zhipu?.apiKey || process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
-  if (aiKey) {
-    const { searchNewsByCategory } = require('./zhipuSearch')
-    try {
-      const r = await searchNewsByCategory(category, db, quotaRef)
-      if (r.news && r.news.length > 0) {
-        news = r.news
-        engine = r.engine // 'zhipu' | 'qwen' | 'deepseek'
-        skipFetch = true       // AI 源已自带 content（500-800 字正文）
-        skipAiSummary = true   // 已内联 summary（AI 来源）
-        console.log(`[refreshNews][${category}] AI 搜索命中: ${news.length} 条 (engine=${engine})`)
-      } else {
-        console.warn(`[refreshNews][${category}] AI 搜索无结果，降级聚合/天行`)
+  // 1a. juhe + tianxing 并行抓取
+  const sourceJobs = []
+  if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
+  if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
+  if (sourceJobs.length > 0) {
+    const settled = await Promise.allSettled(sourceJobs)
+    const used = []
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
+        news = news.concat(r.value.news)
+        used.push(sourceJobs[i].label)
       }
-    } catch (err) {
-      console.error(`[refreshNews][${category}] 智谱搜索异常:`, err.message)
+    })
+    if (news.length > 0) {
+      engine = used.join('+') || 'juhe+tianxing'
+      skipFetch = false       // 三方源只给 title/summary/url，需要抓正文
+      skipAiSummary = false   // 需要 AI 摘要/解读
+      console.log(`[refreshNews][${category}] 三方抓取: ${news.length} 条 (${engine})`)
     }
+  } else {
+    console.warn(`[refreshNews][${category}] JUHE/TIAN 均未配置 Key，仅消费官方 RSS staging`)
   }
 
-  // 1b. 聚合兜底（智谱/DeepSeek 空/未配置/失败）
-  if (news.length === 0) {
-    skipFetch = false
-    skipAiSummary = false
-    const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
-    if (!config.juhe.apiKey) {
-      console.warn(`[refreshNews][${category}] JUHE_API_KEY 未配置，跳过聚合`)
-    } else {
-      try {
-        const r = await fetchAllJuhe([category], 8)
-        if (r.news && r.news.length > 0) {
-          news = r.news
-          engine = 'juhe'
-          console.log(`[refreshNews][${category}] 聚合兜底: ${news.length} 条`)
-        }
-      } catch (err) {
-        console.error(`[refreshNews][${category}] 聚合失败:`, err.message)
-      }
+  // 1b. 官方源：从 news_ingest 消费（fetchPendingByCategory 按前端分类匹配）
+  // 官方源 item 携带 content（rssFetcher 双写进 staging 的正文全文，A.4/A.5 允许作 AI 加工源），
+  // 落库 news_cache 时 content 清空（版权红线），只保留 summary + contentSource='official_rss' + sourceUrl。
+  try {
+    const { fetchPendingByCategory } = require('./utils/newsIngestStore')
+    const officialDocs = await fetchPendingByCategory(category, 8)
+    if (officialDocs.length > 0) {
+      const officialItems = officialDocs.map((d) => ({
+        id: `official_${d.urlFp}`,
+        title: d.title,
+        summary: d.summary || '',
+        content: d.content || '',       // 仅 AI 摘要源数据，落库前清空
+        contentSource: 'official_rss',
+        category: d.category,           // 已由 rssFetcher 映射为前端分类
+        categoryName: CATEGORY_NAMES[d.category] || d.category,
+        source: d.sourceName || '官方源',
+        sourceName: d.sourceName || '官方源',
+        sourceUrl: d.url || '',
+        picUrl: '',
+        publishTime: d.publishTime || '',
+        _ingestId: d._id,
+      }))
+      news = news.concat(officialItems)
+      ingestIds = officialDocs.map((d) => d._id)
+      console.log(`[refreshNews][${category}] 官方源消费: ${officialItems.length} 条 (pending ingest)`)
     }
+  } catch (ingestErr) {
+    console.warn(`[refreshNews][${category}] news_ingest 消费失败（官方源跳过）:`, ingestErr.message)
   }
 
-  // 1c. 天行兜底（聚合也失败/空）
+  // 1c. 全部源无数据 → 保留旧缓存（不清理、不写入）
   if (news.length === 0) {
-    skipFetch = false
-    skipAiSummary = false
-    const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
-    if (!config.tian.apiKey) {
-      console.warn(`[refreshNews][${category}] TIAN_API_KEY 未配置，跳过天行`)
-    } else {
-      try {
-        const r = await fetchAllTian([category], 8)
-        if (r.news && r.news.length > 0) {
-          news = r.news
-          engine = 'tianxing'
-          console.log(`[refreshNews][${category}] 天行兜底: ${news.length} 条`)
-        }
-      } catch (err) {
-        console.error(`[refreshNews][${category}] 天行失败:`, err.message)
-      }
-    }
-  }
-
-  // 1d. 三源全失败 → 保留旧缓存（不清理、不写入）
-  if (news.length === 0) {
-    console.warn(`[refreshNews][${category}] 智谱+聚合+天行均无数据，保留旧缓存`)
+    console.warn(`[refreshNews][${category}] juhe+天行+官方源均无数据，保留旧缓存`)
     return {
       category,
       inserted: 0,
@@ -414,9 +451,13 @@ async function runCategoryPipeline(category, quotaBaseline) {
   let qualityPassed = secPassed
   let qualityBlocked = []
   try {
-    const { scored, gated } = qualityScorer.scoreAll(secPassed, { category })
-    qualityPassed = scored.filter(it => !it._gated)
-    qualityBlocked = gated
+    // ⚠️ 2026-08-12 修复（FS-质量把控 遗留 bug，658f8d3 引入）：
+    // scoreAll 实际返回 { passed, rejected, stats }，此前误解构 { scored, gated }
+    // → scored 恒 undefined → 抛错走降级 → finalScore 从未落库、质量门形同虚设。
+    // 正确解构：passed（通过者，含 finalScore/eventId/heatScore）、rejected（拒者列表）。
+    const { passed: scoredPassed, rejected: gatedRejected } = qualityScorer.scoreAll(secPassed, { category })
+    qualityPassed = scoredPassed
+    qualityBlocked = gatedRejected.map(x => ({ _gatedReason: x.reason, title: x.item }))
   } catch (qsErr) {
     console.warn(`[refreshNews][${category}] ⚠️ qualityScorer 失败，沿用旧逻辑: ${qsErr.message}`)
   }
@@ -443,7 +484,7 @@ async function runCategoryPipeline(category, quotaBaseline) {
     }
   }
 
-  // 5. 正文抓取 + AI 摘要（智谱/DeepSeek 源 skipFetch + skipAiSummary；聚合/天行源照常抓+摘要）
+  // 5. 正文抓取 + AI 摘要（v8 路线1：所有源统一抓正文 + AI 摘要/解读；官方源 content 自带、落库前清空）
   // P0-2：enrich 硬期限 = catStart + 55s（保留 5s 给 DB 写入/清理）——search 吃预算后 enrich
   // 不再按 12s/条串行顶爆 60s；预算不足自动跳过 AI 摘要保正文（详情页缓存命中依赖 content）。
   const enrichStart = Date.now()
@@ -482,6 +523,24 @@ async function runCategoryPipeline(category, quotaBaseline) {
   // 兜底整批写过的 id 也计入已写集合（供 clearOldCacheExcept 判断，语义见第 7 步）
   pendingForBatch.forEach(it => writtenIds.add(it.id))
 
+  // 6b. 消费 news_ingest（A.5 处理即删）：仅删除已成功写库的官方源条目
+  // 只删 writtenIds 中属于官方源（带 _ingestId）的条目——enrich 失败/被质量门拦的留 pending 下轮重试
+  let ingestConsumed = 0
+  if (ingestIds.length > 0) {
+    try {
+      const { consumeByKeys } = require('./utils/newsIngestStore')
+      const consumedIds = enriched
+        .filter(it => it._ingestId && writtenIds.has(it.id))
+        .map(it => it._ingestId)
+      if (consumedIds.length > 0) {
+        const cr = await consumeByKeys(consumedIds)
+        ingestConsumed = cr.removed || 0
+      }
+    } catch (ingestErr) {
+      console.warn(`[refreshNews][${category}] news_ingest 消费删除失败（幂等，下轮 TTL 兜底）:`, ingestErr.message)
+    }
+  }
+
   // 7. 清理该分类旧缓存（保留新 ids）
   const newIds = enriched.map(it => it.id)
   const cleared = await clearOldCacheExcept(category, newIds)
@@ -500,6 +559,7 @@ async function runCategoryPipeline(category, quotaBaseline) {
     count: enriched.length,
     engine,
     skipped: false,
+    ingestConsumed,
     quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
     elapsedMs,
   }
@@ -510,24 +570,20 @@ async function runCategoryPipeline(category, quotaBaseline) {
 exports.main = async (event) => {
   const startTime = Date.now()
 
-  // ── B-13: 数据源可用性显式短路（百炼 Key 搁置期保护）──
-  // 检测当前可用数据源：智谱（主力）→ 聚合 → 天行。
-  // 若三者均未配置 Key（仅剩旧版百炼 DASHSCOPE_API_KEY 等搁置配置），
-  // 直接快速返回，避免每次刷新白跑三源检查 + 浪费配额查询与日志。
-  // 覆盖 编排模式 与 工人模式（单分类）两种入口。
-  // ⚠️ 注意（历史裁定 2026-08-02）：DeepSeek 不单独作为可用源——
-  //    它仅作智谱的降级（index.js 298 行 zhipuKey 为空则整个智谱分支跳过），
-  //    单独配置 DEEPSEEK_API_KEY 无法产出数据，故不纳入检测（防旧 B-13 误伤双引擎）。
+  // ── B-13 v8: 数据源可用性显式短路 ──
+  // 路线1（2026-08-12 owner 拍板）：不再用 AI 搜索抓数据，全部三方接口抓取。
+  // 可用数据源 = juhe + tianxing（并行抓取）；官方 RSS 由 rssFetcher 独立写入 news_ingest，
+  // refreshNews 只消费，无需额外 Key。
+  // ⚠️ AI Key（智谱等）仍用于 enrich 阶段的摘要/解读处理，但不再是"抓取源"判据。
   const availableSources = []
-  if (process.env.ZHIPU_API_KEY || config.zhipu?.apiKey) availableSources.push('zhipu')
-  if (process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey) availableSources.push('qwen')  // DG-03
   if (config.juhe.apiKey) availableSources.push('juhe')
   if (config.tian.apiKey) availableSources.push('tianxing')
   if (availableSources.length === 0) {
-    const hint = process.env.DASHSCOPE_API_KEY
-      ? '（检测到已搁置的百炼 DASHSCOPE_API_KEY，当前数据源已切换智谱，请配置 ZHIPU_API_KEY / JUHE_API_KEY / TIAN_API_KEY）'
-      : ''
-    console.warn(`[refreshNews] 无可用的新闻数据源（ZHIPU/JUHE/TIAN 均未配置）${hint}，显式短路跳过刷新`)
+    // 即使 juhe/天行均未配置，官方源 staging 可能仍有 pending 数据可消费。
+    // 但官方源本身由 rssFetcher 负责抓取，refreshNews 无三方 Key 时无实际数据可处理，
+    // 短路跳过（官方源消费依赖分类映射，仅在有 Key 时随主流水线处理）。
+    const hint = '当前 refreshNews 无 juhe/tianxing Key，且官方源由 rssFetcher 独立抓取；请配置 JUHE_API_KEY / TIAN_API_KEY 以启用统一流水线'
+    console.warn(`[refreshNews] 无可用的三方新闻数据源 ${hint}，显式短路跳过刷新`)
     return {
       code: 0,
       message: '无可用的新闻数据源，跳过刷新',

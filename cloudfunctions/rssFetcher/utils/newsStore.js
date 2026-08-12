@@ -9,6 +9,29 @@
 const cloud = require('wx-server-sdk')
 const { sha256 } = require('./validator')
 const qualityScorer = require('./qualityScorer')
+const newsIngestStore = require('./newsIngestStore')
+
+// ── 官方源源站分类 → 前端 5 tab 分类映射（v1.2 路线1）──
+// 官方源 feed.category 是源站原始栏目（finance/edu/culture/society/health/book/house...），
+// 前端只有 recommend/tech/international/sports/life 5 个 tab。写入 news_ingest 时统一映射，
+// 保证官方源上首页后落在可见 tab（"全部"天然可见所有分类）。
+const OFFICIAL_CATEGORY_MAP = {
+  tech: 'tech', digital: 'tech', auto: 'tech', science: 'tech', it: 'tech',
+  sports: 'sports',
+  life: 'life', edu: 'life', culture: 'life', health: 'life', book: 'life',
+  house: 'life', society: 'life', finance: 'life', economy: 'life', money: 'life',
+  world: 'international', international: 'international', global: 'international',
+}
+
+/**
+ * 官方源源站分类 → 前端 tab 分类（未命中兜底 life=社会）
+ * @param {string} srcCategory
+ * @returns {string}
+ */
+function mapOfficialCategory(srcCategory) {
+  const c = String(srcCategory || '').trim().toLowerCase()
+  return OFFICIAL_CATEGORY_MAP[c] || 'life'
+}
 
 function col() {
   return cloud.database().collection('news_raw_official')
@@ -100,6 +123,9 @@ async function batchInsert(items) {
       content_mode: 'official_rss',
       status: 'active',
     })
+    // 版权红线（A.4/A.5）：news_raw_official 归档只存 title/url/summary，绝不落 content 正文全文；
+    // content 仅走 news_ingest 瞬时 staging（见 batchInsertToIngest）。
+    delete doc.content
     try {
       await col().add({ data: doc })
       written++
@@ -117,4 +143,30 @@ async function batchInsert(items) {
   return { written, failed, rejectedCount, rejected }
 }
 
-module.exports = { filterDuplicates, batchInsert, sha256 }
+/**
+ * 批量写入新增项到 news_ingest（staging，含 content 供 AI 加工；瞬时，批次后清除）。
+ * 字段对齐 newsIngestStore.buildInputDoc 输入形态：
+ *   { sourceType, sourceName, title, summary, url, content, category, publishTime, fetchedAt }
+ * 幂等：_id = ingest_${urlFp}（有 URL 时），重复写入自动跳过。
+ * @param {Array<Object>} items - validator.validate 输出的 item（含 content）
+ * @param {Object} [opts] - { sourceName? }
+ * @returns {Promise<{written:number, failed:number, total:number}>}
+ */
+async function batchInsertToIngest(items) {
+  if (!items || !items.length) return { written: 0, failed: 0, total: 0 }
+  const ingestItems = items.map((it) => ({
+    sourceType: 'official_rss',
+    sourceName: it.sourceName || '官方源',
+    title: it.title,
+    summary: it.summary || '',
+    url: it.url || '',
+    // A.4/A.5：content 仅作为 AI 加工源数据（瞬时 staging，批次后清除）
+    content: it.content || '',
+    category: mapOfficialCategory(it.category),
+    publishTime: it.pubDate || it.fetchedAt || '',
+    fetchedAt: it.fetchedAt || new Date().toISOString(),
+  }))
+  return newsIngestStore.pushItems(ingestItems)
+}
+
+module.exports = { filterDuplicates, batchInsert, batchInsertToIngest, mapOfficialCategory, OFFICIAL_CATEGORY_MAP, sha256 }

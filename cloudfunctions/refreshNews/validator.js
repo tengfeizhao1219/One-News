@@ -169,11 +169,16 @@ function validateSourceUrl(url, source) {
     const hostname = new URL(u).hostname.replace(/^www\./, '').toLowerCase()
 
     // 来源中文名 → 预期域名映射
+    // v8 路线1：补充官方源实际域名（中新 chinanews.com.cn、人民 people.com.cn、
+    // 央视 cctv.com、新华 xinhuanet.com）——官方源 RSS 直连 URL 必须是真实源站域名，
+    // 若此处误伤会导致 sourceUrl 被清空、前端「出处 ↗」失效。
     const SOURCE_DOMAIN_EXPECT = {
-      '新华社':     ['xinhuanet.com'],
+      '新华社':     ['xinhuanet.com', 'news.cn'],
       '人民日报':   ['people.com.cn'],
       '央视新闻':   ['cctv.com', 'cctv.cn'],
-      '中新网':     ['chinanews.com'],
+      '央视网':     ['cctv.com', 'cctv.cn'],
+      '中新网':     ['chinanews.com', 'chinanews.com.cn'],
+      '新华网':     ['xinhuanet.com', 'news.cn'],
       '澎湃新闻':   ['thepaper.cn'],
       '36氪':       ['36kr.com'],
       '虎嗅':       ['huxiu.com'],

@@ -79,6 +79,8 @@ function validate(raw, meta) {
     titleFp: sha256(title),
     url: rawUrl,
     summary: String(summary),
+    // A.4/A.5：content 正文全文 → AI 加工源数据（瞬时 staging，仅 news_ingest 用）
+    content: raw.content ? String(raw.content) : '',
     pubDate: String(pubDate),
     fetchedAt: raw.fetchedAt || new Date().toISOString(),
     status: 'pending',

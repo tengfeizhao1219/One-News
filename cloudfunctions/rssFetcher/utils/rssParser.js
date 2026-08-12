@@ -3,8 +3,9 @@
  * ============================================================
  * 基于 fast-xml-parser（纯 JS 无原生依赖，微信云函数可直接安装）。
  * 兼容 RSS 2.0（<item>）与 Atom（<entry>）。
- * 输出统一：{ title, url, pubDate, desc, sourceName? }
- * 版权红线：只保留标题/链接/摘要信息，不存正文全文。
+ * 输出统一：{ title, url, pubDate, desc, content, sourceName? }
+ * 版权红线（A.4/A.5 修订）：content（正文全文）仅作为 AI 加工源数据，
+ *   存 news_ingest 瞬时 staging、批次后清除；不向用户展示、不持久化。
  * ============================================================
  */
 
@@ -58,6 +59,8 @@ function parse(xmlText) {
         url: cleanStr(it.link),
         pubDate: cleanStr(it.pubDate || it['dc:date'] || it.date),
         desc: cleanSummary(it.description || it.summary || it['content:encoded'] || ''),
+        // A.4/A.5：content:encoded 正文全文 → AI 加工源数据（瞬时 staging，不落库）
+        content: cleanContent(it['content:encoded'] || it.description || it.summary || ''),
       }))
       .filter((it) => it.title && it.url)
     return out
@@ -77,11 +80,14 @@ function parse(xmlText) {
         if (!rel || rel === 'alternate') { url = href; break }
       }
       if (!url && links.length) url = (links[0]['@_href'] || links[0].href) || ''
+      const atomContent = (it.content && (it.content['#text'] || it.content.__cdata || cleanStr(it.content))) || ''
       return {
         title: cleanStr((it.title && it.title['#text']) || it.title),
         url: cleanStr(url),
         pubDate: cleanStr(it.published || it.updated || ''),
-        desc: cleanSummary((it.summary && it.summary['#text']) || it.summary || ''),
+        desc: cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
+        // A.4/A.5：Atom <content> 正文 → AI 加工源数据
+        content: cleanContent(atomContent),
       }
     }).filter((it) => it.title && it.url)
     return out
@@ -121,10 +127,39 @@ function cleanSummary(v) {
     .slice(0, 300)
 }
 
+/**
+ * 正文清洗（A.4/A.5）：RSS content:encoded / Atom content → AI 加工源数据。
+ * 去标签 → 段落结构化（保留 \n，AI 摘要/解读依赖段落边界）→ 截断 ≤ 5000 字。
+ * 仅存 news_ingest 瞬时 staging，批次后清除；不落 news_cache、不向用户展示。
+ * @param {string} v
+ * @returns {string}
+ */
+function cleanContent(v) {
+  const s = cleanStr(v)
+  if (!s) return ''
+  return s
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+    .slice(0, 5000)
+}
+
 /** 值强制转数组（元素可能单值时是对象，多值时是数组） */
 function toArray(v) {
   if (v == null) return []
   return Array.isArray(v) ? v : [v]
 }
 
-module.exports = { parse, toArray, cleanStr, cleanSummary }
+module.exports = { parse, toArray, cleanStr, cleanSummary, cleanContent }

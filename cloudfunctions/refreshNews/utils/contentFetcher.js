@@ -748,12 +748,19 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
       if (deadline && Date.now() + 3000 > deadline) break
       const idx = cursor++
       const item = cleanedNewsList[idx]
+      // v8 路线1：官方源（contentSource='official_rss'）特殊处理
+      //   - content 由 rssFetcher 双写进 news_ingest 时已自带（A.4/A.5 允许官方 RSS 抓正文作 AI 加工源）
+      //   - 不再 fetchContentForItem 抓源站 HTML（版权红线 + 省预算）
+      //   - 跳过 interpretNews 独立解读（避免覆盖 contentSource 导致前端「出处 ↗」丢失）
+      //   - AI 摘要照常（owner 拍板摘要优先级：AI > 源摘要 > 首段 > 标题）
+      //   - 落库前 content 清空（news_cache 不缓存官方正文全文，仅 summary + sourceUrl）
+      const isOfficialRss = item.contentSource === 'official_rss'
       try {
         // 1. 抓正文
         // AI 独立解读模式（skipFetch=true）：直接使用 AI 生成的 content，不再抓原文覆盖
         // （版权策略：AI 解读 ≠ 原文复述，抓原文覆盖会破坏版权规避效果）
         let content
-        if (skipFetch) {
+        if (skipFetch || isOfficialRss) {
           content = item.content || ''
         } else {
           content = await Promise.race([
@@ -773,7 +780,8 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         //     降级源/原文（聚合/天行/抓取的全文 contentSource='fetched' 等）→ 对原文 interpretNews
         //     产出独立解读，成功则覆盖 content + 标记 'ai_interpretation'，让详情页 R1 放行出真解读
         //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
-        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
+        // v8 路线1：官方源（official_rss）跳过 interpretNews——保留官方源标记，仅做 AI 摘要。
+        if (!isOfficialRss && enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
           const interpretation = await Promise.race([
             interpretNews(content, item.title, enriched.references, item),
             new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
@@ -870,6 +878,12 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
             enriched.summary = item.title || ''
             summarySource = 'title'
           }
+        }
+
+        // v8 路线1（版权红线 A.4/A.5）：官方源 content（正文全文）仅作 AI 摘要源数据，
+        // 摘要/首段兜底完成后立即清空——news_cache 不缓存官方正文全文，只留 summary + sourceUrl 跳源站。
+        if (isOfficialRss) {
+          enriched.content = ''
         }
 
         enriched.summarySource = summarySource

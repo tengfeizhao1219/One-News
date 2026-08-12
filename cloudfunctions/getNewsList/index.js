@@ -88,6 +88,9 @@ async function queryCache(where, pageNum, pageSize) {
           summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
+          // v1.2 路线1：透传 contentSource（前端识别官方源「出处 ↗」）+ sourceName（官方源来源名）
+          contentSource: item.contentSource || '',
+          sourceName: item.sourceName || '',
           isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态
           // FS-质量把控 v2：附加评分字段（前端可选，用于排序标识/后续展示评分）
           finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
