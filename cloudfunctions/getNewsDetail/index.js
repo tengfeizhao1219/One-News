@@ -579,15 +579,17 @@ exports.main = async (event) => {
   }
 
   // ── 官方源已汇入 news_cache（v1.2 路线1）──
-  // 官方源在 news_cache 中 content=''（版权红线：不缓存正文全文），contentSource='official_rss'。
-  // 命中 news_cache 时同样短路：直接返回 summary + 出处，不进入第 3 步网页抓取（禁止抓官方正文）。
+  // 官方源在 news_cache 中 content 可能为空（解读失败，版权红线不缓存原文）或为 AI 解读正文。
+  // contentSource='official_rss'。命中 news_cache 时短路：有 AI 解读正文则展示，否则返回 summary + 出处，
+  // 不进入第 3 步网页抓取（禁止抓官方正文）。
   if (doc.contentSource === 'official_rss') {
     bumpViewCount(collection, doc._id)
     return {
       code: 0,
       data: {
         ...doc,
-        content: doc.summary || doc.content || '',       // 无正文，兜底 summary
+        // AI 解读正文优先；无正文（解读失败/历史数据）兜底 summary
+        content: doc.content && doc.content.trim().length >= 30 ? doc.content : (doc.summary || ''),
         contentSource: 'official_rss',
         sourceUrl: doc.sourceUrl || doc.url || '',
         sourceName: doc.sourceName || doc.source || '',

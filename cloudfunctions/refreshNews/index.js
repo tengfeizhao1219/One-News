@@ -472,8 +472,18 @@ async function runCategoryPipeline(category, quotaBaseline) {
   }
 
   // 4. 有效新闻过少 → 保留旧缓存（不清旧，避免把分类清空/降级为少量低质内容）
-  if (qualityPassed.length < MIN_PER_CATEGORY) {
-    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${qualityPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存`)
+  // v8 路线1 修订（2026-08-12 owner 反馈）：官方源（contentSource='official_rss'）是高质量增量
+  // （权威来源 100 + AI 加工），不受 MIN_PER_CATEGORY 门槛限制——官方源每小时每源仅 1-2 条新的，
+  // 单分类经常 <3 条，若并入门槛会永远进不了 tab。故：官方源只要过质量门就照常 enrich + 写库；
+  // 仅当【三方源 + 官方源】总量 <3 才保留旧缓存（该分类本次刷新整体偏弱）。
+  //   实现：官方源条目从 qualityPassed 中拆出，走独立 enrich + batchInsert（不触发 clearOldCacheExcept），
+  //   三方源仍走原门槛逻辑；若三方源 <3 且官方源也为 0 → 保留旧缓存。
+  const officialPassed = qualityPassed.filter(it => it.contentSource === 'official_rss')
+  const thirdPartyPassed = qualityPassed.filter(it => it.contentSource !== 'official_rss')
+  console.log(`[refreshNews][${category}] 拆分: 官方源 ${officialPassed.length} 条 / 三方源 ${thirdPartyPassed.length} 条`)
+
+  if (qualityPassed.length < MIN_PER_CATEGORY && officialPassed.length === 0) {
+    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${qualityPassed.length} 条(<${MIN_PER_CATEGORY})且无官方源，保留旧缓存`)
     return {
       category,
       inserted: 0,
@@ -493,11 +503,13 @@ async function runCategoryPipeline(category, quotaBaseline) {
   // 传 onEnriched 回调 → 每完成一条成功 enrich 立即单条写库（createdAt = 各自完成时刻），
   // 供前端短轮询 getNewsDelta 按 createdAt 增量读到"逐条新数据"，实现"列表逐条增加"。
   // 失败/被跳过条目不回调（不入库，避免无正文壳文档）。兜底见下。
+  // v8 路线1 修订：官方源（即使 <3 条）与三方源合并 enrich + 写库，但 clearOldCacheExcept 只清三方源旧缓存。
+  const enrichPool = officialPassed.concat(thirdPartyPassed)
   let incrementalInserted = 0
   let incrementalFailed = 0
   const writtenIds = new Set() // 已由回调单条写库成功的 id 集合
   const enriched = await enrichNewsList(
-    qualityPassed, 8, skipFetch, skipAiSummary, enrichDeadline,
+    enrichPool, 8, skipFetch, skipAiSummary, enrichDeadline,
     async (item) => {
       // 单条写库：batchInsert 内部按 id 幂等（已存在 update 保留 _id / retained，新记录 add）
       const r = await batchInsert([item])
@@ -541,10 +553,15 @@ async function runCategoryPipeline(category, quotaBaseline) {
     }
   }
 
-  // 7. 清理该分类旧缓存（保留新 ids）
-  const newIds = enriched.map(it => it.id)
-  const cleared = await clearOldCacheExcept(category, newIds)
-  console.log(`[refreshNews][${category}]: 清理旧数据 ${cleared} 条`)
+  // 7. 清理该分类旧缓存（保留新 ids）——v8 修订：仅三方源路径清旧（官方源是增量补写，不动旧数据）
+  //    官方源单独出现时（三方源 <3），不清旧缓存，避免官方源补写把整分类旧数据删光。
+  if (thirdPartyPassed.length >= MIN_PER_CATEGORY) {
+    const newIds = enriched.map(it => it.id)
+    const cleared = await clearOldCacheExcept(category, newIds)
+    console.log(`[refreshNews][${category}]: 清理旧数据 ${cleared} 条`)
+  } else {
+    console.log(`[refreshNews][${category}]: 三方源 ${thirdPartyPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存（官方源已增量补写）`)
+  }
 
   // 8. 备份快照
   await backupToCacheBackup({ [category]: enriched })

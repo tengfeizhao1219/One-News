@@ -114,8 +114,9 @@
             <text class="ai-badge-desc">已依版权合规策略过滤原文全文，仅显示 AI 摘要</text>
             <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">查看原文 ›</text>
           </view>
-          <!-- 官方源归因标识（版权红线：只跳源站 H5，不显正文；contentSource==='official_rss' 时渲染；
-               与 AI 解读/AI 摘录徽标平行占位，语义区分：官方源 ≠ AI 生成） -->
+          <!-- 官方源归因标识（contentSource==='official_rss' 时渲染；v1.2 路线1 修订：
+               AI 解读正文可展示，版权红线是"不缓存/不展示原文全文"，解读为加工产物；
+               语义区分：官方源 ≠ AI 生成，出处跳源站 H5） -->
           <view class="source-attribution-badge" wx:if="{{news.contentSource === 'official_rss'}}">
             <text class="source-chip">{{news.sourceName || news.source}}</text>
             <text class="source-badge-desc">内容整理自官方源</text>

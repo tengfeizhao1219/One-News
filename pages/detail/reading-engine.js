@@ -33,6 +33,10 @@ for (var i = 0; i < CATEGORIES.length; i++) {
 // ⚠️ FS R1（commit eb12834）已保证 ai_first 模式下非 ai_interpretation 的 content 字段已清空；
 //   本函数是**前端最后一道闸门**，即使后端拦截漏网也只展示 summary。
 var ALLOWED_RENDER_CONTENT_SOURCE = 'ai_interpretation'
+// v1.2 路线1 + 2026-08-12 修订：官方源（official_rss）落库 content 可能是 AI 解读正文
+// （A.4/A.5：解读是加工产物非原文复述，可展示），应渲染 content；仅当 content 为空（解读失败）
+// 时降级 summary。R1（FS）已保证 official_rss 的 content 要么是 AI 解读正文要么为空，不会是原文全文。
+var ALLOWED_RENDER_CONTENT_SOURCES = ['ai_interpretation', 'official_rss']
 var R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
 
 /**
@@ -43,7 +47,7 @@ var R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
 function resolveContentText(news) {
   if (!news) return ''
   var source = news.contentSource || ''
-  if (source === ALLOWED_RENDER_CONTENT_SOURCE) {
+  if (ALLOWED_RENDER_CONTENT_SOURCES.indexOf(source) !== -1) {
     return news.content || news.summary || ''
   }
   // r1_blocked_fulltext / 其他历史全文本 / 兜底：只取 summary

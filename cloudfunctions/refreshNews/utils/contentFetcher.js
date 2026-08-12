@@ -780,18 +780,24 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         //     降级源/原文（聚合/天行/抓取的全文 contentSource='fetched' 等）→ 对原文 interpretNews
         //     产出独立解读，成功则覆盖 content + 标记 'ai_interpretation'，让详情页 R1 放行出真解读
         //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
-        // v8 路线1：官方源（official_rss）跳过 interpretNews——保留官方源标记，仅做 AI 摘要。
-        if (!isOfficialRss && enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
+        // v8 路线1 + 2026-08-12 修订：官方源（official_rss）同样走 interpretNews——
+        //   A.4/A.5 允许官方 RSS 抓正文作 AI 加工源；AI 解读是加工产物（非原文复述），可落库展示。
+        //   但 contentSource **保持 'official_rss'**（前端「出处 ↗」+ R1 放行依赖它），
+        //   解读正文写 content、观点写 aiOpinion；解读失败则 content 维持原文（版权红线：落库前清空）。
+        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
           const interpretation = await Promise.race([
             interpretNews(content, item.title, enriched.references, item),
             new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
           ])
           if (interpretation && interpretation.text) {
             enriched.content = interpretation.text
-            enriched.contentSource = 'ai_interpretation'
+            // 官方源保留 'official_rss'（前端出处 ↗），普通源标记 'ai_interpretation'
+            if (!isOfficialRss) {
+              enriched.contentSource = 'ai_interpretation'
+            }
             // owner 8/12 拍板：把【一页说】观点拆成独立字段，供前端做独立卡片
             enriched.aiOpinion = interpretation.aiOpinion || ''
-            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}）`)
+            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}｜src=${isOfficialRss ? 'official' : 'normal'}）`)
           } else {
             console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)
           }
@@ -880,9 +886,11 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           }
         }
 
-        // v8 路线1（版权红线 A.4/A.5）：官方源 content（正文全文）仅作 AI 摘要源数据，
-        // 摘要/首段兜底完成后立即清空——news_cache 不缓存官方正文全文，只留 summary + sourceUrl 跳源站。
-        if (isOfficialRss) {
+        // v8 路线1 + 2026-08-12 修订（版权红线 A.4/A.5）：
+        // 官方源 content（原文全文）仅作 AI 加工源数据。落库时区分两种情况：
+        //   - AI 解读成功（content 已被 interpretNews 替换为加工产物）→ 保留 content 展示解读正文；
+        //   - AI 解读失败（content 仍是原文全文）→ 清空，不缓存官方正文，详情页用 summary + sourceUrl 跳源站。
+        if (isOfficialRss && content && enriched.content === content) {
           enriched.content = ''
         }
 
