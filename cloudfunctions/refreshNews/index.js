@@ -35,6 +35,7 @@ const config = require('./config')
 const { enrichNewsList, isInvalidDesc } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
+const qualityScorer = require('./utils/qualityScorer')
 
 // ─── 分类列表（聚合支持的分类）───
 // v7（TL-B11）：与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
@@ -264,6 +265,15 @@ async function batchInsert(newsList) {
         retainedAt,
         cacheExpire,
         createdAt: now,
+        // ─── FS-质量把控 v1（2026-08-12）：6 维评分 + 热度 + FinalScore + eventId 落库 ───
+        // qualityScorer 已对 secPassed 评分并 attach 到 item；enriched 通过展开运算符保留这些字段。
+        // 失败兜底（qualityScorer 异常时）：null/空串由 getNewsList 排序兜底（不参与排序，不影响历史数据）。
+        finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
+        qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
+        heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
+        eventId: item.eventId || '',
+        noiseRatio: typeof item.noiseRatio === 'number' ? item.noiseRatio : null,
+        gatedReason: item._gated || (item._gatedReason || ''),  // 写入时已经过质量门，此处仅为留痕
       }
 
       // v7（TL-B12）：已有记录则 update（保留 _id，避免重复插入相同 id 文档导致数据分叉），
@@ -390,14 +400,41 @@ async function runCategoryPipeline(category, quotaBaseline) {
   const { passed: secPassed, blocked: secBlocked } = secResult
   console.log(`[refreshNews][${category}] 安全审核: ${secPassed.length} 通过, ${secBlocked.length} 拦截`)
 
+  // 3.5 多维质量评分 + 热度融合 + 质量门控（FS-质量把控核心 2026-08-12 落地）
+  //   - clusterEvent 跨源事件聚合算 eventId/eventHeat（基于 title 聚类，不依赖 content）
+  //   - topicHeat/engagement 算热度
+  //   - QualityScore = 0.25·来源 + 0.20·完整 + 0.15·时效 + 0.15·文本 + 0.10·去重（合规为硬门禁）
+  //   - FinalScore = 0.6·Quality + 0.4·Heat；Quality<40 或 噪音比>0.4 或 合规命中 → 不入新闻池
+  //   - 接入点：enrich 前对 secPassed 评分，attach 到 item；enrich 通过 spread {...item, ...} 保留字段；
+  //     batchInsert 落库 finalScore/eventId；getNewsList 排序按 FinalScore。
+  //   - 安全网：scoreAll 失败不阻塞流程（catch → 全部放行，沿用旧逻辑）→ 已落地 finalScore=null。
+  let qualityPassed = secPassed
+  let qualityBlocked = []
+  try {
+    const { scored, gated } = qualityScorer.scoreAll(secPassed, { category })
+    qualityPassed = scored.filter(it => !it._gated)
+    qualityBlocked = gated
+  } catch (qsErr) {
+    console.warn(`[refreshNews][${category}] ⚠️ qualityScorer 失败，沿用旧逻辑: ${qsErr.message}`)
+  }
+  console.log(`[refreshNews][${category}] 质量评分: ${qualityPassed.length} 通过, ${qualityBlocked.length} 拒`)
+  if (qualityBlocked.length > 0) {
+    const reasons = qualityBlocked.reduce((m, it) => {
+      const r = it._gatedReason || 'unknown'
+      m[r] = (m[r] || 0) + 1
+      return m
+    }, {})
+    console.log(`[refreshNews][${category}] 拒因: ${JSON.stringify(reasons)}`)
+  }
+
   // 4. 有效新闻过少 → 保留旧缓存（不清旧，避免把分类清空/降级为少量低质内容）
-  if (secPassed.length < MIN_PER_CATEGORY) {
-    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${secPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存`)
+  if (qualityPassed.length < MIN_PER_CATEGORY) {
+    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${qualityPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存`)
     return {
       category,
       inserted: 0,
       skipped: true,
-      engine,
+      engine: 'none',
       quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
       elapsedMs: Date.now() - catStart,
     }
@@ -416,7 +453,7 @@ async function runCategoryPipeline(category, quotaBaseline) {
   let incrementalFailed = 0
   const writtenIds = new Set() // 已由回调单条写库成功的 id 集合
   const enriched = await enrichNewsList(
-    secPassed, 8, skipFetch, skipAiSummary, enrichDeadline,
+    qualityPassed, 8, skipFetch, skipAiSummary, enrichDeadline,
     async (item) => {
       // 单条写库：batchInsert 内部按 id 幂等（已存在 update 保留 _id / retained，新记录 add）
       const r = await batchInsert([item])

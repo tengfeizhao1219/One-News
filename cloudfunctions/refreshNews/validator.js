@@ -273,5 +273,6 @@ module.exports = {
   validateAndClean,
   validateSourceUrl,
   deduplicateByTitle,
+  titleSimilarity,
   VALID_SOURCES,
 }
