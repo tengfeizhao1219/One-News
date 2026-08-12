@@ -12,6 +12,8 @@
 
 const { cleanNewsContent, validateCleanedContent } = require('./newsCleaner')
 const config = require('../config')
+// 读法路由（轻量路线，2026-08-12 owner 拍板）：把 qualityScorer 落库信号 → 解读读法 + 是否加【一页说】
+const { resolveInterpretPlan } = require('./interpretLens')
 
 // 抓取超时（refreshNews 有 60s 预算，单条抓取给 6s）
 const FETCH_TIMEOUT_MS = 6000
@@ -356,9 +358,12 @@ module.exports = {
  * @param {string} content - 抓到的原文全文（聚合/天行源）
  * @param {string} title - 新闻标题
  * @param {Array<{title,source,url}>} [references] - 可选信源 URL 列表，辅助解读可溯源
- * @returns {Promise<string|null>} 200-600 字中文解读（随原文长度伸缩，上限约 600）；失败/无配置返回 null
+ * @param {Object} [signals] - 可选评分信号（qualityScorer 落库字段：finalScore/category/title/summary），
+ *                             用于「读法路由」决定解读风格与是否加【一页说】观点段。缺省 → depth 读法（不退化）。
+ * @returns {Promise<{text:string,lensId:string,lensName:string,withOpinion:boolean,routeReason:string,tMin:number,tMax:number}|null>}
+ *          成功返回解读对象（text=正文，其余为读法路由元信息，供日志/可观测）；失败/过短/无配置返回 null。
  */
-function interpretNews(content, title, references) {
+function interpretNews(content, title, references, signals) {
   const hunyuanCfg = (config.hunyuan || {})
   const engines = []
   // 复用与摘要一致的引擎链：智谱 → Qwen → DeepSeek → 混元兜底
@@ -385,18 +390,19 @@ function interpretNews(content, title, references) {
   else if (srcLen < 800) { tMin = 300; tMax = 430 }
   else if (srcLen < 1600) { tMin = 450; tMax = 580 }
   else { tMin = 520; tMax = 600 }
-  const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
 
-  const INTERPRET_PROMPT =
-    '你是「一页」的新闻解读人，不是复读机。基于用户给的新闻原文，写一篇有观点、读着不累的独立解读。\n' +
-    '写法：\n' +
-    '1. 开场用一句话点出"这事和读者有什么关系"，别端着；\n' +
-    '2. 中间讲清来龙去脉与关键事实，挑读者最该知道的讲，不注水、不堆砌；\n' +
-    '3. 可有克制的个人视角或轻类比，但绝不编造原文没有的事实；\n' +
-    '4. 结尾来一句让人记得住的话（金句/反差/小提醒均可）；\n' +
-    '5. 分段用空行分隔，段间自然过渡；\n' +
-    '6. 禁止"据报道""据悉""记者从…获悉"等套话，禁止逐字复述或高度相似改写原文。\n' +
-    `原文约 ${srcLen} 字，你的解读控制在 ${tMin}-${tMax} 字（随原文长度增减，最多不超过 600 字），以句号自然收尾。`
+  // 读法路由（2026-08-12 owner 拍板「轻量路线」）：
+  // 依据 qualityScorer 已落库信号（finalScore/category）选读法 + 决定是否加【一页说】观点段。
+  // signals 缺省时降级为「中等价值」→ depth 读法，保证老调用方（3 参）行为不退化。
+  const plan = resolveInterpretPlan(signals || { title }, { srcLen, tMin, tMax })
+  // 读法会按 lengthFactor 收缩字数（速览天然短），故以 plan 的区间为准
+  tMin = plan.tMin
+  tMax = plan.tMax
+  const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
+  // 合格门槛随读法浮动：速览只要 120-180 字，固定 150 会误杀合格速览
+  const minAccept = Math.max(100, Math.round(tMin * 0.7))
+
+  const INTERPRET_PROMPT = plan.prompt
 
   // 混元兜底（云开发内置，免费额度；与摘要共用同一 createModel 通道）
   function tryHunyuan() {
@@ -425,7 +431,9 @@ function interpretNews(content, title, references) {
       }).then((result) => {
         clearTimeout(timer)
         const txt = (result && result.text ? result.text : '').trim()
-        if (txt && txt.length >= 150) resolve(txt); else resolve(null)
+        if (txt && txt.length >= minAccept) {
+          resolve({ text: txt, lensId: plan.lensId, lensName: plan.lensName, withOpinion: plan.withOpinion, routeReason: plan.routeReason, tMin: plan.tMin, tMax: plan.tMax })
+        } else resolve(null)
       }).catch(() => { clearTimeout(timer); resolve(null) })
     })
   }
@@ -489,7 +497,7 @@ function interpretNews(content, title, references) {
       ;(async () => {
         for (let attempt = 0; attempt < 2; attempt++) {
           const txt = await doRequest()
-          if (txt && txt.length >= 150) { resolve(txt); return }
+          if (txt && txt.length >= minAccept) { resolve({ text: txt, lensId: plan.lensId, lensName: plan.lensName, withOpinion: plan.withOpinion, routeReason: plan.routeReason, tMin: plan.tMin, tMax: plan.tMax }); return }
           if (attempt < 1) await new Promise(res => setTimeout(res, 500))
         }
         console.warn(`[interpret] ${eng.name} 解读失败，尝试下一引擎`)
@@ -747,13 +755,13 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
         if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
           const interpretation = await Promise.race([
-            interpretNews(content, item.title, enriched.references),
+            interpretNews(content, item.title, enriched.references, item),
             new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
           ])
-          if (interpretation && interpretation.length >= 150) {
-            enriched.content = interpretation
+          if (interpretation && interpretation.text) {
+            enriched.content = interpretation.text
             enriched.contentSource = 'ai_interpretation'
-            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.length}字）`)
+            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}）`)
           } else {
             console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)
           }
