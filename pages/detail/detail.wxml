@@ -129,11 +129,10 @@
             <text class="inline-empty-icon">·</text>
             <text class="inline-empty-text">内容暂不可用</text>
           </view>
-          <!-- 一页说：AI 独立观点卡（owner 2026-08-12 拍板方案 C；字段 aiOpinion 由 FS 返回，仅非空渲染） -->
+          <!-- 一页说：AI 独立观点（owner 2026-08-12 拍板方案 B 引用块；字段 aiOpinion 由 FS 返回，仅非空渲染） -->
           <view class="yiyieshuo-card" wx:if="{{news.aiOpinion}}">
             <view class="yiyieshuo-head">
-              <text class="yiyieshuo-chip">一页说</text>
-              <text class="yiyieshuo-sub">AI 独立见解</text>
+              <text class="yiyieshuo-label">一页说</text>
             </view>
             <text class="yiyieshuo-text">{{news.aiOpinion}}</text>
             <view class="yiyieshuo-info-entry" bindtap="onToggleOpinionInfo">

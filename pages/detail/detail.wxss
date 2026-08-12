@@ -364,40 +364,28 @@
    置于 AI 解读/AI 摘录提示语之后（非独立成行），用 --text-link 蓝链色相对高亮，
    与灰提示语形成对比但不过分抢眼；个人主体 web-view 不可用，交互走「复制链接+引导外部浏览器打开」 */
 
-/* ============ 一页说：AI 独立观点卡（owner 2026-08-12 拍板方案 C） ============
-   整卡浅蓝底（--primary-subtle），最轻量形态；与顶部「AI 解读」醒目徽标区分角色：
-   AI 解读=合规免责感，一页说=主蓝洞察感。点击「关于一页说」就地展开说明（中性灰底 --bg-subtle），不引新 hex */
+/* ============ 一页说：AI 独立观点（owner 2026-08-12 拍板方案 B 引用块） ============
+   引用块形态：左边框(--primary) + 浅蓝底(--primary-subtle)，比方案 C 更克制；
+   与顶部「AI 解读」醒目徽标区分角色：AI 解读=合规免责感，一页说=主蓝洞察感。
+   点击「关于一页说」就地展开说明（中性灰底 --bg-subtle），不引新 hex */
 .yiyieshuo-card {
   margin: 8rpx 0 4rpx;
-  padding: 22rpx 24rpx;
+  padding: 22rpx 26rpx;
   background-color: var(--primary-subtle);
-  border-radius: 20rpx;
+  border-left: 6rpx solid var(--primary);
+  border-radius: 12rpx;
 }
 
 .yiyieshuo-head {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  margin-bottom: 14rpx;
+  margin-bottom: 12rpx;
 }
 
-.yiyieshuo-chip {
-  display: inline-block;
-  padding: 4rpx 18rpx;
-  border-radius: 22rpx;
+.yiyieshuo-label {
   font-size: 24rpx;
   font-weight: 600;
-  line-height: 1.4;
   color: var(--primary);
-  background-color: transparent;
-  border: 1rpx solid var(--primary);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-}
-
-.yiyieshuo-sub {
-  font-size: 24rpx;
-  font-weight: 500;
-  color: var(--text-link);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
