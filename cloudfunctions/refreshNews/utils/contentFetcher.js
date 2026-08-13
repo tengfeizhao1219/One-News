@@ -428,16 +428,18 @@ function interpretNews(content, title, references, signals) {
       try {
         cloud = require('wx-server-sdk')
         if (!cloud || typeof cloud.init !== 'function' || typeof cloud.ai !== 'function') {
+          console.warn('[interpret] 混元不可用：wx-server-sdk 无 cloud.ai()，降级下一引擎')
           resolve(null); return
         }
         cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV, timeout: 60000 })
       } catch (e) {
+        console.warn('[interpret] 混元初始化失败（无法加载 wx-server-sdk）：' + (e && e.message || e) + '，降级下一引擎')
         resolve(null); return
       }
       const userContent = `新闻标题：${title || ''}\n\n新闻原文：\n${input}`
       const model = cloud.ai().createModel('cloudbase')
       const timeoutMs = hunyuanCfg.timeout || 8000
-      const timer = setTimeout(() => { resolve(null) }, timeoutMs)
+      const timer = setTimeout(() => { console.warn(`[interpret] 混元解读超时(>${timeoutMs}ms)，降级下一引擎`); resolve(null) }, timeoutMs)
       model.generateText({
         model: hunyuanCfg.model || 'hy3',
         messages: [
@@ -460,8 +462,15 @@ function interpretNews(content, title, references, signals) {
             withOpinion: plan.withOpinion, routeReason: plan.routeReason,
             tMin: plan.tMin, tMax: plan.tMax,
           })
-        } else resolve(null)
-      }).catch(() => { clearTimeout(timer); resolve(null) })
+        } else {
+          console.warn(`[interpret] 混元解读为空/过短(<${minAccept})，降级下一引擎`)
+          resolve(null)
+        }
+      }).catch((err) => {
+        clearTimeout(timer)
+        console.warn(`[interpret] 混元引擎调用失败：${err && err.message ? err.message : err}，降级下一引擎`)
+        resolve(null)
+      })
     })
   }
 
@@ -505,10 +514,11 @@ function interpretNews(content, title, references, signals) {
         // 降级链永远走不到 → 外层 12s race 掐断全失败。
         // 修复：独立强制超时兜底（Promise.race + req.destroy()），无论 'timeout' 事件是否触发，
         //      到点必 destroy 掐断 + resolve(null)，让降级链能执行。
+        // 2026-08-13 owner 推进项②：doRequest 返回 {text, reason}，失败时记录原因供 CLS 诊断闭环。
         const https = require('https')
         const url = new URL(eng.baseUrl)
         let settled = false
-        const finish = (val) => { if (!settled) { settled = true; r(val) } }
+        const finish = (out) => { if (!settled) { settled = true; r(out) } }
         const req = https.request({
           hostname: url.hostname,
           path: url.pathname + url.search,
@@ -528,24 +538,25 @@ function interpretNews(content, title, references, signals) {
               const txt = resp.choices && resp.choices[0] && resp.choices[0].message
                 ? resp.choices[0].message.content.trim()
                 : null
-              finish(txt)
-            } catch (e) { finish(null) }
+              finish(txt ? { text: txt } : { text: null, reason: '空响应体' })
+            } catch (e) { finish({ text: null, reason: '响应JSON解析失败' }) }
           })
         })
         // 独立强制超时：不依赖 req.on('timeout') 事件（半开连接下不可靠）
-        const forceTimer = setTimeout(() => { req.destroy(); finish(null) }, eng.timeout + 500)
-        req.on('error', () => { clearTimeout(forceTimer); finish(null) })
-        req.on('timeout', () => { clearTimeout(forceTimer); req.destroy(); finish(null) })
+        const forceTimer = setTimeout(() => { req.destroy(); finish({ text: null, reason: '强制超时(半开连接兜底)' }) }, eng.timeout + 500)
+        req.on('error', (e) => { clearTimeout(forceTimer); finish({ text: null, reason: '网络错误:' + (e && e.code || e.message || e) }) })
+        req.on('timeout', () => { clearTimeout(forceTimer); req.destroy(); finish({ text: null, reason: '连接超时' }) })
         req.on('close', () => clearTimeout(forceTimer))
         req.write(body)
         req.end()
       })
       ;(async () => {
+        let lastReason = '未知'
         for (let attempt = 0; attempt < 2; attempt++) {
-          const txt = await doRequest()
-          if (txt && txt.length >= minAccept) {
+          const out = await doRequest()
+          if (out.text && out.text.length >= minAccept) {
             // 切出【一页说】观点成独立字段 aiOpinion，正文剥离内联标记
-            const { body, opinion } = splitOpinionFromText(txt)
+            const { body, opinion } = splitOpinionFromText(out.text)
             resolve({
               text: body,
               aiOpinion: plan.withOpinion ? opinion : '',
@@ -555,9 +566,11 @@ function interpretNews(content, title, references, signals) {
             })
             return
           }
+          if (out.text) lastReason = `文本过短(${out.text.length}<${minAccept})`
+          else lastReason = out.reason || '空响应'
           if (attempt < 1) await new Promise(res => setTimeout(res, 500))
         }
-        console.warn(`[interpret] ${eng.name} 解读失败，尝试下一引擎`)
+        console.warn(`[interpret] ${eng.name} 解读失败（${lastReason}），尝试下一引擎`)
         resolve(null)
       })()
     })
@@ -711,22 +724,25 @@ function summarizeWithZhipu(content, title) {
               const summary = resp.choices && resp.choices[0] && resp.choices[0].message
                 ? resp.choices[0].message.content.trim()
                 : null
-              r(summary)
-            } catch (e) { r(null) }
+              r(summary ? { text: summary } : { text: null, reason: '空响应体' })
+            } catch (e) { r({ text: null, reason: '响应JSON解析失败' }) }
           })
         })
-        req.on('error', () => r(null))
-        req.on('timeout', () => { req.destroy(); r(null) })
+        req.on('error', (e) => r({ text: null, reason: '网络错误:' + (e && e.code || e.message || e) }))
+        req.on('timeout', () => { req.destroy(); r({ text: null, reason: '连接超时' }) })
         req.write(body)
         req.end()
       })
       ;(async () => {
+        let lastReason = '未知'
         for (let attempt = 0; attempt < 3; attempt++) {
-          const summary = await doRequest()
-          if (summary && summary.length >= 30) { resolve(summary); return }
+          const out = await doRequest()
+          if (out.text && out.text.length >= 30) { resolve(out.text); return }
+          if (out.text) lastReason = `文本过短(${out.text.length}<30)`
+          else lastReason = out.reason || '空响应'
           if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
         }
-        console.warn(`[summarize] ${eng.name} 摘要失败，尝试下一引擎`)
+        console.warn(`[summarize] ${eng.name} 摘要失败（${lastReason}），尝试下一引擎`)
         resolve(null)
       })()
     })
