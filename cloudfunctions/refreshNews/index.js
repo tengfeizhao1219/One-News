@@ -507,6 +507,18 @@ async function runCategoryPipeline(category, quotaBaseline) {
   } catch (qsErr) {
     console.warn(`[refreshNews][${category}] ⚠️ qualityScorer 失败，沿用旧逻辑: ${qsErr.message}`)
   }
+  // owner 8/13 选项B（recommend 特殊处理）：recommend 100% 依赖聚合源，电竞类源站常无可抓正文。
+  // 合并链路下正文补全失败的条目正文为空 → 综合质量分恒低被误拒；此处精确化为
+  // 「仅放行正文已抓到 ≥200 字 的条目，其余丢弃」，避免有正文却被综合分误拒，也不放行无正文壳。
+  if (category === 'recommend') {
+    const bodyOk = secPassed.filter(it => (it.content || '').trim().length >= 200)
+    const bodyMiss = secPassed.filter(it => (it.content || '').trim().length < 200)
+    if (bodyOk.length !== qualityPassed.length) {
+      console.log(`[refreshNews][recommend] 选项B 放宽门控: 综合分放行 ${qualityPassed.length} → 有正文放行 ${bodyOk.length}（丢弃无正文 ${bodyMiss.length}）`)
+    }
+    qualityPassed = bodyOk
+    qualityBlocked = bodyMiss.map(it => ({ _gatedReason: 'no_fetchable_body', title: it.title }))
+  }
   console.log(`[refreshNews][${category}] 质量评分: ${qualityPassed.length} 通过, ${qualityBlocked.length} 拒`)
   if (qualityBlocked.length > 0) {
     const reasons = qualityBlocked.reduce((m, it) => {
