@@ -450,6 +450,9 @@ function interpretNews(content, title, references, signals) {
         if (txt && txt.length >= minAccept) {
           // 切出【一页说】观点成独立字段 aiOpinion，正文剥离内联标记（owner 8/12 拍板：观点卡独立呈现）
           const { body, opinion } = splitOpinionFromText(txt)
+          // 可观测性（2026-08-13 owner 推进项②）：补全混元解读成功日志，
+          // 否则 tryHunyuan 失败静默 resolve(null)，无法从 CLS 确认「混元解读是否真的接管」。
+          console.log(`[interpret] 混元解读成功（${txt.length}字｜读法=${plan.lensName}）`)
           resolve({
             text: body,
             aiOpinion: plan.withOpinion ? opinion : '',
