@@ -20,6 +20,12 @@ const PARSE_OPTIONS = {
   parseAttributeValue: false,
   arrayMode: false,
   cdataPropName: '__cdata',      // 保留 CDATA 文本，方便提取
+  // 实体展开上限：fast-xml-parser v4 把 processEntities 归一为对象，maxTotalExpansions
+  // 默认仅 1000；含较多 &#xx; 数字实体的中文 feed（IT之家/联合早报/央视·新华·参考消息
+  // 微信镜像等）会被「Entity expansion limit exceeded」整篇拒掉。调高到 1e6 避免误杀活源。
+  // 注意：选项名是 processEntities.maxTotalExpansions，不是 entityExpansionLimit。owner 8/13 修复。
+  processEntities: { maxTotalExpansions: 1000000, maxEntityCount: 1000000, maxExpandedLength: 1000000 },
+  htmlEntities: true,            // 同时解码 HTML 命名实体（&nbsp; &middot; &mdash; 等）
 }
 
 /**
