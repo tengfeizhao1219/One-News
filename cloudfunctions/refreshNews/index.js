@@ -642,6 +642,20 @@ async function runCategoryPipeline(category, quotaBaseline) {
       if (consumedIds.length > 0) {
         const cr = await consumeByKeys(consumedIds)
         ingestConsumed = cr.removed || 0
+        // owner 8/13 拍板：处理后删源 —— 同步删除 news_raw_official 中对应的官方源 raw 原文，
+        // 保证「抓→处理→删源」闭环，news_raw_official 不长期缓存正文全文。
+        // 映射：news_ingest _id = `ingest_${urlFp}` → news_raw_official _id = `official_${urlFp}`；
+        // 无 URL 兜底的 ingest _id 无对应 raw 记录，删除为 no-op（安全）。
+        const rawIds = consumedIds
+          .filter(id => String(id).startsWith('ingest_'))
+          .map(id => 'official_' + id.slice('ingest_'.length))
+        if (rawIds.length > 0) {
+          let rawRemoved = 0
+          for (const rid of rawIds) {
+            try { await db.collection('news_raw_official').doc(rid).remove(); rawRemoved++ } catch (e) {}
+          }
+          console.log(`[refreshNews][${category}] news_raw_official 同步删除 ${rawRemoved}/${rawIds.length} 条 raw 原文`)
+        }
       }
     } catch (ingestErr) {
       console.warn(`[refreshNews][${category}] news_ingest 消费删除失败（幂等，下轮 TTL 兜底）:`, ingestErr.message)

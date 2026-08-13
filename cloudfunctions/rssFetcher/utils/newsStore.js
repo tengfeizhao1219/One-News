@@ -2,7 +2,8 @@
  * newsStore.js — 官方源新闻数据落库（去重 + 批量写入）
  * ============================================================
  * 对齐方案 §5/§2：写 news_raw_official，urlFp/titleFp 双唯一去重。
- * 版权红线：只存 title/url/summary + 元信息，不存正文全文。
+ * owner 8/13 拍板：news_raw_official 存正文全文（content），作为 AI 加工源数据；
+ * 处理后由 refreshNews 消费时按 _id 同步删除（删源），不长期缓存。仅留 6h 短 TTL 兜底消费失败。
  * ============================================================
  */
 
@@ -126,13 +127,13 @@ async function batchInsert(items) {
       _id: `official_${it.urlFp}`,
       content_mode: 'official_rss',
       status: 'active',
-      // 版权红线：news_raw_official 只存 title/url/summary，不存 content；
-      // 仍按「源数据」处理，7 天后自动清理，避免无限制堆积。
-      expireAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      // owner 8/13 拍板：news_raw_official 存正文全文（content），AI 加工源数据；
+      // 处理后由 refreshNews 消费时按 _id 同步删除（删源，不长期缓存）。
+      // 仅保留 6h 短 TTL 作为消费失败的安全兜底，正常路径处理即删。
+      expireAt: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(),
     })
-    // 版权红线（A.4/A.5）：news_raw_official 归档只存 title/url/summary，绝不落 content 正文全文；
-    // content 仅走 news_ingest 瞬时 staging（见 batchInsertToIngest）。
-    delete doc.content
+    // 存正文：不再 delete content。content 供 refreshNews 做 AI 摘要+解读输入，
+    // 处理后由 refreshNews 删除本集合对应记录（见 refreshNews index.js 6b 消费段）。
     try {
       await col().add({ data: doc })
       written++
@@ -177,20 +178,21 @@ async function batchInsertToIngest(items) {
 }
 
 /**
- * 清理过期的 news_raw_official 归档（7 天 TTL），避免源数据无限堆积。
+ * 清理过期的 news_raw_official 归档（6h 短 TTL 兜底），避免消费失败残留无限堆积。
  * 仅删除 expireAt < now 且 status='active' 的记录，不影响 pending 消费。
+ * 正常路径由 refreshNews 消费时同步删除（删源），此处仅作兜底。
  * @returns {Promise<{removed:number, failed:number}>}
  */
 async function cleanupExpiredOfficialRaw() {
   let removed = 0
   let failed = 0
   const now = new Date().toISOString()
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
   try {
     const batchSize = 100
     let hasMore = true
     while (hasMore) {
-      // 删除条件：expireAt 已过期；或旧数据没有 expireAt 但 fetchedAt/createdAt 超过 7 天
+      // 删除条件：expireAt 已过期；或旧数据没有 expireAt 但 fetchedAt/createdAt 超过 6h
       const cmd = cloud.database().command
       const res = await col()
         .where({
@@ -199,7 +201,7 @@ async function cleanupExpiredOfficialRaw() {
             { expireAt: cmd.lt(now) },
             {
               expireAt: cmd.exists(false),
-              fetchedAt: cmd.lt(sevenDaysAgo),
+              fetchedAt: cmd.lt(sixHoursAgo),
             },
           ],
         })

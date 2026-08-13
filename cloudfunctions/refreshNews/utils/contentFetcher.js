@@ -20,6 +20,9 @@ const FETCH_TIMEOUT_MS = 6000
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 // B-14: 单条 enrich 总超时兜底（12s）——网页抓取 + AI 摘要合计不超过此值，防拖慢 worker 池/首屏
 const ITEM_TIMEOUT_MS = 12000
+// 解读独立预算（owner 8/13 选方案②）：解读需多引擎降级链，12s 太紧会把混元/Qwen/DeepSeek 挤压掉；
+// 提到 25s 让「混元→智谱→Qwen→DeepSeek」都有机会兜底。摘要仍用 12s（IT_ITEM_TIMEOUT_MS）。
+const INTERPRET_TIMEOUT_MS = 25000
 
 // 浏览器 UA（避免反爬）
 const BROWSER_UA =
@@ -412,11 +415,10 @@ function interpretNews(content, title, references, signals) {
   tMin = plan.tMin
   tMax = plan.tMax
   const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
-  // 合格门槛（owner 8/13 #1 拍板：全源都要 AI 解读，覆盖优先）：不再随 tMin 高比例缩放——
-  // 旧 max(70, tMin*0.6) 在长文 tMin=520 时门槛 312 字，混元通常只回 200-280 字被误杀
-  // （实测 news_cache 66 条仅 1 条 ai_interpretation，且恰为短文章）。改为低地板：
-  // 只要模型产出 ≥90 字真实解读即接受，速览/深一度/冷思考均可通过，覆盖率大幅提升。
-  const minAccept = Math.max(90, Math.round(tMin * 0.35))
+  // 合格门槛（owner 8/13 选方案③）：在「混元前置 + 25s 预算」基础上进一步放宽，
+  // 地板 90→50、长文系数 0.35→0.25；旧 max(90,tMin*0.35) 长文门槛 312 字仍误杀混元 200-280 字解读。
+  // 现 max(50, tMin*0.25)：长文门槛降至 ~130 字，短文地板 50 字，解读覆盖率向摘要看齐。
+  const minAccept = Math.max(50, Math.round(tMin * 0.25))
 
   const INTERPRET_PROMPT = plan.prompt
 
@@ -478,14 +480,16 @@ function interpretNews(content, title, references, signals) {
     console.warn('[interpret] 未配置任何解读引擎，跳过 AI 独立解读')
     return Promise.resolve(null)
   }
-  // 有序降级链（owner 8/13 拍板）：智谱 → 混元(云开发内置·免费额度) → Qwen → DeepSeek
-  // 混元为平台托管鉴权、零密钥、免费额度，作为高优免费兜底置于智谱之后、付费外部 Key 链之前；
-  // 任一引擎成功即返回，避免把免费额度浪费在外部 Key 全挂之后才兜底。
+  // 有序降级链（owner 8/13 选方案①：混元前置）：混元(云开发内置·免费额度·快) → 智谱 → Qwen → DeepSeek
+  // 混元平台托管鉴权、零密钥、免费额度，且中文解读质量稳定、延迟低；置于首位的理由：
+  //  - 25s 预算内优先用免费额度跑通，绝大多数条目首引擎即成，省外部 Key 配额；
+  //  - 混元失败再降智谱→Qwen→DeepSeek（付费外部 Key），任一成功即返回。
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
   const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
   if (hunyuanCfg.enabled) {
-    if (zhipuIdx >= 0) providers.splice(zhipuIdx + 1, 0, { kind: 'hunyuan' })
-    else providers.push({ kind: 'hunyuan' })
+    // 插入到智谱之前（即在整个链首位），实现「混元前置」
+    if (zhipuIdx >= 0) providers.splice(zhipuIdx, 0, { kind: 'hunyuan' })
+    else providers.unshift({ kind: 'hunyuan' })
   }
   return (async () => {
     for (const p of providers) {
@@ -668,13 +672,17 @@ function summarizeWithZhipu(content, title) {
     return Promise.resolve(null)
   }
 
-  // 有序降级链（owner 8/13 拍板）：智谱 → 混元(云开发内置·免费额度) → Qwen → DeepSeek
-  // 混元为平台托管鉴权、零密钥、免费额度，作为高优免费兜底置于智谱之后、付费外部 Key 链之前。
+  // 有序降级链（owner 8/13 拍板·摘要同步修复）：混元(云开发内置·免费额度·快) → 智谱 → Qwen → DeepSeek
+  // 混元平台托管鉴权、零密钥、免费额度，且中文摘要质量稳定、延迟低；置于首位：
+  //  - 12s 预算内优先用免费额度跑通，绝大多数条目首引擎即成，省外部 Key 配额；
+  //  - 混元失败再降智谱→Qwen→DeepSeek（付费外部 Key），任一成功即返回。
+  // 此前「智谱打头」+ 12s race 把智谱 8s×3 重试吃满，永远轮不到混元/Qwen/DeepSeek 兜底 → 摘要大面积 null。
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
   const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
   if (hunyuanCfg.enabled) {
-    if (zhipuIdx >= 0) providers.splice(zhipuIdx + 1, 0, { kind: 'hunyuan' })
-    else providers.push({ kind: 'hunyuan' })
+    // 插入到智谱之前（即在整个链首位），实现「混元前置」（与 interpretNews 8/13 修复一致）
+    if (zhipuIdx >= 0) providers.splice(zhipuIdx, 0, { kind: 'hunyuan' })
+    else providers.unshift({ kind: 'hunyuan' })
   }
   return (async () => {
     for (const p of providers) {
@@ -859,35 +867,11 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         if (Array.isArray(item.references) && item.references.length > 0) {
           enriched.references = item.references
         }
-        // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道
-        // 触发条件 = content 不是 AI 解读来源（enriched.contentSource !== 'ai_interpretation'），
-        // 即：AI 源（智谱搜索）content 自带 'ai_interpretation' → 跳过（已解读）；
-        //     降级源/原文（聚合/天行/抓取的全文 contentSource='fetched' 等）→ 对原文 interpretNews
-        //     产出独立解读，成功则覆盖 content + 标记 'ai_interpretation'，让详情页 R1 放行出真解读
-        //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
-        // v8 路线1 + 2026-08-12 修订：官方源（official_rss）同样走 interpretNews——
-        //   A.4/A.5 允许官方 RSS 抓正文作 AI 加工源；AI 解读是加工产物（非原文复述），可落库展示。
-        //   但 contentSource **保持 'official_rss'**（前端「出处 ↗」+ R1 放行依赖它），
-        //   解读正文写 content、观点写 aiOpinion；解读失败则 content 维持原文（版权红线：落库前清空）。
-        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
-          const interpretation = await Promise.race([
-            interpretNews(content, item.title, enriched.references, item),
-            new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
-          ])
-          if (interpretation && interpretation.text) {
-            enriched.content = interpretation.text
-            // 官方源保留 'official_rss'（前端出处 ↗），普通源标记 'ai_interpretation'
-            if (!isOfficialRss) {
-              enriched.contentSource = 'ai_interpretation'
-            }
-            // owner 8/12 拍板：把【一页说】观点拆成独立字段，供前端做独立卡片
-            enriched.aiOpinion = interpretation.aiOpinion || ''
-            console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}｜src=${isOfficialRss ? 'official' : 'normal'}）`)
-          } else {
-            console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)
-          }
-        }
-
+        // ── 3. AI 摘要（列表展示关键字段，优先于解读执行；混元前置保证快速成功）──
+        // 2026-08-13 修复：原摘要引擎链「智谱打头」+ 12s race 把智谱 8s×3 重试吃满，
+        // 永远轮不到混元/Qwen/DeepSeek 兜底 → 摘要大面积返回 null 退化成首段（summarySource='content'）。
+        // 现与解读一致改为「混元前置」（见 summarizeWithZhipu），且摘要先于解读执行，
+        // 避免被解读 25s 预算挤掉（列表展示靠摘要，解读是详情页加分项，best-effort 即可）。
         // 2. 判断原始 summary 来源（description 或标题兜底）
         // FS-05（2026-08-09 owner 拍板）：聚合接口常返回"假 desc"（日期/来源名/几个标点），
         // 原判定 `rawSummary === item.title` 只过滤"== 标题"，对"假 desc"无效。
@@ -897,7 +881,7 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         const descCtx = { title: item.title, source: item.source }
         let summarySource = isInvalidDesc(rawSummary, descCtx) ? 'title' : 'desc'
 
-        // 3. AI 摘要（v6.6：skipAiSummary 时跳过——智谱已内联 summary，标记为 'ai'）
+        // AI 摘要（v6.6：skipAiSummary 时跳过——智谱已内联 summary，标记为 'ai'）
         if (skipAiSummary) {
           // 智谱 prompt 已内联 summary，且经过 AI 生成 → 标记为 'ai'
           if (rawSummary && rawSummary.length >= 20 && rawSummary !== item.title) {
@@ -906,17 +890,13 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         } else if (content && content.length > 10) {
           // P0-2：剩余预算不足跑摘要（<8s）→ 跳过 AI 摘要，保留 content（详情页优先正文，摘要仅列表展示用）
           if (!deadline || Date.now() + 8000 <= deadline) {
-            // B-14: AI 摘要同样加超时兜底（12s）
+            // B-14: AI 摘要同样加超时兜底（12s）；混元前置后首引擎免费额度快速命中，极少走到外部 Key 链
             const aiSummary = await Promise.race([
               summarizeWithZhipu(content, item.title),
               new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
             ])
             if (aiSummary && aiSummary.length >= 30) {
-              // FE-20260810-003：移除 150 字硬截断 —— AI 摘要完整写库展示。
-              // prompt 已收紧为 100-150 字自然收尾，从源头控制长度；
-              // 老数据超长由前端布局整体居中 + 物理溢出兜底（不再 slice 断句）。
-              // owner 8/13 #1：去掉「比例门槛」——长文 AI 摘要 100-150 字占比常 <20% 被误杀，
-              // 导致 AI 摘要覆盖不足（详情页摘要非 AI、正文无解读）。只要产出 ≥60 字真实摘要即采用，
+              // owner 8/13 #1：去掉「比例门槛」——只要产出 ≥60 字真实摘要即采用，
               // 60 字下限已能滤掉 30 字假摘要，不再用占比卡长文。
               if (aiSummary.length >= 60) {
                 enriched.summary = aiSummary
@@ -927,6 +907,43 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
             }
           } else {
             console.warn(`[enrich] ${item.id || ''} 预算不足跳过 AI 摘要（保留 content，summarySource=${summarySource}）`)
+          }
+        }
+
+        // ── 2/4. AI 独立解读（详情页加分项，best-effort：预算不足时跳过，不挤占摘要）──
+        // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道
+        // 触发条件 = content 不是 AI 解读来源（enriched.contentSource !== 'ai_interpretation'），
+        // 即：AI 源（智谱搜索）content 自带 'ai_interpretation' → 跳过（已解读）；
+        //     降级源/原文（聚合/天行/抓取的全文 contentSource='fetched' 等）→ 对原文 interpretNews
+        //     产出独立解读，成功则覆盖 content + 标记 'ai_interpretation'，让详情页 R1 放行出真解读
+        //     （否则被 R1 拦截 → 空卡/卡片搬运）；失败则 content 维持原文，由 R1 拦截兜底返回 summary。
+        // v8 路线1 + 2026-08-12 修订：官方源（official_rss）同样走 interpretNews——
+        //   A.4/A.5 允许官方 RSS 抓正文作 AI 加工源；AI 解读是加工产物（非原文复述），可落库展示。
+        //   但 contentSource **保持 'official_rss'**（前端「出处 ↗」+ R1 放行依赖它），
+        //   解读正文写 content、观点写 aiOpinion；解读失败则 content 维持原文（版权红线：落库前清空）。
+        // 2026-08-13 修复：解读需 25s 预算，置于摘要之后并加预算守卫——剩余 <28s 直接跳过，
+        // 确保摘要（列表关键字段）已先跑完、不被解读挤掉；解读失败则 content 维持原文走 R1 兜底。
+        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
+          // 预算守卫：解读需 25s，剩余 <28s 跳过（保摘要已先完成）
+          if (!deadline || Date.now() + 28000 <= deadline) {
+            const interpretation = await Promise.race([
+              interpretNews(content, item.title, enriched.references, item),
+              new Promise(resolve => setTimeout(() => resolve(null), INTERPRET_TIMEOUT_MS)),
+            ])
+            if (interpretation && interpretation.text) {
+              enriched.content = interpretation.text
+              // 官方源保留 'official_rss'（前端出处 ↗），普通源标记 'ai_interpretation'
+              if (!isOfficialRss) {
+                enriched.contentSource = 'ai_interpretation'
+              }
+              // owner 8/12 拍板：把【一页说】观点拆成独立字段，供前端做独立卡片
+              enriched.aiOpinion = interpretation.aiOpinion || ''
+              console.log(`[enrich] ${item.id || ''} AI 独立解读成功（${interpretation.text.length}字｜读法=${interpretation.lensName}｜观点=${interpretation.withOpinion ? '有' : '无'}｜${interpretation.routeReason}｜src=${isOfficialRss ? 'official' : 'normal'}）`)
+            } else {
+              console.warn(`[enrich] ${item.id || ''} AI 解读失败/过短，保持原文走 R1 兜底`)
+            }
+          } else {
+            console.warn(`[enrich] ${item.id || ''} 预算不足跳过 AI 解读（已保摘要，content 维持原文）`)
           }
         }
 
