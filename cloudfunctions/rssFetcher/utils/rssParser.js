@@ -64,6 +64,9 @@ function parse(xmlText) {
         title: cleanStr(it.title),
         url: cleanStr(it.link),
         pubDate: cleanStr(it.pubDate || it['dc:date'] || it.date),
+        // owner 8/13：条目级栏目（IT之家 RSS 含 <category>科学探索</category> 等），
+        // 供 rssFetcher 按条目把科学探索内容归入「科学探索」tab（feed.category 仅作兜底）。
+        category: cleanStr(it.category),
         desc: cleanSummary(it.description || it.summary || it['content:encoded'] || ''),
         // A.4/A.5：content:encoded 正文全文 → AI 加工源数据（瞬时 staging，不落库）
         content: cleanContent(it['content:encoded'] || it.description || it.summary || ''),
@@ -91,6 +94,8 @@ function parse(xmlText) {
         title: cleanStr((it.title && it.title['#text']) || it.title),
         url: cleanStr(url),
         pubDate: cleanStr(it.published || it.updated || ''),
+        // owner 8/13：Atom 条目级栏目（<category term="..."> 或 <category>文本</category>）
+        category: cleanStr((it.category && (it.category['@_term'] || it.category['#text'])) || it.category),
         desc: cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
         // A.4/A.5：Atom <content> 正文 → AI 加工源数据
         content: cleanContent(atomContent),

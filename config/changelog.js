@@ -64,7 +64,7 @@ module.exports = {
           label: '新功能',
           items: [
             { title: '一页 One News 正式上线', desc: '极简沉浸式新闻阅读，打开即读，零干扰' },
-            { title: '4 大分类', desc: '科技 / 国际 / 体育 / 生活，每小时更新' },
+            { title: '4 大分类', desc: '科技 / 国际 / 科学探索 / 社会，每小时更新' },
             { title: 'AI 三级摘要降级', desc: '智谱 → Qwen → DeepSeek，失败自动降级' },
           ],
         },

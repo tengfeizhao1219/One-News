@@ -366,6 +366,37 @@ async function collectCategoryItems(category) {
   // 仅「借用」展示：用独立前缀 rec_ 避免与原生分类 worker 同 id 互相覆盖 category；
   // 不设 _ingestId → 不进 ingestIds → step6b 不会把源条目从 news_ingest 删除（不饿死原生 worker）。
   if (category === 'recommend') {
+    // owner 8/13 重新梳理：推荐 = 多源综合新闻
+    //   - juhe top（综合/头条）+ tianxing generalnews（综合新闻）
+    //   - 官方 RSS 跨类 pending 要闻借用（rec_ 前缀，不消费，不饿死原生 worker）
+    // 此前 recommend 仅借官方 RSS 要闻（option A），丢弃了 juhe/tianxing → 长期只剩 IT之家一家。
+    const sourceJobs = []
+    if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
+    if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
+    if (sourceJobs.length > 0) {
+      const settled = await Promise.allSettled(sourceJobs)
+      settled.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
+          r.value.news.forEach((it) => items.push({
+            id: it.id,
+            title: it.title,
+            summary: it.summary || '',
+            content: it.content || '',
+            contentSource: 'fetched',
+            category: 'recommend',
+            categoryName: it.categoryName,
+            source: it.source || '聚合数据',
+            sourceName: it.sourceName || it.source || '聚合数据',
+            sourceUrl: it.sourceUrl || '',
+            picUrl: '',
+            publishTime: it.publishTime || '',
+          }))
+          engLabels.push(sourceJobs[i].label)
+        }
+      })
+    }
+
+    // 官方 RSS 跨类 pending 要闻借用（不消费删除，避免饿死各原生分类 worker）
     try {
       const { fetchPendingHeadlines } = require('./utils/newsIngestStore')
       const headlines = await fetchPendingHeadlines(16)

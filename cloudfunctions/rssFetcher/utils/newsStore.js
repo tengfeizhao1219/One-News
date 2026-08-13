@@ -16,11 +16,15 @@ const newsIngestStore = require('./newsIngestStore')
 // 前端只有 recommend/tech/international/sports/life 5 个 tab。写入 news_ingest 时统一映射，
 // 保证官方源上首页后落在可见 tab（"全部"天然可见所有分类）。
 const OFFICIAL_CATEGORY_MAP = {
-  tech: 'tech', digital: 'tech', auto: 'tech', science: 'tech', it: 'tech',
+  tech: 'tech', digital: 'tech', auto: 'tech', it: 'tech',
+  // owner 8/13：官方 RSS 条目级「科学探索」栏目（IT之家等）→ 科学探索 tab（前端 id=sports）
+  science: 'sports', sci: 'sports',
   sports: 'sports',
   life: 'life', edu: 'life', culture: 'life', health: 'life', book: 'life',
   house: 'life', society: 'life', finance: 'life', economy: 'life', money: 'life',
   world: 'international', international: 'international', global: 'international',
+  // owner 8/13：体育类源（虎扑/中新体育/juhe tiyu）改并入「推荐」综合流，不再进科学探索 tab
+  recommend: 'recommend',
 }
 
 /**

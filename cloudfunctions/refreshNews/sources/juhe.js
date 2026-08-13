@@ -6,11 +6,12 @@
  * 接口文档：https://www.juhe.cn/docs/api/id/235
  *
  * 分类 → 聚合 type 映射：
- *   recommend     → top（头条）
+ *   recommend     → top（头条/综合新闻）
  *   tech          → keji（科技）
- *   sports        → tiyu（体育）⚠️ 前端 tab 已改「科学探索」，聚合无科学探索分类，内容仍为体育（降级源可接受）
  *   international → guoji（国际）
  *   life          → shehui（社会）
+ *   ⚠️ 体育(tiyu)：前端 tab 已改名「科学探索」（科学内容），聚合无科学探索分类且 tiyu 是体育，
+ *      故不再请求 juhe tiyu；体育内容改由官方 RSS（虎扑/中新体育）并入「推荐」综合流。
  *
  * 请求方式：POST，application/x-www-form-urlencoded
  *
@@ -26,7 +27,6 @@ const config = require('../config')
 const APP_TO_JUHE_TYPE = {
   recommend: 'top',
   tech: 'keji',
-  sports: 'tiyu',
   international: 'guoji',
   life: 'shehui',
 }

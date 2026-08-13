@@ -32,6 +32,20 @@ const ERROR_STREAK_LIMIT = 3
 // 大批量告警阈值
 const MAX_BATCH_INSERT = 200
 
+// owner 8/13：条目级栏目解析——IT之家等 RSS 条目自带 <category>（科学探索/科学/科普…），
+// 命中科学别名则归入「科学探索」tab（前端 id=sports，显示名=科学探索），其余沿用 feed.category。
+// 英文短别名用精确匹配（避免 musician 误中 sci），中文别名用包含匹配。
+function isScienceAlias(c) {
+  if (!c) return false
+  const n = String(c).trim().toLowerCase()
+  if (n.includes('科学') || n.includes('科普') || n.includes('探索')) return true
+  return ['science', 'sci', 'sicprobe'].includes(n)
+}
+function resolveItemCategory(feedCategory, itemCategory) {
+  if (isScienceAlias(itemCategory)) return 'science'
+  return feedCategory || 'tech'
+}
+
 // ── 云函数入口 ──
 exports.main = async (event = {}) => {
   // L1 全局开关：默认关闭，未开启官方 RSS 抓取时直接跳过
@@ -122,15 +136,18 @@ async function runWorker(feed, now) {
   let filtered = 0
   let invalid = 0
   for (const raw of parsed.items) {
+    // owner 8/13：条目级栏目优先——RSS 条目自带「科学探索」类栏目时归入科学探索 tab，
+    // 否则沿用 feed.category（如 IT之家整站 tech，但其科学探索子栏目单独进科学探索）。
+    const effCat = resolveItemCategory(feed.category || 'tech', raw.category)
     // 栏目用 feed_meta 显式指定（不依赖 RSS item 自带 category，避免中文无法匹配）
-    const fCheck = filter.check({ category: feed.category, title: raw.title }, {
+    const fCheck = filter.check({ category: effCat, title: raw.title }, {
       allowCategories: feed.allowCategories,
       blockTitleKeywords: feed.blockTitleKeywords,
     })
     if (!fCheck.pass) { filtered++; continue }
     const vRes = validator.validate(
       { title: raw.title, url: raw.url, pubDate: raw.pubDate, summary: raw.desc, content: raw.content },
-      meta,
+      Object.assign({}, meta, { category: effCat }),
     )
     if (!vRes.ok) { invalid++; continue }
     candidates.push(vRes.item)
