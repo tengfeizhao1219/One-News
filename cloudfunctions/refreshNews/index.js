@@ -326,30 +326,14 @@ async function batchInsert(newsList) {
 // @param {object} quotaBaseline - 编排器传入的当日配额基线 {zhipuCalls, deepseekCalls}
 // @returns {Promise<object>} 该分类统计 {category, inserted, engine, skipped, quotaDelta, elapsedMs}
 
-/**
- * juhe 抓取包装（带 label，供 Promise.allSettled 判定来源）
- * v8 路线1：juhe 从"兜底"变为主力源之一（与天行并行，不再等 AI 搜索失败）。
- */
-async function juheFetch(category) {
-  const { fetchAllCategories: fetchAllJuhe } = require('./sources/juhe')
-  const r = await fetchAllJuhe([category], 8)
-  return r
-}
-juheFetch.label = 'juhe'
-
-/**
- * 天行抓取包装（带 label）
- */
-async function tianFetch(category) {
-  const { fetchAllCategories: fetchAllTian } = require('./sources/tianxing')
-  const r = await fetchAllTian([category], 8)
-  return r
-}
-tianFetch.label = 'tianxing'
+// 统一源数据抓取模块（owner 8/13 拍板：tianxing/juhe 不再硬编码分支，
+// 全部经 sources/index.js 的 collectAggregateSources 归一经适配器注册表；
+// 后续接入其它 RSS 源只改 SOURCE_ADAPTERS 注册一项，下游逻辑零改动）。
+const { collectAggregateSources } = require('./sources')
 
 /**
  * 统一收集某分类的原始新闻条目（owner 8/13 拍板：聚合 API + 官方 RSS 合并为单一处理链路）
- * 并行拉取 juhe + tianxing（聚合接口，仅返回标题+链接）+ news_ingest（官方RSS staging），
+ * 经 collectAggregateSources 拉取 juhe + tianxing（聚合接口，仅返回标题+链接）+ news_ingest（官方RSS staging），
  * 全部归一为同形状 item（id/title/summary/content/contentSource/source/sourceUrl/category/_ingestId），
  * 下游正文抓取 / 质量门控 / AI 解读 / 写库统一处理，不再分两个链。
  * @returns {Promise<{items:Array, ingestIds:Array<string>, engine:string}>}
@@ -370,31 +354,24 @@ async function collectCategoryItems(category) {
     //   - juhe top（综合/头条）+ tianxing generalnews（综合新闻）
     //   - 官方 RSS 跨类 pending 要闻借用（rec_ 前缀，不消费，不饿死原生 worker）
     // 此前 recommend 仅借官方 RSS 要闻（option A），丢弃了 juhe/tianxing → 长期只剩 IT之家一家。
-    const sourceJobs = []
-    const sourceLabels = []
-    if (config.juhe.apiKey) { sourceJobs.push(juheFetch(category)); sourceLabels.push('juhe') }
-    if (config.tian.apiKey) { sourceJobs.push(tianFetch(category)); sourceLabels.push('tianxing') }
-    if (sourceJobs.length > 0) {
-      const settled = await Promise.allSettled(sourceJobs)
-      settled.forEach((r, i) => {
-        if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
-          r.value.news.forEach((it) => items.push({
-            id: it.id,
-            title: it.title,
-            summary: it.summary || '',
-            content: it.content || '',
-            contentSource: 'fetched',
-            category: 'recommend',
-            categoryName: it.categoryName,
-            source: it.source || '聚合数据',
-            sourceName: it.sourceName || it.source || '聚合数据',
-            sourceUrl: it.sourceUrl || '',
-            picUrl: '',
-            publishTime: it.publishTime || '',
-          }))
-          engLabels.push(sourceLabels[i])
-        }
-      })
+    // 聚合 API（juhe + tianxing）经统一适配器注册表抓取（owner 8/13：不再区分两个源）
+    const { news: aggNews, engines: aggEngines } = await collectAggregateSources([category], 8)
+    if (aggNews.length > 0) {
+      aggNews.forEach((it) => items.push({
+        id: it.id,
+        title: it.title,
+        summary: it.summary || '',
+        content: it.content || '',
+        contentSource: 'fetched',
+        category: 'recommend',
+        categoryName: it.categoryName,
+        source: it.source || '聚合数据',
+        sourceName: it.sourceName || it.source || '聚合数据',
+        sourceUrl: it.sourceUrl || '',
+        picUrl: '',
+        publishTime: it.publishTime || '',
+      }))
+      engLabels.push(...aggEngines)
     }
 
     // 官方 RSS 跨类 pending 要闻借用（不消费删除，避免饿死各原生分类 worker）
@@ -425,32 +402,24 @@ async function collectCategoryItems(category) {
     return { items, ingestIds, engine }
   }
 
-  // 聚合 API（juhe + tianxing）并行抓取（仅标题/链接，正文后续统一抓）
-  const sourceJobs = []
-  const sourceLabels = []
-  if (config.juhe.apiKey) { sourceJobs.push(juheFetch(category)); sourceLabels.push('juhe') }
-  if (config.tian.apiKey) { sourceJobs.push(tianFetch(category)); sourceLabels.push('tianxing') }
-  if (sourceJobs.length > 0) {
-    const settled = await Promise.allSettled(sourceJobs)
-    settled.forEach((r, i) => {
-      if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
-        r.value.news.forEach((it) => items.push({
-          id: it.id,
-          title: it.title,
-          summary: it.summary || '',
-          content: it.content || '',        // 聚合只给标题/链接，正文后续统一抓
-          contentSource: 'fetched',
-          category: it.category,
-          categoryName: it.categoryName,
-          source: it.source || '聚合数据',
-          sourceName: it.sourceName || it.source || '聚合数据',
-          sourceUrl: it.sourceUrl || '',
-          picUrl: '',
-          publishTime: it.publishTime || '',
-        }))
-        engLabels.push(sourceLabels[i])
-      }
-    })
+  // 聚合 API（juhe + tianxing）经统一适配器注册表并行抓取（owner 8/13：一套业务逻辑，不再分两个源）
+  const { news: aggNews, engines: aggEngines } = await collectAggregateSources([category], 8)
+  if (aggNews.length > 0) {
+    aggNews.forEach((it) => items.push({
+      id: it.id,
+      title: it.title,
+      summary: it.summary || '',
+      content: it.content || '',        // 聚合只给标题/链接，正文后续统一抓
+      contentSource: 'fetched',
+      category: it.category,
+      categoryName: it.categoryName,
+      source: it.source || '聚合数据',
+      sourceName: it.sourceName || it.source || '聚合数据',
+      sourceUrl: it.sourceUrl || '',
+      picUrl: '',
+      publishTime: it.publishTime || '',
+    }))
+    engLabels.push(...aggEngines)
   }
 
   // 官方 RSS（news_ingest，rssFetcher 每小时轮询写入，status=pending）

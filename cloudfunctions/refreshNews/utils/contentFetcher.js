@@ -412,11 +412,11 @@ function interpretNews(content, title, references, signals) {
   tMin = plan.tMin
   tMax = plan.tMax
   const maxTokens = Math.min(1600, Math.ceil(tMax * 2.3))
-  // 合格门槛随读法浮动：速览只要 120-180 字，固定 150 会误杀合格速览
-  // 2026-08-12 修订：门槛从 max(100, tMin*0.7) 下调为 max(70, tMin*0.6)——
-  // 实测解读失败率高（三引擎全挂日志密集），一个重要原因是 minAccept 偏高
-  // + 8s 超时太短，模型输出 70-90 字的合格速览也被判失败 → 详情页只剩摘要。
-  const minAccept = Math.max(70, Math.round(tMin * 0.6))
+  // 合格门槛（owner 8/13 #1 拍板：全源都要 AI 解读，覆盖优先）：不再随 tMin 高比例缩放——
+  // 旧 max(70, tMin*0.6) 在长文 tMin=520 时门槛 312 字，混元通常只回 200-280 字被误杀
+  // （实测 news_cache 66 条仅 1 条 ai_interpretation，且恰为短文章）。改为低地板：
+  // 只要模型产出 ≥90 字真实解读即接受，速览/深一度/冷思考均可通过，覆盖率大幅提升。
+  const minAccept = Math.max(90, Math.round(tMin * 0.35))
 
   const INTERPRET_PROMPT = plan.prompt
 
@@ -915,20 +915,14 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               // FE-20260810-003：移除 150 字硬截断 —— AI 摘要完整写库展示。
               // prompt 已收紧为 100-150 字自然收尾，从源头控制长度；
               // 老数据超长由前端布局整体居中 + 物理溢出兜底（不再 slice 断句）。
-              // B-COMPLIANCE-1 R4（2026-08-10 owner 拍板）：摘要比例硬校验 ——
-              // AI 摘要太短视为不健康（如智谱偶发返回 30 字假摘要），降级走首段/标题兜底。
-              // 2026-08-12 owner 拍板方案 B：阈值 0.3 → 0.2 放宽 ——
-              // 实测三方源（天行）正文偏短（200-500 字），AI 摘要 100 字左右占比 20-28%，
-              // 0.3 阈值大量误伤（差 1-5 个百分点），导致三方源 AI 摘要覆盖不足。
-              // 放宽到 0.2：保留"防 30 字假摘要"底线，同时放行短正文源的正常 AI 摘要。
-              const minSummaryRatio = 0.2
-              const ratio = content.length > 0 ? aiSummary.length / content.length : 0
-              if (ratio < minSummaryRatio) {
-                console.warn(`[enrich] ${item.id || ''} AI 摘要比例不达标（${(ratio * 100).toFixed(1)}% < 20%），降级兜底`)
-                // 不写入 summary，让后续 4 级降级链走首段/标题
-              } else {
+              // owner 8/13 #1：去掉「比例门槛」——长文 AI 摘要 100-150 字占比常 <20% 被误杀，
+              // 导致 AI 摘要覆盖不足（详情页摘要非 AI、正文无解读）。只要产出 ≥60 字真实摘要即采用，
+              // 60 字下限已能滤掉 30 字假摘要，不再用占比卡长文。
+              if (aiSummary.length >= 60) {
                 enriched.summary = aiSummary
                 summarySource = 'ai'
+              } else {
+                console.warn(`[enrich] ${item.id || ''} AI 摘要过短(<60字)，降级兜底`)
               }
             }
           } else {
@@ -978,6 +972,20 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         //   - AI 解读失败（content 仍是原文全文）→ 清空，不缓存官方正文，详情页用 summary + sourceUrl 跳源站。
         if (isOfficialRss && content && enriched.content === content) {
           enriched.content = ''
+        }
+
+        // ── #2 合规（owner 8/13 拍板：AI 摘要+解读处理完成即删 raw 原文）──
+        // content 落库优先级：ai_interpretation(含官方 official_rss 解读产物) > ai_summary > 清空(绝不存 raw)
+        // 官方源解读失败已在上方清空 content（仅留 summary+sourceUrl 跳源站）；此处兜底非官方源。
+        if (enriched.contentSource !== 'ai_interpretation' && enriched.contentSource !== 'official_rss') {
+          if (summarySource === 'ai' && enriched.summary) {
+            enriched.content = enriched.summary
+            enriched.contentSource = 'ai_summary'
+            console.log(`[enrich] ${item.id || ''} 无 AI 解读→回退 AI 摘要为 content（ai_summary）`)
+          } else if ((enriched.content || '').trim().length > 0) {
+            console.warn(`[enrich] ${item.id || ''} 无 AI 产物，清空 raw 原文（不落库，合规删除）`)
+            enriched.content = ''
+          }
         }
 
         enriched.summarySource = summarySource

@@ -69,7 +69,8 @@ function applyR1Filter(doc, originalContentSource) {
   // - 'ai_interpretation'：refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
   // - 'official_rss'：官方 RSS 源直连，版权红线只存 summary 不存正文（v1.1 #35）
   //   content 为 summary 兜底值，非侵权全文，前端展示「出处↗」跳转源站 H5
-  const allowedSources = ['ai_interpretation', 'official_rss']
+  // - 'ai_summary'：owner 8/13 新增——聚合/天行源 AI 解读失败时回退的 AI 摘要 content（仍属 AI 加工产物，非 raw 原文），放行展示
+  const allowedSources = ['ai_interpretation', 'official_rss', 'ai_summary']
   if (allowedSources.includes(originalContentSource)) {
     return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
   }
