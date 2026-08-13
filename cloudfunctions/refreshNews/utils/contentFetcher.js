@@ -382,15 +382,15 @@ function interpretNews(content, title, references, signals) {
   // 8s 太短（三引擎全挂日志密集的根因之一），12s 与 ITEM_TIMEOUT_MS 对齐。
   const zhipuCfg = (config.zhipuSummary || {})
   if (zhipuCfg.apiKey) {
-    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 12000 })
+    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 8000 })
   }
   const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
   if (dashKey) {
-    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 12000 })
+    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 8000 })
   }
   const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
   if (deepseekKey) {
-    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 12000 })
+    engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
   }
   // 解读输入门槛：正文太短（< 50 字）不值得解读
   if (!content || content.trim().length < 50) return Promise.resolve(null)
@@ -488,8 +488,16 @@ function interpretNews(content, title, references, signals) {
         temperature: 0.7, // 解读需有观点、可读性强，适度放开创造性
       })
       const doRequest = () => new Promise((r) => {
+        // 2026-08-13 修复「AI 解读挂起根因」：
+        // Node HTTPS 在「半开连接」（服务端已收包但未响应/连接中断未触发 FIN）下，
+        // req.setTimeout 的 'timeout' 事件偶发不触发 → doRequest 内 Promise 永不 settle →
+        // tryEngine 卡死 → 降级链(智谱→Qwen→DeepSeek→混元)永远走不到 → 外层 12s race 掐断全失败。
+        // 修复：独立强制超时兜底（Promise.race + req.destroy()），无论 'timeout' 事件是否触发，
+        //      到点必 destroy 掐断 + resolve(null)，让降级链能执行。
         const https = require('https')
         const url = new URL(eng.baseUrl)
+        let settled = false
+        const finish = (val) => { if (!settled) { settled = true; r(val) } }
         const req = https.request({
           hostname: url.hostname,
           path: url.pathname + url.search,
@@ -509,12 +517,15 @@ function interpretNews(content, title, references, signals) {
               const txt = resp.choices && resp.choices[0] && resp.choices[0].message
                 ? resp.choices[0].message.content.trim()
                 : null
-              r(txt)
-            } catch (e) { r(null) }
+              finish(txt)
+            } catch (e) { finish(null) }
           })
         })
-        req.on('error', () => r(null))
-        req.on('timeout', () => { req.destroy(); r(null) })
+        // 独立强制超时：不依赖 req.on('timeout') 事件（半开连接下不可靠）
+        const forceTimer = setTimeout(() => { req.destroy(); finish(null) }, eng.timeout + 500)
+        req.on('error', () => { clearTimeout(forceTimer); finish(null) })
+        req.on('timeout', () => { clearTimeout(forceTimer); req.destroy(); finish(null) })
+        req.on('close', () => clearTimeout(forceTimer))
         req.write(body)
         req.end()
       })
