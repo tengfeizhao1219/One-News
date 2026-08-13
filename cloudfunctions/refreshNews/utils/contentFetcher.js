@@ -276,15 +276,23 @@ function fetchJuheContent(uniquekey, options = {}) {
  * @returns {Promise<string>} 清洗后的正文；失败返回 ''
  */
 async function fetchContentForItem(item) {
-  // 1. 聚合官方内容接口
+  let best = ''
+  // 1. 聚合官方内容接口（juhe 按 uniquekey 取正文）
   const juheKey = parseJuheKey(item.id)
   if (juheKey) {
     const juheContent = await fetchJuheContent(juheKey, { title: item.title, source: item.source })
-    if (juheContent) return juheContent
+    // 仅接受有效正文（>=50字），短摘要/限流空响应不视为可用
+    if (juheContent && juheContent.length >= 50) best = juheContent
   }
 
-  // 2. 网页抓取
-  if (item.sourceUrl) {
+  // 2. 网页抓取补全（v6.6 / 2026-08-12：与官方源 A2 同源思路）
+  //    根因：聚合接口（juhe）常只返回短摘要、或免费版限流(100次/分)返回空，
+  //          导致正文过短/缺失 → interpretNews 跳过或解读质量差 → 大面积无 AI 解读正文。
+  //    修复：正文 < 200 字时按 sourceUrl 抓源站网页正文补全，取较长者，
+  //          保证 interpretNews 有足够输入 → 提升 AI 解读覆盖率（contentSource 变 ai_interpretation，过 R1 门禁）。
+  //    tianxing 无 content 字段、id 非 juhe_ → 直接走此分支（唯一正文来源）。
+  //    版权合规：抓到的源站正文仅作 AI 加工源，news_cache 不落库原文。
+  if (best.length < 200 && item.sourceUrl) {
     try {
       const html = await fetchWebPage(item.sourceUrl)
       if (html) {
@@ -296,7 +304,7 @@ async function fetchContentForItem(item) {
             source: item.source,
           })
           const validation = validateCleanedContent(cleaned)
-          if (validation.valid) return cleaned
+          if (validation.valid && cleaned.length > best.length) best = cleaned
         }
       }
     } catch (err) {
@@ -304,7 +312,7 @@ async function fetchContentForItem(item) {
     }
   }
 
-  return ''
+  return best
 }
 
 /**
