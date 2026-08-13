@@ -45,7 +45,18 @@ exports.main = async (event = {}) => {
   try {
     await ensureSchema()
   } catch (e) {
-    console.warn('[rssFetcher] ensureSchema 异常（放行，后续操作容错）:', e.message)
+    console.warn('[rssFetcher] ensureSchema 异常（放行，后续操作容容错）:', e.message)
+  }
+
+  // 启动自检：幂等播种 feed_meta（新接入的 RSS 源在此注册；已存在则跳过，不覆盖灰度配置）
+  // owner 8/13：dda5903 新增 4 个 tech 源已写入 seedFeeds.json，但未经 seed() 注册进 feed_meta → 永不被轮询。
+  // 加此自检后，每次 rssFetcher 触发都会补齐缺失源（幂等），无需单独手动播种。
+  try {
+    const { seed } = require('./utils/seedFeeds')
+    const seedRes = await seed()
+    console.log(`[rssFetcher] feed_meta 播种完成：新增 ${seedRes.inserted} 条，跳过 ${seedRes.skipped} 条`)
+  } catch (e) {
+    console.warn('[rssFetcher] seed 异常（放行）:', e.message)
   }
 
   const now = Date.now()

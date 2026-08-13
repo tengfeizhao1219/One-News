@@ -466,18 +466,26 @@ function interpretNews(content, title, references, signals) {
     console.warn('[interpret] 未配置任何解读引擎，跳过 AI 独立解读')
     return Promise.resolve(null)
   }
-  if (engines.length === 0) return tryHunyuan()
-  return new Promise((resolve) => {
-    tryEngine(0).then((txt) => {
-      if (txt) { resolve(txt); return }
-      tryHunyuan().then(resolve)
-    })
-  })
+  // 有序降级链（owner 8/13 拍板）：智谱 → 混元(云开发内置·免费额度) → Qwen → DeepSeek
+  // 混元为平台托管鉴权、零密钥、免费额度，作为高优免费兜底置于智谱之后、付费外部 Key 链之前；
+  // 任一引擎成功即返回，避免把免费额度浪费在外部 Key 全挂之后才兜底。
+  const providers = engines.map((eng) => ({ kind: 'openai', eng }))
+  const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
+  if (hunyuanCfg.enabled) {
+    if (zhipuIdx >= 0) providers.splice(zhipuIdx + 1, 0, { kind: 'hunyuan' })
+    else providers.push({ kind: 'hunyuan' })
+  }
+  return (async () => {
+    for (const p of providers) {
+      const r = p.kind === 'openai' ? await tryOneEngine(p.eng) : await tryHunyuan()
+      if (r) return r
+    }
+    return null
+  })()
 
-  function tryEngine(idx) {
+  // 单引擎尝试（2 次重试）；不再链式 forward，由外层 providers 列表统一编排顺序
+  function tryOneEngine(eng) {
     return new Promise((resolve) => {
-      if (idx >= engines.length) { resolve(null); return }
-      const eng = engines[idx]
       const body = JSON.stringify({
         model: eng.model,
         messages: [
@@ -491,7 +499,7 @@ function interpretNews(content, title, references, signals) {
         // 2026-08-13 修复「AI 解读挂起根因」：
         // Node HTTPS 在「半开连接」（服务端已收包但未响应/连接中断未触发 FIN）下，
         // req.setTimeout 的 'timeout' 事件偶发不触发 → doRequest 内 Promise 永不 settle →
-        // tryEngine 卡死 → 降级链(智谱→Qwen→DeepSeek→混元)永远走不到 → 外层 12s race 掐断全失败。
+        // 降级链永远走不到 → 外层 12s race 掐断全失败。
         // 修复：独立强制超时兜底（Promise.race + req.destroy()），无论 'timeout' 事件是否触发，
         //      到点必 destroy 掐断 + resolve(null)，让降级链能执行。
         const https = require('https')
@@ -547,7 +555,7 @@ function interpretNews(content, title, references, signals) {
           if (attempt < 1) await new Promise(res => setTimeout(res, 500))
         }
         console.warn(`[interpret] ${eng.name} 解读失败，尝试下一引擎`)
-        tryEngine(idx + 1).then(resolve)
+        resolve(null)
       })()
     })
   }
@@ -644,26 +652,25 @@ function summarizeWithZhipu(content, title) {
     return Promise.resolve(null)
   }
 
-  // 外部引擎链优先（智谱 → Qwen → DeepSeek），全部失败后用混元兜底（免费额度）
-  // 排序依据：外部 Key 引擎可走 HTTP API，混元走平台托管鉴权费用最省，
-  // 作为最后兜底，避免每天正常跑批也消耗 10亿 免费额度。
-  if (engines.length === 0) {
-    // 无外部 Key，直接走混元兜底
-    return tryHunyuan()
+  // 有序降级链（owner 8/13 拍板）：智谱 → 混元(云开发内置·免费额度) → Qwen → DeepSeek
+  // 混元为平台托管鉴权、零密钥、免费额度，作为高优免费兜底置于智谱之后、付费外部 Key 链之前。
+  const providers = engines.map((eng) => ({ kind: 'openai', eng }))
+  const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
+  if (hunyuanCfg.enabled) {
+    if (zhipuIdx >= 0) providers.splice(zhipuIdx + 1, 0, { kind: 'hunyuan' })
+    else providers.push({ kind: 'hunyuan' })
   }
-  return new Promise((resolve) => {
-    tryEngine(0).then((engSummary) => {
-      if (engSummary) { resolve(engSummary); return }
-      // 外部引擎全部失败 → 混元兜底
-      tryHunyuan().then(resolve)
-    })
-  })
+  return (async () => {
+    for (const p of providers) {
+      const s = p.kind === 'openai' ? await tryOneEngine(p.eng) : await tryHunyuan()
+      if (s) return s
+    }
+    return null
+  })()
 
-  // 顺序尝试各引擎（智谱 → Qwen → DeepSeek），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
-  function tryEngine(idx) {
+  // 单引擎尝试（3 次重试，指数退避）；不再链式 forward，由外层 providers 列表统一编排顺序
+  function tryOneEngine(eng) {
     return new Promise((resolve) => {
-      if (idx >= engines.length) { resolve(null); return }
-      const eng = engines[idx]
       const body = JSON.stringify({
         model: eng.model,
         messages: [
@@ -717,11 +724,10 @@ function summarizeWithZhipu(content, title) {
           if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
         }
         console.warn(`[summarize] ${eng.name} 摘要失败，尝试下一引擎`)
-        tryEngine(idx + 1).then(resolve)
+        resolve(null)
       })()
     })
   }
-  return tryEngine(0)
 }
 
 // v6.2：保留旧函数名兼容（contentFetcher 内部已改用 summarizeWithZhipu）

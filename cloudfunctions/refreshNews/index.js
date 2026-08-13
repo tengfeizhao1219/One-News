@@ -406,6 +406,30 @@ async function runCategoryPipeline(category, quotaBaseline) {
         publishTime: d.publishTime || '',
         _ingestId: d._id,
       }))
+      // A2 前置（owner 8/13 拍板）：官方源正文补全须在质量门控前完成，
+      // 否则评分时 content 仍是 RSS 署名行/导语 → 完整分+文本分≈0 → Quality<40 全拒。
+      // 仅对 content<200 的官方源按 sourceUrl 抓源站正文；enrich 阶段见 content≥200 会跳过重复抓取。
+      const ITEM_TIMEOUT_MS = 12000
+      const shortOnes = officialItems.filter((it) => !it.content || it.content.trim().length < 200)
+      if (shortOnes.length > 0) {
+        const { fetchContentForItem } = require('./utils/contentFetcher')
+        await Promise.all(shortOnes.map(async (it) => {
+          try {
+            const full = await Promise.race([
+              fetchContentForItem(it),
+              new Promise((res) => setTimeout(res, ITEM_TIMEOUT_MS)),
+            ])
+            if (full && full.trim().length >= 200) {
+              it.content = full
+              console.log(`[refreshNews][${category}] 官方源前置抓正文成功（${full.length}字）: ${it.title}`)
+            } else {
+              console.warn(`[refreshNews][${category}] 官方源前置抓正文失败/过短（${(full || '').length}字）: ${it.title}`)
+            }
+          } catch (e) {
+            console.warn(`[refreshNews][${category}] 官方源前置抓正文异常: ${it.title} - ${e && e.message}`)
+          }
+        }))
+      }
       news = news.concat(officialItems)
       ingestIds = officialDocs.map((d) => d._id)
       console.log(`[refreshNews][${category}] 官方源消费: ${officialItems.length} 条 (pending ingest)`)
