@@ -359,6 +359,40 @@ async function collectCategoryItems(category) {
   const ingestIds = []
   const engLabels = []
 
+  // owner 8/13 选项A：recommend 改「官方要闻精选」。
+  // recommend 自身无官方 RSS 栏目（过去 100% 依赖聚合，电竞源无正文被质量门全拒），
+  // 现从全分类 pending 官方源池取最新 N 条作为推荐源——保证可抓正文、可生成 AI 文档，
+  // 并彻底解耦 juhe 日额度耗尽(10012)的聚合单点。
+  // 仅「借用」展示：用独立前缀 rec_ 避免与原生分类 worker 同 id 互相覆盖 category；
+  // 不设 _ingestId → 不进 ingestIds → step6b 不会把源条目从 news_ingest 删除（不饿死原生 worker）。
+  if (category === 'recommend') {
+    try {
+      const { fetchPendingHeadlines } = require('./utils/newsIngestStore')
+      const headlines = await fetchPendingHeadlines(16)
+      headlines.forEach((d) => {
+        items.push({
+          id: `rec_${d.urlFp}`,
+          title: d.title,
+          summary: d.summary || '',
+          content: d.content || '',
+          contentSource: 'official_rss',
+          category: 'recommend',
+          categoryName: CATEGORY_NAMES.recommend || '推荐',
+          source: d.sourceName || '官方源',
+          sourceName: d.sourceName || '官方源',
+          sourceUrl: d.url || '',
+          picUrl: '',
+          publishTime: d.publishTime || '',
+        })
+      })
+      if (headlines.length > 0) engLabels.push('official_rss')
+    } catch (ingestErr) {
+      console.warn(`[refreshNews][recommend] news_ingest 要闻消费失败:`, ingestErr.message)
+    }
+    const engine = engLabels.length > 0 ? engLabels.join('+') : 'none'
+    return { items, ingestIds, engine }
+  }
+
   // 聚合 API（juhe + tianxing）并行抓取（仅标题/链接，正文后续统一抓）
   const sourceJobs = []
   if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))

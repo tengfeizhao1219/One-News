@@ -93,6 +93,30 @@ async function fetchPendingByCategory(category, limit = 20) {
  * @param {Array<string>} ids - news_ingest doc._id 列表
  * @returns {Promise<{removed:number, tried:number}>}
  */
+/**
+ * 拉取跨全部前端分类的 pending 官方源要闻（按 fetchedAt 倒序取最新 N）。
+ * 用于 recommend「官方要闻精选」（owner 8/13 选项A）：recommend 自身无官方 RSS 栏目，
+ * 故从全分类 pending 池取最新若干条作为推荐源。
+ * ⚠️ 重要：推荐 worker 仅「借用」这些条目做展示，调用方不得将 _ingestId 加入 ingestIds
+ * （不消费删除），否则会饿死各原生分类 worker 对同一条目的正常消费。
+ * @param {number} [limit=16] 要闻条数
+ * @returns {Promise<Array<Object>>} news_ingest docs（含 _id）
+ */
+async function fetchPendingHeadlines(limit = 16) {
+  try {
+    const res = await col()
+      .where({ status: 'pending' })
+      .orderBy('fetchedAt', 'desc')
+      .limit(limit)
+      .get()
+    return (res && res.data) || []
+  } catch (e) {
+    if (isSoftErr(e)) return []
+    console.warn(`[newsIngestStore] 拉取 pending 要闻失败:`, (e && e.message) || e)
+    return []
+  }
+}
+
 async function consumeByKeys(ids) {
   let removed = 0
   if (!ids || !ids.length) return { removed, tried: 0 }
@@ -159,6 +183,7 @@ module.exports = {
   col,
   ensureNewsIngest,
   fetchPendingByCategory,
+  fetchPendingHeadlines,
   consumeByKeys,
   cleanupExpired,
   isSoftErr,
