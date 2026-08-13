@@ -86,6 +86,14 @@ exports.main = async (event = {}) => {
     results.push(r)
   }
 
+  // 9. 清理过期 news_raw_official 归档（7 天 TTL），避免源数据无限堆积
+  try {
+    const cleanupRes = await newsStore.cleanupExpiredOfficialRaw()
+    console.log(`[rssFetcher] 清理过期 raw 归档: removed=${cleanupRes.removed}, failed=${cleanupRes.failed}`)
+  } catch (e) {
+    console.warn('[rssFetcher] 清理过期 raw 归档异常:', e.message)
+  }
+
   return { ok: true, scanned: results.length, results }
 }
 

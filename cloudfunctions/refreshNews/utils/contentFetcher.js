@@ -988,6 +988,15 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           }
         }
 
+        // 收尾归一化：防止任何路径把「已清空 content」仍标为 fetched（标签必须反映实际落库内容）
+        if (enriched.contentSource === 'fetched' && (enriched.content || '').trim().length === 0) {
+          enriched.contentSource = ''
+        }
+        if (enriched.contentSource === 'fetched' && summarySource === 'ai' && enriched.summary) {
+          enriched.content = enriched.summary
+          enriched.contentSource = 'ai_summary'
+        }
+
         enriched.summarySource = summarySource
         result[idx] = enriched
         // FS-CF3：成功项回调 → 调用方可立即单条写库（分批增量通道）

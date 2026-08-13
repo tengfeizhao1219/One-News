@@ -264,12 +264,20 @@ async function batchInsert(newsList) {
         cacheExpire = retainedAt + config.cache.retainedTTL
       }
 
+      // 落库前最终归一化 contentSource：避免回调/兜底路径把「AI 摘要兜底 content」仍写成 fetched
+      let finalContentSource = item.contentSource || ''
+      if (finalContentSource === 'fetched' && summarySource === 'ai' && summary) {
+        finalContentSource = 'ai_summary'
+      } else if (finalContentSource === 'fetched' && !(item.content || '').trim()) {
+        finalContentSource = ''
+      }
+
       const docData = {
         id: item.id,
         title: item.title,
         summary,
         summarySource,        // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示依赖）
-        contentSource: item.contentSource || '',  // 'ai_interpretation' | 'fetched'（版权策略：区分 AI 解读 vs 抓取原文）
+        contentSource: finalContentSource,  // 'ai_interpretation' | 'ai_summary' | 'official_rss' | ''（版权策略：区分 AI 解读 vs 抓取原文）
         content: item.content || '',   // v6：refreshNews 已直接抓正文
         // B-COMPLIANCE-1 S1（2026-08-10 owner 拍板）：references 字段入库（智谱/AI 搜索链的来源 URL 列表）。
         // 缺省/非 AI 源（聚合/天行）= 空数组 → 详情页"原文回源"按钮自动隐藏。已有记录 update 也会覆盖。

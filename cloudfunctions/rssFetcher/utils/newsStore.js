@@ -126,6 +126,9 @@ async function batchInsert(items) {
       _id: `official_${it.urlFp}`,
       content_mode: 'official_rss',
       status: 'active',
+      // 版权红线：news_raw_official 只存 title/url/summary，不存 content；
+      // 仍按「源数据」处理，7 天后自动清理，避免无限制堆积。
+      expireAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
     // 版权红线（A.4/A.5）：news_raw_official 归档只存 title/url/summary，绝不落 content 正文全文；
     // content 仅走 news_ingest 瞬时 staging（见 batchInsertToIngest）。
@@ -173,4 +176,64 @@ async function batchInsertToIngest(items) {
   return newsIngestStore.pushItems(ingestItems)
 }
 
-module.exports = { filterDuplicates, batchInsert, batchInsertToIngest, mapOfficialCategory, OFFICIAL_CATEGORY_MAP, sha256 }
+/**
+ * 清理过期的 news_raw_official 归档（7 天 TTL），避免源数据无限堆积。
+ * 仅删除 expireAt < now 且 status='active' 的记录，不影响 pending 消费。
+ * @returns {Promise<{removed:number, failed:number}>}
+ */
+async function cleanupExpiredOfficialRaw() {
+  let removed = 0
+  let failed = 0
+  const now = new Date().toISOString()
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  try {
+    const batchSize = 100
+    let hasMore = true
+    while (hasMore) {
+      // 删除条件：expireAt 已过期；或旧数据没有 expireAt 但 fetchedAt/createdAt 超过 7 天
+      const cmd = cloud.database().command
+      const res = await col()
+        .where({
+          status: 'active',
+          $or: [
+            { expireAt: cmd.lt(now) },
+            {
+              expireAt: cmd.exists(false),
+              fetchedAt: cmd.lt(sevenDaysAgo),
+            },
+          ],
+        })
+        .limit(batchSize)
+        .get()
+      const docs = res.data || []
+      if (docs.length === 0) {
+        hasMore = false
+        break
+      }
+      for (const d of docs) {
+        try {
+          await col().doc(d._id).remove()
+          removed++
+        } catch (e) {
+          failed++
+          console.warn(`[cleanupExpiredOfficialRaw] 删除 ${d._id} 失败:`, e && e.message)
+        }
+      }
+      if (docs.length < batchSize) hasMore = false
+    }
+  } catch (e) {
+    console.warn('[cleanupExpiredOfficialRaw] 清理失败:', e && e.message)
+    failed++
+  }
+  return { removed, failed }
+}
+
+module.exports = {
+  filterDuplicates,
+  batchInsert,
+  batchInsertToIngest,
+  mapOfficialCategory,
+  OFFICIAL_CATEGORY_MAP,
+  sha256,
+  cleanupExpiredOfficialRaw,
+}
