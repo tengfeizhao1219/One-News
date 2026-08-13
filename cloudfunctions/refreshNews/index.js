@@ -346,97 +346,92 @@ async function tianFetch(category) {
   return r
 }
 tianFetch.label = 'tianxing'
+
+/**
+ * 统一收集某分类的原始新闻条目（owner 8/13 拍板：聚合 API + 官方 RSS 合并为单一处理链路）
+ * 并行拉取 juhe + tianxing（聚合接口，仅返回标题+链接）+ news_ingest（官方RSS staging），
+ * 全部归一为同形状 item（id/title/summary/content/contentSource/source/sourceUrl/category/_ingestId），
+ * 下游正文抓取 / 质量门控 / AI 解读 / 写库统一处理，不再分两个链。
+ * @returns {Promise<{items:Array, ingestIds:Array<string>, engine:string}>}
+ */
+async function collectCategoryItems(category) {
+  const items = []
+  const ingestIds = []
+  const engLabels = []
+
+  // 聚合 API（juhe + tianxing）并行抓取（仅标题/链接，正文后续统一抓）
+  const sourceJobs = []
+  if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
+  if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
+  if (sourceJobs.length > 0) {
+    const settled = await Promise.allSettled(sourceJobs)
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
+        r.value.news.forEach((it) => items.push({
+          id: it.id,
+          title: it.title,
+          summary: it.summary || '',
+          content: it.content || '',        // 聚合只给标题/链接，正文后续统一抓
+          contentSource: 'fetched',
+          category: it.category,
+          categoryName: it.categoryName,
+          source: it.source || '聚合数据',
+          sourceName: it.sourceName || it.source || '聚合数据',
+          sourceUrl: it.sourceUrl || '',
+          picUrl: '',
+          publishTime: it.publishTime || '',
+        }))
+        engLabels.push(sourceJobs[i].label)
+      }
+    })
+  }
+
+  // 官方 RSS（news_ingest，rssFetcher 每小时轮询写入，status=pending）
+  try {
+    const { fetchPendingByCategory } = require('./utils/newsIngestStore')
+    const officialDocs = await fetchPendingByCategory(category, 8)
+    if (officialDocs.length > 0) {
+      officialDocs.forEach((d) => {
+        items.push({
+          id: `official_${d.urlFp}`,
+          title: d.title,
+          summary: d.summary || '',
+          content: d.content || '',         // 仅 AI 加工源数据，落库前按版权清空
+          contentSource: 'official_rss',
+          category: d.category,              // 已由 rssFetcher 映射为前端分类
+          categoryName: CATEGORY_NAMES[d.category] || d.category,
+          source: d.sourceName || '官方源',
+          sourceName: d.sourceName || '官方源',
+          sourceUrl: d.url || '',
+          picUrl: '',
+          publishTime: d.publishTime || '',
+          _ingestId: d._id,
+        })
+        ingestIds.push(d._id)
+      })
+      engLabels.push('official_rss')
+    }
+  } catch (ingestErr) {
+    console.warn(`[refreshNews][${category}] news_ingest 消费失败（官方源跳过）:`, ingestErr.message)
+  }
+
+  const engine = engLabels.length > 0 ? engLabels.join('+') : 'none'
+  return { items, ingestIds, engine }
+}
+
 async function runCategoryPipeline(category, quotaBaseline) {
   const catStart = Date.now()
   const baseZ = (quotaBaseline && quotaBaseline.zhipuCalls) || 0
   const baseD = (quotaBaseline && quotaBaseline.deepseekCalls) || 0
   const quotaRef = { zhipuCalls: baseZ, deepseekCalls: baseD }
 
-  // 1. 统一抓取（v8 路线1：不再用 AI 搜索抓数据，全部三方接口 + 官方 RSS）
-  //    - juhe + tianxing 并行抓取（原"智谱搜索主力→聚合/天行兜底"已废除）
-  //    - 官方源：从 news_ingest 消费（rssFetcher 每小时写入，status=pending）
-  let news = []
-  let engine = 'none'
-  let skipFetch = false
-  let skipAiSummary = false
-  let ingestIds = [] // 已消费的 news_ingest _id（成功后删除，A.5 处理即删）
-
-  // 1a. juhe + tianxing 并行抓取
-  const sourceJobs = []
-  if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
-  if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
-  if (sourceJobs.length > 0) {
-    const settled = await Promise.allSettled(sourceJobs)
-    const used = []
-    settled.forEach((r, i) => {
-      if (r.status === 'fulfilled' && r.value && r.value.news && r.value.news.length > 0) {
-        news = news.concat(r.value.news)
-        used.push(sourceJobs[i].label)
-      }
-    })
-    if (news.length > 0) {
-      engine = used.join('+') || 'juhe+tianxing'
-      skipFetch = false       // 三方源只给 title/summary/url，需要抓正文
-      skipAiSummary = false   // 需要 AI 摘要/解读
-      console.log(`[refreshNews][${category}] 三方抓取: ${news.length} 条 (${engine})`)
-    }
-  } else {
-    console.warn(`[refreshNews][${category}] JUHE/TIAN 均未配置 Key，仅消费官方 RSS staging`)
-  }
-
-  // 1b. 官方源：从 news_ingest 消费（fetchPendingByCategory 按前端分类匹配）
-  // 官方源 item 携带 content（rssFetcher 双写进 staging 的正文全文，A.4/A.5 允许作 AI 加工源），
-  // 落库 news_cache 时 content 清空（版权红线），只保留 summary + contentSource='official_rss' + sourceUrl。
-  try {
-    const { fetchPendingByCategory } = require('./utils/newsIngestStore')
-    const officialDocs = await fetchPendingByCategory(category, 8)
-    if (officialDocs.length > 0) {
-      const officialItems = officialDocs.map((d) => ({
-        id: `official_${d.urlFp}`,
-        title: d.title,
-        summary: d.summary || '',
-        content: d.content || '',       // 仅 AI 摘要源数据，落库前清空
-        contentSource: 'official_rss',
-        category: d.category,           // 已由 rssFetcher 映射为前端分类
-        categoryName: CATEGORY_NAMES[d.category] || d.category,
-        source: d.sourceName || '官方源',
-        sourceName: d.sourceName || '官方源',
-        sourceUrl: d.url || '',
-        picUrl: '',
-        publishTime: d.publishTime || '',
-        _ingestId: d._id,
-      }))
-      // A2 前置（owner 8/13 拍板）：官方源正文补全须在质量门控前完成，
-      // 否则评分时 content 仍是 RSS 署名行/导语 → 完整分+文本分≈0 → Quality<40 全拒。
-      // 仅对 content<200 的官方源按 sourceUrl 抓源站正文；enrich 阶段见 content≥200 会跳过重复抓取。
-      const ITEM_TIMEOUT_MS = 12000
-      const shortOnes = officialItems.filter((it) => !it.content || it.content.trim().length < 200)
-      if (shortOnes.length > 0) {
-        const { fetchContentForItem } = require('./utils/contentFetcher')
-        await Promise.all(shortOnes.map(async (it) => {
-          try {
-            const full = await Promise.race([
-              fetchContentForItem(it),
-              new Promise((res) => setTimeout(res, ITEM_TIMEOUT_MS)),
-            ])
-            if (full && full.trim().length >= 200) {
-              it.content = full
-              console.log(`[refreshNews][${category}] 官方源前置抓正文成功（${full.length}字）: ${it.title}`)
-            } else {
-              console.warn(`[refreshNews][${category}] 官方源前置抓正文失败/过短（${(full || '').length}字）: ${it.title}`)
-            }
-          } catch (e) {
-            console.warn(`[refreshNews][${category}] 官方源前置抓正文异常: ${it.title} - ${e && e.message}`)
-          }
-        }))
-      }
-      news = news.concat(officialItems)
-      ingestIds = officialDocs.map((d) => d._id)
-      console.log(`[refreshNews][${category}] 官方源消费: ${officialItems.length} 条 (pending ingest)`)
-    }
-  } catch (ingestErr) {
-    console.warn(`[refreshNews][${category}] news_ingest 消费失败（官方源跳过）:`, ingestErr.message)
-  }
+  // 1. 统一收集（owner 8/13 拍板：聚合 API 与官方 RSS 合并为单一处理链路，逻辑完全一致，不再分两个链）
+  //    collectCategoryItems 内部并行拉取 juhe+tianxing（聚合）+ news_ingest（官方RSS），
+  //    全部归一为同形状 item；下游正文抓取 / 质量门控 / AI 解读 / 写库统一处理。
+  const collected = await collectCategoryItems(category)
+  let news = collected.items
+  let ingestIds = collected.ingestIds
+  let engine = collected.engine
 
   // 1c. 全部源无数据 → 保留旧缓存（不清理、不写入）
   if (news.length === 0) {
@@ -450,6 +445,33 @@ async function runCategoryPipeline(category, quotaBaseline) {
       elapsedMs: Date.now() - catStart,
     }
   }
+
+  // 2. 统一正文补全（A2，所有来源通用）
+  //    owner 8/13 拍板：无论官方RSS还是聚合API，都必须先抓到正文——列表型源站（RSS/聚合仅给标题+链接）
+  //    按 sourceUrl 逐条抓源站正文（fetchContentForItem 已实现：juhe 正文接口 + 通用网页抓取）。
+  //    正文缺失/过短(<200)才补抓；质量门控与 AI 解读都基于真实正文，最终展示的是「正文→AI 解读文档」。
+  const ITEM_TIMEOUT_MS = 12000
+  const shortOnes = news.filter((it) => !it.content || it.content.trim().length < 200)
+  if (shortOnes.length > 0) {
+    const { fetchContentForItem } = require('./utils/contentFetcher')
+    await Promise.all(shortOnes.map(async (it) => {
+      try {
+        const full = await Promise.race([
+          fetchContentForItem(it),
+          new Promise((res) => setTimeout(res, ITEM_TIMEOUT_MS)),
+        ])
+        if (full && full.trim().length >= 200) {
+          it.content = full
+          console.log(`[refreshNews][${category}] 正文补全成功（${full.length}字）: ${it.title}`)
+        } else {
+          console.warn(`[refreshNews][${category}] 正文补全失败/过短（${(full || '').length}字）: ${it.title}`)
+        }
+      } catch (e) {
+        console.warn(`[refreshNews][${category}] 正文补全异常: ${it.title} - ${e && e.message}`)
+      }
+    }))
+  }
+  console.log(`[refreshNews][${category}] 统一收集: ${news.length} 条（${engine}），正文补全后进入校验`)
 
   // 2. 质量校验 + 去重
   const { valid, rejected, stats: validationStats } = validateAndClean(news)
@@ -495,28 +517,21 @@ async function runCategoryPipeline(category, quotaBaseline) {
     console.log(`[refreshNews][${category}] 拒因: ${JSON.stringify(reasons)}`)
   }
 
-  // 4. 有效新闻过少 → 保留旧缓存（不清旧，避免把分类清空/降级为少量低质内容）
-  // v8 路线1 修订（2026-08-12 owner 反馈）：官方源（contentSource='official_rss'）是高质量增量
-  // （权威来源 100 + AI 加工），不受 MIN_PER_CATEGORY 门槛限制——官方源每小时每源仅 1-2 条新的，
-  // 单分类经常 <3 条，若并入门槛会永远进不了 tab。故：官方源只要过质量门就照常 enrich + 写库；
-  // 仅当【三方源 + 官方源】总量 <3 才保留旧缓存（该分类本次刷新整体偏弱）。
-  //   实现：官方源条目从 qualityPassed 中拆出，走独立 enrich + batchInsert（不触发 clearOldCacheExcept），
-  //   三方源仍走原门槛逻辑；若三方源 <3 且官方源也为 0 → 保留旧缓存。
-  const officialPassed = qualityPassed.filter(it => it.contentSource === 'official_rss')
-  const thirdPartyPassed = qualityPassed.filter(it => it.contentSource !== 'official_rss')
-  console.log(`[refreshNews][${category}] 拆分: 官方源 ${officialPassed.length} 条 / 三方源 ${thirdPartyPassed.length} 条`)
-
-  if (qualityPassed.length < MIN_PER_CATEGORY && officialPassed.length === 0) {
-    console.warn(`[refreshNews][${category}] ⚠️ 有效新闻仅 ${qualityPassed.length} 条(<${MIN_PER_CATEGORY})且无官方源，保留旧缓存`)
+  // 4. 质量门控后 0 条通过 → 保留旧缓存（不清旧、不写入）
+  // v8 路线1 + owner 8/13 合并链路：不再区分 official_rss / 三方源两条写库路径，
+  // 所有来源过门后统一进入 enrich + 写库；1-2 条时增量补写（不清旧），≥MIN_PER_CATEGORY 全量刷新（清旧）。
+  if (qualityPassed.length === 0) {
+    console.warn(`[refreshNews][${category}] 质量门控后 0 条通过，保留旧缓存`)
     return {
       category,
       inserted: 0,
       skipped: true,
-      engine: 'none',
+      engine,
       quotaDelta: { zhipuCalls: quotaRef.zhipuCalls - baseZ, deepseekCalls: quotaRef.deepseekCalls - baseD },
       elapsedMs: Date.now() - catStart,
     }
   }
+  console.log(`[refreshNews][${category}] 质量门控通过: ${qualityPassed.length} 条（统一链路，不再拆分官方/三方）`)
 
   // 5. 正文抓取 + AI 摘要（v8 路线1：所有源统一抓正文 + AI 摘要/解读；官方源 content 自带、落库前清空）
   // P0-2：enrich 硬期限 = catStart + 55s（保留 5s 给 DB 写入/清理）——search 吃预算后 enrich
@@ -528,12 +543,12 @@ async function runCategoryPipeline(category, quotaBaseline) {
   // 供前端短轮询 getNewsDelta 按 createdAt 增量读到"逐条新数据"，实现"列表逐条增加"。
   // 失败/被跳过条目不回调（不入库，避免无正文壳文档）。兜底见下。
   // v8 路线1 修订：官方源（即使 <3 条）与三方源合并 enrich + 写库，但 clearOldCacheExcept 只清三方源旧缓存。
-  const enrichPool = officialPassed.concat(thirdPartyPassed)
+  const enrichPool = qualityPassed
   let incrementalInserted = 0
   let incrementalFailed = 0
   const writtenIds = new Set() // 已由回调单条写库成功的 id 集合
   const enriched = await enrichNewsList(
-    enrichPool, 8, skipFetch, skipAiSummary, enrichDeadline,
+    enrichPool, 8, false, false, enrichDeadline,
     async (item) => {
       // 单条写库：batchInsert 内部按 id 幂等（已存在 update 保留 _id / retained，新记录 add）
       const r = await batchInsert([item])
@@ -577,14 +592,14 @@ async function runCategoryPipeline(category, quotaBaseline) {
     }
   }
 
-  // 7. 清理该分类旧缓存（保留新 ids）——v8 修订：仅三方源路径清旧（官方源是增量补写，不动旧数据）
-  //    官方源单独出现时（三方源 <3），不清旧缓存，避免官方源补写把整分类旧数据删光。
-  if (thirdPartyPassed.length >= MIN_PER_CATEGORY) {
+  // 7. 清理该分类旧缓存（保留新 ids）——统一链路：有效条数 ≥ MIN_PER_CATEGORY 视为一次完整刷新（清旧），
+  //    否则增量补写（不清旧，保留历史条目，避免把分类降级为少量新内容）。
+  if (qualityPassed.length >= MIN_PER_CATEGORY) {
     const newIds = enriched.map(it => it.id)
     const cleared = await clearOldCacheExcept(category, newIds)
-    console.log(`[refreshNews][${category}]: 清理旧数据 ${cleared} 条`)
+    console.log(`[refreshNews][${category}]: 完整刷新，清理旧数据 ${cleared} 条`)
   } else {
-    console.log(`[refreshNews][${category}]: 三方源 ${thirdPartyPassed.length} 条(<${MIN_PER_CATEGORY})，保留旧缓存（官方源已增量补写）`)
+    console.log(`[refreshNews][${category}]: 有效 ${qualityPassed.length} 条(<${MIN_PER_CATEGORY})，增量补写（保留旧缓存）`)
   }
 
   // 8. 备份快照
@@ -611,27 +626,19 @@ async function runCategoryPipeline(category, quotaBaseline) {
 exports.main = async (event) => {
   const startTime = Date.now()
 
-  // ── B-13 v8: 数据源可用性显式短路 ──
+  // ── B-13 v8 + owner 8/13 合并链路：官方 RSS 是独立数据源 ──
   // 路线1（2026-08-12 owner 拍板）：不再用 AI 搜索抓数据，全部三方接口抓取。
-  // 可用数据源 = juhe + tianxing（并行抓取）；官方 RSS 由 rssFetcher 独立写入 news_ingest，
-  // refreshNews 只消费，无需额外 Key。
+  // 可用聚合数据源 = juhe + tianxing（并行抓取）；官方 RSS 由 rssFetcher 独立写入 news_ingest，
+  // refreshNews 只消费，无需额外 Key —— 故即使无三方 Key，worker 仍可消费官方源 staging，不再短路跳过整轮。
   // ⚠️ AI Key（智谱等）仍用于 enrich 阶段的摘要/解读处理，但不再是"抓取源"判据。
   const availableSources = []
   if (config.juhe.apiKey) availableSources.push('juhe')
   if (config.tian.apiKey) availableSources.push('tianxing')
   if (availableSources.length === 0) {
-    // 即使 juhe/天行均未配置，官方源 staging 可能仍有 pending 数据可消费。
-    // 但官方源本身由 rssFetcher 负责抓取，refreshNews 无三方 Key 时无实际数据可处理，
-    // 短路跳过（官方源消费依赖分类映射，仅在有 Key 时随主流水线处理）。
-    const hint = '当前 refreshNews 无 juhe/tianxing Key，且官方源由 rssFetcher 独立抓取；请配置 JUHE_API_KEY / TIAN_API_KEY 以启用统一流水线'
-    console.warn(`[refreshNews] 无可用的三方新闻数据源 ${hint}，显式短路跳过刷新`)
-    return {
-      code: 0,
-      message: '无可用的新闻数据源，跳过刷新',
-      data: { skipped: true, reason: 'no_source_configured', hint },
-    }
+    console.warn('[refreshNews] 未配置 juhe/tianxing Key，本轮仅消费官方 RSS staging（聚合源缺位）')
+  } else {
+    console.log(`[refreshNews] 可用聚合数据源: ${availableSources.join(' + ')}（${availableSources.length} 个）；官方 RSS 始终参与`)
   }
-  console.log(`[refreshNews] 可用数据源: ${availableSources.join(' + ')}（${availableSources.length} 个）`)
 
   // 工人模式：event.category 存在 → 只跑单分类流水线
   if (event && (event.category || event.shard)) {

@@ -841,10 +841,17 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
             }
           }
         } else {
-          content = await Promise.race([
-            fetchContentForItem(item),
-            new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
-          ])
+          // 统一链路（owner 8/13）：item.content 已在质量门控前置抓正文阶段补全；
+          // 若已 ≥200 字则直接复用，不再重复抓（防与上游正文补全重复请求源站）。
+          const existing = (item.content || '').trim()
+          if (existing.length >= 200) {
+            content = existing
+          } else {
+            content = await Promise.race([
+              fetchContentForItem(item),
+              new Promise(resolve => setTimeout(() => resolve(''), ITEM_TIMEOUT_MS)),
+            ])
+          }
         }
         const enriched = { ...item, content, contentSource: item.contentSource || 'fetched' }
         // B-COMPLIANCE-1 S1：透传 references（智谱/AI 搜索链的来源 URL 列表）到 enriched，
