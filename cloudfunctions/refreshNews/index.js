@@ -496,9 +496,9 @@ async function runCategoryPipeline(category, quotaBaseline) {
         ])
         if (full && full.trim().length >= 200) {
           it.content = full
-          console.log(`[refreshNews][${category}] 正文补全成功（${full.length}字）: ${it.title}`)
+          console.log(`[refreshNews][${category}] 正文补全成功（${full.length}字）[${it.source}] ${it.title}`)
         } else {
-          console.warn(`[refreshNews][${category}] 正文补全失败/过短（${(full || '').length}字）: ${it.title}`)
+          console.warn(`[refreshNews][${category}] 正文补全失败/过短（${(full || '').length}字）[${it.source}] ${it.title}`)
         }
       } catch (e) {
         console.warn(`[refreshNews][${category}] 正文补全异常: ${it.title} - ${e && e.message}`)
