@@ -371,8 +371,9 @@ async function collectCategoryItems(category) {
     //   - 官方 RSS 跨类 pending 要闻借用（rec_ 前缀，不消费，不饿死原生 worker）
     // 此前 recommend 仅借官方 RSS 要闻（option A），丢弃了 juhe/tianxing → 长期只剩 IT之家一家。
     const sourceJobs = []
-    if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
-    if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
+    const sourceLabels = []
+    if (config.juhe.apiKey) { sourceJobs.push(juheFetch(category)); sourceLabels.push('juhe') }
+    if (config.tian.apiKey) { sourceJobs.push(tianFetch(category)); sourceLabels.push('tianxing') }
     if (sourceJobs.length > 0) {
       const settled = await Promise.allSettled(sourceJobs)
       settled.forEach((r, i) => {
@@ -391,7 +392,7 @@ async function collectCategoryItems(category) {
             picUrl: '',
             publishTime: it.publishTime || '',
           }))
-          engLabels.push(sourceJobs[i].label)
+          engLabels.push(sourceLabels[i])
         }
       })
     }
@@ -426,8 +427,9 @@ async function collectCategoryItems(category) {
 
   // 聚合 API（juhe + tianxing）并行抓取（仅标题/链接，正文后续统一抓）
   const sourceJobs = []
-  if (config.juhe.apiKey) sourceJobs.push(juheFetch(category))
-  if (config.tian.apiKey) sourceJobs.push(tianFetch(category))
+  const sourceLabels = []
+  if (config.juhe.apiKey) { sourceJobs.push(juheFetch(category)); sourceLabels.push('juhe') }
+  if (config.tian.apiKey) { sourceJobs.push(tianFetch(category)); sourceLabels.push('tianxing') }
   if (sourceJobs.length > 0) {
     const settled = await Promise.allSettled(sourceJobs)
     settled.forEach((r, i) => {
@@ -446,7 +448,7 @@ async function collectCategoryItems(category) {
           picUrl: '',
           publishTime: it.publishTime || '',
         }))
-        engLabels.push(sourceJobs[i].label)
+        engLabels.push(sourceLabels[i])
       }
     })
   }
