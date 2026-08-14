@@ -113,7 +113,7 @@ async function queryCache(where, pageNum, pageSize) {
 // ADR-003 §3.4：覆盖 5 个分类，每个分类至少 1 条占位内容，确保任何情况下不返回空白页。
 const BUILTIN_NEWS = {
   recommend: [
-    { id: 'builtin-rec-01', title: '欢迎使用 One-News', summary: '这是一款极简新闻速览小程序，每天为你精选值得关注的新闻。', category: 'recommend', categoryName: '推荐', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-rec-01', title: '欢迎使用 One-News', summary: '这是一款极简资讯速览小程序，每天为你精选值得关注的资讯。', category: 'recommend', categoryName: '推荐', source: 'One-News', publishTime: Date.now() },
   ],
   tech: [
     { id: 'builtin-tech-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'tech', categoryName: '科技', source: 'One-News', publishTime: Date.now() },
