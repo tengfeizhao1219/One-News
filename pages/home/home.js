@@ -448,12 +448,12 @@ Page({
   /**
    * FS-CF3（2026-08-10 owner 确认方案A「先快返回+分批增量」）：
    * 下拉刷新核心。改为「先快返回 + 分批增量」——
-   *   1. 触发 refreshNews 工人模式（固定刷刷新目标分类），但不 await 完成（RPC 15s 硬超时，
+   *   1. 触发 newsFetcher(orchestrate) 统一抓取所有源（Stage 0），但不 await 完成（fire-and-forget 快速返回），
    *      worker 后台 30-50s 逐条写库），UI 立即可交互，toast「正在抓取」；
    *   2. 启动短轮询（每 3s）调 getNewsDelta 按 createdAt >= since 读回逐条写库的新记录，
    *      去重后整体 prepend 到列表头部，实现「列表逐条增加」；
    *   3. 连续空轮或达 45s 上限 → 停止轮询 → 整页重拉第 1 页保证列表完整有序 → 诚实提示。
-   * 兜底：currentCategory === 'all' 时 worker 无法刷全分类，退回旧编排模式（_refreshNewsCloudOrchestrator）。
+   * 兜底：currentCategory === 'all' 时仍退回编排模式（_refreshNewsCloudOrchestrator）统一触发 newsFetcher(orchestrate)。
    * @param {string} refreshTarget 刷新抓取的分类（顶部下拉=当前分类固定 recommend 由调用方传入）
    */
   async _refreshWithIncrement(refreshTarget) {
@@ -470,7 +470,7 @@ Page({
 
     try {
       // ① 触发 worker：fire-and-forget，不阻塞 UI（RPC 超时/db 异常由轮询兜底）
-      wx.cloud.callFunction({ name: 'refreshNews', data: { category: target } }).catch(() => {})
+      wx.cloud.callFunction({ name: 'newsFetcher', data: {} }).catch(() => {})
       wx.showToast({ title: '正在抓取最新新闻…', icon: 'loading', duration: 1500 })
       this._startRefreshPolling(since, target)
     } catch (err) {
@@ -579,20 +579,12 @@ Page({
     if (this.data.isRefreshing) return
     this.setData({ isRefreshing: true })
     try {
-      const res = await wx.cloud.callFunction({ name: 'refreshNews', data: {} })
-      if (res.result.code === 0) {
-        const isAsync = res.result.data?.async === true
-        const inserted = res.result.data?.inserted || 0
-        wx.showToast({
-          title: isAsync
-            ? (inserted > 0 ? `已更新 ${inserted} 条，其余后台刷新中` : '已触发后台刷新')
-            : `已更新 ${inserted} 条新闻`,
-          icon: 'success',
-          duration: 2000,
-        })
-        if (isAsync) this._schedulePostRefreshReload()
+      const res = await wx.cloud.callFunction({ name: 'newsFetcher', data: {} })
+      if (res.result && res.result.ok) {
+        wx.showToast({ title: '已触发后台刷新', icon: 'success', duration: 2000 })
+        this._schedulePostRefreshReload()
       } else {
-        wx.showToast({ title: res.result.message || '刷新失败', icon: 'none' })
+        wx.showToast({ title: (res.result && res.result.message) || '刷新失败', icon: 'none' })
       }
     } catch (err) {
       console.error('下拉刷新失败:', err)
@@ -1046,7 +1038,7 @@ Page({
   /**
    * DG-03（方案 5 改动 C）+ FS-CF2（2026-08-10）：到达列表开头继续下滑 -> 刷新
    * 修复「假刷新」bug：旧实现只是重读数据库并谎报“已更新 X 条”。
-   * FS-CF3（2026-08-10 方案A）：改为增量刷新——真调 refreshNews 工人模式（fire-and-forget 快速返回），
+   * FS-CF3（2026-08-10 方案A）：改为增量刷新——真调 newsFetcher(orchestrate)（fire-and-forget 快速返回），
    * 短轮询 getNewsDelta 按 createdAt 增量逐条插入当前浏览分类列表头部，实现「列表逐条增加」。
    * 保持 FS-CF2 的「真刷不假报」：最终按增量实际写入数诚实提示，绝不虚报条数。
    */
