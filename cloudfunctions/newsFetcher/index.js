@@ -177,12 +177,8 @@ async function runOrchestrate() {
     })
   })
 
-  // 接力：抓取写库后立即点燃流水线（Stage 1/2/3），缩短端到端时延；
-  // 若本轮 callFunction 失败/延迟，仍有 selfHealScheduler(5min) 定时器兜底重跑 run()（幂等）。
-  try {
-    cloud.callFunction({ name: 'newsPipeline', data: { action: 'run' } }).catch(() => {})
-  } catch (e) { /* 忽略 */ }
-
+  // 接力说明：流水线由每个 fetch-source 落库后各自点燃（见 runFetchSource），
+  // 避免 orchestrate 末尾单次触发时 news_raw 尚未写满而空跑；selfHealScheduler(5min) 仍作终极兜底。
   return { ok: true, planned: plan.length, dispatched: plan.length }
 }
 
@@ -190,15 +186,23 @@ async function runOrchestrate() {
 async function runFetchSource(source) {
   try { await ensureSchema() } catch (e) { /* 放行 */ }
   const { kind } = source
+  let result
   try {
-    if (kind === 'rss') return await fetchOfficialRss(source.feed)
-    if (kind === 'juhe') return await fetchAggregate('juhe', source.category)
-    if (kind === 'tian') return await fetchAggregate('tian', source.category)
-    return { ok: false, reason: `unknown source kind: ${kind}` }
+    if (kind === 'rss') result = await fetchOfficialRss(source.feed)
+    else if (kind === 'juhe') result = await fetchAggregate('juhe', source.category)
+    else if (kind === 'tian') result = await fetchAggregate('tian', source.category)
+    else result = { ok: false, reason: `unknown source kind: ${kind}` }
   } catch (e) {
     console.error('[newsFetcher] fetch-source 异常:', e.message, e.stack)
-    return { ok: false, error: e.message }
+    result = { ok: false, error: e.message }
   }
+  // 接力：本源写完 news_raw 后立即点燃流水线（有 pending 即续跑，串起整批）。
+  // 关键修正：orchestrate 末尾的单次触发常因 news_raw 尚未写满而空跑；
+  // 改为由每个 fetch-source 在落库后各自点燃，确保管道随源数据到位而启动。
+  if (result && result.ok && result.written > 0) {
+    try { await cloud.callFunction({ name: 'newsPipeline', data: { action: 'run' } }) } catch (e) { /* 忽略 */ }
+  }
+  return result
 }
 
 // 官方 RSS 单源抓取
