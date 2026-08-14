@@ -86,6 +86,43 @@ const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 /**
+ * 从 Buffer 检测编码并转码为 UTF-8（修复 GBK/GB2312 旧站正文乱码，如央视网 www.cctv.com）。
+ * HTML 不像 XML 有顶层 encoding 声明，故优先扫 <meta charset> / <meta http-equiv=content-type>，
+ * 其次信任响应头 content-type 的 charset；均无声明时兜底 UTF-8。
+ */
+function decodeBuffer(buffer, declaredEncoding) {
+  const buf = Buffer.from(buffer)
+  // 1) BOM 优先
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+    return buf.slice(3).toString('utf8')
+  }
+  // 2) 从 HTML <head> 前 1024 字节探测 charset（meta 声明优先于响应头）
+  const head = buf.slice(0, 1024).toString('latin1')
+  let enc = declaredEncoding || ''
+  if (!enc) {
+    const m1 = /<meta[^>]+charset\s*=\s*["']?\s*([a-z0-9-]+)/i.exec(head)
+    if (m1) enc = m1[1]
+    else {
+      const m2 = /<meta[^>]+http-equiv\s*=\s*["']?content-type["']?[^>]*content\s*=\s*["'][^"']*charset\s*=\s*([a-z0-9-]+)/i.exec(head)
+      if (m2) enc = m2[1]
+    }
+  }
+  const canonical = (enc || '').toLowerCase().replace(/[-_]/g, '')
+  if (canonical && canonical !== 'utf8') {
+    try {
+      if (canonical === 'gbk' || canonical === 'gb2312' || canonical === 'gb18030') {
+        if (typeof TextDecoder !== 'undefined') return new TextDecoder('gbk').decode(buf)
+        try { const iconv = require('iconv-lite'); return iconv.decode(buf, 'gbk') } catch (e) { /* 回退 UTF-8 */ }
+      }
+      if (typeof TextDecoder !== 'undefined') {
+        try { const td = new TextDecoder(canonical); if (td.encoding !== 'utf-8') return td.decode(buf) } catch (e) { /* 回退 UTF-8 */ }
+      }
+    } catch (e) { /* 回退 UTF-8 */ }
+  }
+  return buf.toString('utf8')
+}
+
+/**
  * 从 URL 抓取网页 HTML（v5.4：加 UA / Accept 头 + 跟随重定向 + 2MB 上限）
  * @param {string} url
  * @returns {Promise<string|null>}
@@ -120,6 +157,10 @@ function fetchWebPage(url) {
         return
       }
 
+      // 提取响应头声明的 charset（GBK 等旧站常缺，decodeBuffer 会再扫 meta 兜底）
+      const charsetMatch = /charset\s*=\s*([a-z0-9-]+)/i.exec(contentType)
+      const declaredEncoding = charsetMatch ? charsetMatch[1] : ''
+
       const chunks = []
       let total = 0
       res.on('data', chunk => {
@@ -127,12 +168,12 @@ function fetchWebPage(url) {
         // 防止过大网页撑爆内存
         if (total > MAX_DOWNLOAD_BYTES) {
           req.destroy()
-          resolve(Buffer.concat(chunks).toString('utf8'))
+          resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding))
           return
         }
         chunks.push(chunk)
       })
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+      res.on('end', () => resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding)))
     })
 
     req.on('error', () => resolve(null))
@@ -570,6 +611,8 @@ exports.main = async (event) => {
         sourceUrl: doc.url,
         sourceName: doc.sourceName,
         category: doc.category,
+        // 时间字段归一化：news_raw_official 用 pubDate，前端读 publishTime（缺则 NaN，已前端防御）
+        publishTime: doc.publishTime || doc.pubDate || '',
       },
       meta: {
         source: collection,
@@ -595,6 +638,8 @@ exports.main = async (event) => {
         sourceUrl: doc.sourceUrl || doc.url || '',
         sourceName: doc.sourceName || doc.source || '',
         category: doc.category,
+        // 时间字段归一化：官方源汇入 news_cache 后仍可能用 pubDate，前端读 publishTime（缺则 NaN，已前端防御）
+        publishTime: doc.publishTime || doc.pubDate || '',
       },
       meta: {
         source: collection,
@@ -728,6 +773,8 @@ exports.main = async (event) => {
     // B-COMPLIANCE-1 S1：透传 references（智谱/AI 搜索链的来源 URL 列表），
     // 前端详情页"原文回源"按钮根据此数组显示/隐藏（PRD §3.2）。
     references: Array.isArray(doc.references) ? doc.references : [],
+    // 时间字段归一化：兜底 pubDate（历史/官方源数据可能用该字段名），避免前端 NaN月NaN日
+    publishTime: doc.publishTime || doc.pubDate || '',
   }
 
   return {

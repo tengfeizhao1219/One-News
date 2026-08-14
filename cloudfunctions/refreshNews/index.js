@@ -399,7 +399,7 @@ async function collectCategoryItems(category) {
           sourceName: d.sourceName || '官方源',
           sourceUrl: d.url || '',
           picUrl: '',
-          publishTime: d.publishTime || '',
+          publishTime: d.publishTime || d.pubDate || '',
         })
       })
       if (headlines.length > 0) engLabels.push('official_rss')
@@ -448,7 +448,7 @@ async function collectCategoryItems(category) {
           sourceName: d.sourceName || '官方源',
           sourceUrl: d.url || '',
           picUrl: '',
-          publishTime: d.publishTime || '',
+          publishTime: d.publishTime || d.pubDate || '',
           _ingestId: d._id,
         })
         ingestIds.push(d._id)

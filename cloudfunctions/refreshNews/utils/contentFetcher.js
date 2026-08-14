@@ -29,6 +29,44 @@ const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
 /**
+ * 从 Buffer 检测编码并转码为 UTF-8（修复 GBK/GB2312 旧站正文乱码，如央视网 www.cctv.com）。
+ * HTML 不像 XML 有顶层 encoding 声明，故优先扫 <meta charset> / <meta http-equiv=content-type>，
+ * 其次信任响应头 content-type 的 charset；均无声明时兜底 UTF-8。
+ * 借鉴 rssFetcher/utils/apiFetch.js 的 decodeBuffer（跨云函数不可共享依赖，独立实现）。
+ */
+function decodeBuffer(buffer, declaredEncoding) {
+  const buf = Buffer.from(buffer)
+  // 1) BOM 优先
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+    return buf.slice(3).toString('utf8')
+  }
+  // 2) 从 HTML <head> 前 1024 字节探测 charset（meta 声明优先于响应头）
+  const head = buf.slice(0, 1024).toString('latin1')
+  let enc = declaredEncoding || ''
+  if (!enc) {
+    const m1 = /<meta[^>]+charset\s*=\s*["']?\s*([a-z0-9-]+)/i.exec(head)
+    if (m1) enc = m1[1]
+    else {
+      const m2 = /<meta[^>]+http-equiv\s*=\s*["']?content-type["']?[^>]*content\s*=\s*["'][^"']*charset\s*=\s*([a-z0-9-]+)/i.exec(head)
+      if (m2) enc = m2[1]
+    }
+  }
+  const canonical = (enc || '').toLowerCase().replace(/[-_]/g, '')
+  if (canonical && canonical !== 'utf8') {
+    try {
+      if (canonical === 'gbk' || canonical === 'gb2312' || canonical === 'gb18030') {
+        if (typeof TextDecoder !== 'undefined') return new TextDecoder('gbk').decode(buf)
+        try { const iconv = require('iconv-lite'); return iconv.decode(buf, 'gbk') } catch (e) { /* 回退 UTF-8 */ }
+      }
+      if (typeof TextDecoder !== 'undefined') {
+        try { const td = new TextDecoder(canonical); if (td.encoding !== 'utf-8') return td.decode(buf) } catch (e) { /* 回退 UTF-8 */ }
+      }
+    } catch (e) { /* 回退 UTF-8 */ }
+  }
+  return buf.toString('utf8')
+}
+
+/**
  * 从 URL 抓取网页 HTML（带 UA / Accept 头 + 跟随重定向 + 2MB 上限）
  * @param {string} url
  * @returns {Promise<string|null>}
@@ -62,18 +100,22 @@ function fetchWebPage(url) {
         return
       }
 
+      // 提取响应头声明的 charset（GBK 等旧站常缺，decodeBuffer 会再扫 meta 兜底）
+      const charsetMatch = /charset\s*=\s*([a-z0-9-]+)/i.exec(contentType)
+      const declaredEncoding = charsetMatch ? charsetMatch[1] : ''
+
       const chunks = []
       let total = 0
       res.on('data', chunk => {
         total += chunk.length
         if (total > MAX_DOWNLOAD_BYTES) {
           req.destroy()
-          resolve(Buffer.concat(chunks).toString('utf8'))
+          resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding))
           return
         }
         chunks.push(chunk)
       })
-      res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+      res.on('end', () => resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding)))
     })
 
     req.on('error', () => resolve(null))
