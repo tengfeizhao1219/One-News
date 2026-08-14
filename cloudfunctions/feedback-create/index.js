@@ -34,21 +34,11 @@ const ZHIPU_PATH = '/api/paas/v4/chat/completions'
 const DEEPSEEK_BASE = 'api.deepseek.com'
 const DEEPSEEK_PATH = '/chat/completions'
 
-// ── 关键词黑名单（初版内置常量，PRD §4.4） ─────────────
+// ── 关键词黑名单（PRD §4.4 · 敏感词过滤表） ─────────────
 // 覆盖五大类：涉黄 / 涉政 / 暴力 / 辱骂 / 广告 spam
+// 权威单一真相源：utils/sensitiveWords.js（与 newsPipeline ⑥ 硬门禁共用，避免漂移）
 
-const KEYWORD_BLACKLIST = [
-  // 涉黄
-  '约炮', '一夜情', '嫖娼', '卖淫', '裸聊', '色情', '做爱', '性爱',
-  // 涉政敏感
-  '六四', '法轮功', '李洪志', '刘晓波', '台独', '藏独', '疆独', '港独', '达赖',
-  // 暴力/威胁
-  '砍死', '弄死', '杀你全家', '炸了', '恐怖袭击',
-  // 辱骂
-  '傻逼', '脑残', '智障', '白痴', '贱人', '婊子', '操你妈', '草泥马', '狗日的',
-  // 广告/引流
-  '加微信', '加qq', '加v信', '兼职刷单', '日赚', '月入十万', '点击链接', '复制口令', '扫二维码', '拉人进群',
-]
+const { SENSITIVE_WORDS, matchSensitiveWord } = require('./utils/sensitiveWords')
 
 // ── 作者识别（PRD §4.3.2 · 已确认） ────────────────────
 // 环境变量 AUTHOR_OPENID（云开发控制台 → 云函数 feedback/* → 环境变量）
@@ -65,11 +55,9 @@ function isAuthorOpenid(openid) {
 // ── 关键词过滤 ────────────────────────────────────────
 
 function keywordFilter(content) {
-  const lower = content.toLowerCase()
-  for (const kw of KEYWORD_BLACKLIST) {
-    if (lower.includes(kw)) {
-      return { passed: false, reason: `内容包含违规词「${kw}」` }
-    }
+  const hit = matchSensitiveWord(content)
+  if (hit) {
+    return { passed: false, reason: `内容包含违规词「${hit}」` }
   }
   return { passed: true, reason: '' }
 }

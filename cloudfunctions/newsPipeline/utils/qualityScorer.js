@@ -25,6 +25,7 @@
 
 const { cleanNewsContent, validateCleanedContent } = require('./newsCleaner')
 const { titleSimilarity } = require('../validator')
+const { SENSITIVE_WORDS, matchSensitiveWord } = require('./sensitiveWords')
 
 // ─── 评分权重（方案 §二）────
 const W = {
@@ -81,23 +82,25 @@ const _AGG_SOURCE_NAMES = [
 // 合规门禁信号（⑥），2026-08-14 owner 拍板拆分为软/硬两类：
 //  - 软信号（版权搬运/纯导流弱信号）：保留检测，但不硬丢弃，进入下一环节评分（降权处理）。
 //    弱信号新闻仍可能经 AI 后展示，仅降低其质量分、压低排序。
-//  - 硬黑名单（明确违法/版权红线）：命中即丢弃，不进评分、不进 news_cache。
-// 与 securityCheck（NLP 级 msgSecCheck）互补：敏感政治类由 msgSecCheck 处理，不在此维护。
+//  - 硬黑名单：命中即丢弃，不进评分、不进 news_cache。
+//    硬黑名单 = 早先整理的「敏感词汇过滤表」（SENSITIVE_WORDS，PRD §4.4 五大类：涉黄/涉政/暴力/辱骂/广告spam），
+//    与 feedback-create 共用同一权威源（utils/sensitiveWords.js），避免两处漂移。
+//    版权搬运硬信号（全文转载/未经授权转载等）属软信号降权范畴，不在此硬弃。
+// 与 securityCheck（NLP 级 msgSecCheck）互补：msgSecCheck 负责大语义违规（联网审核）；
+// 本表负责可客观判定的敏感词硬拦截（本地秒级、无网络依赖、兜底）。
 // 命中规则：字符串走 includes；正则去掉 ^...$ 锚定走 test() 部分匹配（hay = title/summary/content）。
 
 // 软信号：保留检测、进入评分降权（不丢弃）
 const COMPLIANCE_SOFT_SIGNALS = [
-  '授权转载请联系',
-  /本站（独家|原创）/,
+  // 版权搬运 / 机构稿整篇转载弱信号（规避「苏民终 588」类判例风险，但不硬弃）
+  '全文转载', '未经授权转载', '授权转载请联系', '不得转载',
+  /版权归.{1,20}(所有|版权所有)/, /本站（独家|原创）/,
   // 纯导流/无新闻实质
   '点击下方关注', '关注我们', '星标我们', '后台回复', '公众号内回复',
 ]
 
-// 硬黑名单：命中即丢弃（明确转载声明 / 版权归属声明，规避「苏民终 588」类判例风险）
-const COMPLIANCE_HARD_BLACKLIST = [
-  '全文转载', '未经授权转载', '不得转载',
-  /版权归.{1,20}(所有|版权所有)/,
-]
+// 硬黑名单：命中即丢弃（敏感词汇过滤表 = SENSITIVE_WORDS，PRD §4.4 五大类）
+const COMPLIANCE_HARD_BLACKLIST = SENSITIVE_WORDS
 
 /**
  * 归一化标题（用于跨源事件聚类 + 指纹，降噪）
@@ -247,7 +250,9 @@ function _fingerprintOf(v, map) {
 
 /**
  * ⑥ 合规门禁（硬性）
- * 命中敏感/版权红线 → 返回 reason（不走评分）。无命中返回 null。
+ * 硬黑名单（敏感词表 SENSITIVE_WORDS）命中 → 返回 { hard }（不走评分）。
+ * 软信号（版权搬运/纯导流）命中 → 返回 { soft }（进入评分降权，不丢弃）。
+ * 无命中返回 null。
  */
 function complianceGate(item) {
   const hay = `${item.title || ''} ${item.summary || ''} ${item.content || ''}`
