@@ -6,9 +6,13 @@
  * @returns {string} 如 "3小时前"
  */
 function formatRelativeTime(dateStr) {
+  const d = new Date(dateStr)
+  const ts = d.getTime()
+  // 防御：dateStr 为空/非日期/不可解析时，不渲染乱码（避免 "NaN月NaN日"）
+  if (!dateStr || Number.isNaN(ts)) return ''
+
   const now = Date.now()
-  const date = new Date(dateStr).getTime()
-  const diff = now - date
+  const diff = now - ts
 
   const minute = 60 * 1000
   const hour = 60 * minute
@@ -19,7 +23,6 @@ function formatRelativeTime(dateStr) {
   if (diff < day) return Math.floor(diff / hour) + '小时前'
   if (diff < 3 * day) return Math.floor(diff / day) + '天前'
 
-  const d = new Date(dateStr)
   const month = d.getMonth() + 1
   const dayNum = d.getDate()
   return month + '月' + dayNum + '日'
