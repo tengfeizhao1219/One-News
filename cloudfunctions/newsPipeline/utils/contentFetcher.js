@@ -986,7 +986,9 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         // v8 路线1 + 2026-08-12 修订（版权红线 A.4/A.5）：
         // 官方源 content（原文全文）仅作 AI 加工源数据。落库时区分两种情况：
         //   - AI 解读成功（content 已被 interpretNews 替换为加工产物）→ 保留 content 展示解读正文；
-        //   - AI 解读失败（content 仍是原文全文）→ 清空，不缓存官方正文，详情页用 summary + sourceUrl 跳源站。
+        //   - AI 解读失败（content 仍是原文全文）→ 先清空 raw 全文，再由下方「保正文兜底」回填短文本。
+        // 2026-08-14 owner 拍板：凡通过质量门的新闻必须带正文（哪怕较短），禁止空 body；
+        //   红线仍成立——只回填 AI 解读/AI 摘要/源站短导语(desc)/标题 等短文本，绝不回填 raw 全文。
         if (isOfficialRss && content && enriched.content === content) {
           enriched.content = ''
         }
@@ -1012,6 +1014,22 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         if (enriched.contentSource === 'fetched' && summarySource === 'ai' && enriched.summary) {
           enriched.content = enriched.summary
           enriched.contentSource = 'ai_summary'
+        }
+
+        // ── 保正文兜底（owner 8/14 拍板）──
+        // 凡通过质量门的新闻必须带正文，哪怕较短，禁止空 body（否则详情页空卡）。
+        // 前提：上方已确保 raw 全文不入 content（官方解读失败清空 / 非官方无产物清空）。
+        // 此处只回填「短文本」：AI 摘要 > 源站短导语(desc) > 标题；contentSource 必须落在
+        // R1 放行名单（ai_interpretation / official_rss / ai_summary），否则详情页 R1 会把 body 清空。
+        if (!(enriched.content || '').trim()) {
+          const bodyFallback = (summarySource === 'ai' && enriched.summary)
+            ? enriched.summary
+            : (enriched.summary && enriched.summary !== item.title ? enriched.summary : (item.title || ''))
+          if (bodyFallback) {
+            enriched.content = bodyFallback
+            enriched.contentSource = isOfficialRss ? 'official_rss' : 'ai_summary'
+            console.log(`[enrich] ${item.id || ''} 保正文兜底：回填${isOfficialRss ? '官方短导语' : 'AI摘要/导语'}（非 raw 全文，contentSource=${enriched.contentSource}）`)
+          }
         }
 
         enriched.summarySource = summarySource

@@ -60,7 +60,7 @@
 │ Stage 2 · AI（newsAI，纯 AI 零抓取）                           │
 │  · 分批消费 news_staging(aiStatus=pending)                     │
 │  · 混元前置：AI摘要 + AI解读 + 一页说观点                       │
-│  · 官方源 AI 跑在原文上，发布时 content 清空（合规）            │
+│  · 官方源 AI 跑在原文上；raw 原文不落库，解读正文/短导语保留（合规） │
 │  · 单条独占预算，跑不完留 pending 下轮重试                      │
 └──────────────┬───────────────────────────────────────────────┘
                │ aiStatus=done
@@ -149,7 +149,7 @@
 
 - **混元前置引擎链**（已验证）：混元 → 智谱 → Qwen → DeepSeek。
 - 摘要先于解读执行（列表关键）；解读 25s 独立预算 + best-effort 守卫。
-- 官方源：`contentSource` 保持 `official_rss`（前端「出处 ↗」），AI 跑在原文上；**发布时 `content` 清空**（合规红线）。
+- 官方源：`contentSource` 保持 `official_rss`（前端「出处 ↗」），AI 跑在原文上；**raw 原文不落库，解读正文/短导语均保留**（合规红线，2026-08-14 修订）。
 - 纯 AI、零网络抓取 → 不再被「补正文」挤预算；单条独占预算，跑不完留 `pending` 下轮重试。
 - 写回 `aiStatus=done` + `summary`/`summarySource='ai'`/`aiOpinion`/`contentSource`。
 
@@ -235,7 +235,7 @@ exports.main = async (event) => {
 
 ## 6. 合规红线（不变）
 
-- 官方源全文只在 `news_raw` + `news_staging` **瞬时**存在；`news_cache` 只存 `summary`，`content` 发布即清空 → 不长期缓存正文。
+- 官方源 raw 全文只在 `news_raw` + `news_staging` **瞬时**存在（抓取即删）；`news_cache` 存 `summary` + **解读正文/短导语**（`content` 保留，红线下只禁 raw 全文），不长期缓存源站全文。
 - 不展示原文、不缓存 raw 全文、只跳源站 H5（与现有 A.4/A.5 一致）。
 
 ---
@@ -285,7 +285,7 @@ exports.main = async (event) => {
 |---|---|
 | 续跑链异常中断 → 堆积 | drain 兜底 trigger 每 3 分钟捞残留；6h TTL 自动过期 |
 | 新流水线 AI 质量波动 | `PIPELINE_MODE=legacy` 并行双写对比，达标再切 |
-| 官方源合规误判 | Stage2 发布即清空 content；news_cache 不存 raw |
+| 官方源合规误判 | raw 原文不落库（news_raw 抓取即删）；news_cache 只存 AI 解读/短导语，绝不存 raw 全文 |
 | 云函数配额升高（扇出增多） | 每源独立任务天然限流；drain 低频兜底 |
 
 ---
