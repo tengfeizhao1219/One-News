@@ -14,6 +14,7 @@
 // 含英文通名 + 常见中文别名（RSS 的 category 可能是中文栏目名）。
 // 注意：按栏目 URL 接入时，主分类建议由 feed_meta 显式指定，这里作为兜底匹配。
 const CATEGORY_ALIASES = {
+  recommend: ['recommend', '推荐', '推荐阅读'],
   tech: ['tech', 'it', 'technology', '科技', '数码', '互联网'],
   finance: ['finance', 'fortune', 'economy', 'money', '财经', '金融', '经济'],
   edu: ['edu', 'education', 'school', '教育'],
