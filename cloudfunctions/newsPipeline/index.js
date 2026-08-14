@@ -206,10 +206,33 @@ async function stageAi(deadline) {
     const items = await stagingStore.claimPending(STAGE_BATCH.ai)
     if (!items.length) break
 
+    // C. 已解读即跳过重抓（2026-08-14）：cache 已有有效 ai_interpretation 的条目不再消耗混元配额做 AI 加工，
+    // 直接标 done（publish 时 batchInsert 的 A 保护会保留既有解读，不重抓、不覆盖）。
+    let needAi = items
+    const skipIds = []
+    try {
+      const ids = items.map((it) => it.id)
+      const res = await db.collection('news_cache').where({ id: db.command.in(ids) }).get()
+      const now = Date.now()
+      const interpreted = new Set()
+      for (const d of (res.data || [])) {
+        if (d.contentSource === 'ai_interpretation' && (d.cacheExpire || Infinity) > now) interpreted.add(d.id)
+      }
+      needAi = items.filter((it) => !interpreted.has(it.id))
+      for (const it of items) if (interpreted.has(it.id)) skipIds.push(it._id)
+    } catch (e) {
+      console.warn('[newsPipeline][ai] 查已解读缓存失败，全部走 AI:', e.message)
+    }
+    if (skipIds.length) {
+      await stagingStore.markDone(skipIds)
+      processed += skipIds.length
+    }
+    if (!needAi.length) continue
+
     // 纯 AI：skipFetch=true → 直接用 item.content（Stage 1 已补全）跑摘要+解读
     // deadline 给 enrichNewsList 内部守卫留 5s 余量
     const enriched = await enrichNewsList(
-      items,
+      needAi,
       3,            // concurrency：3 路并行，配合 STAGE_BATCH.ai=12 提升单实例吞吐
       true,         // skipFetch
       false,        // skipAiSummary
@@ -219,9 +242,9 @@ async function stageAi(deadline) {
 
     const doneIds = []
     const pendingIds = []
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < needAi.length; i++) {
       const e = enriched[i]
-      if (!e) { pendingIds.push(items[i]._id); continue } // 被 deadline break 跳过 → 退回重跑
+      if (!e) { pendingIds.push(needAi[i]._id); continue } // 被 deadline break 跳过 → 退回重跑
       await writeBackEnriched([e])
       doneIds.push(e._id)
     }
@@ -296,13 +319,24 @@ async function batchInsert(newsList) {
         finalContentSource = ''
       }
 
+      // A. 保护已生成的 AI 解读（2026-08-14）：同 id 更新时，若 cache 旧记录已是真解读，
+      // 本次更弱（ai_summary/fetched/空）则不降级覆盖——避免多波重抓把真解读坍缩成摘要。
+      // 官方源 official_rss 为独立合法态，不在此保护范围内（保持「出处 ↗」）。
+      let finalContent = item.content || ''
+      let finalAiOpinion = (typeof item.aiOpinion === 'string') ? item.aiOpinion : ''
+      if (existed && existed.contentSource === 'ai_interpretation' && finalContentSource !== 'ai_interpretation' && finalContentSource !== 'official_rss') {
+        finalContent = (typeof existed.content === 'string' && existed.content) ? existed.content : finalContent
+        finalContentSource = 'ai_interpretation'
+        finalAiOpinion = (typeof existed.aiOpinion === 'string' && existed.aiOpinion) ? existed.aiOpinion : finalAiOpinion
+      }
+
       const docData = {
         id: item.id,
         title: item.title,
         summary,
         summarySource,
         contentSource: finalContentSource,
-        content: item.content || '',
+        content: finalContent,
         references: Array.isArray(item.references) ? item.references : [],
         category: item.category,
         categoryName: item.categoryName,
@@ -322,7 +356,7 @@ async function batchInsert(newsList) {
         eventId: item.eventId || '',
         noiseRatio: null,
         gatedReason: '',
-        aiOpinion: typeof item.aiOpinion === 'string' ? item.aiOpinion : '',
+        aiOpinion: finalAiOpinion,
       }
 
       if (existed && existed._id) {

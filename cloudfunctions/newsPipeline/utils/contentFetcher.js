@@ -20,9 +20,9 @@ const FETCH_TIMEOUT_MS = 6000
 const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
 // B-14: 单条 enrich 总超时兜底（12s）——网页抓取 + AI 摘要合计不超过此值，防拖慢 worker 池/首屏
 const ITEM_TIMEOUT_MS = 12000
-// 解读独立预算（owner 8/13 选方案②）：解读需多引擎降级链，12s 太紧会把混元/Qwen/DeepSeek 挤压掉；
-// 提到 25s 让「混元→智谱→Qwen→DeepSeek」都有机会兜底。摘要仍用 12s（IT_ITEM_TIMEOUT_MS）。
-const INTERPRET_TIMEOUT_MS = 25000
+// 解读独立预算（2026-08-14 A+B+C+D 优化：25s→40s）：给「混元→智谱→Qwen→DeepSeek」降级链完整余量，
+// 最坏 4 引擎×8s=32s < 40s，DeepSeek 兜底也能走到。实际 race 受解读预算动态截断（见 L928），不撑 60s 函数墙。摘要仍用 12s（ITEM_TIMEOUT_MS）。
+const INTERPRET_TIMEOUT_MS = 40000
 
 // 浏览器 UA（避免反爬）
 const BROWSER_UA =
@@ -910,7 +910,7 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
           }
         }
 
-        // ── 2/4. AI 独立解读（详情页加分项，best-effort：预算不足时跳过，不挤占摘要）──
+        // ── 2/4. AI 独立解读（详情页硬需求：凡展示新闻必须带 AI 解读正文；预算充足尽量跑，仅剩 <5s 才跳过）──
         // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道
         // 触发条件 = content 不是 AI 解读来源（enriched.contentSource !== 'ai_interpretation'），
         // 即：AI 源（智谱搜索）content 自带 'ai_interpretation' → 跳过（已解读）；
@@ -921,14 +921,18 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         //   A.4/A.5 允许官方 RSS 抓正文作 AI 加工源；AI 解读是加工产物（非原文复述），可落库展示。
         //   但 contentSource **保持 'official_rss'**（前端「出处 ↗」+ R1 放行依赖它），
         //   解读正文写 content、观点写 aiOpinion；解读失败则 content 维持原文（版权红线：落库前清空）。
-        // 2026-08-13 修复：解读需 25s 预算，置于摘要之后并加预算守卫——剩余 <28s 直接跳过，
-        // 确保摘要（列表关键字段）已先跑完、不被解读挤掉；解读失败则 content 维持原文走 R1 兜底。
+        // 2026-08-14 A+B+C+D 优化：解读是硬需求，不再以固定 28s 跳过（此前 ~95 次/日因预算守卫被跳过）。
+        // 改为：剩余 ≥5s 即尝试；race 超时动态 = min(INTERPRET_TIMEOUT_MS, 剩余-3s)，
+        // 早段条目给满 40s 走完整降级链，晚段条目 race 自动缩短 → 数学上保证不超 60s 函数墙。
         if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
-          // 预算守卫：解读需 25s，剩余 <28s 跳过（保摘要已先完成）
-          if (!deadline || Date.now() + 28000 <= deadline) {
+          // 预算守卫：仅剩 <5s 才跳过（保函数不超时）；其余一律尝试解读
+          if (!deadline || Date.now() + 5000 <= deadline) {
+            const interpretRaceMs = deadline
+              ? Math.min(INTERPRET_TIMEOUT_MS, Math.max(0, deadline - Date.now() - 3000))
+              : INTERPRET_TIMEOUT_MS
             const interpretation = await Promise.race([
               interpretNews(content, item.title, enriched.references, item),
-              new Promise(resolve => setTimeout(() => resolve(null), INTERPRET_TIMEOUT_MS)),
+              new Promise(resolve => setTimeout(() => resolve(null), interpretRaceMs)),
             ])
             if (interpretation && interpretation.text) {
               enriched.content = interpretation.text
