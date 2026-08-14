@@ -84,7 +84,7 @@ const _AGG_SOURCE_NAMES = [
 //    弱信号新闻仍可能经 AI 后展示，仅降低其质量分、压低排序。
 //  - 硬黑名单：命中即丢弃，不进评分、不进 news_cache。
 //    硬黑名单 = 早先整理的「敏感词汇过滤表」（SENSITIVE_WORDS，PRD §4.4 五大类：涉黄/涉政/暴力/辱骂/广告spam），
-//    与 feedback-create 共用同一权威源（utils/sensitiveWords.js），避免两处漂移。
+//    与 feedback-create 共用同一权威源（common/sensitiveWords.js，本副本由 tools/sync-common.sh 同步生成，勿手改）。
 //    版权搬运硬信号（全文转载/未经授权转载等）属软信号降权范畴，不在此硬弃。
 // 与 securityCheck（NLP 级 msgSecCheck）互补：msgSecCheck 负责大语义违规（联网审核）；
 // 本表负责可客观判定的敏感词硬拦截（本地秒级、无网络依赖、兜底）。

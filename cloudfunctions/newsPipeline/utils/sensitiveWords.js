@@ -1,14 +1,22 @@
 /**
- * 敏感词过滤表 — 权威单一真相源（原 feedback-create PRD §4.4）
+ * 敏感词过滤表 — 公共层权威单一真相源（原 feedback-create PRD §4.4）
  *
- * 说明：
- *  - 本表为「早先整理的敏感词汇过滤表」，派生自 feedback/create 的 KEYWORD_BLACKLIST（PRD §4.4）。
- *  - 作为 newsPipeline ⑥ 合规硬门禁的 COMPLIANCE_HARD_BLACKLIST（命中即丢弃，不进评分、不进缓存）；
- *    同时 feedback-create 仍使用同内容（保持两处一致，避免漂移）。
- *  - 覆盖五大类：涉黄 / 涉政敏感 / 暴力 / 辱骂 / 广告 spam。
- *  - 与 msgSecCheck（SecurityCheck，AI 语义审核）互补：
- *      msgSecCheck 负责大语义违规（需联网审核）；
- *      本表负责可客观判定的敏感词硬拦截（本地秒级、无网络依赖、兜底）。
+ * 覆盖五大类：涉黄 / 涉政敏感 / 暴力 / 辱骂 / 广告 spam。
+ * 与 msgSecCheck（SecurityCheck，AI 语义审核）互补：
+ *   - msgSecCheck 负责大语义违规（需联网审核）；
+ *   - 本表负责可客观判定的敏感词硬拦截（本地秒级、无网络依赖、兜底）。
+ *
+ * ⚠️ 维护方式（重要）：
+ *   - 本文件是「唯一真相源」，只在此处增删敏感词。
+ *   - 云函数以单函数目录为根打包（CloudBase 不含兄弟目录），各函数内
+ *     utils/sensitiveWords.js 是【本文件经 tools/sync-common.sh 生成的平铺副本】，
+ *     部署时保持函数自包含（详见 scripts/deploy-cloudfunctions.sh v4.1 注释）。
+ *   - 改词后跑一次：bash tools/sync-common.sh  即可同步到各函数副本。
+ *   - 【不要】直接手改各函数 utils/ 下的副本（会被下一次同步覆盖）。
+ *
+ * 用途：
+ *   - newsPipeline ⑥ 合规硬门禁 COMPLIANCE_HARD_BLACKLIST（命中即丢弃）；
+ *   - feedback-create 意见反馈内容过滤（命中即拒绝）。
  */
 
 const SENSITIVE_WORDS = [

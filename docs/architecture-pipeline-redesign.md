@@ -138,7 +138,8 @@
 - 丢弃语义：门控丢弃者彻底不进 AI、不展示（省预算 + 符合「前端只展示已过 AI 条目」诉求）。
 
 ⑥ 合规门禁（2026-08-14 拆分为软/硬两类）：
-- **硬黑名单** `COMPLIANCE_HARD_BLACKLIST` = 早先整理的**敏感词汇过滤表** `SENSITIVE_WORDS`（`utils/sensitiveWords.js`，PRD §4.4 五大类：涉黄/涉政/暴力/辱骂/广告spam），命中即丢弃，不进评分、不进 news_cache，不进 AI。与 `feedback-create` 共用同一权威源，避免漂移。
+- **硬黑名单** `COMPLIANCE_HARD_BLACKLIST` = 早先整理的**敏感词汇过滤表** `SENSITIVE_WORDS`（PRD §4.4 五大类：涉黄/涉政/暴力/辱骂/广告spam），命中即丢弃，不进评分、不进 news_cache，不进 AI。与 `feedback-create` 共用同一权威源。
+  - **维护口径（公共层）**：权威单一真相源 = `common/sensitiveWords.js`；`newsPipeline`/`feedback-create` 各函数 `utils/sensitiveWords.js` 为 `tools/sync-common.sh` 生成的**平铺副本**（CloudBase 只打包函数自身目录，不做运行时跨函数 require）。**只改 common/ 一处** → `bash tools/sync-common.sh --apply` → 重新部署受影响云函数。
 - **软信号** `COMPLIANCE_SOFT_SIGNALS`（版权搬运/纯导流弱信号，如 `全文转载`/`未经授权转载`/`授权转载请联系`/`不得转载`、本站独家/原创、`点击下方关注`/`关注我们`/`后台回复`/`公众号内回复` 等）：保留检测，**不硬丢弃**，进入评分并降权（`COMPLIANCE_SOFT_PENALTY=15`），由整体质量门决定是否展示。
 - 敏感词的 AI 语义层（涉政大语境）由 `msgSecCheck`（securityCheck，联网审核）另行处理；本表只负责可客观判定的敏感词本地硬拦截（秒级、无网络依赖、兜底）。
 

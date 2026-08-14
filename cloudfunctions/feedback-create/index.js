@@ -36,7 +36,7 @@ const DEEPSEEK_PATH = '/chat/completions'
 
 // ── 关键词黑名单（PRD §4.4 · 敏感词过滤表） ─────────────
 // 覆盖五大类：涉黄 / 涉政 / 暴力 / 辱骂 / 广告 spam
-// 权威单一真相源：utils/sensitiveWords.js（与 newsPipeline ⑥ 硬门禁共用，避免漂移）
+// 权威单一真相源：common/sensitiveWords.js（与 newsPipeline ⑥ 硬门禁共用；本副本由 tools/sync-common.sh 同步生成，勿手改）
 
 const { SENSITIVE_WORDS, matchSensitiveWord } = require('./utils/sensitiveWords')
 
