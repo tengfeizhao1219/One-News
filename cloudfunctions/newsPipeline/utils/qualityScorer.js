@@ -7,11 +7,11 @@
  *       产出 FinalScore 用于落库 + 排序；低质/超门控条目不进 news_cache。
  *
  *   QualityScore = 0.25·①来源权威 + 0.20·②内容完整 + 0.15·③时效 + 0.15·④文本质量 + 0.10·⑤去重唯一
- *   ⑥合规性 为硬门禁（命中直接弃，不走评分）
+ *   ⑥合规性 拆分为软/硬：硬黑名单命中直接弃；软信号(版权搬运/纯导流)保留检测、进入评分降权
  *   HeatScore    = (eventHeat + topicHeat + engagement) × decay    （归一化到 0-100）
  *   FinalScore   = 0.6 · QualityScore + 0.4 · HeatScore
  *
- *   质量门（Gate）：QualityScore < 40 或 噪音比 > 0.4 或 合规命中 → 不进 news_cache
+ *   质量门（Gate）：QualityScore < 40 或 噪音比 > 0.4 或 合规硬黑名单命中 → 不进 news_cache
  *
  * 接入时序（关键设计，见 refreshNews/index.js runCategoryPipeline）：
  *   在 enrichNewsList 之前对 secPassed（已通过校验+安全审核的本分类候选）调用 scoreAll，
@@ -40,6 +40,9 @@ const GATE = {
   minQuality: 40,    // QualityScore 低于此 → 弃
   maxNoiseRatio: 0.4 // 噪音比高于此 → 弃
 }
+
+// 软信号降权幅度（命中合规软信号仍进入评分，但压低质量分，不丢弃）
+const COMPLIANCE_SOFT_PENALTY = 15
 
 // ─── 来源权威性配置表（方案 §六）────
 // 口径：官方/央媒=100；省级权威=80；权威媒体=85；聚合/三方=60；未知/UGC=40
@@ -75,23 +78,26 @@ const _AGG_SOURCE_NAMES = [
   '一点资讯', 'ZAKER', '快资讯', 'AI', '智谱', '智能搜索', '搜索',
 ]
 
-// 合规硬门禁信号（⑥）：命中即弃，不进评分、不进 news_cache。
-// 设计与 securityCheck（NLP 级 msgSecCheck）互补：
-//   - securityCheck 负责内容安全（政治/色情/暴恐等，个人主体降级放行）；
-//   - qualityScorer ⑥ 聚焦可客观判定的两类红线：
-//       a) 版权搬运硬信号 —— 与官方 RSS「不抓正文」红线不同，这里是判别"第三方把受版权保护的
-//          外媒/机构稿全文整篇搬运"的弱信号词，命中即降权拦截（防版权风险）；
-//       b) 明显导流/伪内容 —— 纯引流口播、无实质新闻价值的剪辑片段标题。
-// 敏感类政治词条不在此处维护（由 msgSecCheck 按官方口径处理，避免本地关键词滞后/误伤）。
+// 合规门禁信号（⑥），2026-08-14 owner 拍板拆分为软/硬两类：
+//  - 软信号（版权搬运/纯导流弱信号）：保留检测，但不硬丢弃，进入下一环节评分（降权处理）。
+//    弱信号新闻仍可能经 AI 后展示，仅降低其质量分、压低排序。
+//  - 硬黑名单（明确违法/版权红线）：命中即丢弃，不进评分、不进 news_cache。
+// 与 securityCheck（NLP 级 msgSecCheck）互补：敏感政治类由 msgSecCheck 处理，不在此维护。
+// 命中规则：字符串走 includes；正则去掉 ^...$ 锚定走 test() 部分匹配（hay = title/summary/content）。
 
-const _COMPLIANCE_BLOCK_KEYWORDS = [
-  // 版权搬运 / 机构稿整篇转载弱信号（命中即弃，规避「苏民终 588」类判例风险）
-  // 字符串走 includes；正则去掉 ^...$ 锚定，走 test() 部分匹配（hay 含 title/summary/content）
-  '全文转载', '未经授权转载', '授权转载请联系', '不得转载',
-  /版权归.{1,20}(所有|版权所有)/, /本站（独家|原创）/,
+// 软信号：保留检测、进入评分降权（不丢弃）
+const COMPLIANCE_SOFT_SIGNALS = [
+  '授权转载请联系',
+  /本站（独家|原创）/,
   // 纯导流/无新闻实质
   '点击下方关注', '关注我们', '星标我们', '后台回复', '公众号内回复',
-].filter(Boolean)
+]
+
+// 硬黑名单：命中即丢弃（明确转载声明 / 版权归属声明，规避「苏民终 588」类判例风险）
+const COMPLIANCE_HARD_BLACKLIST = [
+  '全文转载', '未经授权转载', '不得转载',
+  /版权归.{1,20}(所有|版权所有)/,
+]
 
 /**
  * 归一化标题（用于跨源事件聚类 + 指纹，降噪）
@@ -245,9 +251,15 @@ function _fingerprintOf(v, map) {
  */
 function complianceGate(item) {
   const hay = `${item.title || ''} ${item.summary || ''} ${item.content || ''}`
-  for (const kw of _COMPLIANCE_BLOCK_KEYWORDS) {
-    if (typeof kw === 'string' && hay.includes(kw)) return `合规关键词命中: ${kw}`
-    if (kw instanceof RegExp && kw.test(hay)) return `合规模式命中: ${kw}`
+  // 硬黑名单优先：命中即弃
+  for (const kw of COMPLIANCE_HARD_BLACKLIST) {
+    if (typeof kw === 'string' && hay.includes(kw)) return { hard: `合规黑名单命中: ${kw}` }
+    if (kw instanceof RegExp && kw.test(hay)) return { hard: `合规黑名单模式命中: ${kw}` }
+  }
+  // 软信号：保留检测、进入评分降权，不丢弃
+  for (const kw of COMPLIANCE_SOFT_SIGNALS) {
+    if (typeof kw === 'string' && hay.includes(kw)) return { soft: `合规软信号命中: ${kw}` }
+    if (kw instanceof RegExp && kw.test(hay)) return { soft: `合规软信号模式命中: ${kw}` }
   }
   return null
 }
@@ -259,11 +271,13 @@ function complianceGate(item) {
  * @returns {{ score:number, passed:boolean, rejectReason?:string, source:number, complete:number, fresh:number, text:number, uniq:number, noiseRatio:number }}
  */
 function score(item, ctx = {}) {
-  // 合规门禁（硬性，不走评分）
+  // 合规门禁：硬黑名单命中 → 直接弃（不走评分）；软信号命中 → 记录并降权，仍进入评分
   const compliance = complianceGate(item)
-  if (compliance) {
-    return { score: 0, passed: false, rejectReason: compliance, gated: 'compliance' }
+  if (compliance && compliance.hard) {
+    return { score: 0, passed: false, rejectReason: compliance.hard, gated: 'compliance' }
   }
+  const softPenalty = (compliance && compliance.soft) ? COMPLIANCE_SOFT_PENALTY : 0
+  if (compliance && compliance.soft) item._softCompliance = compliance.soft
 
   const s = sourceAuthority(item)
   const c = contentCompleteness(item)
@@ -272,13 +286,15 @@ function score(item, ctx = {}) {
   const u = dedupScore(item, ctx)
   const noiseRatio = item._noiseRatio || 0
 
-  const score = Math.round(
+  let score = Math.round(
     W.source * s
     + W.complete * c
     + W.fresh * f
     + W.text * t
     + W.uniq * u
   )
+  // 软信号降权（进入评分但压低质量分，不丢弃）
+  if (softPenalty) score = Math.max(0, score - softPenalty)
 
   // 质量门（方案 §四）
   let passed = true

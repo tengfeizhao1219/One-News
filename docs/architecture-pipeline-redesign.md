@@ -49,7 +49,7 @@
 ┌──────────────────────────────────────────────────────────────┐
 │ Stage 1 · Process（newsProcessor，补全正文+质量门）            │
 │  · 分批消费 news_raw(pending)                                  │
-│  · 补全正文(fetchContent ≤12s/条) → 质量门 → 安全/去重          │
+│  · 补全正文(fetchContent ≤12s/条) → 安全审核 → 质量评分+门控 → 去重  │
 │  · pass → 写 news_staging(aiStatus=pending, 含 content)        │
 │  · recommend 跨类借 top 组装(rec_，不消费原件)                  │
 │  · 预算将尽自续跑                                              │
@@ -115,13 +115,32 @@
 
 ### 3.1 Stage 1 · Process（newsProcessor，补全正文 + 质量门）
 
-**职责**：`news_raw(pending)` → 补全正文 → 质量门 → `news_staging(aiStatus=pending)`。
+**职责**：`news_raw(pending)` → 补全正文 → 安全审核 → 质量评分+门控 → `news_staging(aiStatus=pending)`。
 
 - 分批拉 `news_raw(pending)`（游标/cursor 保证续跑不重复）。
-- 逐条：`fetchContentForItem`（≤12s/条，仅当正文缺失时抓源站 HTML）→ 质量评分 → 去重(urlFp/titleFp) → 敏感过滤。
+- 逐条：`fetchContentForItem`（≤12s/条，仅当正文缺失时抓源站 HTML）→ 安全审核 → **质量评分+门控**（qualityScorer.scoreAll，见 3.1.1）→ 去重(urlFp/titleFp)。
 - pass：写 `news_staging`（含 `content` 作 AI 原料）+ 标 `news_raw` 为 `consumed`。
 - `recommend`：正常条目 staging 后，跨类借 top 组装 `rec_` 前缀条目（**借用不消费**原件，避免饿死原生分类）。
 - 预算将尽（`Date.now()+SLICE > deadline`）→ 自续跑。
+
+### 3.1.1 质量筛选旋钮与 ⑥ 合规门禁（2026-08-14 owner 终值）
+
+质量筛选在 Stage 1 安全审核之后调用 `qualityScorer.scoreAll()`，按 `passed` 分流：
+- **幸存者** → 写 `news_staging`（带 `finalScore/qualityScore/heatScore/eventId`），进 Stage 2 AI；
+- **被门控丢弃者**（低质 / 噪音比超阈 / 合规硬黑名单命中）→ 不写 staging、不进 AI、不展示。
+
+旋钮终值（与 qualityScorer.js 常量一致，owner 拍板维持/确认）：
+- 门控阈值：`minQuality=40`、`maxNoiseRatio=0.4`（维持现状）。
+- 5 维权重：来源权威 0.25 / 内容完整 0.20 / 时效 0.15 / 文本质量 0.15 / 去重唯一 0.10（不调整）。
+- 来源权威表 `SOURCE_AUTHORITY`：四家央媒(中新/人民/央视/新华)=100、聚合 `DEFAULT_AGG=60` 等，确认覆盖现有源（无需额外调整）。
+- 热度融合：保留 `HeatScore = (eventHeat + topicHeat + engagement) × 衰减`，`FinalScore = 0.6·Quality + 0.4·Heat`。
+- 评分位置：安全审核之后（owner 同意）。
+- 丢弃语义：门控丢弃者彻底不进 AI、不展示（省预算 + 符合「前端只展示已过 AI 条目」诉求）。
+
+⑥ 合规门禁（2026-08-14 拆分为软/硬两类）：
+- **软信号** `COMPLIANCE_SOFT_SIGNALS`（版权搬运/纯导流弱信号，如 `授权转载请联系`、本站独家/原创、`点击下方关注`/`关注我们`/`后台回复`/`公众号内回复` 等）：保留检测，**不硬丢弃**，进入评分并降权（`COMPLIANCE_SOFT_PENALTY=15`），由整体质量门决定是否展示。
+- **硬黑名单** `COMPLIANCE_HARD_BLACKLIST`（明确转载/版权归属声明，如 `全文转载`/`未经授权转载`/`不得转载`、版权正则）：命中即丢弃，不进评分、不进 news_cache。
+- 当前硬黑名单为种子集（owner 可继续扩充）；敏感政治类由 `msgSecCheck` 另行处理。
 
 ### 3.2 Stage 2 · AI（newsAI，纯 AI 零抓取）
 

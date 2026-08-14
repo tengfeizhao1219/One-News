@@ -28,6 +28,7 @@ const stagingStore = require('./utils/newsStagingStore')
 const { fetchContentForItem, enrichNewsList, isInvalidDesc } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
+const { scoreAll } = require('./utils/qualityScorer')
 const config = require('./config')
 
 const BUDGET_MS = 55000          // 单次实例预算（< 60s 墙，留余量）
@@ -119,11 +120,17 @@ async function stageProcess(deadline) {
       }
     }
 
-    // 注：qualityScorer 评分门控此处有意跳过 —— owner 诉求「所有数据都经 AI 处理」，
-    //     低分条目也应进 AI；排序权重由 getNewsList 兜底（finalScore=null 不参与排序）。
+    // 4. 质量筛选（评分 + 门控）—— owner 拍板：先筛选再进 AI；
+    //    被门控丢弃者（低质 / 噪音比超阈 / 合规硬黑名单命中）不写 staging、不进 AI、不展示。
+    const scored = scoreAll(secPassed, {})
+    const passed = scored.passed
+    if (scored.rejected.length) {
+      console.log(`[newsPipeline][process] 质量门丢弃 ${scored.rejected.length} 条:`,
+        scored.rejected.slice(0, 5))
+    }
 
-    // 4. 写 news_staging(aiStatus=pending, 含 content)
-    const docs = secPassed.map((it) => ({
+    // 5. 写 news_staging（仅幸存者，含 finalScore/qualityScore/heatScore/eventId）
+    const docs = passed.map((it) => ({
       _id: it._id,
       id: it.id,
       title: it.title,
@@ -140,12 +147,11 @@ async function stageProcess(deadline) {
       titleFp: it.titleFp,
       content: it.content || '',
       contentSource: it.contentSource || 'fetched',
-      // 评分字段留空（不参与排序，降级兜底）
-      finalScore: null,
-      qualityScore: null,
-      heatScore: null,
-      eventId: '',
-      noiseRatio: null,
+      finalScore: it.finalScore ?? null,
+      qualityScore: it.qualityScore ?? null,
+      heatScore: it.heatScore ?? null,
+      eventId: it.eventId || '',
+      noiseRatio: it.noiseRatio ?? null,
       aiStatus: 'pending',
       createdAt: new Date().toISOString(),
       expireAt: new Date(Date.now() + STAGING_TTL_MS).toISOString(),
