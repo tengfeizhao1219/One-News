@@ -1,0 +1,13 @@
+{
+  "envId": "cloud1-1g9313w0bb791de0",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "newsPipeline",
+      "path": "newsPipeline",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    }
+  ]
+}
