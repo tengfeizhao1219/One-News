@@ -513,6 +513,91 @@ async function enforceCategoryCapOnCache() {
   return { trimmed }
 }
 
+// ====================================================================
+// TTL 物理清理（2026-08-15 补）· 删除 cacheExpire 已过期记录
+// --------------------------------------------------------------------
+// 背景：此前 TTL 物理删除只写在未部署的 refreshNews 里，线上无函数做过期
+//       清理 → 过期记录物理滞留库（虽被 getNewsList 的 cacheExpire>now 过滤
+//       隐藏，仍为垃圾堆积、且数量口径失真）。本函数在每次 publish / 调度 tick
+//       兜底清理，让 cache 真正自清、只保留近 7 天（保留项 30 天）数据。
+// 删除键 = cacheExpire < now；保留项(cacheExpire=retainedAt+30d)自然豁免。
+// ====================================================================
+async function cleanupExpiredCache() {
+  const now = Date.now()
+  let removed = 0
+  try {
+    const res = await db.collection('news_cache').where({ cacheExpire: _.lt(now) }).remove()
+    removed = (res && res.stats && (res.stats.removed || res.stats.removedCount)) || 0
+  } catch (e) {
+    console.warn('[newsPipeline][TTL清理] 过期记录删除异常（放行）:', e.message)
+  }
+  if (removed > 0) console.log(`[newsPipeline][TTL清理] 删除 ${removed} 条过期(cacheExpire<now)记录`)
+  return { removed }
+}
+
+// 质量评分（与 batchInsert 内 rankOf 同口径，module 级共享）：AI 解读 > AI 摘要 > 其它，
+// 叠加 aiOpinion 完整性、qualityScore。用于去重兜底时"每组只留最好那条"。
+function rankOfItem(it) {
+  let r = 0
+  if (it.contentSource === 'ai_interpretation') r = 3
+  else if (it.contentSource === 'ai_summary') r = 2
+  if (it.aiOpinion && String(it.aiOpinion).trim()) r += 0.5
+  r += (Number(it.qualityScore) || 0) / 100
+  return r
+}
+
+// ====================================================================
+// 去重兜底（2026-08-15 补）· 按 dedupKey 合并跨批次竞态副本
+// --------------------------------------------------------------------
+// 背景：batchInsert 已按 dedupKey upsert，但 CloudBase NoSQL 存在读写延迟，
+//       两轮独立 publish 时，后一轮的 existMap 查询可能漏判前一轮刚写入的记录
+//       → 同 dedupKey 被 add 成两份副本（实测 47 条里出现 6 对）。这类重复
+//       getNewsList 会原样返回给前端，用户仍看到重复。
+// 做法：publish / 调度 tick 末端再扫一遍，按 dedupKey 分组，每组只留
+//       rankOfItem 最高（同档留最新 publishTime）那条，其余物理删除。
+// ====================================================================
+async function dedupByDkSweep() {
+  let all = []
+  let skip = 0
+  while (true) {
+    const res = await db.collection('news_cache').limit(1000).skip(skip).get()
+    const list = (res && res.data) || []
+    if (!list.length) break
+    all = all.concat(list)
+    if (list.length < 1000) break
+    skip += 1000
+  }
+  if (!all.length) return { deduped: 0 }
+
+  const byDk = {}
+  for (const it of all) {
+    const dk = it.dedupKey || (it.sourceUrl || it.link || it.url) || ('T:' + (it.title || ''))
+    if (!dk) continue
+    ;(byDk[dk] = byDk[dk] || []).push(it)
+  }
+  const toRemove = []
+  let deduped = 0
+  for (const dk of Object.keys(byDk)) {
+    const items = byDk[dk]
+    if (items.length <= 1) continue
+    items.sort((a, b) => {
+      const ra = rankOfItem(a)
+      const rb = rankOfItem(b)
+      if (rb !== ra) return rb - ra
+      const ta = new Date(a.publishTime || 0).getTime() || 0
+      const tb = new Date(b.publishTime || 0).getTime() || 0
+      return tb - ta
+    })
+    for (const loser of items.slice(1)) toRemove.push(loser._id)
+    deduped += items.length - 1
+  }
+  for (const id of toRemove) {
+    try { await db.collection('news_cache').doc(id).remove() } catch (e) { /* 忽略 */ }
+  }
+  if (deduped > 0) console.log(`[newsPipeline][去重兜底] 按 dedupKey 合并 ${deduped} 条跨批次重复副本`)
+  return { deduped }
+}
+
 async function stagePublish(deadline) {
   let published = 0
   while (hasBudget(deadline)) {
@@ -531,6 +616,22 @@ async function stagePublish(deadline) {
     console.warn('[newsPipeline][publish] 每类硬上限兜底异常（放行）:', e.message)
   }
 
+  // TTL 物理清理：删除 cacheExpire 已过期(>7天)记录，只保留近 7 天数据
+  let ttlRes = { removed: 0 }
+  try {
+    ttlRes = await cleanupExpiredCache()
+  } catch (e) {
+    console.warn('[newsPipeline][publish] TTL 清理异常（放行）:', e.message)
+  }
+
+  // 去重兜底：合并跨批次竞态产生的同 dedupKey 副本，避免前端看到重复
+  let dupRes = { deduped: 0 }
+  try {
+    dupRes = await dedupByDkSweep()
+  } catch (e) {
+    console.warn('[newsPipeline][publish] 去重兜底异常（放行）:', e.message)
+  }
+
   const sd = await stagingStore.doneCount()
   if (sd > 0) trigger('publish')
   else trigger('run') // 全部完成 → 调度器回到空闲
@@ -541,6 +642,10 @@ async function stagePublish(deadline) {
 // 调度器 run()：幂等检查全局队列，触发下一个该跑的阶段
 // ====================================================================
 async function run() {
+  // TTL 物理清理：每次调度 tick 兜底，过期记录随时被清，防堆积
+  try { await cleanupExpiredCache() } catch (e) { /* 放行 */ }
+  // 去重兜底：调度 tick 也兜底合并跨批次重复副本
+  try { await dedupByDkSweep() } catch (e) { /* 放行 */ }
   const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
   if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
   const sp = await stagingStore.pendingCount()
