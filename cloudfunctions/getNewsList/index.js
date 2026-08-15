@@ -9,6 +9,26 @@ const db = cloud.database()
 const config = require('./config')
 const { cleanTitle } = require('./utils/newsCleaner')
 
+// ─── 服务端去重（2026-08-15 补）────────────────────────
+// 背景：news_cache 因历史遗留（旧 refreshNews 多 id 分支）与集群抖动，
+//   可能残留同篇新闻的多条副本（不同 id / 跨分类）。前端按 id 去重兜不住
+//   「同篇不同 id」的情况，用户会看到重复。此处无论缓存是否干净，都在
+//   返回前按「sourceUrl 优先、归一化标题兜底」去重，保证用户永不看到重复。
+// 返回数组保持原顺序（已按 finalScore/publishTime 排好），每组只留第一条（最优）。
+function dedupItems(items) {
+  const seen = new Set()
+  const out = []
+  for (const it of (items || [])) {
+    const key = String(it.sourceUrl || it.link || it.url || '').trim()
+      || ('T:' + String(it.title || '').replace(/\s+/g, '').toLowerCase())
+    if (!key) { out.push(it); continue }
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(it)
+  }
+  return out
+}
+
 // ─── 分类名称映射（本地常量，无需 adapter）───
 // v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
 // 与 frontend utils/constants.js CATEGORIES 对齐。
@@ -81,8 +101,11 @@ async function queryCache(where, pageNum, pageSize) {
         .where(where)
         .count()
 
+      // 服务端去重：同 sourceUrl/同标题只保留一条，斩断用户可见的重复
+      const listData = dedupItems(res.data)
+
       return {
-        list: res.data.map(item => ({
+        list: listData.map(item => ({
           id: item.id, _id: item._id,
           title: cleanTitle(item.title || ''), summary: item.summary,
           summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
@@ -162,8 +185,9 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
       .get()
     if (res.data && res.data.length > 0) {
       const totalRes = await db.collection('news_cache_backup').where(where).count()
+      const listData = dedupItems(res.data)
       return {
-        list: res.data.map(item => ({
+        list: listData.map(item => ({
           id: item.id, _id: item._id,
           title: cleanTitle(item.title || ''), summary: item.summary,
           summarySource: item.summarySource || '', // v6.2：'ai' | 'desc' | 'title'
