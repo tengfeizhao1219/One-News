@@ -97,7 +97,10 @@ function normalizeAggregateItem(raw, sourceType, category) {
     sourceId: `${sourceType}_${category}`,
     sourceName: raw.source || (sourceType === 'juhe' ? '聚合数据' : '天行数据'),
     source: raw.source || (sourceType === 'juhe' ? '聚合数据' : '天行数据'),
-    id: `${sourceType}_${category}_${urlFp.slice(0, 16)}`,
+    // 去重键统一用完整 urlFp（去掉 sourceType/category 前缀）：同源转载的同篇新闻
+    // 在不同 source/category 下生成同一 id，batchInsert 按 id upsert 自动合并，根治跨源重复。
+    // 此前 `${sourceType}_${category}_${urlFp.slice(0,16)}` 因前缀+截断导致同篇多 id → 重复落库。
+    id: urlFp,
     category,
     categoryName: raw.categoryName || '',
     pubDate: String(raw.publishTime || new Date().toISOString()),

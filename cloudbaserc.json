@@ -8,6 +8,13 @@
       "runtime": "Nodejs20.19",
       "handler": "index.main",
       "installDependency": true
+    },
+    {
+      "name": "newsFetcher",
+      "path": "newsFetcher",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
     }
   ]
 }

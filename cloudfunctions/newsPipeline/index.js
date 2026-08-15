@@ -331,21 +331,46 @@ async function batchInsert(newsList) {
   let inserted = 0
   let failed = 0
 
+  // 去重键：link/sourceUrl 优先，空则标题归一化（与前端去重口径一致）。
+  // 用 dedupKey 而非 item.id 做 upsert 匹配：无论 id 如何变化，同篇新闻（同 link/title）都合并为一条。
+  const dkOf = (it) => {
+    const lk = String(it.sourceUrl || it.link || it.url || '').trim()
+    return lk || ('T:' + String(it.title || '').trim())
+  }
+  // 同批次内存去重：每组保留 AI 解读最全、质量最高者，避免并发/批内重复写入。
+  const rankOf = (it) => {
+    let r = 0
+    if (it.contentSource === 'ai_interpretation') r = 3
+    else if (it.contentSource === 'ai_summary') r = 2
+    if (it.aiOpinion && String(it.aiOpinion).trim()) r += 0.5
+    r += (Number(it.qualityScore) || 0) / 100
+    return r
+  }
+  const bestByDk = new Map()
+  for (const it of newsList) {
+    const dk = dkOf(it)
+    if (!dk) continue
+    const prev = bestByDk.get(dk)
+    if (!prev || rankOf(it) > rankOf(prev)) bestByDk.set(dk, it)
+  }
+  const dedupList = [...bestByDk.values()]
+
   const existMap = {}
   try {
-    const ids = newsList.map((it) => it.id)
-    for (let i = 0; i < ids.length; i += 20) {
-      const chunk = ids.slice(i, i + 20)
-      const res = await db.collection('news_cache').where({ id: db.command.in(chunk) }).get()
-      res.data.forEach((doc) => { existMap[doc.id] = doc })
+    const dks = dedupList.map((it) => dkOf(it))
+    for (let i = 0; i < dks.length; i += 20) {
+      const chunk = dks.slice(i, i + 20)
+      const res = await db.collection('news_cache').where({ dedupKey: db.command.in(chunk) }).get()
+      res.data.forEach((doc) => { existMap[doc.dedupKey] = doc })
     }
   } catch (err) {
     console.warn('[newsPipeline][publish] 查询已有记录失败:', err.message)
   }
 
-  await batchParallel(newsList, async (item) => {
+  await batchParallel(dedupList, async (item) => {
     try {
-      const existed = existMap[item.id]
+      const dk = dkOf(item)
+      const existed = existMap[dk]
       let summary = item.summary || ''
       let summarySource = item.summarySource || (!summary || summary === item.title ? 'title' : 'desc')
       if (existed) {
@@ -393,6 +418,7 @@ async function batchInsert(newsList) {
 
       const docData = {
         id: item.id,
+        dedupKey: dk,
         title: item.title,
         summary,
         summarySource,
