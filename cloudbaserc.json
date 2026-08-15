@@ -5,7 +5,7 @@
     {
       "name": "newsFetcher",
       "path": "newsFetcher",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs18.15",
       "handler": "index.main",
       "installDependency": true,
       "triggers": [
@@ -19,56 +19,56 @@
     {
       "name": "newsPipeline",
       "path": "newsPipeline",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs18.15",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "getNewsList",
       "path": "getNewsList",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "getNewsDetail",
       "path": "getNewsDetail",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "getNewsDelta",
       "path": "getNewsDelta",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "setNewsRetained",
       "path": "setNewsRetained",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "feedback-create",
       "path": "feedback-create",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "feedback-delete",
       "path": "feedback-delete",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     },
     {
       "name": "feedback-list",
       "path": "feedback-list",
-      "runtime": "Nodejs20.19",
+      "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
     }
