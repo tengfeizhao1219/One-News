@@ -3,6 +3,20 @@
   "functionRoot": "cloudfunctions",
   "functions": [
     {
+      "name": "newsFetcher",
+      "path": "newsFetcher",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "hourlyFetch",
+          "type": "timer",
+          "config": "0 0 * * * * *"
+        }
+      ]
+    },
+    {
       "name": "newsPipeline",
       "path": "newsPipeline",
       "runtime": "Nodejs20.19",
@@ -10,8 +24,50 @@
       "installDependency": true
     },
     {
-      "name": "newsFetcher",
-      "path": "newsFetcher",
+      "name": "getNewsList",
+      "path": "getNewsList",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "getNewsDetail",
+      "path": "getNewsDetail",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "getNewsDelta",
+      "path": "getNewsDelta",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "setNewsRetained",
+      "path": "setNewsRetained",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "feedback-create",
+      "path": "feedback-create",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "feedback-delete",
+      "path": "feedback-delete",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "feedback-list",
+      "path": "feedback-list",
       "runtime": "Nodejs20.19",
       "handler": "index.main",
       "installDependency": true
