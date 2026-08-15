@@ -310,8 +310,11 @@ async function batchInsert(newsList) {
       }
 
       // v7（TL-B12）：已有记录则 update（保留 _id，避免重复插入相同 id 文档导致数据分叉），
-      // 新记录则 add。
+      // 新记录则 add。P1-2 修复：update 不覆盖 createdAt（保留首写时刻），避免热新闻
+      // createdAt 被刷成"本轮时刻"导致 getNewsDelta 将其误判为本轮新增。
       if (existed && existed._id) {
+        delete docData.createdAt
+        docData.updatedAt = now
         await db.collection('news_cache').doc(existed._id).update({ data: docData })
       } else {
         await db.collection('news_cache').add({ data: docData })

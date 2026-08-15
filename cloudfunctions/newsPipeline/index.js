@@ -437,16 +437,20 @@ async function batchInsert(newsList) {
         retainedAt,
         cacheExpire,
         createdAt: now,
-        finalScore: null,
-        qualityScore: null,
-        heatScore: null,
+        finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
+        qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
+        heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
         eventId: item.eventId || '',
-        noiseRatio: null,
-        gatedReason: '',
+        noiseRatio: typeof item.noiseRatio === 'number' ? item.noiseRatio : null,
+        gatedReason: item.gatedReason || item._gatedReason || (item._gated ? 'gated' : ''),
         aiOpinion: finalAiOpinion,
       }
 
       if (existed && existed._id) {
+        // P1-2 修复：update 不覆盖 createdAt（保留首写时刻），避免热新闻 createdAt 被刷成
+        // "本轮时刻"导致 getNewsDelta 将其误判为本轮新增
+        delete docData.createdAt
+        docData.updatedAt = now
         await db.collection('news_cache').doc(existed._id).update({ data: docData })
       } else {
         await db.collection('news_cache').add({ data: docData })
@@ -497,12 +501,16 @@ async function enforceCategoryCapOnCache() {
     const items = byCat[cat]
     const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
     if (items.length <= cap) continue
-    items.sort((a, b) => {
+    // P0-3 修复：收藏（isRetained=true）条目豁免淘汰，只从普通条目中淘汰超出上限者
+    const retained = items.filter(it => it.isRetained === true)
+    const normal = items.filter(it => it.isRetained !== true)
+    if (normal.length <= cap) continue
+    normal.sort((a, b) => {
       const ta = new Date(a.publishTime || 0).getTime() || 0
       const tb = new Date(b.publishTime || 0).getTime() || 0
       return tb - ta // 新优先
     })
-    const losers = items.slice(cap) // 超出硬上限的旧记录
+    const losers = normal.slice(cap) // 超出硬上限的旧记录（收藏豁免）
     for (const l of losers) toRemove.push(l._id)
     trimmed += losers.length
   }
@@ -580,7 +588,11 @@ async function dedupByDkSweep() {
   for (const dk of Object.keys(byDk)) {
     const items = byDk[dk]
     if (items.length <= 1) continue
-    items.sort((a, b) => {
+    // P0-3 修复：收藏条目不参与去重淘汰（保留用户可见副本）
+    const retained = items.filter(it => it.isRetained === true)
+    const normal = items.filter(it => it.isRetained !== true)
+    if (normal.length <= 1) continue
+    normal.sort((a, b) => {
       const ra = rankOfItem(a)
       const rb = rankOfItem(b)
       if (rb !== ra) return rb - ra
@@ -588,8 +600,8 @@ async function dedupByDkSweep() {
       const tb = new Date(b.publishTime || 0).getTime() || 0
       return tb - ta
     })
-    for (const loser of items.slice(1)) toRemove.push(loser._id)
-    deduped += items.length - 1
+    for (const loser of normal.slice(1)) toRemove.push(loser._id)
+    deduped += normal.length - 1
   }
   for (const id of toRemove) {
     try { await db.collection('news_cache').doc(id).remove() } catch (e) { /* 忽略 */ }

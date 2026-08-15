@@ -1,0 +1,57 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "globals": {
+    "wx": "readonly",
+    "App": "readonly",
+    "Page": "readonly",
+    "Component": "readonly",
+    "Behavior": "readonly",
+    "getApp": "readonly",
+    "getCurrentPages": "readonly",
+    "console": "readonly",
+    "setTimeout": "readonly",
+    "clearTimeout": "readonly",
+    "setInterval": "readonly",
+    "clearInterval": "readonly",
+    "Buffer": "readonly",
+    "process": "readonly"
+  },
+  "rules": {
+    "no-undef": "error",
+    "no-unused-vars": ["warn", { "args": "none", "varsIgnorePattern": "^_" }],
+    "no-unreachable": "error",
+    "no-constant-condition": "error",
+    "no-dupe-keys": "error",
+    "no-dupe-args": "error",
+    "no-dupe-class-members": "error",
+    "no-duplicate-imports": "error",
+    "no-redeclare": "error",
+    "no-cond-assign": "error",
+    "no-func-assign": "error",
+    "no-obj-calls": "error",
+    "no-sparse-arrays": "error",
+    "no-unexpected-multiline": "error",
+    "no-unsafe-finally": "error",
+    "no-unsafe-negation": "error",
+    "valid-typeof": "error",
+    "use-isnan": "error",
+    "no-fallthrough": "error",
+    "no-return-assign": "error",
+    "no-prototype-builtins": "warn",
+    "no-empty": "warn",
+    "no-extra-boolean-cast": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "no-implicit-coercion": "off",
+    "no-shadow": "off",
+    "no-case-declarations": "warn"
+  },
+  "ignorePatterns": ["node_modules/", "test/", "tests/"]
+}

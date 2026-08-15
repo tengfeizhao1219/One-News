@@ -27,7 +27,7 @@ module.exports = {
 
   // DeepSeek API（refreshNews 智谱降级兜底数据源）🆕
   deepseek: {
-    apiKey: process.env.DEEPSEEK_API_KEY,
+    apiKey: process.env.DEEPSEEK_API_KEY || '', // P2-9 修复：env 缺失时兜底空串，避免 undefined 传入 SDK
     model: 'deepseek-chat',
     timeout: 45000,
   },

@@ -135,6 +135,29 @@ Page({
     this._syncFontScale()
   },
 
+  // P2-8 修复：此前页面无 onUnload/onHide，_destroyed 从未置 true，16 处守卫全部失效；
+  // 下拉刷新轮询与提示定时器在页面离开后仍继续执行（浪费云函数调用 + 销毁后 setData 告警）。
+  onHide() {
+    // 隐藏（如进入详情页）时停止增量轮询，避免后台持续调用 getNewsDelta
+    if (this._refreshPollTimer) { this._stopRefreshPolling(false) }
+  },
+
+  onUnload() {
+    this._destroyed = true
+    var timers = [
+      this._swipeHintTimer,
+      this._categoryHintTimer,
+      this._statusPillTimer,
+      this._refreshPollTimer,
+      this._reloadTimer,
+      this._panelAnimTimer,
+    ]
+    timers.forEach(function (t) { if (t) clearTimeout(t) })
+    if (Array.isArray(this._refreshReloadTimers)) {
+      this._refreshReloadTimers.forEach(function (t) { if (t) clearTimeout(t) })
+    }
+  },
+
   /**
    * 同步字体档位与 CSS 变量值
    */
@@ -513,9 +536,11 @@ Page({
           // 整体 prepend 到头部：fresh 按 createdAt asc，先抓到的排最前，符合"逐条增加"观感
           const merged = fresh.concat(old)
           that.setData({ newsList: merged, currentPage: 1, loadMoreCount: 0 })
-          // 增量后卡片与侧栏同步（以当前停留在开头的场景，prepend 后仍定位 index 0）
-          that.renderCards(merged, that.data.currentIndex)
-          that._syncPanelList(merged, that.data.currentIndex)
+          // P1-12 修复：prepend 后用户正在阅读的卡片位置需随新增条数后移，
+          // 否则 merged[当前 index] 变成全新新闻，正在阅读的卡片被静默替换
+          const shiftedIndex = Math.min(that.data.currentIndex + fresh.length, Math.max(0, merged.length - 1))
+          that.renderCards(merged, shiftedIndex)
+          that._syncPanelList(merged, shiftedIndex)
         } else {
           that._pollEmptyStreak++
         }

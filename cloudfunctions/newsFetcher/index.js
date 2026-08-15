@@ -50,8 +50,26 @@ function isScienceAlias(c) {
   return ['science', 'sci', 'sicprobe'].includes(n)
 }
 function resolveItemCategory(feedCategory, itemCategory) {
-  if (isScienceAlias(itemCategory)) return 'science'
+  // P1-7 修复：科学别名归入「科学探索」tab（前端 id=sports），与 rssFetcher OFFICIAL_CATEGORY_MAP 口径一致
+  if (isScienceAlias(itemCategory)) return 'sports'
   return feedCategory || 'tech'
+}
+
+// P1-7 修复：官方源站分类 → 前端 tab 分类（与 rssFetcher/utils/newsStore.js OFFICIAL_CATEGORY_MAP 同源）。
+// 此前 newsFetcher 路径缺此映射，官方 RSS 以 science/finance/culture 等落库，前端 5 tab 全部查不到。
+const OFFICIAL_CATEGORY_MAP = {
+  tech: 'tech', digital: 'tech', auto: 'tech', it: 'tech',
+  science: 'sports', sci: 'sports',
+  sports: 'sports',
+  life: 'life', edu: 'life', culture: 'life', health: 'life', book: 'life',
+  house: 'life', society: 'life', finance: 'life', economy: 'life', money: 'life',
+  world: 'international', international: 'international', global: 'international',
+  recommend: 'recommend',
+}
+function mapOfficialCategory(srcCategory) {
+  const c = String(srcCategory || '').trim().toLowerCase()
+  if (isScienceAlias(c)) return 'sports'
+  return OFFICIAL_CATEGORY_MAP[c] || 'life'
 }
 
 // 规范化「官方 RSS 校验后的候选」→ news_raw doc（content 留空，红线：不缓存正文）
@@ -69,7 +87,7 @@ function normalizeOfficialItem(vItem, feed) {
     sourceName: feed.sourceName || feed.name || '',
     source: feed.sourceName || feed.name || '',
     id: `official_${vItem.urlFp}`,
-    category: vItem.category || feed.category || 'tech',
+    category: mapOfficialCategory(vItem.category || feed.category || 'tech'),
     categoryName: '',
     pubDate: vItem.pubDate || vItem.fetchedAt || new Date().toISOString(),
     fetchedAt: new Date().toISOString(),

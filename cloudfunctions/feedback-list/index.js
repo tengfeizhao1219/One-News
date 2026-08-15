@@ -74,30 +74,25 @@ exports.main = async (event) => {
     }
 
     // 1. 分页查询顶层留言
+    // P1-3 修复：list 与 total 共用同一过滤条件（violation 分支均带 status:'deleted'），
+    // 避免违规筛选下"共 N 条"虚高、分页 hasMore 与真实列表错位。
+    const listFilter = filter === 'violation'
+      ? _.and([topFilter, { status: 'deleted' }])
+      : topFilter
     let msgRes
-    if (filter === 'violation') {
-      // 仅违规标记：软删除的留言（作者视角）
-      msgRes = await db.collection('feedback')
-        .where(_.and([topFilter, { status: 'deleted' }]))
-        .orderBy('createdAt', 'desc')
-        .skip((pageNum - 1) * pageSize)
-        .limit(pageSize)
-        .get()
-    } else {
-      msgRes = await db.collection('feedback')
-        .where(topFilter)
-        .orderBy('createdAt', 'desc')
-        .skip((pageNum - 1) * pageSize)
-        .limit(pageSize)
-        .get()
-    }
+    msgRes = await db.collection('feedback')
+      .where(listFilter)
+      .orderBy('createdAt', 'desc')
+      .skip((pageNum - 1) * pageSize)
+      .limit(pageSize)
+      .get()
 
     const topMessages = msgRes.data || []
 
-    // 2. 总数统计（当前 filter 条件下的顶层留言数）
+    // 2. 总数统计（与 list 同一过滤条件）
     let total = 0
     try {
-      const totalRes = await db.collection('feedback').where(topFilter).count()
+      const totalRes = await db.collection('feedback').where(listFilter).count()
       total = totalRes.total || 0
     } catch (e) {
       console.warn('[feedback/list] 总数统计失败:', e.message)

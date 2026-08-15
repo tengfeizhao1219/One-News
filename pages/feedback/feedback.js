@@ -204,6 +204,15 @@ Page({
     this._call('feedback-create', { content })
       .then((r) => {
         this.setData({ sending: false })
+        // P1-5 修复：后端限频返回 {code:0, data:{rateLimited:true}}——必须优先识别，
+        // 否则误判"留言成功"并清空草稿（消息实际未入库，用户数据丢失）
+        if (r.code === 0 && r.data && r.data.rateLimited) {
+          this._lastSubmitTime = Date.now()
+          this.setData({ sendDisabled: true })
+          this._startCooldownTicker()
+          wx.showToast({ title: r.data.message || '发送太快，请稍后再试', icon: 'none' })
+          return
+        }
         if (r.code === 0) {
           this._lastSubmitTime = Date.now()
           this.setData({ draft: '', sendDisabled: true })

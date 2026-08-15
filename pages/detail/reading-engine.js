@@ -375,59 +375,67 @@ ReadingEngine.prototype.loadNextCategory = function () {
   for (var i = 0; i < READING_CATEGORIES.length; i++) {
     if (READING_CATEGORIES[i].id === curCat) { curIdx = i; break }
   }
-  var targetCatId = ''
-  var targetCatName = ''
-  for (var j = curIdx + 1; j < READING_CATEGORIES.length; j++) {
-    targetCatId = READING_CATEGORIES[j].id
-    targetCatName = READING_CATEGORIES[j].name
-    break // 取顺序上紧邻的下一分类
-  }
-  if (!targetCatId) {
-    return Promise.resolve({ hasNext: false, category: '', categoryName: '', added: 0 })
-  }
+  // P1-4 修复：改为"顺序游标推进"——空/失败/全去重时从已尝试分类的下一位置继续，
+  // 游标单调递增、深度有界（≤ READING_CATEGORIES.length），Promise 必然 settle。
+  // 原实现递归时 curIdx 不推进 → 空分类/全去重场景无限递归（页面卡死 + 请求风暴）。
+  function tryFrom(startIdx) {
+    var targetCatId = ''
+    var targetCatName = ''
+    var foundIdx = -1
+    for (var j = startIdx + 1; j < READING_CATEGORIES.length; j++) {
+      targetCatId = READING_CATEGORIES[j].id
+      targetCatName = READING_CATEGORIES[j].name
+      foundIdx = j
+      break // 取顺序上紧邻的下一分类
+    }
+    if (!targetCatId || foundIdx < 0) {
+      return Promise.resolve({ hasNext: false, category: '', categoryName: '', added: 0 })
+    }
 
-  return that._fetchCategoryWithCache(targetCatId).then(function (result) {
-    var list = result.list || []
-    if (list.length === 0) {
-      // 下一分类无数据 → 跳过（owner 决策②③：无数据则跳下下分类）
-      return that.loadNextCategory()
-    }
-    // 去重追加
-    var seen = {}
-    for (var k = 0; k < that._mergedList.length; k++) {
-      seen[that._mergedList[k].id] = true
-    }
-    var added = 0
-    var startIdx = that._mergedList.length
-    that._categoryIndexes[targetCatId] = startIdx
-    for (var m = 0; m < list.length; m++) {
-      var item = list[m]
-      var nid = item.id || item._id
-      if (!nid || seen[nid]) continue
-      seen[nid] = true
-      that._mergedList.push({
-        id: nid,
-        title: item.title || '',
-        summary: item.summary || '',
-        category: targetCatId,
-        categoryName: item.categoryName || targetCatName,
-        source: item.source || '',
-        sourceUrl: item.sourceUrl || '',
-        picUrl: item.picUrl || '',
-        publishTime: item.publishTime || item.time,
-        // B-COMPLIANCE-1 R2：跨分类补拉也要带合规字段
-        contentSource: item.contentSource || '',
-        references: Array.isArray(item.references) ? item.references : [],
-      })
-      added++
-    }
-    if (added === 0) {
-      // 全部去重（罕见）→ 跳过
-      return that.loadNextCategory()
-    }
-    that._total = that._mergedList.length
-    return { hasNext: true, category: targetCatId, categoryName: targetCatName, added: added }
-  })
+    return that._fetchCategoryWithCache(targetCatId).then(function (result) {
+      var list = result.list || []
+      if (list.length === 0) {
+        // 下一分类无数据 → 跳过（owner 决策②③：无数据则跳下下分类）
+        return tryFrom(foundIdx)
+      }
+      // 去重追加
+      var seen = {}
+      for (var k = 0; k < that._mergedList.length; k++) {
+        seen[that._mergedList[k].id] = true
+      }
+      var added = 0
+      var startPos = that._mergedList.length
+      that._categoryIndexes[targetCatId] = startPos
+      for (var m = 0; m < list.length; m++) {
+        var item = list[m]
+        var nid = item.id || item._id
+        if (!nid || seen[nid]) continue
+        seen[nid] = true
+        that._mergedList.push({
+          id: nid,
+          title: item.title || '',
+          summary: item.summary || '',
+          category: targetCatId,
+          categoryName: item.categoryName || targetCatName,
+          source: item.source || '',
+          sourceUrl: item.sourceUrl || '',
+          picUrl: item.picUrl || '',
+          publishTime: item.publishTime || item.time,
+          // B-COMPLIANCE-1 R2：跨分类补拉也要带合规字段
+          contentSource: item.contentSource || '',
+          references: Array.isArray(item.references) ? item.references : [],
+        })
+        added++
+      }
+      if (added === 0) {
+        // 全部去重（罕见）→ 跳过
+        return tryFrom(foundIdx)
+      }
+      that._total = that._mergedList.length
+      return { hasNext: true, category: targetCatId, categoryName: targetCatName, added: added }
+    })
+  }
+  return tryFrom(curIdx)
 }
 
 /**

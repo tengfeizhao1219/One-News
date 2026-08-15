@@ -1,7 +1,7 @@
 {
-  "name": "rssFetcher",
+  "name": "newsFetcher",
   "version": "1.0.0",
-  "description": "官方 RSS 源直连抓取 v1.0 (#35 FS) — 单小时 trigger 编排器 + 每源 pollSeconds 频率，栏目白名单过滤 + urlFp/titleFp 双去重 + errorStreak 状态机告警。版权红线：只存 title/url/summary 不存正文。",
+  "description": "统一抓取云函数（Stage 0）：官方 RSS / juhe / tianxing 多源并行扇出 → news_raw → 点燃 newsPipeline（P1-13 修复：name 由 rssFetcher 拷贝残留改为 newsFetcher）",
   "main": "index.js",
   "dependencies": {
     "fast-xml-parser": "^4.5.7",
