@@ -200,8 +200,69 @@ async function writeBackEnriched(list) {
   }
 }
 
+// ====================================================================
+// 方案 A（2026-08-15）· AI 前每类硬上限截断
+// --------------------------------------------------------------------
+// 验收标准：单次抓取落库 news_cache 总量 <=47（推荐类 <=15、其余类各 <=8）。
+// 背景：newsFetcher 对每「源x分类」抓 PER_SOURCE_NUM 条无上限扇出，
+//       newsPipeline 旧逻辑把 staging 全量送 AI、全量落库，致单轮常 79~297 条远超 47。
+// 做法：在 stageAi 认领 pending 之前，对 news_staging 所有 pending 按 category 做 top-N，
+//       排序键 = publishTime 倒序 + qualityScore 降序（新且质优优先），
+//       超 cap 的条目直接从 staging 删除 —— 不进 AI、不进 cache，从源头收敛到 <=47。
+//       被截条目对应的 news_raw 已在 Stage 1 消费删除，故彻底不进系统（方案 A 代价：截断新闻不展示）。
+// ====================================================================
+const CATEGORY_CAP = { recommend: 15 }
+const DEFAULT_CAP = 8
+
+async function truncateStagingByCategory() {
+  // 全量拉取 pending（循环翻页，防超 1000 上限）
+  let pending = []
+  let skip = 0
+  while (true) {
+    const res = await db.collection('news_staging').where({ aiStatus: 'pending' }).limit(1000).skip(skip).get()
+    const list = (res && res.data) || []
+    if (!list.length) break
+    pending = pending.concat(list)
+    if (list.length < 1000) break
+    skip += 1000
+  }
+  if (!pending.length) return { total: 0, truncated: 0 }
+
+  const byCat = {}
+  for (const it of pending) {
+    (byCat[it.category] = byCat[it.category] || []).push(it)
+  }
+  const toRemove = []
+  let truncated = 0
+  for (const cat of Object.keys(byCat)) {
+    const items = byCat[cat]
+    const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
+    if (items.length <= cap) continue
+    items.sort((a, b) => {
+      const ta = new Date(a.publishTime || 0).getTime() || 0
+      const tb = new Date(b.publishTime || 0).getTime() || 0
+      if (tb !== ta) return tb - ta // 新优先
+      const qa = (a.qualityScore != null) ? a.qualityScore : -1
+      const qb = (b.qualityScore != null) ? b.qualityScore : -1
+      return qb - qa // 质量高优先
+    })
+    const losers = items.slice(cap) // 超出硬上限的落败者
+    for (const l of losers) toRemove.push(l._id)
+    truncated += losers.length
+  }
+  if (toRemove.length) await stagingStore.removeStaged(toRemove)
+  console.log(`[newsPipeline][方案A] 截断 ${truncated} 条（每类硬上限：recommend<=15/其余<=8），保留 ${pending.length - truncated} 条进 AI`)
+  return { total: pending.length, truncated }
+}
+
 async function stageAi(deadline) {
   let processed = 0
+  // 方案 A：AI 前每类 top-N 截断，从源头收敛到 <=47（异常不阻断 AI 阶段）
+  try {
+    await truncateStagingByCategory()
+  } catch (e) {
+    console.warn('[newsPipeline][ai] 方案A截断异常（放行）:', e.message)
+  }
   while (hasBudget(deadline)) {
     const items = await stagingStore.claimPending(STAGE_BATCH.ai)
     if (!items.length) break
@@ -376,6 +437,56 @@ async function batchInsert(newsList) {
   return { inserted, failed }
 }
 
+// ====================================================================
+// 方案 A 兜底（2026-08-15）· publish 末端每类硬上限淘汰
+// --------------------------------------------------------------------
+// 背景：方案 A 的 staging 截断在「并行 AI 阶段」下存在竞态——多实例同时
+//       claimPending 把 pending→processing 后，只删 pending 的截断够不着已
+//       认领的超额条目，导致单轮 cache 仍可能 >47。
+// 做法：publish 全部完成后，对 news_cache 按 category 做全局硬上限，
+//       每类只保留最新 N 条（publishTime 倒序），超出的旧记录直接删除。
+//       这样无论上游 AI 阶段如何、是否多轮累积，cache 总量恒定 <=47。
+// 排序键 = publishTime 倒序（新优先，淘汰旧的）。
+// ====================================================================
+async function enforceCategoryCapOnCache() {
+  let all = []
+  let skip = 0
+  while (true) {
+    const res = await db.collection('news_cache').limit(1000).skip(skip).get()
+    const list = (res && res.data) || []
+    if (!list.length) break
+    all = all.concat(list)
+    if (list.length < 1000) break
+    skip += 1000
+  }
+  if (!all.length) return { trimmed: 0 }
+
+  const byCat = {}
+  for (const it of all) {
+    (byCat[it.category] = byCat[it.category] || []).push(it)
+  }
+  const toRemove = []
+  let trimmed = 0
+  for (const cat of Object.keys(byCat)) {
+    const items = byCat[cat]
+    const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
+    if (items.length <= cap) continue
+    items.sort((a, b) => {
+      const ta = new Date(a.publishTime || 0).getTime() || 0
+      const tb = new Date(b.publishTime || 0).getTime() || 0
+      return tb - ta // 新优先
+    })
+    const losers = items.slice(cap) // 超出硬上限的旧记录
+    for (const l of losers) toRemove.push(l._id)
+    trimmed += losers.length
+  }
+  for (const id of toRemove) {
+    try { await db.collection('news_cache').doc(id).remove() } catch (e) { /* 忽略 */ }
+  }
+  console.log(`[newsPipeline][方案A兜底] cache 每类硬上限淘汰 ${trimmed} 条，cache 总量收敛到 ${all.length - trimmed}`)
+  return { trimmed }
+}
+
 async function stagePublish(deadline) {
   let published = 0
   while (hasBudget(deadline)) {
@@ -386,10 +497,18 @@ async function stagePublish(deadline) {
     published += r.inserted || 0
   }
 
+  // 方案 A 兜底：publish 后强制每类硬上限，cache 总量恒定 <=47
+  let capRes = { trimmed: 0 }
+  try {
+    capRes = await enforceCategoryCapOnCache()
+  } catch (e) {
+    console.warn('[newsPipeline][publish] 每类硬上限兜底异常（放行）:', e.message)
+  }
+
   const sd = await stagingStore.doneCount()
   if (sd > 0) trigger('publish')
   else trigger('run') // 全部完成 → 调度器回到空闲
-  return { stage: 'publish', published }
+  return { stage: 'publish', published, ...capRes }
 }
 
 // ====================================================================
