@@ -37,17 +37,10 @@ async function ensureCollection(name, indexes) {
       console.warn(`[initSchema] 创建 ${name} 失败（非阻塞）:`, e.message)
     }
   }
-  const col = db.collection(name)
-  for (const idx of (indexes || [])) {
-    try {
-      await col.createIndex({ keys: idx.key, name: idx.name, unique: idx.unique })
-      console.log(`[initSchema] ${name} 索引 ${idx.name} 已就绪`)
-    } catch (e) {
-      if (!isSoftErr(e)) {
-        console.warn(`[initSchema] 建索引 ${name}.${idx.name} 失败（非阻塞）:`, e.message)
-      }
-    }
-  }
+  // 注（2026-08-16）：wx-server-sdk 4.x 不支持 createIndex（col.createIndex is not a function），
+  // 索引统一在云开发控制台 / tcb db nosql execute 管理（news_cache 已建 cat_expire/
+  // cat_createdAt/finalScore_publishTime/dedupKey/id）。此处仅保证集合存在。
+  void indexes
 }
 
 /**
