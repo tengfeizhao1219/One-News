@@ -36,6 +36,7 @@ const STAGE_BATCH = { process: 20, ai: 12, publish: 10 }
 const FETCH_TIMEOUT_MS = 12000
 const STAGING_TTL_MS = 6 * 60 * 60 * 1000
 const MAX_PAGE_ROUNDS = 50       // C-6：全表翻页循环的迭代上限（防异常数据导致无限循环）
+const CONTENT_MIN_FOR_AI = 100   // AI 能力门槛（owner 2026-08-16）：正文 ≥100 字才进 AI 阶段（摘要需内容、解读需 ≥50 字）
 
 // C-6：publishTime 统一归一为数字毫秒时间戳（此前混存字符串/数字，orderBy 分区排序不可靠）
 function toTs(v) {
@@ -144,16 +145,23 @@ async function stageProcess(deadline) {
       }
     }
 
-    // 4. 质量筛选（评分 + 门控）—— owner 拍板：先筛选再进 AI；
+    // 4. AI 能力门槛（owner 2026-08-16）：正文 ≥100 字才算"能 AI"（摘要需内容、解读需 ≥50 字）。
+    //    不足者直接丢弃——不进评分、不进 AI 阶段、不落库（杜绝"无 AI 摘要/解读"的入库新闻）。
+    const aiCapable = secPassed.filter((it) => (it.content || '').trim().length >= CONTENT_MIN_FOR_AI)
+    if (aiCapable.length < secPassed.length) {
+      console.log(`[newsPipeline][process] 正文过短丢弃 ${secPassed.length - aiCapable.length} 条（<${CONTENT_MIN_FOR_AI}字，无法 AI 摘要/解读）`)
+    }
+
+    // 5. 质量筛选（评分 + 门控）—— owner 拍板：先筛选再进 AI；
     //    被门控丢弃者（低质 / 噪音比超阈 / 合规硬黑名单命中）不写 staging、不进 AI、不展示。
-    const scored = scoreAll(secPassed, {})
+    const scored = scoreAll(aiCapable, {})
     const passed = scored.passed
     if (scored.rejected.length) {
       console.log(`[newsPipeline][process] 质量门丢弃 ${scored.rejected.length} 条:`,
         scored.rejected.slice(0, 5))
     }
 
-    // 5. 写 news_staging（仅幸存者，含 finalScore/qualityScore/heatScore/eventId）
+    // 6. 写 news_staging（仅幸存者，含 finalScore/qualityScore/heatScore/eventId）
     const docs = passed.map((it) => ({
       _id: it._id,
       id: it.id,
@@ -263,20 +271,24 @@ async function truncateStagingByCategory() {
     const items = byCat[cat]
     const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
     if (items.length <= cap) continue
+    // owner 2026-08-16：类内按 finalScore 降序取 top（评分高优先），平局 qualityScore → publishTime
     items.sort((a, b) => {
-      const ta = new Date(a.publishTime || 0).getTime() || 0
-      const tb = new Date(b.publishTime || 0).getTime() || 0
-      if (tb !== ta) return tb - ta // 新优先
+      const fa = (typeof a.finalScore === 'number') ? a.finalScore : -1
+      const fb = (typeof b.finalScore === 'number') ? b.finalScore : -1
+      if (fb !== fa) return fb - fa
       const qa = (a.qualityScore != null) ? a.qualityScore : -1
       const qb = (b.qualityScore != null) ? b.qualityScore : -1
-      return qb - qa // 质量高优先
+      if (qb !== qa) return qb - qa
+      const ta = new Date(a.publishTime || 0).getTime() || 0
+      const tb = new Date(b.publishTime || 0).getTime() || 0
+      return tb - ta // 新优先
     })
     const losers = items.slice(cap) // 超出硬上限的落败者
     for (const l of losers) toRemove.push(l._id)
     truncated += losers.length
   }
   if (toRemove.length) await stagingStore.removeStaged(toRemove)
-  console.log(`[newsPipeline][方案A] 截断 ${truncated} 条（每类硬上限：recommend<=15/其余<=8），保留 ${pending.length - truncated} 条进 AI`)
+  console.log(`[newsPipeline][方案A] 截断 ${truncated} 条（每类硬上限：recommend<=15/其余<=8，finalScore 降序保留），保留 ${pending.length - truncated} 条进 AI`)
   return { total: pending.length, truncated }
 }
 
@@ -535,7 +547,11 @@ async function enforceCategoryCapOnCache() {
     const _retained = items.filter(it => it.isRetained === true)
     const normal = items.filter(it => it.isRetained !== true)
     if (normal.length <= cap) continue
+    // owner 2026-08-16：与 AI 入口截断口径一致——finalScore 降序保留高分（收藏豁免）
     normal.sort((a, b) => {
+      const fa = (typeof a.finalScore === 'number') ? a.finalScore : -1
+      const fb = (typeof b.finalScore === 'number') ? b.finalScore : -1
+      if (fb !== fa) return fb - fa
       const ta = new Date(a.publishTime || 0).getTime() || 0
       const tb = new Date(b.publishTime || 0).getTime() || 0
       return tb - ta // 新优先
