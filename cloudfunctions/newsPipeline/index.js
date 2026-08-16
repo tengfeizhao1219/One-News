@@ -31,7 +31,7 @@ const { SecurityCheck } = require('./securityCheck')
 const { scoreAll } = require('./utils/qualityScorer')
 const config = require('./config')
 
-const BUDGET_MS = 55000          // 单次实例预算（< 60s 墙，留余量）
+const BUDGET_MS = 110000          // 单次实例预算（函数超时已调至 120s，110s 预算充分榨取实例能力，提升 AI 摘要/解读单轮覆盖率）
 const STAGE_BATCH = { process: 20, ai: 12, publish: 10 }
 const FETCH_TIMEOUT_MS = 12000
 const STAGING_TTL_MS = 6 * 60 * 60 * 1000
@@ -54,8 +54,8 @@ async function batchParallel(arr, fn, size) {
 }
 
 // ─── 自调度（fire-and-forget，不 await，父实例立即返回）───
-// P0-4：60s 触发冷却（system_kv 原子占位），防止引擎故障期"失败→重试→再触发"的
-//       实例风暴无限叠加；正常续跑不受影响（上一实例刚结束时锁刚写入，放行）。
+// 触发冷却 15s：仅去抖"同一时刻多个实例同时结束"的重复触发；
+// 不阻断正常续跑链（实例运行 ~110s >> 15s，下一实例触发时锁必然已过期）。
 async function trigger(action) {
   try {
     const now = Date.now()
@@ -65,7 +65,7 @@ async function trigger(action) {
       const d = await kv.doc('pipeline_trigger_lock').get()
       last = (d && d.data && d.data.ts) || 0
     } catch (e) { last = 0 }
-    if (last && (now - Number(last)) < 60 * 1000) return // 冷却中
+    if (last && (now - Number(last)) < 15 * 1000) return // 冷却中
     try {
       await kv.doc('pipeline_trigger_lock').set({ data: { ts: now } })
     } catch (e) {
@@ -337,7 +337,9 @@ async function stageAi(deadline) {
       doneIds.push(e._id)
     }
     if (doneIds.length) await stagingStore.markDone(doneIds)
-    if (pendingIds.length) await stagingStore.markPending(pendingIds) // 退回未处理项
+    // 解读覆盖优化（2026-08-16）：deadline 跳过是"预算不足"而非"引擎失败"，
+    // 退回时不烧重试次数（此前误把预算跳过计为失败，3 轮后丢弃 → 文档永远无 AI 解读）
+    if (pendingIds.length) await stagingStore.markPendingKeepRetry(pendingIds)
     processed += doneIds.length
   }
 

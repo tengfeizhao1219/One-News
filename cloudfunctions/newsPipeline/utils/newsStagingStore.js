@@ -90,6 +90,13 @@ async function markDone(ids) {
   await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'done', aiAt: Date.now() } })
 }
 
+// 解读覆盖优化（2026-08-16）：deadline 预算跳过 ≠ 引擎失败，退回时不烧重试次数，
+// 让文档能跨实例继续被处理（否则 3 轮预算跳过即被丢弃 → 永远无 AI 摘要/解读）。
+async function markPendingKeepRetry(ids) {
+  if (!ids || !ids.length) return
+  await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'pending' } })
+}
+
 // P0-4：退回 pending 时自增重试计数 + 记录失败时间；耗尽重试上限 → 转 discarded（不再进 AI）
 async function markPending(ids) {
   if (!ids || !ids.length) return
@@ -143,6 +150,7 @@ module.exports = {
   claimPending,
   markDone,
   markPending,
+  markPendingKeepRetry,
   discardExhausted,
   claimDone,
   removeStaged,
