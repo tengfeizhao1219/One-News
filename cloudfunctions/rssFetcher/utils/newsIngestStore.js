@@ -22,7 +22,7 @@
  */
 
 const cloud = require('wx-server-sdk')
-const { sha256, normalizeUrl, cleanTitle } = require('./validator')
+const { sha256, normalizeUrl, cleanTitle } = require('./fingerprint')
 
 // ── 常量 ──
 // TTL：数据自写入起保留时长（方案 §4.1：如 3 天）。瞬时 staging，超期即可清除。

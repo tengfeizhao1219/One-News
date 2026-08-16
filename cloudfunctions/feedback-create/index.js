@@ -27,6 +27,8 @@ const _ = db.command
 const RATE_LIMIT_MS = 30 * 1000        // 30s 限频
 const AI_TIMEOUT_MS = 8000             // AI 校验超时
 const MAX_REPLY_DEPTH = 4              // 楼中楼最深 4 级（超出后 rootId 沿用顶层，前端收平）
+const MAX_CONTENT_LEN = 2000           // C-4：内容长度上限（防超大文本刷存储/刷 AI token）
+const AI_VALIDATE_TRUNCATE = 1000      // C-4：喂给 AI 校验的截断长度（校验语义不受影响）
 
 const ZHIPU_MODEL = 'glm-4-flash'
 const ZHIPU_BASE = 'open.bigmodel.cn'
@@ -231,9 +233,12 @@ exports.main = async (event) => {
   const content = (event.content || '').trim()
   const parentId = event.parentId ? String(event.parentId) : null
 
-  // 1. 参数校验（Q1 已确认：不限字数，仅非空校验）
+  // 1. 参数校验（C-4：内容长度上限；此前不限字数，超大文本直接入库并原样喂 AI）
   if (!content) {
     return { code: -1, message: '内容不能为空' }
+  }
+  if (content.length > MAX_CONTENT_LEN) {
+    return { code: -1, message: `内容过长（最多 ${MAX_CONTENT_LEN} 字）` }
   }
 
   // 2. 频率限制（30s/条）
@@ -249,8 +254,8 @@ exports.main = async (event) => {
     return { code: 'BLOCKED', data: { reason: kw.reason } }
   }
 
-  // 4. AI 语义校验
-  const ai = await aiValidate(content)
+  // 4. AI 语义校验（C-4：输入截断，控制 token 成本）
+  const ai = await aiValidate(content.slice(0, AI_VALIDATE_TRUNCATE))
   if (!ai.safe) {
     console.warn(`[feedback/create] AI 拦截: "${content.slice(0, 60)}" — ${ai.reason}`)
     return { code: 'BLOCKED', data: { reason: ai.reason || '内容不合规' } }

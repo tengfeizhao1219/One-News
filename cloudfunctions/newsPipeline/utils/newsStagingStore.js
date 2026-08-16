@@ -15,6 +15,10 @@ const _ = db.command
 const COLLECTION = 'news_staging'
 const STALE_MS = 5 * 60 * 1000 // processing 卡死 5min 后可重认领
 
+// P0-4：AI 重试熔断参数——重试上限 + 冷却期，防止引擎故障期无限重试链（费用失控）
+const MAX_AI_RETRY = 3
+const RETRY_COOLDOWN_MS = 10 * 60 * 1000
+
 function col() { return db.collection(COLLECTION) }
 
 // Stage 1：写入 staging（幂等，按 _id upsert）
@@ -28,7 +32,8 @@ async function writeStaging(docs) {
         await col().doc(doc._id).update({ data: doc })
         updated++
       } else {
-        await col().add({ data: doc })
+        // 新增时初始化重试字段（update 路径不重置，避免已消耗的重试次数被清零）
+        await col().add({ data: Object.assign({ aiStatus: 'pending', aiRetry: 0, aiFailAt: 0 }, doc) })
         added++
       }
     } catch (e) {
@@ -41,8 +46,12 @@ async function writeStaging(docs) {
 }
 
 // Stage 2：认领一批待 AI 加工（pending 或卡死的 processing）
+// P0-5：原子认领——条件更新（只改仍可认领的）+ claimToken 回读实际归属，
+//       并发实例不会重复认领同一批（消除重复 AI 调用）。
+// P0-4：pending 且未耗尽重试（aiRetry<3）且不在冷却期（aiFailAt>10min 前）才可认领。
 async function claimPending(limit) {
   const now = Date.now()
+  const token = Math.random().toString(36).slice(2) + '_' + now.toString(36)
   const res = await col()
     .where(_.or([
       { aiStatus: 'pending' },
@@ -51,12 +60,29 @@ async function claimPending(limit) {
     .orderBy('createdAt', 'asc')
     .limit(limit)
     .get()
-  const items = (res && res.data) || []
-  if (items.length > 0) {
-    const ids = items.map((i) => i._id)
-    await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'processing', claimedAt: now } })
+  const candidates = (res && res.data) || []
+  // 熔断过滤（aiRetry/aiFailAt 缺失视为 0/未失败）
+  const claimable = candidates.filter((it) => {
+    const retry = Number(it.aiRetry) || 0
+    if (retry >= MAX_AI_RETRY) return false
+    const failAt = Number(it.aiFailAt) || 0
+    if (failAt && (now - failAt) < RETRY_COOLDOWN_MS) return false
+    return true
+  })
+  if (!claimable.length) return []
+  const ids = claimable.map((i) => i._id)
+  try {
+    await col().where(_.or([
+      { _id: _.in(ids), aiStatus: 'pending' },
+      _.and([{ _id: _.in(ids), aiStatus: 'processing' }, { claimedAt: _.lt(now - STALE_MS) }]),
+    ])).update({ data: { aiStatus: 'processing', claimedAt: now, claimToken: token } })
+  } catch (e) {
+    console.warn('[newsStagingStore] claimPending 认领更新失败:', (e && e.message) || e)
+    return []
   }
-  return items
+  // 回读本实例实际认领到的（claimToken 唯一标识本次认领）
+  const claimedRes = await col().where({ _id: _.in(ids), claimToken: token }).limit(limit).get()
+  return (claimedRes && claimedRes.data) || []
 }
 
 async function markDone(ids) {
@@ -64,9 +90,30 @@ async function markDone(ids) {
   await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'done', aiAt: Date.now() } })
 }
 
+// P0-4：退回 pending 时自增重试计数 + 记录失败时间；耗尽重试上限 → 转 discarded（不再进 AI）
 async function markPending(ids) {
   if (!ids || !ids.length) return
-  await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'pending' } })
+  const now = Date.now()
+  await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'pending', aiRetry: _.inc(1), aiFailAt: now } })
+  const over = await col().where({ _id: _.in(ids), aiRetry: _.gte(MAX_AI_RETRY) }).get()
+  const overIds = ((over && over.data) || []).map((d) => d._id)
+  if (overIds.length) {
+    await col().where({ _id: _.in(overIds) }).update({ data: { aiStatus: 'discarded', discardedAt: now } })
+    console.warn(`[newsStagingStore] ${overIds.length} 条 AI 重试耗尽 → discarded（熔断）`)
+  }
+}
+
+// P0-4：清扫历史遗留的"已耗尽重试但仍 pending"的条目（部署前旧数据）→ discarded
+async function discardExhausted() {
+  try {
+    const r = await col().where({ aiStatus: 'pending', aiRetry: _.gte(MAX_AI_RETRY) }).get()
+    const ids = ((r && r.data) || []).map((d) => d._id)
+    if (ids.length) {
+      await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'discarded', discardedAt: Date.now() } })
+      console.warn(`[newsStagingStore] 清扫 ${ids.length} 条耗尽重试的 pending → discarded`)
+    }
+    return ids.length
+  } catch (e) { return 0 }
 }
 
 // Stage 3：认领一批已 done（batchInsert 幂等 + 删 staging 即终态，无需中间态防卡死）
@@ -96,6 +143,7 @@ module.exports = {
   claimPending,
   markDone,
   markPending,
+  discardExhausted,
   claimDone,
   removeStaged,
   pendingCount,

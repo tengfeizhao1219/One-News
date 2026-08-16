@@ -254,6 +254,13 @@ Page({
     this._call('feedback-create', { content, parentId: id })
       .then((r) => {
         this.setData({ replySending: false })
+        // P1-5（回复路径同样处理）：后端限频返回 code:0 + data.rateLimited，
+        // 不能误判为"回复成功"并清空草稿（消息实际未入库）
+        if (r.code === 0 && r.data && r.data.rateLimited) {
+          this._lastSubmitTime = Date.now()
+          wx.showToast({ title: r.data.message || '发送太快，请稍后再试', icon: 'none' })
+          return
+        }
         if (r.code === 0) {
           const replyDraft = this.data.replyDraft || {}
           replyDraft[id] = ''

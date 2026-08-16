@@ -35,6 +35,15 @@ const BUDGET_MS = 55000          // 单次实例预算（< 60s 墙，留余量�
 const STAGE_BATCH = { process: 20, ai: 12, publish: 10 }
 const FETCH_TIMEOUT_MS = 12000
 const STAGING_TTL_MS = 6 * 60 * 60 * 1000
+const MAX_PAGE_ROUNDS = 50       // C-6：全表翻页循环的迭代上限（防异常数据导致无限循环）
+
+// C-6：publishTime 统一归一为数字毫秒时间戳（此前混存字符串/数字，orderBy 分区排序不可靠）
+function toTs(v) {
+  if (v == null) return 0
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
+  const t = new Date(v).getTime()
+  return Number.isFinite(t) ? t : 0
+}
 
 // ─── 工具：分批并行（从 refreshNews 移植，语义一致）───
 async function batchParallel(arr, fn, size) {
@@ -45,8 +54,23 @@ async function batchParallel(arr, fn, size) {
 }
 
 // ─── 自调度（fire-and-forget，不 await，父实例立即返回）───
-function trigger(action) {
+// P0-4：60s 触发冷却（system_kv 原子占位），防止引擎故障期"失败→重试→再触发"的
+//       实例风暴无限叠加；正常续跑不受影响（上一实例刚结束时锁刚写入，放行）。
+async function trigger(action) {
   try {
+    const now = Date.now()
+    const kv = db.collection('system_kv')
+    let last = 0
+    try {
+      const d = await kv.doc('pipeline_trigger_lock').get()
+      last = (d && d.data && d.data.ts) || 0
+    } catch (e) { last = 0 }
+    if (last && (now - Number(last)) < 60 * 1000) return // 冷却中
+    try {
+      await kv.doc('pipeline_trigger_lock').set({ data: { ts: now } })
+    } catch (e) {
+      try { await kv.add({ data: { _id: 'pipeline_trigger_lock', ts: now } }) } catch (e2) { /* 忽略 */ }
+    }
     cloud.callFunction({ name: 'newsPipeline', data: { action, _from: 'self' } }).catch(() => {})
   } catch (e) { /* 忽略 */ }
 }
@@ -218,7 +242,8 @@ async function truncateStagingByCategory() {
   // 全量拉取 pending（循环翻页，防超 1000 上限）
   let pending = []
   let skip = 0
-  while (true) {
+  let rounds = 0
+  while (++rounds <= MAX_PAGE_ROUNDS) { // C-6：迭代上限兜底（最多 MAX_PAGE_ROUNDS 轮）
     const res = await db.collection('news_staging').where({ aiStatus: 'pending' }).limit(1000).skip(skip).get()
     const list = (res && res.data) || []
     if (!list.length) break
@@ -257,6 +282,8 @@ async function truncateStagingByCategory() {
 
 async function stageAi(deadline) {
   let processed = 0
+  // P0-4：清扫历史遗留"耗尽重试但仍 pending"的条目 → discarded（部署前的旧数据）
+  try { await stagingStore.discardExhausted() } catch (e) { /* 忽略 */ }
   // 方案 A：AI 前每类 top-N 截断，从源头收敛到 <=47（异常不阻断 AI 阶段）
   try {
     await truncateStagingByCategory()
@@ -430,7 +457,7 @@ async function batchInsert(newsList) {
         source: item.source,
         sourceName: item.sourceName || '',
         sourceUrl: item.sourceUrl || '',
-        publishTime: item.publishTime,
+        publishTime: toTs(item.publishTime),
         picUrl: '',
         viewCount: 0,
         isRetained,
@@ -481,7 +508,8 @@ async function batchInsert(newsList) {
 async function enforceCategoryCapOnCache() {
   let all = []
   let skip = 0
-  while (true) {
+  let rounds = 0
+  while (++rounds <= MAX_PAGE_ROUNDS) { // C-6：迭代上限兜底（最多 MAX_PAGE_ROUNDS 轮）
     const res = await db.collection('news_cache').limit(1000).skip(skip).get()
     const list = (res && res.data) || []
     if (!list.length) break
@@ -502,7 +530,7 @@ async function enforceCategoryCapOnCache() {
     const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
     if (items.length <= cap) continue
     // P0-3 修复：收藏（isRetained=true）条目豁免淘汰，只从普通条目中淘汰超出上限者
-    const retained = items.filter(it => it.isRetained === true)
+    const _retained = items.filter(it => it.isRetained === true)
     const normal = items.filter(it => it.isRetained !== true)
     if (normal.length <= cap) continue
     normal.sort((a, b) => {
@@ -567,7 +595,8 @@ function rankOfItem(it) {
 async function dedupByDkSweep() {
   let all = []
   let skip = 0
-  while (true) {
+  let rounds = 0
+  while (++rounds <= MAX_PAGE_ROUNDS) { // C-6：迭代上限兜底（最多 MAX_PAGE_ROUNDS 轮）
     const res = await db.collection('news_cache').limit(1000).skip(skip).get()
     const list = (res && res.data) || []
     if (!list.length) break
@@ -589,7 +618,7 @@ async function dedupByDkSweep() {
     const items = byDk[dk]
     if (items.length <= 1) continue
     // P0-3 修复：收藏条目不参与去重淘汰（保留用户可见副本）
-    const retained = items.filter(it => it.isRetained === true)
+    const _retained = items.filter(it => it.isRetained === true)
     const normal = items.filter(it => it.isRetained !== true)
     if (normal.length <= 1) continue
     normal.sort((a, b) => {

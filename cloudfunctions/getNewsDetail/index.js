@@ -123,12 +123,46 @@ function decodeBuffer(buffer, declaredEncoding) {
 }
 
 /**
+ * C-5：URL 安全校验（防 SSRF）——仅允许 http/https，拒绝内网/保留段/云元数据地址。
+ * @param {string} url
+ * @returns {boolean}
+ */
+function isSafeHttpUrl(url) {
+  try {
+    const u = new URL(url)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    const host = u.hostname.toLowerCase()
+    if (host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local')) return false
+    if (host === '::' || host === '::1' || host.startsWith('fe80:')) return false
+    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
+    if (m) {
+      const a = +m[1], b = +m[2]
+      if (a === 10) return false                       // 10.0.0.0/8
+      if (a === 172 && b >= 16 && b <= 31) return false // 172.16-31.0.0/16
+      if (a === 192 && b === 168) return false         // 192.168.0.0/16
+      if (a === 127) return false                      // loopback
+      if (a === 169 && b === 254) return false         // link-local（含云元数据 169.254.169.254）
+      if (a === 0) return false                        // 0.0.0.0/8
+      if (a === 100 && b >= 64 && b <= 127) return false // CGNAT（含阿里云元数据 100.100.100.200）
+    }
+    return true
+  } catch (e) { return false }
+}
+
+const MAX_REDIRECTS = 3 // C-5：重定向最多跟随 3 次（防重定向环挂死/连环跳转）
+
+/**
  * 从 URL 抓取网页 HTML（v5.4：加 UA / Accept 头 + 跟随重定向 + 2MB 上限）
  * @param {string} url
+ * @param {number} [redirectCount] 已跟随重定向次数
  * @returns {Promise<string|null>}
  */
-function fetchWebPage(url) {
+function fetchWebPage(url, redirectCount) {
+  const redirects = redirectCount || 0
   if (!url) return Promise.resolve(null)
+
+  // C-5：scheme/host 校验（sourceUrl 来自第三方上游，防内网/元数据地址被代发请求）
+  if (!isSafeHttpUrl(url)) return Promise.resolve(null)
 
   const protocol = url.startsWith('https') ? require('https') : require('http')
 
@@ -142,11 +176,15 @@ function fetchWebPage(url) {
         'Cache-Control': 'no-cache',
       },
     }, (res) => {
-      // 跟随一次重定向（301/302）
+      // C-5：跟随重定向但有深度上限（3 次），超限直接放弃
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume()
+        if (redirects >= MAX_REDIRECTS) {
+          resolve(null)
+          return
+        }
         const nextUrl = new URL(res.headers.location, url).toString()
-        return resolve(fetchWebPage(nextUrl))
+        return resolve(fetchWebPage(nextUrl, redirects + 1))
       }
 
       // 只处理 200 且 HTML 类型

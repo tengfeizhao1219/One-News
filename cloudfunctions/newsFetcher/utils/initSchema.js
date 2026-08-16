@@ -69,6 +69,15 @@ function ensureSchema() {
         { key: { fetchedAt: 1 }, name: 'fetchedAt', unique: false },
         { key: { urlFp: 1 }, name: 'urlFp', unique: false },
       ])
+      // C-6：news_cache 组合索引自愈（此前靠云控制台手动建，缺失时 getNewsList 链式
+      // orderBy 查询失败被 catch 静默降级 backup，主路径失效难以发现）
+      await ensureCollection('news_cache', [
+        { key: { category: 1, cacheExpire: 1 }, name: 'cat_expire', unique: false },
+        { key: { category: 1, createdAt: 1 }, name: 'cat_createdAt', unique: false },
+        { key: { finalScore: 1, publishTime: 1 }, name: 'finalScore_publishTime', unique: false },
+        { key: { dedupKey: 1 }, name: 'dedupKey', unique: false },
+        { key: { id: 1 }, name: 'id', unique: false },
+      ])
       await ensureCollection('feed_meta', [])
     })()
   }

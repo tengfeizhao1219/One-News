@@ -62,3 +62,50 @@ jobs:
             exit 1
           fi
           echo "✅ 全部回归测试通过"
+
+  # Phase B（2026-08-16）：公共层一致性门禁——common/ 权威源与各函数副本必须一致，
+  # 防止"同一逻辑 N 份、修一份漏 N-1 份"的漂移回归。
+  consistency-check:
+    name: 一致性检查（common → 函数副本 + 包名）
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 公共层副本一致性（sync-common.sh 预览模式，漂移即红）
+        run: |
+          set -e
+          bash tools/sync-common.sh > /tmp/sync_out.txt 2>&1 || { cat /tmp/sync_out.txt; exit 1; }
+          if grep -q "\[X\]" /tmp/sync_out.txt; then
+            echo "❌ 公共层副本漂移：以下副本与 common/ 权威源不一致"
+            grep "\[X\]" /tmp/sync_out.txt
+            echo "修复：bash tools/sync-common.sh --apply 后提交"
+            exit 1
+          fi
+          echo "✅ 公共层副本全部一致"
+      - name: 云函数 package.json name 与目录名一致
+        run: |
+          set -e
+          FAIL=0
+          for dir in cloudfunctions/*/; do
+            name=$(basename "$dir")
+            if [ -f "$dir/package.json" ]; then
+              pkg_name=$(node -e "console.log(require('$PWD/$dir/package.json').name)" 2>/dev/null || echo "")
+              if [ "$pkg_name" != "$name" ]; then
+                echo "❌ $name/package.json name=\"$pkg_name\" 应为 \"$name\""
+                FAIL=1
+              fi
+            fi
+          done
+          if [ "$FAIL" = "1" ]; then exit 1; fi
+          echo "✅ 全部云函数 package.json name 与目录名一致"
+      - name: 部署清单与云函数目录一致（cloudbaserc.json）
+        run: |
+          set -e
+          node -e "
+            const fs=require('fs');
+            const cfg=JSON.parse(fs.readFileSync('cloudbaserc.json','utf8'));
+            const names=new Set(cfg.functions.map(f=>f.name));
+            const dirs=fs.readdirSync('cloudfunctions',{withFileTypes:true}).filter(d=>d.isDirectory()).map(d=>d.name);
+            const missing=dirs.filter(d=>!names.has(d));
+            if (missing.length){ console.log('❌ 目录存在但未列入部署清单:', missing.join(', ')); process.exit(1); }
+            console.log('✅ 部署清单与目录一致（' + names.size + ' 个函数在清单中，目录中未列入的: ' + (dirs.length-names.size) + ' 个为退役/废弃函数）');
+          "

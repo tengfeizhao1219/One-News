@@ -8,7 +8,7 @@
  */
 
 const cloud = require('wx-server-sdk')
-const { sha256 } = require('./validator')
+const { sha256 } = require('./fingerprint')
 const qualityScorer = require('./qualityScorer')
 const newsIngestStore = require('./newsIngestStore')
 

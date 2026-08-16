@@ -8,7 +8,7 @@
  * 设计依据：docs/architecture-pipeline-redesign.md §2 / §5.2
  */
 const cloud = require('wx-server-sdk')
-const { sha256, normalizeUrl } = require('./validator')
+const { sha256, normalizeUrl } = require('./fingerprint')
 
 const TTL_MS = 6 * 60 * 60 * 1000
 
