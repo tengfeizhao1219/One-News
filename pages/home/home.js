@@ -798,9 +798,11 @@ Page({
     }
 
     // 阶段 1: out-up —— 当前卡片向上移出
+    // 修复（owner 2026-08-16）：仅 active 卡参与 out 动画——above/below 卡是 opacity:0 的隐藏卡，
+    // 若一并挂 out-* 会出现"鬼影卡"滑过屏幕（上一条/下一条提前闪现又消失），观感不自然
     var cards = this.data.cards.map(function (card) {
       var next = { ...card }
-      if (card.state === 'active' || card.state === 'below') {
+      if (card.state === 'active') {
         next.animClass = 'out-up'
       }
       return next
@@ -844,9 +846,10 @@ Page({
     }
 
     // 阶段 1: out-down —— 当前卡片向下移出
+    // 修复（owner 2026-08-16）：仅 active 卡参与 out 动画（同上，消除隐藏卡鬼影）
     var cards = this.data.cards.map(function (card) {
       var next = { ...card }
-      if (card.state === 'active' || card.state === 'above') {
+      if (card.state === 'active') {
         next.animClass = 'out-down'
       }
       return next

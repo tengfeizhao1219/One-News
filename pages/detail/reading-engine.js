@@ -498,71 +498,57 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   // 预取窗口 ±2
   that._prefetchWindow()
 
-  // B-COMPLIANCE-1 R2：当前新闻强制走 getNewsDetail，确保入口新闻拿到最新合规字段
-  // （旧 localCache 可能存的是 R1 部署前的全文数据，若先读缓存会导致前端 UI 不变化）
-  return getNewsDetail(cur.id).then(function (detail) {
-    // 规范化：保证 contentSource / references / sourceUrl 等字段一定有值
-    var normalized = normalizeDetail(detail)
+  // 优化（owner 2026-08-16）：内容已存在本地（库/缓存），翻页不应等云端——
+  // ① 立即用本地数据渲染（本地缓存 > 列表条目摘要），Promise 立即 resolve，翻页零等待；
+  // ② 后台拉取 getNewsDetail 刷新合规字段/全文（写缓存 + 回写 mergedList，
+  //    仍在当前页则通过 onDetailRefresh 升级渲染）。
+  var local = null
+  if (that._cache) {
+    try { local = that._cache.get('newsDetail:' + cur.id) } catch (e) { local = null }
+  }
+  var base = local || {
+    id: cur.id,
+    _id: cur.id,
+    title: cur.title,
+    summary: cur.summary,
+    content: cur.content || cur.summary,
+    contentSource: cur.contentSource || 'ai_interpretation',
+    category: cur.category,
+    categoryName: cur.categoryName,
+    source: cur.source,
+    sourceUrl: cur.sourceUrl || '',
+    references: cur.references || [],
+    picUrl: cur.picUrl,
+    publishTime: cur.publishTime,
+  }
+  var normalized = normalizeDetail(base)
+  var text = resolveContentText(normalized)
+  var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
+  that._onDetailReady(normalized, paragraphs)
 
-    // 把网络返回的合规字段回写到 mergedList 当前条目，
-    // 后续翻页/返回/分享图都能拿到一致的 contentSource / references
-    if (normalized && that._mergedList[that._globalIndex]) {
-      that._mergedList[that._globalIndex].contentSource = normalized.contentSource
-      that._mergedList[that._globalIndex].references = normalized.references
-      that._mergedList[that._globalIndex].sourceUrl = normalized.sourceUrl || that._mergedList[that._globalIndex].sourceUrl
+  // 后台刷新（网络失败静默，不影响已展示内容）
+  getNewsDetail(cur.id).then(function (detail) {
+    var fresh = normalizeDetail(detail)
+    // 回写 mergedList 合规字段（后续翻页/返回/分享图一致）
+    if (that._mergedList[that._globalIndex] && that._mergedList[that._globalIndex].id === cur.id) {
+      that._mergedList[that._globalIndex].contentSource = fresh.contentSource
+      that._mergedList[that._globalIndex].references = fresh.references
+      that._mergedList[that._globalIndex].sourceUrl = fresh.sourceUrl || that._mergedList[that._globalIndex].sourceUrl
+      that._mergedList[that._globalIndex].content = fresh.content || that._mergedList[that._globalIndex].content
+      that._mergedList[that._globalIndex].aiOpinion = fresh.aiOpinion || ''
     }
-
-    // R2（PRD §八）：统一收敛拆分点，按 contentSource 决定正文文本
-    var text = resolveContentText(normalized)
-    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-    that._onDetailReady(normalized, paragraphs)
-
-    // B-06: 写入缓存（DG-08：TTL 30min → 24h），覆盖旧数据
     if (that._cache) {
-      try {
-        that._cache.set('newsDetail:' + cur.id, normalized, { ttl: 24 * 60 * 60 * 1000 })
-      } catch (e) { /* 缓存写入失败不阻塞 */ }
+      try { that._cache.set('newsDetail:' + cur.id, fresh, { ttl: 24 * 60 * 60 * 1000 }) } catch (e) { /* 忽略 */ }
     }
-
-    return { news: normalized, paragraphs: paragraphs, fromCache: false }
-  }).catch(function () {
-    // 网络失败时，才回退读本地缓存（避免旧数据导致完全空白）
-    if (that._cache) {
-      try {
-        var cachedDetail = that._cache.get('newsDetail:' + cur.id)
-        if (cachedDetail) {
-          var cachedNormalized = normalizeDetail(cachedDetail)
-          var text = resolveContentText(cachedNormalized)
-          var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-          that._onDetailReady(cachedNormalized, paragraphs)
-          return Promise.resolve({ news: cachedNormalized, paragraphs: paragraphs, fromCache: true })
-        }
-      } catch (e) { /* 缓存读取失败，继续兜底 */ }
+    // 仍在当前页 → 用最新详情刷新渲染（本地仅摘要兜底时，全文到达后升级显示）
+    if (that._onDetailRefresh) {
+      var t2 = resolveContentText(fresh)
+      var p2 = t2.split('\n').filter(function (p) { return p.trim() })
+      that._onDetailRefresh(fresh, p2)
     }
+  }).catch(function () { /* 网络失败：保持本地渲染 */ })
 
-    // 降级：用列表摘要
-    // R5（PRD §八）：兜底对象补 contentSource，保证 AI 解读徽标正确显示
-    var fallback = normalizeDetail({
-      id: cur.id,
-      _id: cur.id,
-      title: cur.title,
-      summary: cur.summary,
-      content: cur.summary,
-      contentSource: 'ai_interpretation', // 降级摘要视为 AI 解读兜底，徽标不错位
-      category: cur.category,
-      categoryName: cur.categoryName,
-      source: cur.source,
-      sourceUrl: cur.sourceUrl,
-      references: cur.references || [],
-      picUrl: cur.picUrl,
-      publishTime: cur.publishTime,
-    })
-    // R2（PRD §八）：兜底同样走 resolveContentText（fallback.contentSource='ai_interpretation'，取 content）
-    var text = resolveContentText(fallback)
-    var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
-    that._onDetailReady(fallback, paragraphs)
-    return { news: fallback, paragraphs: paragraphs }
-  })
+  return Promise.resolve({ news: normalized, paragraphs: paragraphs, fromCache: !!local })
 }
 
 /**
@@ -578,7 +564,12 @@ ReadingEngine.prototype._prefetchWindow = function () {
       that._prefetched[i] = true
       var item = that._mergedList[i]
       if (!item) continue
-      getNewsDetail(item.id).catch(function () {})
+      getNewsDetail(item.id).then(function (detail) {
+        // 优化（owner 2026-08-16）：预取结果写缓存——翻页到该条时直接命中本地缓存，秒开
+        if (that._cache) {
+          try { that._cache.set('newsDetail:' + item.id, normalizeDetail(detail), { ttl: 24 * 60 * 60 * 1000 }) } catch (e) { /* 忽略 */ }
+        }
+      }).catch(function () {})
     }
   }
 

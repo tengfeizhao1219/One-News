@@ -286,6 +286,21 @@ Page({
         }
         that._renderDetail(news, paragraphs)
       },
+      // 优化（owner 2026-08-16）：翻页即时渲染本地数据后，后台拉取的最新详情到达时刷新——
+      // 仍在切换中 → 替换 pendingDetail（in 阶段直接渲染全文）；已渲染且停在顶部 → 升级为全文
+      onDetailRefresh: function (news, paragraphs) {
+        var cur = that._engine && that._engine.getCurrent()
+        if (!cur || !news || cur.id !== news.id) return
+        if (that._switching) {
+          if (that._pendingDetail) {
+            that._pendingDetail = { news: news, paragraphs: paragraphs }
+          }
+          return
+        }
+        if ((that._lastScrollTop || 0) <= 10) {
+          that._renderDetail(news, paragraphs)
+        }
+      },
       onError: function (msg) {
         wx.hideLoading()
         wx.showToast({ title: msg || '加载失败', icon: 'none' })
@@ -581,16 +596,17 @@ Page({
         that._switching = false
         // 先切换为新内容（此刻 animClass 仍是 out-up，元素停在 -100vh，旧内容已移出）
         that._applyPendingDetail()
-        // 关键修复：单元素复用模型下，元素当前在 -100vh（out-up 终点）。
-        // 若直接置 in-up，transition 会从 -100vh 一路滑到 +100vh（穿越全屏），
-        // 30ms 后清除时停留在「近顶部→中心」，表现为新内容从【顶部】下滑——与预期相反。
-        // 因此先以 no-transition 瞬间吸附到 in-up 起点(+100vh)，再移除 class 触发「从底部上滑入」。
-        that.setData({ animClass: 'in-up no-transition', scrollTop: 0 })
+        // 修复（owner 2026-08-16）：先强制滚回顶部（scroll-top 同值不触发重置，1→0 两步保证生效），
+        // 再吸附到 in-up 起点(+page-h)，避免滑入时展示文档中后段
+        that.setData({ scrollTop: 1 })
         setTimeout(function () {
-          // 移除 in-up 与 no-transition：元素从 +100vh 滑入中心（从底部往上滑入）
-          that.setData({ animClass: '' })
-          that._animating = false
-        }, 30)
+          // 移除 in-up 与 no-transition：元素从 +page-h 滑入中心（从底部往上滑入）
+          that.setData({ scrollTop: 0, animClass: 'in-up no-transition' })
+          setTimeout(function () {
+            that.setData({ animClass: '' })
+            that._animating = false
+          }, 30)
+        }, 50)
       }).catch(function () {
         that._switching = false
         that._pendingDetail = null
@@ -709,13 +725,16 @@ Page({
         // 翻上一页：旧内容向下移出后，新内容整屏从上方滑入（in-down: -page-h→0）。
         // 与翻下一页（in-up: +page-h→0）对称，均为一整屏画面滑入，与正文长度无关。
         that._applyPendingDetail()
-        // 先以 no-transition 瞬间吸附到 -page-h（屏幕上方整屏位置），
-        // 再移除 class 触发 transition 从上方整屏滑入
-        that.setData({ animClass: 'in-down no-transition', scrollTop: 0 })
+        // 修复（owner 2026-08-16）：先强制滚回顶部（scroll-top 同值不触发重置，1→0 两步保证生效），
+        // 再吸附到 -page-h 起点，避免滑入时展示文档中后段（"整篇文档底部滑入"）
+        that.setData({ scrollTop: 1 })
         setTimeout(function () {
-          that.setData({ animClass: '' })
-          that._animating = false
-        }, 30)
+          that.setData({ scrollTop: 0, animClass: 'in-down no-transition' })
+          setTimeout(function () {
+            that.setData({ animClass: '' })
+            that._animating = false
+          }, 30)
+        }, 50)
       }).catch(function () {
         that._switching = false
         that._pendingDetail = null
