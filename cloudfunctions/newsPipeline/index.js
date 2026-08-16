@@ -39,11 +39,31 @@ const MAX_PAGE_ROUNDS = 50       // C-6：全表翻页循环的迭代上限（�
 const CONTENT_MIN_FOR_AI = 100   // AI 能力门槛（owner 2026-08-16）：正文 ≥100 字才进 AI 阶段（摘要需内容、解读需 ≥50 字）
 
 // C-6：publishTime 统一归一为数字毫秒时间戳（此前混存字符串/数字，orderBy 分区排序不可靠）
+// 新鲜度门禁（owner 2026-08-16）：修复"旧闻滞留/部分分类不刷新"
+const FRESH_MAX_AGE_MS = 48 * 3600 * 1000   // 旧闻阈值：publishTime 超过 48h 不入库
+const FRESH_MAX_FUTURE_MS = 3600 * 1000     // 未来时间容差：超过 1h 视为脏数据
+const FRESHNESS_PENALTY_PER_HOUR = 1.0      // 缓存淘汰：每老 1h 扣 1 分（旧闻自然沉底，新闻上位）
+
+function parseTs(v) {
+  if (v == null) return null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
+  const s = String(v).trim()
+  if (!s || s === 'None' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') return null
+  const t = new Date(s).getTime()
+  return Number.isFinite(t) ? t : null
+}
+
 function toTs(v) {
-  if (v == null) return 0
-  if (typeof v === 'number') return Number.isFinite(v) ? v : 0
-  const t = new Date(v).getTime()
-  return Number.isFinite(t) ? t : 0
+  const t = parseTs(v)
+  return t == null ? 0 : t
+}
+
+// 缓存淘汰用"新鲜度衰减分"：finalScore - 每老 1h 扣 1 分（publishTime 缺失回退 createdAt）
+function effCacheScore(it, now) {
+  const fs = (typeof it.finalScore === 'number') ? it.finalScore : -1
+  const t = parseTs(it.publishTime) || parseTs(it.createdAt) || now
+  const ageH = Math.max(0, (now - t) / 3600000)
+  return fs - ageH * FRESHNESS_PENALTY_PER_HOUR
 }
 
 // ─── 工具：分批并行（从 refreshNews 移植，语义一致）───
@@ -109,8 +129,31 @@ async function stageProcess(deadline) {
     const { items, hasMore } = await rawStore.pullPending({ limit: STAGE_BATCH.process, cursorSkip: 0 })
     if (!items.length) break
 
-    // 1. 补全正文（官方源按 sourceUrl 抓源站；聚合 juhe 按 key / 网页抓）
-    await Promise.all(items.map(async (it) => {
+    // 0. 兜底补全 source/id（兼容旧 raw 缺字段，自愈历史 consumed 条目）
+    for (const it of items) {
+      if (!it.source) it.source = it.sourceName || it.sourceId || it.sourceType || ''
+      if (!it.id) it.id = `${it.sourceId || it.sourceType}_${(it.urlFp || '').slice(0, 16)}`
+    }
+
+    // 0.5 新鲜度门禁（owner 2026-08-16）：publishTime 解析归一 + 时效过滤。
+    //     旧闻（>48h）/未来时间（>1h）/无法解析 的条目直接丢弃——不抓正文、不进 AI、不落库。
+    //     修复"几小时前的新闻一直滞留、部分分类不刷新"（实测有 2007 年文章入库）。
+    const nowGate = Date.now()
+    const freshItems = items.filter((it) => {
+      let t = parseTs(it.publishTime)
+      if (t == null) t = parseTs(it.fetchedAt)   // 源无日期 → 回退抓取时刻（仍按新鲜处理）
+      if (t == null) t = nowGate
+      it.publishTime = t                          // 归一为数字（下游排序一致）
+      const age = nowGate - t
+      return age >= -FRESH_MAX_FUTURE_MS && age <= FRESH_MAX_AGE_MS
+    })
+    if (freshItems.length < items.length) {
+      console.log(`[newsPipeline][process] 新鲜度过滤丢弃 ${items.length - freshItems.length} 条（旧闻/无日期/未来时间）`)
+    }
+    if (!freshItems.length) continue
+
+    // 1. 补全正文（官方源按 sourceUrl 抓源站；聚合 juhe 按 key / 网页抓）——仅在通过新鲜度门禁后抓取
+    await Promise.all(freshItems.map(async (it) => {
       if (!it.content || it.content.trim().length < 200) {
         try {
           const full = await Promise.race([
@@ -122,14 +165,8 @@ async function stageProcess(deadline) {
       }
     }))
 
-    // 0. 兜底补全 source/id（兼容旧 raw 缺字段，自愈历史 consumed 条目）
-    for (const it of items) {
-      if (!it.source) it.source = it.sourceName || it.sourceId || it.sourceType || ''
-      if (!it.id) it.id = `${it.sourceId || it.sourceType}_${(it.urlFp || '').slice(0, 16)}`
-    }
-
     // 2. 基础校验 + 去重
-    const { valid } = validateAndClean(items)
+    const { valid } = validateAndClean(freshItems)
 
     // 3. 内容安全审核（合规不可省；config 无 security 段则放行）
     const securityEnabled = !!(config.security && config.security.enabled)
@@ -547,13 +584,15 @@ async function enforceCategoryCapOnCache() {
     const _retained = items.filter(it => it.isRetained === true)
     const normal = items.filter(it => it.isRetained !== true)
     if (normal.length <= cap) continue
-    // owner 2026-08-16：与 AI 入口截断口径一致——finalScore 降序保留高分（收藏豁免）
+    // owner 2026-08-16：淘汰用"新鲜度衰减分"= finalScore - 每老1h扣1分——
+    // 高分旧闻会随时间沉底，新进新闻（同分或略低）也能上位，解决"旧闻滞留不刷新"
+    const _now = Date.now()
     normal.sort((a, b) => {
-      const fa = (typeof a.finalScore === 'number') ? a.finalScore : -1
-      const fb = (typeof b.finalScore === 'number') ? b.finalScore : -1
-      if (fb !== fa) return fb - fa
-      const ta = new Date(a.publishTime || 0).getTime() || 0
-      const tb = new Date(b.publishTime || 0).getTime() || 0
+      const ea = effCacheScore(a, _now)
+      const eb = effCacheScore(b, _now)
+      if (eb !== ea) return eb - ea
+      const ta = parseTs(a.publishTime) || parseTs(a.createdAt) || 0
+      const tb = parseTs(b.publishTime) || parseTs(b.createdAt) || 0
       return tb - ta // 新优先
     })
     const losers = normal.slice(cap) // 超出硬上限的旧记录（收藏豁免）
