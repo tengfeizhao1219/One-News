@@ -101,6 +101,15 @@ function hasBudget(deadline) {
   return Date.now() + 3000 <= deadline
 }
 
+// 静默时段（owner 2026-08-16）：凌晨 01:00-05:00 不跑抓取/AI 加工，省资源。
+// 函数运行于 ap-shanghai（UTC+8），getHours() 即北京时间。
+const QUIET_START_HOUR = 1
+const QUIET_END_HOUR = 5 // 左闭右开：01:00 ≤ h < 05:00
+function isQuietHours(now) {
+  const h = new Date(now || Date.now()).getHours()
+  return h >= QUIET_START_HOUR && h < QUIET_END_HOUR
+}
+
 // ====================================================================
 // Stage 1 · process：news_raw(pending) → 补全正文 + 安全校验 → news_staging
 // ====================================================================
@@ -758,6 +767,12 @@ async function run() {
 // ====================================================================
 exports.main = async (event = {}, context = {}) => {
   const action = (event && event.action) || 'run'
+  // 静默时段（01:00-05:00）：跳过全部重活（抓取/AI/落库），实例立即返回，
+  // 自调度链在静默时段自然终止（每 5 分钟 selfHeal 仍会轻量唤醒并快速返回）
+  if (isQuietHours()) {
+    console.log(`[newsPipeline] 静默时段（${QUIET_START_HOUR}:00-${QUIET_END_HOUR}:00）跳过 action=${action}`)
+    return { ok: true, action, step: 'quiet', reason: 'quiet hours' }
+  }
   const deadline = Date.now() + BUDGET_MS
   console.log(`[newsPipeline] action=${action}`)
   try {

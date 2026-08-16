@@ -149,8 +149,22 @@ exports.main = async (event = {}) => {
   return await runOrchestrate()
 }
 
+// ── 静默时段（owner 2026-08-16）：凌晨 01:00-05:00 不抓取，省资源 ──
+// 函数运行于 ap-shanghai（UTC+8），getHours() 即北京时间
+const QUIET_START_HOUR = 1
+const QUIET_END_HOUR = 5 // 左闭右开：01:00 ≤ h < 05:00
+function isQuietHours(now) {
+  const h = new Date(now || Date.now()).getHours()
+  return h >= QUIET_START_HOUR && h < QUIET_END_HOUR
+}
+
 // ── 编排器：枚举所有源 → 每个源独立任务并行扇出 ──
 async function runOrchestrate() {
+  // 静默时段：定时器/下拉刷新触发的抓取全部跳过（缓存保留上次数据，05:00 起恢复）
+  if (isQuietHours()) {
+    console.log(`[newsFetcher] 静默时段（${QUIET_START_HOUR}:00-${QUIET_END_HOUR}:00）跳过抓取`)
+    return { ok: true, quiet: true, planned: 0, dispatched: 0, reason: 'quiet hours' }
+  }
   // 自愈建表
   try { await ensureSchema() } catch (e) {
     console.warn('[newsFetcher] ensureSchema 异常（放行）:', e.message)
