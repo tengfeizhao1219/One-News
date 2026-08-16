@@ -594,19 +594,22 @@ Page({
     setTimeout(function () {
       contentPromise.then(function () {
         that._switching = false
-        // 先切换为新内容（此刻 animClass 仍是 out-up，元素停在 -100vh，旧内容已移出）
-        that._applyPendingDetail()
-        // 修复（owner 2026-08-16）：先强制滚回顶部（scroll-top 同值不触发重置，1→0 两步保证生效），
-        // 再吸附到 in-up 起点(+page-h)，避免滑入时展示文档中后段
+        // 修复 v2（owner 2026-08-16）：【先滚动归位、再换内容】——
+        // 旧内容此刻已在 out-up 终点(-page-h)屏外，先滚动到顶（不可见）等 scroll 落定，
+        // 再切换新内容 → 新文档从顶部渲染，杜绝"换内容瞬间 scroll 被钳制到新文档底部 → 一页说闪现"
         that.setData({ scrollTop: 1 })
         setTimeout(function () {
-          // 移除 in-up 与 no-transition：元素从 +page-h 滑入中心（从底部往上滑入）
-          that.setData({ scrollTop: 0, animClass: 'in-up no-transition' })
+          that.setData({ scrollTop: 0 })
           setTimeout(function () {
-            that.setData({ animClass: '' })
-            that._animating = false
-          }, 30)
-        }, 50)
+            that._applyPendingDetail()
+            // 吸附到 in-up 起点(+page-h)，再移除 class 从底部一屏上滑入
+            that.setData({ animClass: 'in-up no-transition' })
+            setTimeout(function () {
+              that.setData({ animClass: '' })
+              that._animating = false
+            }, 30)
+          }, 50)
+        }, 30)
       }).catch(function () {
         that._switching = false
         that._pendingDetail = null
@@ -721,20 +724,22 @@ Page({
     setTimeout(function () {
       contentPromise.then(function () {
         that._switching = false
-        // out-down 阶段结束，旧内容已移出屏幕下方。
-        // 翻上一页：旧内容向下移出后，新内容整屏从上方滑入（in-down: -page-h→0）。
-        // 与翻下一页（in-up: +page-h→0）对称，均为一整屏画面滑入，与正文长度无关。
-        that._applyPendingDetail()
-        // 修复（owner 2026-08-16）：先强制滚回顶部（scroll-top 同值不触发重置，1→0 两步保证生效），
-        // 再吸附到 -page-h 起点，避免滑入时展示文档中后段（"整篇文档底部滑入"）
+        // 修复 v2（owner 2026-08-16）：【先滚动归位、再换内容】——
+        // 旧内容此刻已在 out-down 终点(+page-h)屏外，先滚动到顶（不可见）等 scroll 落定，
+        // 再切换新内容 → 新文档从顶部渲染，杜绝"换内容瞬间 scroll 被钳制到新文档底部 → 一页说闪现"
         that.setData({ scrollTop: 1 })
         setTimeout(function () {
-          that.setData({ scrollTop: 0, animClass: 'in-down no-transition' })
+          that.setData({ scrollTop: 0 })
           setTimeout(function () {
-            that.setData({ animClass: '' })
-            that._animating = false
-          }, 30)
-        }, 50)
+            that._applyPendingDetail()
+            // 吸附到 in-down 起点(-page-h)，再移除 class 从顶部一屏下滑入
+            that.setData({ animClass: 'in-down no-transition' })
+            setTimeout(function () {
+              that.setData({ animClass: '' })
+              that._animating = false
+            }, 30)
+          }, 50)
+        }, 30)
       }).catch(function () {
         that._switching = false
         that._pendingDetail = null
