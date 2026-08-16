@@ -69,7 +69,21 @@
 
   <!-- 内容 -->
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
-<template name="article-body">
+  <scroll-view
+    wx:if="{{pageState === 'ready'}}"
+    class="content {{animClass}}"
+    scroll-y
+    scroll-top="{{scrollTop}}"
+    enhanced
+    show-scrollbar="{{false}}"
+    upper-threshold="10"
+    lower-threshold="50"
+    bindscroll="onContentScroll"
+    bindscrolltoupper="onScrollToUpper"
+    bindscrolltolower="onScrollToLower"
+    bindtouchstart="onTouchStart"
+    bindtouchend="onTouchEnd">
+
     <view class="article">
       <view class="detail-body">
         <!-- 标题 -->
@@ -154,38 +168,7 @@
         <!-- 底部返回已移除 -->
       </view>
     </view>
-
-</template>
-  <scroll-view
-    wx:if="{{pageState === 'ready'}}"
-    class="content {{animClass}}"
-    scroll-y
-    scroll-top="{{scrollTop}}"
-    enhanced
-    show-scrollbar="{{false}}"
-    upper-threshold="10"
-    lower-threshold="50"
-    bindscroll="onContentScroll"
-    bindscrolltoupper="onScrollToUpper"
-    bindscrolltolower="onScrollToLower"
-    bindtouchstart="onTouchStart"
-    bindtouchend="onTouchEnd">
-
-    <template is="article-body" data="{{news: news, paragraphs: paragraphs, opinionInfoExpanded: opinionInfoExpanded, referencesExpanded: referencesExpanded}}" />
   </scroll-view>
-  <scroll-view
-    wx:if="{{incomingShow}}"
-    class="content incoming {{incomingAnim}}"
-    scroll-y
-    scroll-top="{{incomingScrollTop}}"
-    enhanced
-    show-scrollbar="{{false}}"
-    upper-threshold="10"
-    lower-threshold="50">
-
-    <template is="article-body" data="{{news: incomingNews, paragraphs: incomingParagraphs, opinionInfoExpanded: opinionInfoExpanded, referencesExpanded: referencesExpanded}}" />
-  </scroll-view>
-
 
   <!-- 底部应用来源归属：固定常驻视口底部，内容与长短/是否滚动无关（11:45 新增，15:0x 改为 position:fixed） -->
   <view class="detail-app-source">
