@@ -183,6 +183,11 @@
 .content.in-up    { transform: translateY(var(--page-h, 100vh)); }
 /* 下滑翻上一条：新内容从上方滑入（-page-h→0，整屏滑入，与翻下一页对称） */
 .content.in-down  { transform: translateY(calc(-1 * var(--page-h, 100vh))); }
+/* 胶片翻页 incoming 层：置于主层之上，过渡期间可见 */
+.content.incoming {
+  z-index: 3;
+}
+
 /* 备用：淡入效果（当前未使用，保留供后续切换） */
 .article.fade-in  { opacity: 0; }
 

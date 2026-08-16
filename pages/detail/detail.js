@@ -17,6 +17,11 @@ var localCache = require('../../utils/localCache').localCache
 var cloud = require('../../utils/cloud')
 var app = getApp()
 
+// 翻页动画模式（owner 2026-08-16）：'film' = 双图层胶片式（连续滑入）；'legacy' = 旧两阶段（可回退）
+var SWIPE_MODE = 'film'
+// 胶片动画时长（毫秒），与 .content 的 transition 0.35s 对齐
+var FILM_ANIM_MS = 360
+
 // 全局缓存单例（引擎内部复用，favorites / browseHistory 同源存储为数组）
 var _cache = localCache
 
@@ -41,6 +46,12 @@ Page({
     isLast: false,
     loading: false,
     animClass: '',
+    // 胶片翻页（SWIPE_MODE='film'）：第二层 incoming 过渡层
+    incomingShow: false,
+    incomingNews: {},
+    incomingParagraphs: [],
+    incomingAnim: '',
+    incomingScrollTop: 0,
     // 跨分类视觉
     showCrossingCategory: '',  // 进度指示中的分类名
     flashColor: '',            // 跨分类进度分类名着色；空串触发 CSS fallback 到 var(--primary)
@@ -542,9 +553,12 @@ Page({
   // ============ 跨分类翻页 ============
 
   /**
-   * 上滑 → 下一条：旧内容向上移出(out-up) → 新内容从底部滑入(in-up)，一屏高度
+   * 翻页动画模式（owner 2026-08-16 可回退开关）：
+   *   'film'   胶片式：当前页滑出 + 下一页同步滑入（双图层同时动，无死等，视觉连续）
+   *   'legacy' 旧版：先 out 350ms 再 in 350ms（两阶段，改动前效果）
    */
   _swipeToNext: function () {
+    if (SWIPE_MODE === 'film') { this._swipeToNextFilm(); return }
     var that = this
     if (that._animating || !that._engine) return
     // BUG-20260806-002：单篇模式禁止翻页
@@ -621,6 +635,129 @@ Page({
   },
 
   /**
+   * 胶片式翻下一条（SWIPE_MODE='film'）：当前页向上滑出 + 下一页从底部同步滑入（双图层连续）
+   */
+  _swipeToNextFilm: function () {
+    var that = this
+    if (that._animating || !that._engine) return
+    if (that._singleMode) return
+    that._animating = true
+    that._switching = true
+    that._pendingDetail = null
+
+    var result = that._engine.goNext()
+    if (!result.canGo) {
+      that._animating = false
+      that._switching = false
+      that._tryNextCategory()
+      return
+    }
+    if (result.isCrossing) {
+      that._showFlash(result.crossingCategory)
+      clearTimeout(that._crossingHintTimer)
+      that._crossingHintTimer = setTimeout(function () {
+        if (!that._destroyed) that.setData({ showCrossingCategory: '' })
+      }, 500)
+    }
+
+    var progress = that._engine.getProgress()
+    // 即时加载下一条（本地数据，立即 resolve）
+    var contentPromise = that._engine.loadCurrentDetail()
+    contentPromise.then(function (res) {
+      that._switching = false
+      // incoming 层起始吸附在 +page-h（屏下方），当前层 out-up 向上滑出
+      that.setData({
+        incomingShow: true,
+        incomingNews: res.news,
+        incomingParagraphs: res.paragraphs,
+        incomingAnim: 'in-up no-transition',
+        incomingScrollTop: 0,
+        animClass: 'out-up',
+        currentIndex: progress.index,
+        total: progress.total,
+        category: progress.category,
+        positionText: progress.positionText,
+        isFirst: that._engine.isFirst(),
+        isLast: that._engine.isLast(),
+        showCrossingCategory: result.isCrossing ? progress.categoryName : '',
+      })
+      // 下一帧移除 no-transition：incoming 从 +page-h 滑入，当前层同时向上滑出（连续胶片）
+      setTimeout(function () {
+        that.setData({ incomingAnim: 'in-up' })
+        // 动画结束：incoming 提升为主层
+        setTimeout(function () {
+          that.setData({ animClass: '', incomingShow: false, incomingAnim: '' })
+          that._renderDetail(that.data.incomingNews, that.data.incomingParagraphs)
+          that._animating = false
+        }, FILM_ANIM_MS)
+      }, 30)
+    }).catch(function () {
+      that._animating = false
+      that._switching = false
+      that._showNetworkToast()
+    })
+  },
+
+  /**
+   * 胶片式翻上一条（SWIPE_MODE='film'）：当前页向下滑出 + 上一条从顶部同步滑入（双图层连续）
+   */
+  _swipeToPrevFilm: function () {
+    var that = this
+    if (that._animating || !that._engine) return
+    if (that._singleMode) return
+    that._animating = true
+    that._switching = true
+    that._pendingDetail = null
+
+    var result = that._engine.goPrev()
+    if (!result.canGo) {
+      that._animating = false
+      that._switching = false
+      return
+    }
+    if (result.isCrossing) {
+      that._showFlash(result.crossingCategory)
+      clearTimeout(that._crossingHintTimer)
+      that._crossingHintTimer = setTimeout(function () {
+        if (!that._destroyed) that.setData({ showCrossingCategory: '' })
+      }, 500)
+    }
+
+    var progress = that._engine.getProgress()
+    var contentPromise = that._engine.loadCurrentDetail()
+    contentPromise.then(function (res) {
+      that._switching = false
+      that.setData({
+        incomingShow: true,
+        incomingNews: res.news,
+        incomingParagraphs: res.paragraphs,
+        incomingAnim: 'in-down no-transition',
+        incomingScrollTop: 0,
+        animClass: 'out-down',
+        currentIndex: progress.index,
+        total: progress.total,
+        category: progress.category,
+        positionText: progress.positionText,
+        isFirst: that._engine.isFirst(),
+        isLast: that._engine.isLast(),
+        showCrossingCategory: result.isCrossing ? progress.categoryName : '',
+      })
+      setTimeout(function () {
+        that.setData({ incomingAnim: 'in-down' })
+        setTimeout(function () {
+          that.setData({ animClass: '', incomingShow: false, incomingAnim: '' })
+          that._renderDetail(that.data.incomingNews, that.data.incomingParagraphs)
+          that._animating = false
+        }, FILM_ANIM_MS)
+      }, 30)
+    }).catch(function () {
+      that._animating = false
+      that._switching = false
+      that._showNetworkToast()
+    })
+  },
+
+  /**
    * DG-02（需求 R3 + 方案 4）：当前分类末条 → 跨分类自动跳转
    * - home 来源：引擎按固定分类顺序加载下一分类首页追加（toast「正在阅读：分类」）
    * - 所有分类读完 / history / favorites 来源：toast「已阅读完，回到首页获取更多新闻」
@@ -682,6 +819,7 @@ Page({
    * 下滑 → 上一条：旧内容向下移出(out-down) → 新内容从顶部滑入(in-down)，一屏高度
    */
   _swipeToPrev: function () {
+    if (SWIPE_MODE === 'film') { this._swipeToPrevFilm(); return }
     var that = this
     if (that._animating || !that._engine) return
     // BUG-20260806-002：单篇模式禁止翻页
