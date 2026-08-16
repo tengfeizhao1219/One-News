@@ -107,6 +107,7 @@ function ReadingEngine(options) {
   this._entryNewsId = options.entryNewsId || ''
   this._onProgress = options.onProgress || function () {}
   this._onDetailReady = options.onDetailReady || function () {}
+  this._onDetailRefresh = options.onDetailRefresh || function () {}
   this._onError = options.onError || function () {}
   this._cache = options.cache || null
 
