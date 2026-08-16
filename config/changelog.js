@@ -6,9 +6,74 @@
 module.exports = {
   // 当前线上版本号（与小程序后台提交审核时填写的版本号保持一致）
   // 全版本统一加 v 前缀（关于页/设置页/分享文案/弹窗头部均显示 vX.Y.Z）
-  currentVersion: 'v1.0.1',
+  currentVersion: 'v1.3.0',
 
   versions: [
+    {
+      version: 'v1.3.0',
+      date: '2026-08-16',
+      sections: [
+        {
+          type: 'feature',
+          label: '新功能',
+          items: [
+            { title: '官方源 RSS 直连', desc: '接入中新/人民/央视/新华等官方媒体，版权合规不抓正文、跳源站阅读' },
+            { title: '新闻流水线重构', desc: '抓取→质量门控→AI 解读→落库 两级流水线，下拉刷新更快更稳' },
+            { title: '「一页说」观点卡', desc: '详情页 AI 独立观点，按评分择优生成' },
+            { title: '全景覆盖', desc: '全源 AI 摘要 + 解读，多源正文补全' },
+            { title: '列表翻页交互 + 新鲜度', desc: '翻页引擎重构更顺滑；过时新闻门禁 + 缓存衰减，凌晨静默省资源' },
+          ],
+        },
+        {
+          type: 'fix',
+          label: '修复',
+          items: [
+            { title: '修复正文乱码', desc: '央视网等 GBK 旧站正文乱码已修复' },
+            { title: '修复时间显示', desc: '详情页 NaN月NaN日 错乱已根治' },
+            { title: '修复新闻重复', desc: '多轮根治同一条新闻重复落库问题' },
+            { title: '修复首页刷新', desc: '下拉刷新假提示已修复' },
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.2.1',
+      date: '2026-08-10',
+      sections: [
+        {
+          type: 'fix',
+          label: '修复',
+          items: [
+            { title: '修复空白页', desc: '关于页/设置页空白页（config 打包误排除）' },
+            { title: '修复首页卡片布局', desc: '内容垂直居中、标题不被状态栏遮挡、AI 摘要完整展示' },
+            { title: '修复 logo 浅色路径', desc: '浅色模式下 logo 图标路径补修' },
+          ],
+        },
+        {
+          type: 'optimization',
+          label: '优化',
+          items: [
+            { title: '工程化', desc: '拆分私有配置，根治 project.config.json 冲突与部署报错' },
+          ],
+        },
+      ],
+    },
+    {
+      version: 'v1.2.0',
+      date: '2026-08-09',
+      sections: [
+        {
+          type: 'feature',
+          label: '新功能',
+          items: [
+            { title: 'AI 摘要升级', desc: '接入云开发混元大模型，免费额度优先，失败自动降级' },
+            { title: '摘要来源角标', desc: '首页显示当前摘要是 AI / 来源 / 正文 / 标题' },
+            { title: '品牌 Logo 落地', desc: '首页 / 详情 / 关于 / 启动页统一品牌视觉' },
+            { title: '分享增强', desc: '首页 / 详情 / 关于页支持发送给朋友 + 朋友圈' },
+          ],
+        },
+      ],
+    },
     {
       version: 'v1.0.1',
       date: '2026-08-09',
