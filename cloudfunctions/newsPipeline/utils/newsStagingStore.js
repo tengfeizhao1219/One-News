@@ -18,6 +18,8 @@ const STALE_MS = 5 * 60 * 1000 // processing 卡死 5min 后可重认领
 // P0-4：AI 重试熔断参数——重试上限 + 冷却期，防止引擎故障期无限重试链（费用失控）
 const MAX_AI_RETRY = 3
 const RETRY_COOLDOWN_MS = 10 * 60 * 1000
+// 预算跳过（deadline）的兜底上限：超过则转 discarded，防永不终止的续跑链（请求风暴）
+const MAX_SKIP = 20
 
 function col() { return db.collection(COLLECTION) }
 
@@ -90,11 +92,29 @@ async function markDone(ids) {
   await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'done', aiAt: Date.now() } })
 }
 
-// 解读覆盖优化（2026-08-16）：deadline 预算跳过 ≠ 引擎失败，退回时不烧重试次数，
-// 让文档能跨实例继续被处理（否则 3 轮预算跳过即被丢弃 → 永远无 AI 摘要/解读）。
+// 仅统计「可认领」的待办（pending + 卡死超时的 processing），用于调度触发决策。
+// 关键（修复 EXCEED_REQUEST_LIMIT 请求风暴）：不能把"正在被其他实例处理的 processing"
+// 也算成待办，否则并发实例会误判"还有活"→ 空转触发新实例 → 每 15s 一个实例的风暴。
+async function claimablePendingCount() {
+  const now = Date.now()
+  const r = await col().where(_.or([
+    { aiStatus: 'pending' },
+    _.and([{ aiStatus: 'processing' }, { claimedAt: _.lt(now - STALE_MS) }]),
+  ])).count().catch(() => ({ total: 0 }))
+  return r.total || 0
+}
+
+// 解读覆盖优化（2026-08-16）：deadline 预算跳过 ≠ 引擎失败，退回时不烧 aiRetry（熔断计数），
+// 但仍有 skipCount 上限兜底——避免个别永不完成的条目让链永不终止（请求风暴）。
 async function markPendingKeepRetry(ids) {
   if (!ids || !ids.length) return
-  await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'pending' } })
+  await col().where({ _id: _.in(ids) }).update({ data: { aiStatus: 'pending', skipCount: _.inc(1) } })
+  const over = await col().where({ _id: _.in(ids), skipCount: _.gte(MAX_SKIP) }).get()
+  const overIds = ((over && over.data) || []).map((d) => d._id)
+  if (overIds.length) {
+    await col().where({ _id: _.in(overIds) }).update({ data: { aiStatus: 'discarded', discardedAt: Date.now() } })
+    console.warn(`[newsStagingStore] ${overIds.length} 条预算跳过超限(${MAX_SKIP}) → discarded（防风暴）`)
+  }
 }
 
 // P0-4：退回 pending 时自增重试计数 + 记录失败时间；耗尽重试上限 → 转 discarded（不再进 AI）
@@ -155,5 +175,6 @@ module.exports = {
   claimDone,
   removeStaged,
   pendingCount,
+  claimablePendingCount,
   doneCount,
 }

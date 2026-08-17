@@ -75,8 +75,8 @@ async function batchParallel(arr, fn, size) {
 }
 
 // ─── 自调度（fire-and-forget，不 await，父实例立即返回）───
-// 触发冷却 15s：仅去抖"同一时刻多个实例同时结束"的重复触发；
-// 不阻断正常续跑链（实例运行 ~110s >> 15s，下一实例触发时锁必然已过期）。
+// 触发冷却 60s：去抖"多个实例同时结束"的重复触发，并作为空转风暴的兜底保险。
+// 配合 claimablePendingCount（只认领"可认领"待办）双重防请求风暴（EXCEED_REQUEST_LIMIT）。
 async function trigger(action) {
   try {
     const now = Date.now()
@@ -86,7 +86,7 @@ async function trigger(action) {
       const d = await kv.doc('pipeline_trigger_lock').get()
       last = (d && d.data && d.data.ts) || 0
     } catch (e) { last = 0 }
-    if (last && (now - Number(last)) < 15 * 1000) return // 冷却中
+    if (last && (now - Number(last)) < 60 * 1000) return // 冷却中
     try {
       await kv.doc('pipeline_trigger_lock').set({ data: { ts: now } })
     } catch (e) {
@@ -401,8 +401,9 @@ async function stageAi(deadline) {
     processed += doneIds.length
   }
 
-  // 续跑 / 接力
-  const sp = await stagingStore.pendingCount()
+  // 续跑 / 接力——修复请求风暴：只统计「可认领」的待办（claimablePendingCount），
+  // 不把正在被其他实例处理的 processing 误判为待办，避免空转触发
+  const sp = await stagingStore.claimablePendingCount()
   if (sp > 0) trigger('ai')
   else trigger('run')
   return { stage: 'ai', processed }
@@ -755,7 +756,7 @@ async function run() {
   try { await dedupByDkSweep() } catch (e) { /* 放行 */ }
   const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
   if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
-  const sp = await stagingStore.pendingCount()
+  const sp = await stagingStore.claimablePendingCount()
   if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending' } }
   const sd = await stagingStore.doneCount()
   if (sd > 0) { trigger('publish'); return { step: 'publish', reason: 'staging 有 done' } }
