@@ -75,18 +75,42 @@ async function batchParallel(arr, fn, size) {
 }
 
 // ─── 自调度（fire-and-forget，不 await，父实例立即返回）───
-// 触发冷却 60s：去抖"多个实例同时结束"的重复触发，并作为空转风暴的兜底保险。
-// 配合 claimablePendingCount（只认领"可认领"待办）双重防请求风暴（EXCEED_REQUEST_LIMIT）。
+// 防请求风暴三层防护（EXCEED_REQUEST_LIMIT 事故复盘 2026-08-17）：
+//   ① 60s 触发冷却（去抖 + 兜底）
+//   ② 每小时自触发预算上限（硬熔断 + 告警日志，正常 ~8 次/时，40 已很宽裕）
+//   ③ 配合 claimablePendingCount（只认领"可认领"待办）不再空转
+const MAX_SELF_TRIGGER_PER_HOUR = 40
 async function trigger(action) {
   try {
     const now = Date.now()
     const kv = db.collection('system_kv')
+
+    // ① 60s 冷却
     let last = 0
     try {
       const d = await kv.doc('pipeline_trigger_lock').get()
       last = (d && d.data && d.data.ts) || 0
     } catch (e) { last = 0 }
     if (last && (now - Number(last)) < 60 * 1000) return // 冷却中
+
+    // ② 小时预算熔断
+    const hourKey = 'pipeline_trigger_budget_' + Math.floor(now / 3600000)
+    let count = 0
+    try {
+      const b = await kv.doc(hourKey).get()
+      count = (b && b.data && b.data.count) || 0
+    } catch (e) { count = 0 }
+    if (count >= MAX_SELF_TRIGGER_PER_HOUR) {
+      console.warn(`[newsPipeline] 自触发小时预算(${MAX_SELF_TRIGGER_PER_HOUR})已耗尽，暂停自调度（改由 selfHeal 兜底）——疑似异常续跑，请检查`)
+      return
+    }
+    try {
+      await kv.doc(hourKey).update({ data: { count: _.inc(1) } })
+    } catch (e) {
+      try { await kv.add({ data: { _id: hourKey, count: 1 } }) } catch (e2) { /* 忽略 */ }
+    }
+
+    // 写冷却锁 + 触发
     try {
       await kv.doc('pipeline_trigger_lock').set({ data: { ts: now } })
     } catch (e) {

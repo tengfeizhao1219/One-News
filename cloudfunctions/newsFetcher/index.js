@@ -231,13 +231,30 @@ async function runFetchSource(source) {
     console.error('[newsFetcher] fetch-source 异常:', e.message, e.stack)
     result = { ok: false, error: e.message }
   }
-  // 接力：本源写完 news_raw 后立即点燃流水线（有 pending 即续跑，串起整批）。
-  // 关键修正：orchestrate 末尾的单次触发常因 news_raw 尚未写满而空跑；
-  // 改为由每个 fetch-source 在落库后各自点燃，确保管道随源数据到位而启动。
+  // 接力：本源写完 news_raw 后点燃流水线——但做 60s 节流（复用 newsPipeline 的
+  // pipeline_trigger_lock 锁），22 个源并发时最多每分钟触发 1 次，避免并发扇出引发调用风暴。
   if (result && result.ok && result.written > 0) {
-    try { await cloud.callFunction({ name: 'newsPipeline', data: { action: 'run' } }) } catch (e) { /* 忽略 */ }
+    try { await throttledTriggerPipeline() } catch (e) { /* 忽略 */ }
   }
   return result
+}
+
+// 节流触发流水线：60s 内只放行一次（system_kv 原子占位），与 newsPipeline 自调度共用同一把锁
+async function throttledTriggerPipeline() {
+  const now = Date.now()
+  const kv = cloud.database().collection('system_kv')
+  const key = 'pipeline_trigger_lock'
+  try {
+    const d = await kv.doc(key).get()
+    const last = (d && d.data && d.data.ts) || 0
+    if (last && (now - Number(last)) < 60 * 1000) return // 冷却中，跳过本次触发
+  } catch (e) { /* 锁不存在 → 放行 */ }
+  try {
+    await kv.doc(key).set({ data: { ts: now } })
+  } catch (e) {
+    try { await kv.add({ data: { _id: key, ts: now } }) } catch (e2) { /* 忽略 */ }
+  }
+  await cloud.callFunction({ name: 'newsPipeline', data: { action: 'run' } }).catch(() => {})
 }
 
 // 官方 RSS 单源抓取
