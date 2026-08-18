@@ -1,6 +1,9 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/intel/home/home",
+    "pages/intel/detail/detail",
+    "pages/intel/mine/mine",
     "pages/detail/detail",
     "pages/history/history",
     "pages/favorites/favorites",

@@ -1,0 +1,21 @@
+<!-- INTEL-MODULE: AI 情报官模块 · 我的（FAB 入口落地页） -->
+<view class="page {{themeClass}} intel-mine">
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <view class="nav">
+    <text class="nav-back" bindtap="goBack">‹</text>
+    <text class="nav-title">我的</text>
+  </view>
+
+  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+    <view class="sect-head"><view class="dot"></view><text>画像与推送</text></view>
+    <view class="card"><text class="card-title">我的身份画像</text><text class="card-desc">工作 / 产品 / 家庭 三重身份与关注领域管理</text></view>
+    <view class="card"><text class="card-title">信息源管理</text><text class="card-desc">25 个情报源开关与权重</text></view>
+    <view class="card"><text class="card-title">推送档位与提前量 Δ</text><text class="card-desc">05 / 11 / 18 点三档发布节奏</text></view>
+
+    <view class="sect-head"><view class="dot"></view><text>合规</text></view>
+    <view class="card"><text class="card-title">风险告知与授权</text><text class="card-desc">公众号 / 第三方源使用范围</text></view>
+
+    <view class="foot-note">由 AI 情报官生成 · 配置项待后端联调</view>
+  </scroll-view>
+</view>

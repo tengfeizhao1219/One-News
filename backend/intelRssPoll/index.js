@@ -1,0 +1,750 @@
+// 情报按源 worker（T1.4b / I 基础设施）
+// ============================================================
+// ⚠️ 复用 One News rssFetcher 的 per-source worker 范式（非其业务）：
+//    全局开关 + 自愈建表 + 幂等播种 + listDueFeeds + 每源 fetch→解析→去重→
+//    写 intel_ingest + 更新 lastSuccessCursor + 四类告警。intel_* 命名空间隔离。
+//
+// 数据流（§1.1 / §7.2）：intel_ingest（原始）→ 质量门 → intel_staged（处理后）
+//    → 发布闸门 T 时刻置 isCurrent 指针 → intel_current（用户可见）。
+//    T1.4 覆盖：intel_ingest 写入 + lastSuccessCursor 增量游标（跨 05/11/18 续传）。
+//
+// 增量游标续传（§5.8 #3）：
+//   - intel_sources.lastSuccessCursor 记录「上次成功抓取到的最晚 publishedAt」；
+//   - api 类源（HN/arXiv）把 cursor 转成 since 时间窗，避免重复拉旧数据；
+//   - rss/scrape 类只露最新 10–20 条，不按 cursor 硬过滤（防漏），靠 guid 去重；
+//   - 每次成功抓取后写回新 cursor，跨 05/11/18 三次巡检自动续传。
+//
+// guid 幂等去重（硬约束 #4）：唯一键 = 源 id + item guid（sha256），
+//   先批量查 intel_ingest 已存在则跳过，另建唯一索引双保险。
+//
+// 单源超时 + 重试（硬约束 #5）：每源预算 5–15s（rss 8s / api 10s / scrape 15s），
+//   apiFetch 内建 2 次重试，scrape 包一层 1 次重试，外层 Promise.race 掐超时；
+//   所有路径不 await 出界 → 适配 60s 硬超时。
+//
+// 部署注意：本函数 require('../common/ensureSchema') 与 require('../seedSources')，
+//   部署云函数时需将 backend/common/ 与 backend/seedSources.js 一并上传。
+// ============================================================
+
+const cloud = require('wx-server-sdk')
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+const db = cloud.database()
+
+const crypto = require('crypto')
+const { XMLParser } = require('fast-xml-parser')
+const { ensureSchema } = require('../common/ensureSchema')
+const { seed } = require('../seedSources')
+const { fetchWebPage, extractContentFromHtml } = require('../common/contentFetcher')
+
+// ─── 集合名（intel_* 命名空间）───
+const INTEL_INGEST = 'intel_ingest'
+const INTEL_SOURCES = 'intel_sources'
+const INTEL_HEALTH = 'intel_health'
+
+// ─── 阈值（仿 rssFetcher）───
+const ERROR_STREAK_LIMIT = 3   // 连续 N 次入库=0 → 暂停 + 告警
+const MAX_BATCH_INSERT = 200   // 单轮入库 ≥ 此值 → 大批量告警
+const MAX_SERIAL_SOURCES = 3   // 无参编排下串行上限，超过则自我分片
+
+// ─── 单源超时预算（硬约束 #5：5–15s）───
+const TIMEOUT_BY_TYPE = { rss: 8000, news: 8000, api: 10000, scrape: 15000, wechat: 5000 }
+
+// ───────────────────────────
+// 复用 One News rssFetcher/utils/apiFetch.js（非其业务）：HTTP 抓取 + 重试 + GBK 解码
+// ───────────────────────────
+const REQUEST_TIMEOUT_MS = 30 * 1000
+const MAX_RETRIES = 2
+const MAX_DOWNLOAD_BYTES = 5 * 1024 * 1024
+const DEFAULT_UA = 'Mozilla/5.0 (compatible; IntelOfficer/1.0; +intel.onenews.app)'
+
+function _requestOnce(url, { headers = {}, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+  return new Promise((resolve) => {
+    const protocol = url.startsWith('https') ? require('https') : require('http')
+    const req = protocol.get(url, {
+      timeout: timeoutMs,
+      headers: Object.assign({
+        'User-Agent': DEFAULT_UA,
+        'Accept': 'application/rss+xml, application/xml, text/xml, application/json;q=0.9, */*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Cache-Control': 'no-cache',
+      }, headers),
+    }, (res) => {
+      const status = res.statusCode || 0
+      if (status === 304) {
+        res.resume()
+        resolve({ status, notModified: true, rawBuffer: null, headers: res.headers })
+        return
+      }
+      if (status >= 300 && status < 400 && res.headers.location) {
+        res.resume()
+        const nextUrl = new URL(res.headers.location, url).toString()
+        return _requestOnce(nextUrl, { headers, timeoutMs }).then(resolve)
+      }
+      const chunks = []
+      let total = 0
+      res.on('data', (chunk) => {
+        total += chunk.length
+        if (total > MAX_DOWNLOAD_BYTES) {
+          req.destroy()
+          resolve({ status, notModified: false, rawBuffer: Buffer.concat(chunks), headers: res.headers })
+          return
+        }
+        chunks.push(chunk)
+      })
+      res.on('end', () => resolve({ status, notModified: false, rawBuffer: Buffer.concat(chunks), headers: res.headers }))
+      res.on('error', () => resolve({ status, notModified: false, rawBuffer: null, headers: res.headers }))
+    })
+    req.on('error', () => resolve({ status: 0, notModified: false, rawBuffer: null, headers: {} }))
+    req.on('timeout', () => { req.destroy(); resolve({ status: 0, notModified: false, rawBuffer: null, headers: {} }) })
+    req.end()
+  })
+}
+
+function _decodeBuffer(buffer, declaredEncoding) {
+  const buf = Buffer.from(buffer)
+  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
+    return buf.slice(3).toString('utf8')
+  }
+  const declared = (declaredEncoding || '').toLowerCase()
+  const head = buf.slice(0, 200).toString('utf8')
+  const em = /encoding\s*=\s*["']([^"']+)["']/i.exec(head)
+  const enc = declared || (em ? em[1] : null)
+  if (enc && enc !== 'utf-8' && enc !== 'utf8') {
+    const canonical = enc.replace(/[-_]/g, '').toLowerCase()
+    if (canonical === 'gbk' || canonical === 'gb2312' || canonical === 'gb18030') {
+      if (typeof TextDecoder !== 'undefined') return new TextDecoder('gbk').decode(buf)
+      try { const iconv = require('iconv-lite'); return iconv.decode(buf, 'gbk') } catch (e) { /* 回退 UTF-8 */ }
+    }
+  }
+  return buf.toString('utf8')
+}
+
+/** 抓取 URL → { ok, text, notModified, status, lastModified, etag }（304 语义 + 2 次重试） */
+async function intelHttpGet(url, options = {}) {
+  const prev = options.prev || {}
+  const cacheHeaders = {}
+  if (prev.lastModified) cacheHeaders['If-Modified-Since'] = prev.lastModified
+  if (prev.etag) cacheHeaders['If-None-Match'] = prev.etag
+
+  let resp = null
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    resp = await _requestOnce(url, { headers: Object.assign(cacheHeaders, options.headers || {}) })
+    if (resp.status === 200 || resp.status === 304) break
+    if (resp.status >= 400 && resp.status < 500) break
+  }
+  const lastModified = resp.headers['last-modified'] || null
+  const etag = resp.headers['etag'] || null
+  if (resp.notModified) return { ok: true, notModified: true, text: null, status: 304, lastModified, etag }
+  if (resp.status !== 200 || !resp.rawBuffer) {
+    return { ok: false, notModified: false, text: null, status: resp.status, lastModified, etag }
+  }
+  const rawText = Buffer.from(resp.rawBuffer).slice(0, 200).toString('utf8')
+  const em = /encoding\s*=\s*["']([^"']+)["']/i.exec(rawText)
+  return {
+    ok: true, notModified: false,
+    text: _decodeBuffer(resp.rawBuffer, em ? em[1] : ''),
+    status: 200, lastModified, etag,
+  }
+}
+
+// ───────────────────────────
+// 复用 One News rssFetcher/utils/rssParser.js（非其业务）：XML/RSS/Atom → 条目
+// ───────────────────────────
+const PARSE_OPTIONS = {
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  trimValues: true,
+  parseTagValue: false,
+  parseAttributeValue: false,
+  arrayMode: false,
+  cdataPropName: '__cdata',
+  processEntities: { maxTotalExpansions: 1000000, maxEntityCount: 1000000, maxExpandedLength: 1000000 },
+  htmlEntities: true,
+}
+
+function _cleanStr(v) {
+  if (v == null) return ''
+  if (typeof v === 'string') return v.trim()
+  if (typeof v === 'object') {
+    const txt = v['#text'] !== undefined ? v['#text'] : v.__cdata
+    if (txt != null) return String(txt).trim()
+    for (const k of Object.keys(v)) {
+      if (k.startsWith('@_')) continue
+      const r = _cleanStr(v[k])
+      if (r) return r
+    }
+    return ''
+  }
+  return String(v).trim()
+}
+
+function _cleanSummary(v) {
+  const s = _cleanStr(v)
+  if (!s) return ''
+  return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300)
+}
+
+function _cleanContent(v) {
+  const s = _cleanStr(v)
+  if (!s) return ''
+  return s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n').trim().slice(0, 5000)
+}
+
+function _toArray(v) {
+  if (v == null) return []
+  return Array.isArray(v) ? v : [v]
+}
+
+/** 解析 RSS/Atom XML → { items:[{title,url,pubDate,guid,category,desc,content}], channelTitle } */
+function intelParseXml(xmlText) {
+  const out = { items: [], channelTitle: null }
+  if (!xmlText || typeof xmlText !== 'string') return out
+  let doc
+  try {
+    doc = new XMLParser(PARSE_OPTIONS).parse(xmlText)
+  } catch (err) {
+    throw new Error(`XML 解析失败: ${err.message}`)
+  }
+  const root = doc && (doc.rss || doc.feed)
+  if (!root) return out
+
+  if (doc.rss) {
+    const channel = doc.rss.channel
+    if (!channel) return out
+    out.channelTitle = _cleanStr(channel.title) || null
+    out.items = _toArray(channel.item)
+      .map((it) => ({
+        title: _cleanStr(it.title),
+        url: _cleanStr(it.link),
+        pubDate: _cleanStr(it.pubDate || it['dc:date'] || it.date),
+        guid: _cleanStr(it.guid) || _cleanStr(it.link),
+        category: _cleanStr(it.category),
+        desc: _cleanSummary(it.description || it.summary || it['content:encoded'] || ''),
+        content: _cleanContent(it['content:encoded'] || it.description || it.summary || ''),
+      }))
+      .filter((it) => it.title && it.url)
+    return out
+  }
+
+  if (doc.feed) {
+    out.channelTitle = (doc.feed.title && doc.feed.title['#text']) || _cleanStr(doc.feed.title) || null
+    out.items = _toArray(doc.feed.entry).map((it) => {
+      let url = ''
+      const links = _toArray(it.link)
+      for (const l of links) {
+        const href = (l && (l['@_href'] || l.href)) || ''
+        const rel = (l && (l['@_rel'] || l.rel)) || ''
+        if (!rel || rel === 'alternate') { url = href; break }
+      }
+      if (!url && links.length) url = (links[0]['@_href'] || links[0].href) || ''
+      const atomContent = (it.content && (it.content['#text'] || it.content.__cdata || _cleanStr(it.content))) || ''
+      return {
+        title: _cleanStr((it.title && it.title['#text']) || it.title),
+        url: _cleanStr(url),
+        pubDate: _cleanStr(it.published || it.updated || ''),
+        guid: _cleanStr(it.id) || _cleanStr(url),
+        category: _cleanStr((it.category && (it.category['@_term'] || it.category['#text'])) || it.category),
+        desc: _cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
+        content: _cleanContent(atomContent),
+      }
+    }).filter((it) => it.title && it.url)
+    return out
+  }
+  return out
+}
+
+// ───────────────────────────
+// 复用 One News rssFetcher/utils/fingerprint.js 的指纹范式（非其业务）
+// ───────────────────────────
+function sha256(s) {
+  return crypto.createHash('sha256').update(String(s)).digest('hex')
+}
+
+function normalizeUrl(url) {
+  if (!url) return ''
+  let u = String(url).trim()
+  u = u.replace(/^(https?:\/\/)?/i, '').replace(/\/+$/, '')
+  u = u.replace(/([?&])(utm_[a-z]+|spm|from|from_|source|ref)=[^&]*(&|$)/gi, '$1').replace(/[?&]+$/, '')
+  return u
+}
+
+function cleanTitle(title) {
+  return String(title || '').replace(/\s+/g, ' ').replace(/^[【\[]+|[】\]]+$/g, '').trim()
+}
+
+/** guid 幂等去重键（硬约束 #4）：源 id + item guid → 唯一键 */
+function makeGuid(sourceId, guidRaw) {
+  return `intel_${sourceId}_${sha256(normalizeUrl(guidRaw))}`
+}
+
+/**
+ * 校验并规整一条候选条目（对齐设计 §5.1 Item + 版权红线：不落正文全文至 current）。
+ * @returns {{ok:boolean, item?:Object, reason?:string}}
+ */
+function validateIntelItem(raw, meta) {
+  if (!raw || typeof raw !== 'object') return { ok: false, reason: '候选条目为空' }
+  const title = cleanTitle(raw.title)
+  const rawUrl = String(raw.url || '').trim()
+  if (!title) return { ok: false, reason: '缺标题' }
+  if (!rawUrl) return { ok: false, reason: '缺 URL' }
+  if (!/^https?:\/\//i.test(rawUrl)) return { ok: false, reason: `URL 非 http(s)：${rawUrl.slice(0, 40)}` }
+  if (title.length < 4) return { ok: false, reason: `标题过短(${title.length}字)` }
+  if (title.length > 300) return { ok: false, reason: `标题过长(${title.length}字)` }
+  const pubDate = raw.pubDate || ''
+  const fetchedAt = new Date().toISOString()
+  const guidRaw = raw.guid || rawUrl
+  const item = {
+    guid: makeGuid(meta.sourceId, guidRaw),
+    guidRaw: String(guidRaw).slice(0, 512),
+    sourceId: String(meta.sourceId),
+    sourceName: String(meta.sourceName || meta.sourceId),
+    layer: meta.layer || '',
+    sourceType: meta.sourceType || '',
+    targetTime: meta.targetTime || '',
+    title,
+    url: rawUrl,
+    urlFp: sha256(normalizeUrl(rawUrl)),
+    titleFp: sha256(title),
+    summary: String(raw.desc || raw.summary || ''),
+    // 版权红线：content 仅作 AI 加工源数据（瞬时 staging），intel_current 不落全文
+    content: String(raw.content || ''),
+    publishedAt: pubDate || fetchedAt,
+    fetchedAt,
+    status: 'pending', // 待质量门 → intelProcess 消费（Phase 3）
+  }
+  return { ok: true, item }
+}
+
+/** 标题过滤（仿 rssFetcher/filter.js：blockTitleKeywords） */
+function passTitleFilter(title, extraKeywords) {
+  const t = String(title || '').toLowerCase()
+  const keywords = ['直播', '专题', '招聘', '商务合作', '广告', '免责声明', 'sponsored', 'advertorial']
+    .concat(extraKeywords || [])
+    .filter(Boolean)
+  for (const kw of keywords) {
+    if (t.includes(kw)) return false
+  }
+  return true
+}
+
+// ───────────────────────────
+// 抓取适配器（四类：rss / news / api / scrape）
+// ───────────────────────────
+
+/** 拼接 GET URL（baseUrl + params） */
+function buildUrl(baseUrl, params) {
+  if (!params || !Object.keys(params).length) return baseUrl
+  const qs = Object.entries(params)
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join('&')
+  return `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}${qs}`
+}
+
+/**
+ * 抓取单源 → 归一化条目列表 [{title,url,pubDate,guid,desc,content}]。
+ * @param {Object} feed intel_sources 文档
+ * @param {Object} ctx { sinceMs } 增量游标（api 类用）
+ */
+async function fetchSource(feed, ctx = {}) {
+  const type = feed.sourceType || 'rss'
+  const cfg = (feed.adapterConfig || {})
+  const endpoint = cfg.endpoint || feed.baseUrl
+  if (!endpoint) return { items: [], cursor: ctx.sinceMs || null }
+
+  if (type === 'rss' || type === 'news') {
+    // RSS / Google News RSS：直接解析 XML（apiFetch 内建重试 + 304 缓存语义靠 etag/lastModified）
+    const res = await intelHttpGet(endpoint, { prev: { lastModified: feed.lastModified, etag: feed.etag } })
+    if (res.notModified) return { items: [], cursor: ctx.sinceMs || null, notModified: true }
+    if (!res.ok || !res.text) throw new Error(`RSS 抓取失败 status=${res.status}`)
+    const parsed = intelParseXml(res.text)
+    return { items: parsed.items, cursor: ctx.sinceMs || null, lastModified: res.lastModified, etag: res.etag }
+  }
+
+  if (type === 'api') {
+    // 时间窗续传：api 类把 lastSuccessCursor 转成 since 毫秒（§5.8 #3）
+    let params = Object.assign({}, cfg.params || {})
+    if (ctx.sinceMs) {
+      if (feed.key === 'hacker_news') {
+        const nf = String(params.numericFilters || '')
+        params.numericFilters = `points>100,created_at_i>${Math.floor(ctx.sinceMs / 1000)}`
+        if (nf && !nf.includes('created_at_i')) params.numericFilters = `${nf},created_at_i>${Math.floor(ctx.sinceMs / 1000)}`
+      } else if (feed.key === 'arxiv_ai') {
+        // arXiv 时间窗：submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM]
+        const toTs = Date.now()
+        const fmt = (t) => {
+          const d = new Date(t)
+          const p = (n) => String(n).padStart(2, '0')
+          return `${d.getUTCFullYear()}${p(d.getUTCMonth() + 1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}`
+        }
+        params.search_query = `(cat:cs.AI OR cat:cs.CL OR cat:cs.CV) AND submittedDate:[${fmt(ctx.sinceMs)} TO ${fmt(toTs)}]`
+      }
+    }
+    const url = buildUrl(endpoint, params)
+    const res = await intelHttpGet(url)
+    if (!res.ok || !res.text) throw new Error(`API 抓取失败 status=${res.status}`)
+    const text = res.text.trim()
+    // XML（arXiv Atom）→ rssParser；JSON（HN Algolia）→ 映射
+    if (text.startsWith('<')) {
+      const parsed = intelParseXml(text)
+      return { items: parsed.items, cursor: ctx.sinceMs || null }
+    }
+    let json
+    try { json = JSON.parse(text) } catch (e) { throw new Error(`API JSON 解析失败: ${e.message}`) }
+    // HN Algolia hits 结构映射
+    if (Array.isArray(json.hits)) {
+      const items = json.hits
+        .filter((h) => h.title && h.url)
+        .map((h) => ({
+          title: _cleanStr(h.title),
+          url: _cleanStr(h.url),
+          pubDate: _cleanStr(h.created_at) || '',
+          guid: _cleanStr(h.objectID) || _cleanStr(h.url),
+          desc: _cleanStr(h.story_text || h.title),
+          content: _cleanStr(h.story_text || ''),
+        }))
+      return { items, cursor: ctx.sinceMs || null }
+    }
+    throw new Error(`API 响应结构未知 key=${feed.key}`)
+  }
+
+  if (type === 'scrape') {
+    // 官网正文/列表抓取（零依赖 contentFetcher；Phase 2 A 角色按源细化解析规则）
+    const html = await fetchWebPage(endpoint)
+    if (!html) throw new Error(`官网抓取失败 endpoint=${endpoint}`)
+    // 通用列表启发式：取 <h2>/<h3>/<h4>/<article> 内的链接（Anthropic/Meta/The Batch/The Neuron/机器之心）
+    const items = extractListLinks(html)
+    // 兜底：抓取整页正文（如无列表结构）
+    if (items.length === 0) {
+      const body = extractContentFromHtml(html)
+      if (body) {
+        items.push({ title: cleanTitle(feed.name || '官网'), url: endpoint, pubDate: '', guid: endpoint, desc: body.slice(0, 300), content: body })
+      }
+    }
+    return { items, cursor: ctx.sinceMs || null }
+  }
+
+  throw new Error(`未支持的 sourceType=${type}`)
+}
+
+/** 官网列表页通用链接提取（标题级链接启发式，供 scrape 类源使用） */
+function extractListLinks(html) {
+  const items = []
+  const seen = new Set()
+  // 标题容器内的链接：<h2|h3|h4><a href>标题</a></h\d> 或 <a>…</a> 带 class 标题特征
+  const re = /<h([1-4])[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>\s*<\/h\1>/gi
+  let m
+  while ((m = re.exec(html)) !== null) {
+    const title = m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+    let url = m[2].trim()
+    if (!title || title.length < 4) continue
+    if (!/^https?:\/\//i.test(url)) url = new URL(url, 'https://x').toString() // 相对链接兜底
+    const fp = sha256(url)
+    if (seen.has(fp)) continue
+    seen.add(fp)
+    items.push({ title, url, pubDate: '', guid: url, desc: '', content: '' })
+    if (items.length >= 30) break
+  }
+  return items
+}
+
+// ───────────────────────────
+// 去重 + 写 intel_ingest
+// ───────────────────────────
+
+/** 批量查已存在 guid（db.command.in 分批 ≤20）→ existMap */
+async function queryExistingGuids(guids) {
+  const exist = new Set()
+  try {
+    for (let i = 0; i < guids.length; i += 20) {
+      const chunk = guids.slice(i, i + 20)
+      const res = await db.collection(INTEL_INGEST).where({ guid: db.command.in(chunk) }).field({ guid: true }).limit(20).get()
+      ;(res.data || []).forEach((d) => exist.add(d.guid))
+    }
+  } catch (e) {
+    console.warn(`[worker] 查询已存在 guid 失败（降级为全量写入）:`, e.message)
+  }
+  return exist
+}
+
+/** 批量写 intel_ingest（每批 10 并行 add；已存在跳过） */
+async function batchInsertIngest(items) {
+  let written = 0
+  const failed = []
+  const BATCH = 10
+  for (let i = 0; i < items.length; i += BATCH) {
+    const batch = items.slice(i, i + BATCH)
+    await Promise.all(batch.map(async (item) => {
+      try {
+        await db.collection(INTEL_INGEST).add({ data: item })
+        written++
+      } catch (e) {
+        // 唯一索引冲突 = 重复（幂等安全）；其他错误计数
+        if (String(e && (e.errMsg || e.message) || '').includes('duplicate')) {
+          // guid 已存在，视为去重命中
+        } else {
+          failed.push(item.guid)
+        }
+      }
+    }))
+  }
+  return { written, failed }
+}
+
+// ───────────────────────────
+// 源状态更新（lastSuccessCursor 续传）+ 告警
+// ───────────────────────────
+
+async function updateSource(sourceId, patch) {
+  try {
+    await db.collection(INTEL_SOURCES).doc(sourceId).update({ data: patch })
+  } catch (e) {
+    console.warn(`[worker] 更新源 ${sourceId} 失败:`, e.message)
+  }
+}
+
+/** 计算本批最新 publishedAt → 新的增量游标（ISO 字符串） */
+function computeCursor(items, fallbackNow) {
+  let maxTs = 0
+  for (const it of items) {
+    const t = it.publishedAt ? new Date(it.publishedAt).getTime() : 0
+    if (t && t > maxTs) maxTs = t
+  }
+  return maxTs ? new Date(maxTs).toISOString() : new Date(fallbackNow).toISOString()
+}
+
+/** 写健康度/告警记录到 intel_health（不依赖外部 webhook key，落库可查询） */
+async function writeHealthRecord(rec) {
+  try {
+    await db.collection(INTEL_HEALTH).add({ data: Object.assign({ kind: 'alert', createdAt: Date.now() }, rec) })
+  } catch (e) {
+    console.warn('[worker] 写 intel_health 告警失败（非阻塞）:', e.message)
+  }
+}
+
+// ───────────────────────────
+// 每源 worker（仿 rssFetcher.runWorker）
+// ───────────────────────────
+async function runWorker(feed, now, ctx = {}) {
+  const sourceId = feed._id || feed.key
+  console.log(`[worker] 开始抓取源: ${sourceId} [${feed.sourceType}] baseUrl=${feed.baseUrl || feed.key}`)
+
+  const summarize = (patch) => Object.assign({}, patch)
+  const nowIso = new Date(now).toISOString()
+
+  // 1. 抓取（单源超时兜底：Promise.race 掐超时，硬约束 #5）
+  //    增量游标续传（§5.8 #3）：lastSuccessCursor → sinceMs，api 类源（HN/arXiv）
+  //    按时间窗拉增量；rss/scrape 类只露最新 N 条，靠 guid 去重不硬过滤。
+  const timeoutMs = (feed.adapterConfig && feed.adapterConfig.timeoutMs) || TIMEOUT_BY_TYPE[feed.sourceType] || 10000
+  const sinceMs = feed.lastSuccessCursor ? new Date(feed.lastSuccessCursor).getTime() : 0
+  let fetched
+  try {
+    fetched = await Promise.race([
+      fetchSource(feed, Object.assign({}, ctx, { sinceMs })),
+      new Promise((resolve) => setTimeout(() => resolve({ items: [], timedOut: true }), timeoutMs)),
+    ])
+  } catch (e) {
+    console.warn(`[worker] ${sourceId} 抓取异常:`, e.message)
+    await updateSource(sourceId, { lastFetchStatus: 'fetch_error', lastFetchedAt: nowIso })
+    await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'error', message: `抓取异常: ${e.message}` })
+    return summarize({ sourceId, status: 'fetch_error', inserted: 0 })
+  }
+
+  if (fetched.timedOut) {
+    console.warn(`[worker] ${sourceId} 超时（>${timeoutMs}ms），本轮跳过`)
+    await updateSource(sourceId, { lastFetchStatus: 'timeout' })
+    return summarize({ sourceId, status: 'timeout', inserted: 0 })
+  }
+  if (fetched.notModified) {
+    await updateSource(sourceId, { lastFetchStatus: 'not_modified', lastFetchedAt: nowIso })
+    return summarize({ sourceId, status: 'not_modified', inserted: 0 })
+  }
+
+  const rawItems = fetched.items || []
+  if (rawItems.length === 0) {
+    console.warn(`[worker] ${sourceId} 解析后 0 条（可能停更或解析规则待调）`)
+    await updateSource(sourceId, { lastFetchStatus: 'empty' })
+    return summarize({ sourceId, status: 'empty', inserted: 0 })
+  }
+
+  // 2. 过滤 + 校验 → 候选
+  const meta = {
+    sourceId,
+    sourceName: feed.name || sourceId,
+    layer: feed.layer || '',
+    sourceType: feed.sourceType || '',
+    targetTime: ctx.targetTime || '',
+  }
+  const candidates = []
+  let filtered = 0
+  let invalid = 0
+  for (const raw of rawItems) {
+    if (!passTitleFilter(raw.title, feed.blockTitleKeywords)) { filtered++; continue }
+    const vRes = validateIntelItem({ title: raw.title, url: raw.url, pubDate: raw.pubDate, desc: raw.desc, content: raw.content, guid: raw.guid }, meta)
+    if (!vRes.ok) { invalid++; continue }
+    candidates.push(vRes.item)
+  }
+
+  // 3. guid 幂等去重（查已有 + 唯一索引兜底）
+  const existingGuids = await queryExistingGuids(candidates.map((c) => c.guid))
+  const fresh = candidates.filter((c) => !existingGuids.has(c.guid))
+  const duplicates = candidates.length - fresh.length
+
+  // 4. 批量写 intel_ingest
+  let written = 0
+  if (fresh.length) {
+    const wr = await batchInsertIngest(fresh)
+    written = wr.written
+    if (wr.failed.length) {
+      console.warn(`[worker] ${sourceId} ${wr.failed.length} 条写入失败（幂等，下轮重试）`)
+    }
+  }
+
+  // 5. 更新源状态：lastSuccessCursor 续传（§5.8 #3）+ 健康度
+  const prevStreak = Number(feed.errorStreak) || 0
+  const total = candidates.length
+  const newStreak = total === 0 ? prevStreak + 1 : 0
+  const cursor = computeCursor(fresh.length ? fresh : rawItems, now)
+  const patch = {
+    lastFetchTime: nowIso,
+    lastFetchedAt: nowIso,
+    lastFetchStatus: 'ok',
+    lastCount: total,
+    insertedCount: written,
+    duplicateCount: duplicates,
+    errorStreak: newStreak,
+    lastSuccessCursor: cursor,           // 增量游标：下次巡检续传起点
+    lastModified: fetched.lastModified || feed.lastModified,
+    etag: fetched.etag || feed.etag,
+    health: { status: 'ok', consecutiveFails: 0, lastError: '', lastSuccessAt: nowIso },
+  }
+  await updateSource(sourceId, patch)
+
+  // 6. 四类告警（写 intel_health）
+  const alerts = []
+  if (newStreak >= ERROR_STREAK_LIMIT) {
+    await updateSource(sourceId, { status: 'disabled' })
+    await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'error', message: `连续 ${newStreak} 周期入库 0，已自动暂停，请检查源站` })
+    alerts.push('disabled-empty')
+  }
+  if (total > 0 && duplicates / total > 0.5) {
+    await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'warn', message: `本轮重复率 ${(duplicates / total * 100).toFixed(0)}%（${duplicates}/${total}），疑似停更或 URL 漂移` })
+    alerts.push('high-duplicate')
+  }
+  if (written >= MAX_BATCH_INSERT) {
+    await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'warn', message: `单轮入库 ${written} 条（≥${MAX_BATCH_INSERT}），请复核是否需要限流` })
+    alerts.push('bulk-insert')
+  }
+  if (total > 0 && (filtered + invalid) / total > 0.5) {
+    await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'info', message: `过滤/校验拦截 ${filtered + invalid}/${total} 条（过滤词或字段不全），检查源口径` })
+    alerts.push('high-filter')
+  }
+
+  console.log(`[worker] ${sourceId} 完成: total=${total} written=${written} duplicates=${duplicates} filtered=${filtered} invalid=${invalid} streak=${newStreak} cursor=${cursor.slice(0, 19)}`)
+  return summarize({ sourceId, status: 'ok', parsed: total, written, duplicates, filtered, invalid, streak: newStreak, alerts })
+}
+
+// ───────────────────────────
+// listDueFeeds（仿 rssFetcher/feedStore）
+// ───────────────────────────
+async function listDueFeeds(nowMs) {
+  let feeds = []
+  try {
+    const res = await db.collection(INTEL_SOURCES).limit(1000).get()
+    feeds = res.data || []
+  } catch (e) {
+    return []
+  }
+  const due = []
+  for (const f of feeds) {
+    if (f.enabled !== true) continue
+    if (f.status === 'disabled') continue
+    const poll = Number(f.pollSeconds) || 21600
+    const last = f.lastFetchTime ? new Date(f.lastFetchTime).getTime() : 0
+    if (!last || (nowMs - last) >= poll * 1000) due.push(f)
+  }
+  return due
+}
+
+// ───────────────────────────
+// 云函数入口
+// ───────────────────────────
+exports.main = async (event = {}) => {
+  // L1 全局开关：默认关闭，未启用情报抓取时直接跳过（仿 rssFetcher OFFICIAL_RSS_ENABLED）
+  const globalEnabled = String(process.env.INTEL_RSS_POLL_ENABLED || 'false').toLowerCase() === 'true'
+  if (!globalEnabled) {
+    console.log('[intelRssPoll] INTEL_RSS_POLL_ENABLED=false，跳过本轮抓取')
+    return { ok: true, skipped: 'global-disabled' }
+  }
+
+  // 自愈建表（幂等）
+  try {
+    await ensureSchema()
+  } catch (e) {
+    console.warn('[intelRssPoll] ensureSchema 异常（放行）:', e.message)
+  }
+
+  // 幂等播种 intel_sources（新接入源在此自动补齐）
+  try {
+    const seedRes = await seed()
+    console.log(`[intelRssPoll] intel_sources 播种完成：新增 ${seedRes.inserted} 条，跳过 ${seedRes.skipped} 条`)
+  } catch (e) {
+    console.warn('[intelRssPoll] seed 异常（放行）:', e.message)
+  }
+
+  const now = Date.now()
+  const ctx = { targetTime: event.targetTime || '' }
+
+  // ── worker 模式：指定单源（被 intelFetch 分片委派）──
+  if (event.sourceId) {
+    let feed = null
+    try {
+      const res = await db.collection(INTEL_SOURCES).where({ _id: event.sourceId }).limit(1).get()
+      feed = (res.data && res.data[0]) || null
+    } catch (e) { feed = null }
+    if (!feed) {
+      console.warn(`[intelRssPoll] 源不存在或读取失败: ${event.sourceId}`)
+      return { ok: false, sourceId: event.sourceId, status: 'source-not-found' }
+    }
+    const r = await runWorker(feed, now, ctx)
+    return { ok: true, sourceId: event.sourceId, targetTime: ctx.targetTime, ...r }
+  }
+
+  // ── 编排模式（intelRssPoll 定时器 05:15/11:15/18:00 兜底触发，与 intelFetch 错峰）──
+  console.log('[intelRssPoll] ========== 兜底巡检（无参）==========')
+  const dueFeeds = await listDueFeeds(now)
+  if (!dueFeeds.length) {
+    console.log('[intelRssPoll] 无到点源，本轮结束')
+    return { ok: true, scanned: 0 }
+  }
+
+  // 到点源过多时自我分片（防单实例串行超 60s）；≤3 源直接串行
+  if (dueFeeds.length > MAX_SERIAL_SOURCES) {
+    console.log(`[intelRssPoll] ${dueFeeds.length} 源超过串行上限，自我分片（fire-and-forget）`)
+    for (const feed of dueFeeds) {
+      const sourceId = feed._id || feed.key
+      cloud.callFunction({
+        name: 'intelRssPoll',
+        data: { sourceId, targetTime: ctx.targetTime, shard: true },
+      })
+        .then((res) => {
+          const r = res.result || {}
+          console.log(`[intelRssPoll][${sourceId}] worker 完成: status=${r.status || r.skipped || 'ok'} inserted=${r.inserted || 0}`)
+        })
+        .catch((err) => {
+          console.warn(`[intelRssPoll][${sourceId}] RPC 超时（实例仍在后台运行）: ${err.message}`)
+        })
+    }
+    return { ok: true, scanned: dueFeeds.length, sharded: true }
+  }
+
+  // 串行执行（≤3 源，每源 5–15s，最坏 ~45s < 60s）
+  const results = []
+  for (const feed of dueFeeds) {
+    results.push(await runWorker(feed, now, ctx))
+  }
+  return { ok: true, scanned: results.length, results }
+}

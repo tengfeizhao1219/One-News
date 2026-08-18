@@ -1,6 +1,7 @@
 // 首页 - 卡片流主视图逻辑
 
 const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
+const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
 const { getNewsList, getNewsDelta, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
@@ -47,6 +48,7 @@ Page({
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
     // BUG-FS-20260805-001（同根因扩展）: dock 菜单 icon 深色模式切换白色版
     isDark: false,
+    _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
@@ -759,6 +761,17 @@ Page({
       this.openPanel()
       return
     }
+
+    // ============ INTEL-BRIDGE (START): AI 情报模块入口——右滑进入（最小可摘除） ============
+    // 隔离说明：本段为 AI 情报官模块新增，独立于 One News 既有业务。
+    //  - 仅处理「右滑」(dx > 0 且 |dx| > |dy|)；原 onTouchEnd 对右滑无行为，故为纯增量，不影响左滑/纵向手势。
+    //  - 置于纵向早退之前，确保横向右滑不被纵向判定吃掉。
+    //  - 命名空间 intel_*；将 _intelBridgeEnabled 置 false 或整段删除即可摘除。
+    if (dx > INTEL_ENTER_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) && this._intelBridgeEnabled) {
+      wx.navigateTo({ url: '/pages/intel/home/home', fail: (err) => console.warn('[intel-bridge] navigate fail:', err) })
+      return
+    }
+    // ============ INTEL-BRIDGE (END) ============
 
     // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
     if (Math.abs(dy) < SWIPE_THRESHOLD || dt > 500) return

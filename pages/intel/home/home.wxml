@@ -1,0 +1,36 @@
+<!--
+  INTEL-MODULE: AI 情报官模块 · 情报首页
+  隔离说明：本目录 pages/intel/* 全部为新增，独立于 One News 既有业务；
+  命名空间 intel_*，可整体摘除，不影响 One News 原有功能。
+-->
+<view class="page {{themeClass}} intel-home">
+  <!-- 状态栏占位（custom nav） -->
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+
+  <!-- 自定义导航：‹ 返回 One News / 标题 -->
+  <view class="nav">
+    <text class="nav-back" bindtap="goBack">‹</text>
+    <text class="nav-title">AI 情报</text>
+    <text class="nav-sub">情报官已为你梳理今日值得关注的进展</text>
+  </view>
+
+  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+    <view class="sect-head"><view class="dot"></view><text>今日关注</text></view>
+
+    <view class="card" wx:for="{{items}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+      <text class="card-title">{{item.title}}</text>
+      <text class="card-desc">{{item.desc}}</text>
+      <view class="meta">
+        <text class="src">{{item.src}}</text>
+        <text class="time">{{item.time}}</text>
+      </view>
+    </view>
+
+    <view class="foot-note">由 AI 情报官生成 · 仅供参考</view>
+  </scroll-view>
+
+  <!-- 悬浮按钮：完全复刻 One News 首页 .floating-more，作为「我的」入口 -->
+  <view class="floating-more" bindtap="goMine">
+    <image class="more-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+  </view>
+</view>
