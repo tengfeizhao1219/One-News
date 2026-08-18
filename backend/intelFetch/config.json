@@ -1,0 +1,21 @@
+{
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "intelFetch0500",
+      "type": "timer",
+      "config": "0 10 5 * * * *"
+    },
+    {
+      "name": "intelFetch1100",
+      "type": "timer",
+      "config": "0 10 11 * * * *"
+    },
+    {
+      "name": "intelFetch1800",
+      "type": "timer",
+      "config": "0 55 17 * * * *"
+    }
+  ]
+}

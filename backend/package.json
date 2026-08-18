@@ -1,0 +1,10 @@
+{
+  "name": "ai-intel-officer-backend",
+  "version": "1.0.0",
+  "description": "AI 情报官 Phase 1 基础设施（T1.1–T1.4）— intel_* 命名空间，复用 One News 范式可整体摘除。含 intelFetch（self-fan-out 编排器）+ intelRssPoll（按源 worker）+ 25 源幂等播种 + 自愈建表。",
+  "main": "intelRssPoll/index.js",
+  "dependencies": {
+    "fast-xml-parser": "^4.5.7",
+    "wx-server-sdk": "latest"
+  }
+}

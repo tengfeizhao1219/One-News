@@ -71,6 +71,123 @@
       "runtime": "Nodejs16.13",
       "handler": "index.main",
       "installDependency": true
+    },
+    {
+      "name": "intelFetch",
+      "path": "intelFetch",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "intelFetch0500",
+          "type": "timer",
+          "config": "0 10 5 * * * *"
+        },
+        {
+          "name": "intelFetch1100",
+          "type": "timer",
+          "config": "0 10 11 * * * *"
+        },
+        {
+          "name": "intelFetch1800",
+          "type": "timer",
+          "config": "0 55 17 * * * *"
+        }
+      ]
+    },
+    {
+      "name": "intelRssPoll",
+      "path": "intelRssPoll",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "intelPoll0500",
+          "type": "timer",
+          "config": "0 15 5 * * * *"
+        },
+        {
+          "name": "intelPoll1100",
+          "type": "timer",
+          "config": "0 15 11 * * * *"
+        },
+        {
+          "name": "intelPoll1800",
+          "type": "timer",
+          "config": "0 0 18 * * * *"
+        }
+      ]
+    },
+    {
+      "name": "intelProcess",
+      "path": "intelProcess",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "intelProcess0500",
+          "type": "timer",
+          "config": "0 20 5 * * * *"
+        },
+        {
+          "name": "intelProcess1100",
+          "type": "timer",
+          "config": "0 20 11 * * * *"
+        },
+        {
+          "name": "intelProcess1800",
+          "type": "timer",
+          "config": "0 10 18 * * * *"
+        }
+      ]
+    },
+    {
+      "name": "intelDispatcher",
+      "path": "intelDispatcher",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "intelDispatcher0530",
+          "type": "timer",
+          "config": "0 30 5 * * * *"
+        },
+        {
+          "name": "intelDispatcher1130",
+          "type": "timer",
+          "config": "0 30 11 * * * *"
+        },
+        {
+          "name": "intelDispatcher1830",
+          "type": "timer",
+          "config": "0 30 18 * * * *"
+        }
+      ]
+    },
+    {
+      "name": "intelBrief",
+      "path": "intelBrief",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "intelGetList",
+      "path": "intelGetList",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
+    },
+    {
+      "name": "intelGetDetail",
+      "path": "intelGetDetail",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true
     }
   ]
 }

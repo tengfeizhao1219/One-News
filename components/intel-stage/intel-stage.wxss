@@ -1,0 +1,128 @@
+/* INTEL-MODULE: AI 情报官 · 情报首页（内嵌横滑屏）样式。设计令牌全部引用 theme.json，零新增 hex。 */
+.intel-stage {
+  /* 覆盖层：铺满 One News 首页，默认藏在屏幕左侧（translateX -100%），右滑进入滑到 0 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateX(-100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  z-index: 60; /* 高于 One News 内容区(卡片/面板)，低于原生胶囊 */
+  background-color: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+/* active：AI 情报屏覆盖到屏幕中央（translateX 0） */
+.intel-stage.in {
+  transform: translateX(0);
+}
+
+/* 状态栏背景层 —— 复用 One News 首页 .status-bar-fill 机制 */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 16;
+}
+
+.nav {
+  /* 胶囊避让：内容顶到胶囊下方（menu-top + menu-height + 边距），避开原生胶囊 */
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 20rpx) 32rpx 16rpx;
+}
+.nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; margin-right: 4rpx; }
+.nav-title { font-size: calc(34rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
+.nav-sub { font-size: calc(22rpx * var(--font-scale-meta, 1)); color: var(--text-tertiary); margin-left: auto; }
+
+.content {
+  flex: 1;
+  height: 0;
+  padding: 8rpx 32rpx calc(200rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.sect-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: calc(26rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 24rpx 4rpx 20rpx;
+}
+.sect-head .dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--primary); }
+
+.card {
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 32rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+.card-title {
+  display: block;
+  /* 对齐 One News 信息流：标题基准 32rpx（与首页摘要同档），行高放宽到 1.5 */
+  font-size: calc(32rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.card-desc {
+  display: block;
+  /* 对齐 One News：正文基准 28rpx，行高 1.6，更贴近首页摘要排版 */
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.6;
+  margin-top: 12rpx;
+}
+.meta {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 16rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+}
+.meta .src { color: var(--text-link); }
+.foot-note {
+  text-align: center;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin: 8rpx 0 24rpx;
+}
+
+/* FAB：复刻 One News 首页 .floating-more */
+.floating-more {
+  position: fixed;
+  right: 40rpx;
+  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  z-index: 29;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--tag-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  animation: floatY 3.2s ease-in-out infinite;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.floating-more:active {
+  animation: none;
+  transform: scale(0.92);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+.more-icon-img { width: 56rpx; height: 56rpx; }
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10rpx); }
+}

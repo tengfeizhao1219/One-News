@@ -1,0 +1,21 @@
+{
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "intelProcess0500",
+      "type": "timer",
+      "config": "0 20 5 * * * *"
+    },
+    {
+      "name": "intelProcess1100",
+      "type": "timer",
+      "config": "0 20 11 * * * *"
+    },
+    {
+      "name": "intelProcess1800",
+      "type": "timer",
+      "config": "0 10 18 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+<!--
+  INTEL-MODULE: AI 情报官模块 · 情报详情
+  设计要点（v0.4.3 确认）：
+  - 后端 SOP 五步藏为「看不见的劳动力」，用户只看到成品。
+  - 区块标题用系统蓝；正文 13px/1.6；高亮为淡浅蓝底+灰字，不抢眼。
+  - 「了解更多」「上手试试」内容须基于真实联网调研，链接只放已验证可达的官方源。
+  - 方案A：详情内容与所选卡片匹配。claude1m 为真实调研演示（完整叙事）；
+    其余卡片为降级占位（标题/来源/正文与所选卡片一致，不硬编 Claude 内容）。
+-->
+<view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+  <!-- 顶部条带（对齐原生胶囊）：先铺背景，再把导航顶到胶囊下方，避免与胶囊重叠 -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+
+  <!-- 导航（顶到胶囊下方，避开原生胶囊）；title/back 垂直居中于胶囊高度区 -->
+  <view class="nav">
+    <text class="nav-back" bindtap="goBack">‹</text>
+    <text class="nav-title">情报详情</text>
+    <view class="src-chip">{{srcName}}</view>
+  </view>
+
+  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+
+    <!-- 状态条：降噪（浅灰底+次级灰字），仅保留绿色圆点表示「已完成梳理」 -->
+    <view class="status-strip">
+      <view class="dot-g"></view>
+      <text>情报官已完成梳理 · 2 分钟前</text>
+    </view>
+
+    <!-- 结论式标题（与所选卡片匹配） -->
+    <text class="detail-title">{{title}}</text>
+
+    <!-- ============ 完整叙事（claude1m 真实调研演示） ============ -->
+    <block wx:if="{{fullDetail}}">
+      <!-- 发生了什么（正式、详尽；高亮淡浅蓝底+灰字） -->
+      <text class="block-label">发生了什么</text>
+      <view class="prose">2026 年 3 月 13 日，Anthropic 将 Claude 的 <text class="hl">100 万 token 上下文窗口（Context Window）</text> 由 Beta 转为正式可用（GA），覆盖 <text class="hl">Opus 4.6</text> 与 <text class="hl">Sonnet 4.6</text> 两款模型。100 万 token 约等于 75 万英文词 / 1500 页 A4 / 单次可附带 <text class="hl">600 页 PDF 或图片</text>（此前上限为 100 页）。</view>
+      <view class="prose prose-2">最关键的变化是<text class="hl">取消了「长上下文溢价」</text>：超过 20 万 token 后不再翻倍计费，统一按标准单价（Opus 4.6 输入 $5 / 输出 $25、Sonnet 4.6 输入 $3 / 输出 $15，均按每百万 token）收费。在衡量超长文档检索可靠性的 <text class="hl">MRCR v2</text> 基准上，Opus 4.6 在 100 万 token 长度取得 <text class="hl">78.3% 准确率</text>，为当前所有前沿模型最高（同测试 Gemini 3 Pro 为 26.3%）。机制层面，「中间遗忘」显著缓解，上下文压缩减少约 15%，长程对话与多小时 Agent 任务能记住开头读过的内容。</view>
+
+      <view class="divider"></view>
+
+      <!-- 落到你这里（按身份散文，无标签墙） -->
+      <text class="block-label">落到你这里</text>
+      <view class="relate">
+        <view class="relate-item" wx:for="{{relateItems}}" wx:key="who">
+          <view class="who"><text class="who-ic">工</text><text class="who-txt">{{item.who}}</text></view>
+          <view class="relate-txt">{{item.txt}}</view>
+        </view>
+        <view class="relate-skip" wx:if="{{relateSkip}}">{{relateSkip}}</view>
+      </view>
+
+      <view class="divider"></view>
+
+      <!-- 了解更多 ▸（axios 展开，真实来源链接） -->
+      <view class="expand {{showMore ? 'open' : ''}}">
+        <view class="expand-head" bindtap="toggleMore">了解更多 <text class="chev">›</text></view>
+        <view class="expand-body" wx:if="{{showMore}}">
+          <view class="src-link" bindtap="copyLink" data-url="https://docs.anthropic.com/en/docs/build-with-claude/context-windows">
+            <text class="src-ico">📄</text><text class="src-txt">Anthropic 官方文档 · Context windows</text><text class="src-arr">↗</text>
+          </view>
+          <view class="src-link" bindtap="copyLink" data-url="https://www.anthropic.com/news">
+            <text class="src-ico">📰</text><text class="src-txt">Anthropic 官方发布 / News</text><text class="src-arr">↗</text>
+          </view>
+          <view class="src-link" bindtap="copyLink" data-url="https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching">
+            <text class="src-ico">📄</text><text class="src-txt">Anthropic 官方文档 · Prompt caching</text><text class="src-arr">↗</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 上手试试 ▸（步骤 demo + 真实参考链接 + 风险提示） -->
+      <view class="expand {{showTry ? 'open' : ''}}">
+        <view class="expand-head" bindtap="toggleTry">上手试试 <text class="chev">›</text></view>
+        <view class="expand-body" wx:if="{{showTry}}">
+          <view class="steps">
+            <view class="step"><view class="step-n">1</view><view class="step-c">
+              <view class="step-t">选用支持 1M 的模型</view>
+              <view class="step-d">在 Claude 网页端或 API 选用 <text class="code">Sonnet 4.6</text> / <text class="code">Opus 4.6</text>。GA 后 1M 上下文已默认开启，无需特殊开关或 Beta 头。</view>
+            </view></view>
+            <view class="step"><view class="step-n">2</view><view class="step-c">
+              <view class="step-t">整本一次性上传</view>
+              <view class="step-d">把 PDF / 文本作为附件或正文一次性放入，单个请求最多 <text class="code">600 页 PDF</text>。不要再切分文档。</view>
+            </view></view>
+            <view class="step"><view class="step-n">3</view><view class="step-c">
+              <view class="step-t">把最关键的问题放在最后</view>
+              <view class="step-d">模型对开头与结尾注意力更强。例如：「逐条比对这两版合同的责任上限差异，用表格列出」。</view>
+            </view></view>
+            <view class="step"><view class="step-n">4</view><view class="step-c">
+              <view class="step-t">反复追问别怕贵</view>
+              <view class="step-d">对同一文档连问多个问题，配合 <text class="hl">Prompt caching</text> 后，重复查询的输入成本可降至约 <text class="code">1/10</text>。</view>
+            </view></view>
+          </view>
+
+          <view class="risk">⚠️ 提醒：1M 请求首字延迟更高、超长输入绝对成本不低；纯「查某个字段」类任务用 RAG 更划算。涉及敏感合同时，勿直传未授权第三方环境。</view>
+
+          <view class="ref-links">
+            <text class="ref-lab">参考文档（真实来源）</text>
+            <view class="ref-link" bindtap="copyLink" data-url="https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching">
+              <text class="ref-txt">docs.anthropic.com · Prompt caching（缓存机制与 90% 成本节省）</text>
+            </view>
+            <view class="ref-link" bindtap="copyLink" data-url="https://docs.anthropic.com/en/docs/build-with-claude/context-windows">
+              <text class="ref-txt">docs.anthropic.com · Context windows（窗口机制与最佳实践）</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- ============ 降级占位（非 claude 卡片：标题/来源/正文与所选卡片匹配） ============ -->
+    <block wx:else>
+      <!-- 发生了什么：用所选卡片的原文要点（desc）作为首段 -->
+      <text class="block-label">发生了什么</text>
+      <view class="prose">{{descText}}</view>
+
+      <view class="divider"></view>
+
+      <!-- 落到你这里：画像匹配待后端生成 -->
+      <text class="block-label">落到你这里</text>
+      <view class="relate">
+        <view class="relate-item" wx:for="{{relateItems}}" wx:key="who">
+          <view class="who"><text class="who-ic">工</text><text class="who-txt">{{item.who}}</text></view>
+          <view class="relate-txt">{{item.txt}}</view>
+        </view>
+      </view>
+    </block>
+
+    <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
+  </scroll-view>
+</view>

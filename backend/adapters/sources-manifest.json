@@ -1,0 +1,341 @@
+{
+  "_meta": {
+    "title": "AI 情报官 · 25 源注册清单（T2.1 交付）",
+    "version": "1.0",
+    "date": "2026-08-18",
+    "author": "A（适配器）",
+    "basis": "《AI信息源调研.md》§4 映射总表 + §2 分层默认清单 + §5 公众号专章（2026-08-17 实测定论）",
+    "totalSources": 25,
+    "note": "带「待核验」标注的 URL 是调研文档未逐一实测给出的模式推断，落地前按《AI信息源调研.md》§4 末尾注二次核验；若 I 角色 seedSources.json 已定义相同源，以其为最终生效配置，本 manifest 保持同步更新。"
+  },
+  "sources": [
+    {
+      "id": "the_rundown_ai",
+      "name": "The Rundown AI",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://rss.beehiiv.com/feeds/2R3C6Bt5wj.xml",
+      "fetchRate": "high",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 A层#1、§3.1（beehiiv 端点已实测）、§4 综合日报/Newsletter、§5.5 实测可用（2026-08-17）"
+    },
+    {
+      "id": "tldr_ai",
+      "name": "TLDR AI",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://tldr.tech/api/rss/ai",
+      "apiConfig": null,
+      "fetchRate": "high",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 A层#2、§3.1（主端点已给出）、§5.5 实测可用（2026-08-17；备选镜像 https://bullrich.dev/tldr-rss/ai.rss）"
+    },
+    {
+      "id": "the_neuron",
+      "name": "The Neuron",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "web",
+      "webConfig": {
+        "url": "https://www.theneurondaily.com/",
+        "selectorRule": "首页列表抓取：取各文章卡片链接（/p/ 结构），逐条进详情页取标题/日期/正文段落。真实部署时核对卡片容器 class 并替换 RULE_CARD_LINK / RULE_ARTICLE_BODY 正则。"
+      },
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#3、§3.7（/feed 404、/feed.xml 被 Cloudflare 拦截→官网抓取）、§5.5 二复测定论"
+    },
+    {
+      "id": "bens_bites",
+      "name": "Ben's Bites",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://bensbites.substack.com/feed",
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#4、§3.1（Substack 模式）、§5.5 实测可用（2026-08-14，Ben's Session 2）"
+    },
+    {
+      "id": "techcrunch_ai",
+      "name": "TechCrunch（AI 频道）",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#5、§4 新闻站、§5.5 实测可用（2026-08-17，Wispr 融资）"
+    },
+    {
+      "id": "venturebeat_ai",
+      "name": "VentureBeat（AI）",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://venturebeat.com/category/ai/feed/",
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#6、§4 新闻站、§5.5 实测可用（2026-08-17；注意更新偏慢疑似缓存）"
+    },
+    {
+      "id": "theverge_ai",
+      "name": "The Verge（AI）",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#7、§4 新闻站、§5.5 实测可用（2026-08-17，Claude 文本水印）"
+    },
+    {
+      "id": "marktechpost",
+      "name": "MarkTechPost",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://www.marktechpost.com/feed/",
+      "fetchRate": "high",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 A层#8、§5.5 实测可用（2026-08-17，DeepSeek Harness；⚠️ 返回 gzip 压缩，抓取须处理 Content-Encoding）"
+    },
+    {
+      "id": "google_news_ai",
+      "name": "Google News RSS（兜底聚合）",
+      "category": "行业媒体",
+      "layer": "A",
+      "fetchType": "rss",
+      "rssUrl": "https://news.google.com/rss/search?q=QUERY&hl=en-US&gl=US&ceid=US:en",
+      "apiConfig": {
+        "endpoint": "https://news.google.com/rss/search",
+        "params": {
+          "q": "QUERY 模板（支持 when:7d / site: 运算符）",
+          "hl": "en-US",
+          "gl": "US",
+          "ceid": "US:en"
+        },
+        "note": "兜底聚合器：约 100 条/源上限、链接为重定向、无 SLA；仅作关键词兜底，不替代一手源"
+      },
+      "fetchRate": "high",
+      "priority": 4,
+      "sourceDocRef": "AI信息源调研.md §2 A层#9、§3.5（端点已给出）、§4 聚合兜底、§5.5 实测可用（2026-08-17）"
+    },
+    {
+      "id": "the_batch",
+      "name": "The Batch（DeepLearning.AI）",
+      "category": "前沿研究",
+      "layer": "B",
+      "fetchType": "web",
+      "webConfig": {
+        "url": "https://www.deeplearning.ai/the-batch/",
+        "selectorRule": "周更 issue 列表（issue-NNN 结构）：取最新 issue 链接→详情页取标题/日期/正文段落。真实部署时核对 issue 链接与正文容器 class 并替换 RULE_ISSUE_LINK / RULE_ARTICLE_BODY。"
+      },
+      "fetchRate": "low",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 B层#1、§3.7（/the-batch/feed、/feed/ 均 404→官网抓取）、§5.5 二复测定论（AI Engineering Skills Map，8-14）"
+    },
+    {
+      "id": "import_ai",
+      "name": "Import AI（Jack Clark）",
+      "category": "前沿研究",
+      "layer": "B",
+      "fetchType": "rss",
+      "rssUrl": "https://importai.substack.com/feed",
+      "fetchRate": "normal",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 B层#2、§3.1（Substack 模式）、§5.5 实测可用（2026-08-17，Import AI 469）"
+    },
+    {
+      "id": "ahead_of_ai",
+      "name": "Ahead of AI（Sebastian Raschka）",
+      "category": "前沿研究",
+      "layer": "B",
+      "fetchType": "rss",
+      "rssUrl": "https://magazine.sebastianraschka.com/feed",
+      "fetchRate": "low",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 B层#3、§3.1（Substack 模式；Raschka 主刊 magazine.sebastianraschka.com，落地前核验 feed 路径）"
+    },
+    {
+      "id": "latent_space",
+      "name": "Latent Space",
+      "category": "前沿研究",
+      "layer": "B",
+      "fetchType": "rss",
+      "rssUrl": "https://www.latent.space/feed",
+      "fetchRate": "normal",
+      "priority": 3,
+      "sourceDocRef": "AI信息源调研.md §2 B层#4（周更+播客，AI 工程）、§3.1（Substack 模式，落地前核验 feed 路径）"
+    },
+    {
+      "id": "openai_blog",
+      "name": "OpenAI Blog / Research",
+      "category": "AI公司动态",
+      "layer": "C",
+      "fetchType": "rss",
+      "rssUrl": "https://openai.com/news/rss.xml",
+      "apiConfig": null,
+      "fetchRate": "normal",
+      "priority": 1,
+      "sourceDocRef": "AI信息源调研.md §2 C层#1（RSS + 官方页）、§4 实验室官方博客、§5.5 实测可用（2026-08-17，The Defender's Window）"
+    },
+    {
+      "id": "anthropic_news",
+      "name": "Anthropic News",
+      "category": "AI公司动态",
+      "layer": "C",
+      "fetchType": "web",
+      "webConfig": {
+        "url": "https://www.anthropic.com/news",
+        "selectorRule": "列表页：取文章卡片（标题+日期+链接，当天最新 Claude 文本水印 8-14）→详情页取正文段落。真实部署时核对卡片与正文容器 class 并替换 RULE_CARD_LINK / RULE_ARTICLE_BODY。"
+      },
+      "fetchRate": "normal",
+      "priority": 1,
+      "sourceDocRef": "AI信息源调研.md §2 C层#2、§3.7（实测 2 次 404→确认无 RSS，官网抓取）、§5.5 二复测定论"
+    },
+    {
+      "id": "google_deepmind",
+      "name": "Google DeepMind Blog",
+      "category": "AI公司动态",
+      "layer": "C",
+      "fetchType": "rss",
+      "rssUrl": "https://deepmind.google/blog/rss.xml",
+      "fetchRate": "normal",
+      "priority": 1,
+      "sourceDocRef": "AI信息源调研.md §2 C层#3（RSS + 官方页）、§4 实验室官方博客、§5.5 实测可用（2026-08-13，Gemini 3.7 Flash）"
+    },
+    {
+      "id": "meta_ai_blog",
+      "name": "Meta AI Blog",
+      "category": "AI公司动态",
+      "layer": "C",
+      "fetchType": "web",
+      "webConfig": {
+        "url": "https://ai.meta.com/blog/",
+        "selectorRule": "卡片列表页：取文章卡片（标题+日期+链接，最新 Assistive Robotics 7-27）→详情页正文。真实部署时核对卡片与正文容器 class 并替换 RULE_CARD_LINK / RULE_ARTICLE_BODY。"
+      },
+      "fetchRate": "normal",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 C层#4、§3.7（/rss.xml、/feed/ 均不可用→确认无 RSS，官网抓取）、§5.5 二复测定论"
+    },
+    {
+      "id": "huggingface_blog",
+      "name": "Hugging Face Blog",
+      "category": "前沿研究",
+      "layer": "C",
+      "fetchType": "rss",
+      "rssUrl": "https://huggingface.co/blog/feed.xml",
+      "fetchRate": "normal",
+      "priority": 2,
+      "sourceDocRef": "AI信息源调研.md §2 C层#5（开源模型首发地）、§4 实验室官方博客、§5.5 实测可用（2026-08-14，State of Open Models）"
+    },
+    {
+      "id": "arxiv_ai",
+      "name": "arXiv（cs.AI / cs.CL / cs.CV）",
+      "category": "前沿研究",
+      "layer": "C",
+      "fetchType": "api",
+      "apiConfig": {
+        "endpoint": "http://export.arxiv.org/api/query",
+        "params": {
+          "search_query": "cat:cs.AI OR cat:cs.CL OR cat:cs.CV",
+          "sortBy": "submittedDate",
+          "sortOrder": "descending",
+          "max_results": 50,
+          "note": "务必带 submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM] 时间窗拉增量；3 秒限速；返回 Atom XML"
+        }
+      },
+      "fetchRate": "high",
+      "priority": 1,
+      "sourceDocRef": "AI信息源调研.md §2 C层#6、§3.4（端点与限速已实测）、§4 论文、§5.5 实测可用（2026-08-14，CPI-Bench）"
+    },
+    {
+      "id": "hacker_news",
+      "name": "Hacker News",
+      "category": "监管政策",
+      "layer": "D",
+      "fetchType": "api",
+      "apiConfig": {
+        "endpoint": "https://hn.algolia.com/api/v1/search_by_date",
+        "params": {
+          "query": "AI 相关关键词（可空=全量）",
+          "tags": "story",
+          "numericFilters": "points>100,created_at_i>START_TS",
+          "note": "⚠️ 务必带 created_at_i> 时间窗，否则返 2019 旧文（实测）；无密钥、速率友好"
+        }
+      },
+      "fetchRate": "high",
+      "priority": 1,
+      "sourceDocRef": "AI信息源调研.md §2 D层#1、§3.2（端点与时间窗已实测）、§4 Hacker News、§5.5 实测可用（2026-07-26，GrapheneOS 案例）"
+    },
+    {
+      "id": "reddit_singularity",
+      "name": "Reddit（r/singularity · r/LocalLLaMA · r/MachineLearning）",
+      "category": "监管政策",
+      "layer": "D",
+      "fetchType": "rss",
+      "rssUrl": "https://www.reddit.com/r/singularity/.rss",
+      "apiConfig": {
+        "note": "备选 OAuth 2.0 正式 API（免费 100 QPM、仅非商用；商用约 $12K/年）——需要评分/排序时再启用；2026 未认证 .json 返回 403"
+      },
+      "fetchRate": "high",
+      "priority": 4,
+      "sourceDocRef": "AI信息源调研.md §2 D层#2、§3.3（r/.rss 免密钥但无评分/评论）、§5.5 二复测定论（本环境出口被风控拦截、源本身有效，落地换正常出口）"
+    },
+    {
+      "id": "product_hunt",
+      "name": "Product Hunt",
+      "category": "行业媒体",
+      "layer": "E",
+      "fetchType": "rss",
+      "rssUrl": "https://www.producthunt.com/feed",
+      "fetchRate": "high",
+      "priority": 4,
+      "sourceDocRef": "AI信息源调研.md §2 E层#1（新 AI 产品首发）、§4 工具发现（RSS/API）、§5.5 实测可用（2026-08-17，Meridian）"
+    },
+    {
+      "id": "qbitai",
+      "name": "量子位",
+      "category": "中文社区",
+      "layer": "F",
+      "fetchType": "rss",
+      "rssUrl": "https://www.qbitai.com/feed",
+      "fetchRate": "high",
+      "priority": 5,
+      "sourceDocRef": "AI信息源调研.md §2 F层#2、§4 中文源（RSS/官网）、§5.5 实测可用（2026-08-17，人形机器人赛车 Demo）"
+    },
+    {
+      "id": "jiqizhixin",
+      "name": "机器之心",
+      "category": "中文社区",
+      "layer": "F",
+      "fetchType": "web",
+      "webConfig": {
+        "url": "https://www.jiqizhixin.com/",
+        "selectorRule": "首页列表抓取：取文章卡片（标题+日期+链接）→详情页正文段落。⚠️ 原 RSS 已转付费订阅（个人订阅后可用 RSS）；免费走官网抓取。真实部署时核对卡片与正文容器 class 并替换 RULE_CARD_LINK / RULE_ARTICLE_BODY。"
+      },
+      "fetchRate": "high",
+      "priority": 5,
+      "sourceDocRef": "AI信息源调研.md §2 F层#1、§3.7（RSS 已转付费订阅，免费走官网抓取）、§5.5 二复测定论"
+    },
+    {
+      "id": "wechat_officials",
+      "name": "微信公众号（量子位 / 机器之心 / 数字生命卡兹克 等）",
+      "category": "中文社区",
+      "layer": "F",
+      "fetchType": "wechat",
+      "wechatConfig": {
+        "account": "量子位、机器之心、数字生命卡兹克 等用户主动订阅的号（最小必要原则）",
+        "localDb": "{WECHAT_LOCAL_DATA_DIR}/wechat.db（本机微信客户端 SQLite，真实部署时替换为实际路径）",
+        "approach": "首选本地 SQLite 解析（ChatLog vitamin5x/chatlog、wechat_db_parser grapeot）；备选微信读书 API（wewe-rss 及活跃 fork）；不接 RSSHub 公众号路由 / 网页抓取 / UI 自动化 / 公共第三方托管",
+        "compliance": "仅个人学习研究、不商用传播、标来源+原文链接+作者、可一键关停、本地优先、路径失效静默降级",
+        "cloudBridge": "云端 intelRssPoll 只消费本地进程暴露的 HTTP API（/api/items），不直连微信服务器"
+      },
+      "fetchRate": "low",
+      "priority": 5,
+      "sourceDocRef": "AI信息源调研.md §2 F层#6、§5 公众号专章全章（§5.2 路径对比表 / §5.3 推荐结论 / §5.4 合规条款）"
+    }
+  ]
+}

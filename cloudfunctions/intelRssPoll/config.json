@@ -1,0 +1,21 @@
+{
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "intelPoll0500",
+      "type": "timer",
+      "config": "0 15 5 * * * *"
+    },
+    {
+      "name": "intelPoll1100",
+      "type": "timer",
+      "config": "0 15 11 * * * *"
+    },
+    {
+      "name": "intelPoll1800",
+      "type": "timer",
+      "config": "0 0 18 * * * *"
+    }
+  ]
+}

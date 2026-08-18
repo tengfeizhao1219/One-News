@@ -1,0 +1,65 @@
+/* INTEL-MODULE: AI 情报官 · 我的样式。设计令牌全部引用 theme.json，零新增 hex。 */
+.intel-mine {
+  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷） */
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 状态栏背景层 —— 复用 One News 首页 .status-bar-fill 机制 */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 16;
+}
+
+.nav {
+  /* 胶囊避让：内容顶到胶囊下方，避开原生胶囊 */
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 20rpx) 32rpx 16rpx;
+}
+.nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
+.nav-title { font-size: calc(34rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
+
+.content {
+  flex: 1;
+  height: 0;
+  padding: 8rpx 32rpx calc(80rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.sect-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  font-size: calc(26rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 24rpx 4rpx 20rpx;
+}
+.sect-head .dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--primary); }
+
+.card {
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 28rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+.card-title { display: block; font-size: calc(32rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); line-height: 1.5; }
+.card-desc { display: block; font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); margin-top: 8rpx; line-height: 1.6; }
+
+.foot-note {
+  text-align: center;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin: 24rpx 0 32rpx;
+}

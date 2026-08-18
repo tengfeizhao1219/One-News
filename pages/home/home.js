@@ -4,6 +4,8 @@ const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SI
 const { getNewsList, getNewsDelta, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
+const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
+
 const app = getApp()
 
 // 2026-08-18（owner 决策）：分类首页首屏尺寸——recommend 读满落库 cap(15)，其余分类 8。
@@ -52,6 +54,8 @@ Page({
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
     // BUG-FS-20260805-001（同根因扩展）: dock 菜单 icon 深色模式切换白色版
     isDark: false,
+    _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
+    intelActive: false,        // INTEL-BRIDGE: AI 情报屏是否覆盖显示（true=情报屏在屏，false=藏在左侧）
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
@@ -118,6 +122,12 @@ Page({
       // BUG-FS-20260805-001: onShow 同步刷新（从设置页切换主题返回时更新 icon 颜色）
       isDark: this._isSystemDark(),
     })
+
+    // INTEL-BRIDGE: 从 AI 情报详情/我的返回时，恢复情报屏显示（此前右滑进情报屏 → 点进详情/我的）
+    if (app.globalData && app.globalData.intelFromEmbed) {
+      app.globalData.intelFromEmbed = false
+      if (this.data._intelBridgeEnabled) this.setData({ intelActive: true })
+    }
 
     // B-07: 处理从详情页阅读模式返回的定位
     // 若首页被回收，onLoad 会重新 loadNews；onShow 中需等 loadNews 完成后再定位，
@@ -787,6 +797,64 @@ Page({
       else this._animateSwipePrev()
     }
   },
+
+  // ============ INTEL-BRIDGE (START): AI 情报模块——同屏横滑（内嵌面板，最小可摘除） ============
+  // 说明：本段为 AI 情报官模块新增，独立于 One News 既有业务。
+  //  owner 2026-08-18 拍板：AI 情报屏内嵌为 One News 首页覆盖层，同屏横滑切换。
+  //   - One News 屏右滑（dx>0，横向）→ 情报屏从左侧滑入（intelActive=true）
+  //   - AI 情报屏左滑（dx<0，横向）→ 从右侧滑回 One News（intelActive=false）
+  //   - 与 card-stage 的 One News 翻页/左滑呼出面板完全解耦：
+  //       * intelActive=false（One News 屏）：右滑本无行为 → 进情报；左滑仍交 card-stage onTouchEnd 呼出面板
+  //       * intelActive=true（情报屏覆盖）：card-stage 被盖住收不到触摸 → 左滑仅用于返回，无冲突
+  //   - 面板/情报屏互相排斥：打开情报屏时先关侧边栏（避免叠层）。
+  //  摘除方式：删除本段 + home.wxml 的 <intel-stage> + home.json 注册 + data._intelBridgeEnabled/intelActive 即可。
+  onIntelTouchStart(e) {
+    this._intelTouchX = e.touches[0].clientX
+    this._intelTouchY = e.touches[0].clientY
+    this._intelTouchT = Date.now()
+  },
+  onIntelTouchEnd(e) {
+    if (!this.data._intelBridgeEnabled) return
+    if (this._intelTouchX === undefined) return
+    var dx = e.changedTouches[0].clientX - this._intelTouchX
+    var dy = e.changedTouches[0].clientY - this._intelTouchY
+    var dt = Date.now() - this._intelTouchT
+    // 防抖：1 秒内只允许触发一次（避免与 card-stage 冒泡重复/连点）
+    if (this._intelNavLock) return
+    var intelOn = this.data.intelActive
+
+    if (intelOn) {
+      // 当前 AI 情报屏覆盖：仅响应「左滑返回」；纵向滚动（情报内 scroll-view）dy 占主导不会误触
+      if (dx < -INTEL_ENTER_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) && dt < 800) {
+        this._intelNavLock = true
+        var that2 = this
+        setTimeout(function () { that2._intelNavLock = false }, 1000)
+        console.log('[intel-bridge] 情报屏左滑返回 One News, dx=', dx)
+        this.setData({ intelActive: false })
+      }
+      return // 情报屏打开时不再处理 One News 屏的其它横向手势
+    }
+
+    // One News 屏：右滑进入情报；左滑（呼出面板）由 card-stage onTouchEnd 处理，此处不碰
+    // 侧边栏展开态（showPanel）排除：此时右滑是用来「收起侧边栏」的，由 slide-panel 的
+    // onPanelTouchEnd 处理，不应被误判成进入 AI 情报。仅当侧边栏收起、在 One News 首页本体右滑才进入。
+    if (!this.data.showPanel && dx > INTEL_ENTER_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) && dt < 800) {
+      this._intelNavLock = true
+      var that = this
+      setTimeout(function () { that._intelNavLock = false }, 1000)
+      console.log('[intel-bridge] 右滑进入 AI 情报, dx=', dx)
+      // 打开情报屏前先收起侧边栏，避免叠层
+      if (this.data.showPanel) this.closePanel()
+      this.setData({ intelActive: true })
+    }
+  },
+  // 组件内 ‹ 返回按钮请求滑回 One News
+  onIntelReqBack() {
+    if (!this.data.intelActive) return
+    this.setData({ intelActive: false })
+  },
+  // ============ INTEL-BRIDGE (END) ============
+
   // ============ 动画切换逻辑（v5.9: 与详情页 out-in 两阶段完全一致） ============
 
   /**

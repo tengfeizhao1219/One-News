@@ -1,0 +1,69 @@
+<!--
+  INTEL-MODULE: AI 情报官模块 · 情报首页
+  隔离说明：本目录 pages/intel/* 全部为新增，独立于 One News 既有业务；
+  命名空间 intel_*，可整体摘除，不影响 One News 原有功能。
+  顶部对齐：复用 One News 首页机制——注入 --menu-top/--menu-height 对齐原生胶囊；
+  滚动：scroll-view 需确定高度（height:0 + flex:1 / 或 height:100%）才能滚动。
+-->
+<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchend="onSlideTouchEnd">
+
+  <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+
+  <!-- 自定义导航：‹ 返回 One News / 标题（顶到胶囊下方，避开原生胶囊） -->
+  <view class="nav">
+    <text class="nav-back" bindtap="goBack">‹</text>
+    <text class="nav-title">AI 情报</text>
+    <text class="nav-sub">情报官已为你梳理今日值得关注的进展</text>
+  </view>
+
+  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+    <!-- 数据截至 + 源健康提示（§7.6）-->
+    <view class="meta-bar" wx:if="{{meta.dataAsOf || meta.healthTitle}}">
+      <text class="data-asof" wx:if="{{meta.dataAsOf}}">{{meta.dataAsOf}}</text>
+      <text class="health-hint" wx:if="{{meta.healthTitle}}">{{meta.healthTitle}}</text>
+    </view>
+
+    <!-- 今日关注（§7.6）-->
+    <view class="sect-head"><view class="dot"></view><text>今日关注</text></view>
+
+    <block wx:if="{{meta.loading}}">
+      <view class="state-hint">情报官正在梳理中…</view>
+    </block>
+
+    <block wx:elif="{{items.length}}">
+      <view class="card" wx:for="{{items}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+        <text class="card-title">{{item.title}}</text>
+        <text class="card-desc">{{item.desc}}</text>
+        <view class="meta">
+          <text class="src">{{item.src}}</text>
+          <text class="time">{{item.time}}</text>
+        </view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="state-hint" wx:if="{{meta.placeholder}}">今日无可靠更新 · 部分源待验证</view>
+      <view class="state-hint" wx:else>本期暂无内容，稍后再来看看</view>
+    </block>
+
+    <!-- 本周可试用清单（§7.6 / §7.5）-->
+    <block wx:if="{{tryable.length}}">
+      <view class="sect-head"><view class="dot"></view><text>本周可试用清单</text></view>
+      <view class="try-item" wx:for="{{tryable}}" wx:key="id" bindtap="toggleTryable" data-id="{{item.id}}">
+        <view class="try-check {{item.done ? 'on' : ''}}"></view>
+        <view class="try-body">
+          <text class="try-title">{{item.title}}</text>
+          <text class="try-min" wx:if="{{item.minAction}}">{{item.minAction}}</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="foot-note">由 AI 情报官生成 · 仅供参考</view>
+  </scroll-view>
+
+  <!-- 悬浮按钮：完全复刻 One News 首页 .floating-more，作为「我的」入口 -->
+  <view class="floating-more" bindtap="goMine">
+    <image class="more-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+  </view>
+</view>
