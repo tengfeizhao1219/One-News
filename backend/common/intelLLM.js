@@ -101,8 +101,11 @@ async function intelChat(opts = {}) {
   if (!user || !String(user).trim()) return null
   const config = readConfig()
   const engines = []
+  // 智谱：优先复用 One News 云函数环境变量 ZHIPU_API_KEY（T0.3 owner 拍板复用既有 key），
+  // 其次读 config.zhipuSummary；baseUrl 缺省智谱官方兼容端点
   const zs = config.zhipuSummary || {}
-  if (zs.apiKey) engines.push({ name: '智谱', apiKey: zs.apiKey, baseUrl: zs.baseUrl, model: zs.model || 'glm-4-flash', timeout: 8000 })
+  const zsKey = process.env.ZHIPU_API_KEY || zs.apiKey || ''
+  if (zsKey) engines.push({ name: '智谱', apiKey: zsKey, baseUrl: zs.baseUrl || 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: zs.model || 'glm-4-flash', timeout: 8000 })
   const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
   if (dashKey) engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 8000 })
   const dsKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''

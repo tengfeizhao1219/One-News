@@ -148,18 +148,39 @@ function buildPrompts(item, profile, level) {
   const sx = String(item.title || '') + '\n' + String(item.content || item.summary || '')
   const text = sx.slice(0, 2400)
 
+  // ── 画像参数（Phase 5 / T5.2）：depth/langPref 强化或调整 prompt ──
+  // depth: 'deep' 强化深度/落地粒度；'lite' 走更轻量路径；'std'（缺省）维持原状
+  // langPref: 'en' 翻译/输出保留英文原文（不译中）；'zh' 中文优先；'mixed'（缺省）维持原行为
+  const p = (profile && typeof profile === 'object') ? profile : {}
+  const depth = p.depth === 'deep' ? 'deep' : (p.depth === 'lite' ? 'lite' : 'std')
+  const langPref = p.langPref === 'en' ? 'en' : (p.langPref === 'zh' ? 'zh' : 'mixed')
+
+  // 翻译偏好：原默认「英文专有名词保留原文（首现可括号注中文）」。
+  //   langPref='en' → 额外强调「正文以英文原文为主，不译中，术语保留原文不括注」；
+  //   langPref='zh' → 额外强调「正文以中文为主，英文术语首现括号注中文」；mixed 不追加。
+  let translatePref = ''
+  if (langPref === 'en') translatePref = '\n正文以英文原文为主，不强行译中；专有术语保留原文，无需括号注中文。'
+  else if (langPref === 'zh') translatePref = '\n正文以中文为主；英文术语首现括号注中文，后续用中文。'
+
   const baseSystem =
 `你是老赵（AI 情报官）的落地教练。角色 = AI 情报官 + 落地教练。老赵三重身份：${identities}
-务实、直接给结论，不堆参数、不软文、不夸大、不含糊其辞。英文专有名词保留原文（首现可括号注中文），不意译夸张措辞。`
+务实、直接给结论，不堆参数、不软文、不夸大、不含糊其辞。英文专有名词保留原文（首现可括号注中文），不意译夸张措辞。${translatePref}`
+
+  // depth 强化/轻量（仅 high 完整 SOP 路径注入；medium 轻量本就跳过实操）。
+  //   'deep' → 「最小行动」可落地深度，给出可复盘的细节步骤与产出物；
+  //   'lite' → 压缩实操，只给一两个关键动作，减少展开。
+  let depthHint = ''
+  if (depth === 'deep') depthHint = '\n（深度档）「可以怎么做」「最小行动」须给到可复盘的细节步骤、所用工具/入口与产出物，不只罗列概念。'
+  else if (depth === 'lite') depthHint = '\n（精简档）「可以怎么做」压缩到 1-2 个关键动作，「最小行动」给最轻一步即可。'
 
   if (level === 'medium') {
     return {
-      system: baseSystem + `\n对下面的单条情报做「轻量摘要」：一句话定义（含能力边界）+ 一句「对老赵的意义」（命中至少一个身份）。不要实操步骤。`,
+      system: baseSystem + `\n对下面的单条情报做「轻量摘要」：一句话定义（含能力边界）+ 一句「对老赵的意义」（命中至少一个身份）。不要实操步骤。${depth === 'lite' ? '（精简档，更短）' : ''}`,
       user: `情报原文：\n${text}`,
     }
   }
 
-  const system = baseSystem + `
+  const system = baseSystem + depthHint + `
 
 对下面单条情报按 SOP 五步硬性结构输出（欠一步即视为不合格）：
 1. 信息溯源：来源、发布时间、原文链接；来源存疑标「待验证」

@@ -101,7 +101,12 @@ bash tools/gen-intel-deploy.sh          # 生成 cloudfunctions/ 下 7 个 intel
 ### 5.4 环境变量 / 开关
 - `INTEL_RSS_POLL_ENABLED`：默认 **false**，上线时置 **true**（防止未就绪误抓）
 - `INTEL_FETCH_ENABLED`：编排器总开关，同样默认 false
-- **LLM Key（T0.3 🚫 待 owner）**：`intelProcess` 依赖 `intelChat` 多引擎（混元前置→智谱→Qwen→DeepSeek），Key 在云开发控制台该函数环境变量配置。**未配 Key 时 intelProcess 静默降级跳过处理 → intel_staged 无数据 → 前端显示空态**。这是当前"后端有抓取但前端无情报"的头号原因，配好 Key 后处理链即可通。
+- **LLM Key（T0.3 · 2026-08-18 owner 拍板：复用 One News 既有 key，不另申请）**：
+  - `intelProcess` 云函数环境变量需配置与 One News 云函数**同款**的 3 个 key（值从云开发控制台任一 One News 函数环境变量复制，如 `getNewsList`）：
+    - `ZHIPU_API_KEY`（智谱 glm-4-flash；intelLLM 已于 2026-08-18 补齐 env 读取）
+    - `DEEPSEEK_API_KEY`（DeepSeek 降级链）
+    - `DASHSCOPE_API_KEY`（Qwen 降级链）
+  - 配好后多引擎降级链（智谱前置 → Qwen → DeepSeek）自动生效；**未配时 intelProcess 静默降级跳过处理 → intel_staged 无数据 → 前端空态**（当前头号阻塞）。
 
 ### 5.5 数据模型（六集合，`ensureSchema` 自愈建表，幂等可重跑）
 | 集合 | 作用 |
@@ -151,7 +156,7 @@ bash tools/gen-intel-deploy.sh          # 生成 cloudfunctions/ 下 7 个 intel
 ## 七、当前进度与下一步（新 AI 接棒点）
 
 - 已完成：Phase 0 协作就绪 ✅ / Phase 1 基础设施 ✅ / Phase 2 前置（T2.1 manifest + 四类模板）✅ / Phase 2 抓取层（T2.2–T2.5 intelRssPoll 真码 + gzip 解压 + 公众号双模 + 官网实测定论）✅ / Phase 3 处理层（T3.1–T3.4 intelProcess + intelRouter + intelLLM + 定时器）✅ / **前后端连调（首页 getIntelBrief + 详情 intelGetDetail + 7 云函数部署注册）✅（2026-08-18）**
-- **当前最大阻塞：LLM Key（T0.3 🚫）**——intelProcess 未配 Key 时静默降级跳过处理，`intel_staged`/`intel_current` 无数据，前端显示空态。owner 配置 Key 后整条链即通。
+- **当前最大阻塞：intelProcess 环境变量未配 LLM Key**——复用 One News 既有 3 个 key（ZHIPU/DEEPSEEK/DASHSCOPE），在云开发控制台给 intelProcess 配上即可，配好整条链即通（详见 §5.4）。
 - 待办：T3.4 上手试试链接校验落地（research.status=todo）→ 发布闸门 T4.1 打磨 → Phase 5 画像（intel_profile 初始化）
 - 里程碑：M3 首个真实情报产出（需 Phase 3 + LLM key）→ M4 常态化每日三档情报
 
