@@ -50,10 +50,10 @@ const INTEL_SEED_SOURCES = [
     key: 'the_neuron',
     name: 'The Neuron',
     layer: 'A',
-    sourceType: 'scrape', // 实测无 RSS（/feed 404、/feed.xml 被 Cloudflare 拦截），走官网抓取
+    sourceType: 'scrape', // T2.4 实测 403（Cloudflare 反爬），零依赖纯 Node 不可达；默认不开启避免白抓+误告警，内容可由 TechCrunch/Verge 等 RSS 覆盖
     baseUrl: 'https://www.theneurondaily.com/',
     adapterConfig: { endpoint: 'https://www.theneurondaily.com/', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
   {
@@ -133,7 +133,7 @@ const INTEL_SEED_SOURCES = [
     key: 'the_batch',
     name: 'The Batch（DeepLearning.AI）',
     layer: 'B',
-    sourceType: 'scrape', // 实测无 RSS（/the-batch/feed、/feed/ 均 404），官网抓取 issue-NNN 结构
+    sourceType: 'scrape', // T2.4 实测能取到 HTML，但列表页为 JS 渲染、无 issue-NNN 静态卡片，通用提取仅能取最新 teaser（外部 bit.ly 链接）；保守保留开启，正文待 Phase 3 深挖
     baseUrl: 'https://www.deeplearning.ai/the-batch/',
     adapterConfig: { endpoint: 'https://www.deeplearning.ai/the-batch/', timeoutMs: 15000, rateLimit: 'polite' },
     pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research'],
@@ -189,10 +189,10 @@ const INTEL_SEED_SOURCES = [
     key: 'anthropic_news',
     name: 'Anthropic News',
     layer: 'C',
-    sourceType: 'scrape', // 实测 2 次 404，确认无公开 RSS，官网抓取
+    sourceType: 'scrape', // T2.4 实测 414KB HTML 但文章卡片为 JS 客户端渲染，无静态列表；零依赖纯 Node 不可达，默认不开启，内容由 TechCrunch/Verge 等 RSS 覆盖
     baseUrl: 'https://www.anthropic.com/news',
     adapterConfig: { endpoint: 'https://www.anthropic.com/news', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'official', 'safety'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'official', 'safety'],
     blockTitleKeywords: [],
   },
   {
@@ -211,10 +211,10 @@ const INTEL_SEED_SOURCES = [
     key: 'meta_ai_blog',
     name: 'Meta AI Blog',
     layer: 'C',
-    sourceType: 'scrape', // 实测 /rss.xml、/feed/ 均不可用，确认无 RSS，官网抓取
+    sourceType: 'scrape', // T2.4 实测 400（Cloudflare 拒绝），零依赖纯 Node 不可达；默认不开启，内容由 TechCrunch/Verge 等 RSS 覆盖
     baseUrl: 'https://ai.meta.com/blog/',
     adapterConfig: { endpoint: 'https://ai.meta.com/blog/', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'official', 'open_source'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'official', 'open_source'],
     blockTitleKeywords: [],
   },
   {
@@ -291,7 +291,7 @@ const INTEL_SEED_SOURCES = [
     key: 'jiqizhixin',
     name: '机器之心',
     layer: 'F',
-    sourceType: 'scrape', // RSS 已转付费订阅（个人订阅后可用 RSS）；免费走官网抓取
+    sourceType: 'scrape', // T2.4 实测 200 但仅 12.6KB 降级壳（只给 PRO 付费 teaser，免费列表不出现），RSS 已转付费订阅；默认不开启，中文层由 qbitai（量子位 RSS）补位
     baseUrl: 'https://www.jiqizhixin.com/',
     adapterConfig: { endpoint: 'https://www.jiqizhixin.com/', timeoutMs: 15000, rateLimit: 'polite' },
     pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech', 'zh'],
