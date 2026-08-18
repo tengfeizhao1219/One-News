@@ -78,9 +78,9 @@
   margin: 0 0 16rpx;
 }
 
-/* 正文：13px(≈26rpx) / 1.6，与「落到你这里」一致；跟随 --font-scale 缩放（对齐 One News） */
+/* 正文：与首页情报卡片正文对齐 28rpx / 1.6（owner 2026-08-18 18:36 要求详情页字号一并调整），跟随 --font-scale 缩放 */
 .prose {
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale));
   color: var(--text-body);
   line-height: 1.6;
 }
@@ -112,8 +112,8 @@
   font-size: 20rpx; font-weight: 700; color: var(--primary); background: transparent;
 }
 .who-txt { font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 600; color: var(--text-secondary); }
-.relate-txt { font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
-.relate-skip { font-size: calc(26rpx * var(--font-scale)); color: var(--text-tertiary); line-height: 1.6; font-style: italic; }
+.relate-txt { font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
+.relate-skip { font-size: calc(28rpx * var(--font-scale)); color: var(--text-tertiary); line-height: 1.6; font-style: italic; }
 
 /* 可展开区 */
 .expand {
@@ -146,7 +146,7 @@
   margin-bottom: 16rpx;
 }
 .src-ico { font-size: 28rpx; }
-.src-txt { flex: 1; font-size: calc(26rpx * var(--font-scale)); color: var(--text-link); }
+.src-txt { flex: 1; font-size: calc(28rpx * var(--font-scale)); color: var(--text-link); }
 .src-arr { color: var(--text-tertiary); opacity: 0.6; }
 
 /* 上手试试：步骤 */
@@ -164,7 +164,7 @@
 }
 .step-c { flex: 1; }
 .step-t { font-size: calc(28rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); margin-bottom: 6rpx; }
-.step-d { font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); line-height: 1.55; }
+.step-d { font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
 .code {
   background: var(--bg-subtle);
   border-radius: 10rpx;
