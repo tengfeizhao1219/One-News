@@ -34,10 +34,22 @@ intel_ingest(status=pending)
   → 发布闸门(T4.1) 置 isCurrent 指针 → intel_current（用户可见）
 ```
 
-## 定时触发器
+## 定时触发器（错峰，owner 已拍 B 方案：独立定时器延迟统一处理）
 
-- 05:15 / 11:15 / 18:00（intelRssPoll 兜底巡检，与 intelFetch 错峰）
-- intelProcess 由 intelRssPoll 抓取后由巡视链路/手动触发（联调阶段可直调）
+| 时刻 | intelFetch 抓取 | intelRssPoll 兜底 | intelProcess 处理 |
+|---|---|---|---|
+| 05 档 | 05:10 | 05:15 | 05:20 |
+| 11 档 | 11:10 | 11:15 | 11:20 |
+| 18 档 | 17:55 | 18:00 | 18:10 |
+
+- intelProcess 消费 `intel_ingest(status=pending)` → 分层路由 → SOP → 写 `intel_staged`。
+- 成本集中在处理档，便于核算；抓取与处理错峰隔离。
+
+## 待办 / 缺口（需 owner）
+
+- **LLM Key（T0.3 🚫）**：intelProcess 依赖 `intelChat` 多引擎，未配 Key 时静默降级跳过；
+  联调前给独立 env key。
+- **微信本地通道（T2.5）**：本地 SQLite→云端 worker 的物理通道待 owner 拍部署形态。
 
 ## 部署注意
 
