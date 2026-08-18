@@ -81,22 +81,45 @@ function _requestOnce(url, { headers = {}, timeoutMs = REQUEST_TIMEOUT_MS } = {}
       }
       const chunks = []
       let total = 0
+      const finalize = (rawBuffer) => {
+        resolve({ status, notModified: false, rawBuffer, headers: res.headers })
+      }
       res.on('data', (chunk) => {
         total += chunk.length
         if (total > MAX_DOWNLOAD_BYTES) {
           req.destroy()
-          resolve({ status, notModified: false, rawBuffer: Buffer.concat(chunks), headers: res.headers })
+          finalize(_maybeGunzip(Buffer.concat(chunks), res.headers['content-encoding']))
           return
         }
         chunks.push(chunk)
       })
-      res.on('end', () => resolve({ status, notModified: false, rawBuffer: Buffer.concat(chunks), headers: res.headers }))
+      res.on('end', () => finalize(_maybeGunzip(Buffer.concat(chunks), res.headers['content-encoding'])))
       res.on('error', () => resolve({ status, notModified: false, rawBuffer: null, headers: res.headers }))
     })
     req.on('error', () => resolve({ status: 0, notModified: false, rawBuffer: null, headers: {} }))
     req.on('timeout', () => { req.destroy(); resolve({ status: 0, notModified: false, rawBuffer: null, headers: {} }) })
     req.end()
   })
+}
+
+/**
+ * 按响应头 content-encoding 解压原始字节（Node http.get 默认带 Accept-Encoding: gzip,deflate，
+ * 部分源如 MarkTechPost/机器之心会返回压缩体，不解压则 XML/JSON 解析拿到乱码）。
+ * gzip → zlib.gunzipSync / deflate → zlib.inflateSync / br → zlib.brotliDecompressSync。
+ * 解压失败（非压缩体或损坏）时原样返回，交由下游解析容错。
+ */
+function _maybeGunzip(buffer, contentEncoding) {
+  const enc = String(contentEncoding || '').toLowerCase().trim()
+  if (!enc || !buffer || !buffer.length) return buffer
+  try {
+    const zlib = require('zlib')
+    if (enc === 'gzip' || enc === 'x-gzip') return zlib.gunzipSync(buffer)
+    if (enc === 'deflate') return zlib.inflateSync(buffer)
+    if (enc === 'br') return zlib.brotliDecompressSync(buffer)
+  } catch (e) {
+    console.warn(`[intelRssPoll] http 解压失败（enc=${enc}），原样返回: ${e.message}`)
+  }
+  return buffer
 }
 
 function _decodeBuffer(buffer, declaredEncoding) {
