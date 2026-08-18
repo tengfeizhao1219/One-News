@@ -1,17 +1,30 @@
 /* INTEL-MODULE: AI 情报官 · 情报详情样式。设计令牌全部引用 theme.json，零新增 hex。 */
 .intel-detail {
-  min-height: 100vh;
+  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷） */
+  height: 100vh;
+  overflow: hidden;
   background-color: var(--bg-card);
   display: flex;
   flex-direction: column;
 }
-.status-bar { width: 100%; }
+/* 状态栏背景层 + 导航避让：复制 One News 首页机制（menuTop/menuHeight 对齐原生胶囊） */
+.status-bar-fill {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 16;
+}
 
 .nav {
+  /* 顶到胶囊下方（胶囊 = menuTop 顶 + menuHeight 高），不再从状态栏开始，避开原生胶囊 */
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: 8rpx 32rpx 16rpx;
+  position: relative;
+  z-index: 17;
 }
 .nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
 .nav-title { font-size: 34rpx; font-weight: 700; color: var(--text-primary); }
@@ -26,8 +39,10 @@
 
 .content {
   flex: 1;
+  height: 0;
   padding: 8rpx 32rpx calc(80rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow-y: auto;
 }
 
 /* 状态条：降噪 */
@@ -47,7 +62,7 @@
 
 .detail-title {
   display: block;
-  font-size: 38rpx;
+  font-size: calc(38rpx * var(--font-scale));
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.4;
@@ -56,24 +71,24 @@
 
 .block-label {
   display: block;
-  font-size: 26rpx;
+  font-size: calc(26rpx * var(--font-scale-meta, 1));
   font-weight: 700;
   color: var(--primary);
   letter-spacing: 0.5rpx;
   margin: 0 0 16rpx;
 }
 
-/* 正文：13px(≈26rpx) / 1.6，与「落到你这里」一致 */
+/* 正文：13px(≈26rpx) / 1.6，与「落到你这里」一致；跟随 --font-scale 缩放（对齐 One News） */
 .prose {
-  font-size: 26rpx;
+  font-size: calc(26rpx * var(--font-scale));
   color: var(--text-body);
   line-height: 1.6;
 }
 .prose-2 { margin-top: 20rpx; }
 
-/* 高亮：淡浅蓝底 + 柔和灰字，不重、不抢眼 */
+/* 高亮：淡浅蓝底 + 柔和灰字，不重、不抢眼。背景复用 theme.json --highlight-bg 令牌（零新增色值，自动跟随深浅色） */
 .hl {
-  background: rgba(0, 122, 255, 0.07);
+  background: var(--highlight-bg);
   color: var(--text-body);
   font-weight: 500;
   padding: 0 6rpx;
@@ -96,9 +111,9 @@
   display: flex; align-items: center; justify-content: center;
   font-size: 20rpx; font-weight: 700; color: var(--primary); background: transparent;
 }
-.who-txt { font-size: 24rpx; font-weight: 600; color: var(--text-secondary); }
-.relate-txt { font-size: 26rpx; color: var(--text-body); line-height: 1.6; }
-.relate-skip { font-size: 26rpx; color: var(--text-tertiary); line-height: 1.6; font-style: italic; }
+.who-txt { font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 600; color: var(--text-secondary); }
+.relate-txt { font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
+.relate-skip { font-size: calc(26rpx * var(--font-scale)); color: var(--text-tertiary); line-height: 1.6; font-style: italic; }
 
 /* 可展开区 */
 .expand {
@@ -111,7 +126,7 @@
 .expand-head {
   display: flex;
   align-items: center;
-  font-size: 28rpx;
+  font-size: calc(28rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   padding: 26rpx 28rpx;
@@ -131,7 +146,7 @@
   margin-bottom: 16rpx;
 }
 .src-ico { font-size: 28rpx; }
-.src-txt { flex: 1; font-size: 26rpx; color: var(--text-link); }
+.src-txt { flex: 1; font-size: calc(26rpx * var(--font-scale)); color: var(--text-link); }
 .src-arr { color: var(--text-tertiary); opacity: 0.6; }
 
 /* 上手试试：步骤 */
@@ -143,18 +158,18 @@
 }
 .step-n {
   flex: 0 0 44rpx; height: 44rpx; border-radius: 50%;
-  background: var(--primary); color: #fff;
-  font-size: 24rpx; font-weight: 700;
+  background: var(--primary); color: var(--chip-text); /* 白字复用 theme.json --chip-text，零新增 hex */
+  font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 700;
   display: flex; align-items: center; justify-content: center; z-index: 1;
 }
 .step-c { flex: 1; }
-.step-t { font-size: 28rpx; font-weight: 700; color: var(--text-primary); margin-bottom: 6rpx; }
-.step-d { font-size: 26rpx; color: var(--text-body); line-height: 1.55; }
+.step-t { font-size: calc(28rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); margin-bottom: 6rpx; }
+.step-d { font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); line-height: 1.55; }
 .code {
   background: var(--bg-subtle);
   border-radius: 10rpx;
   padding: 2rpx 10rpx;
-  font-size: 24rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
   color: var(--text-primary);
 }
 
@@ -163,18 +178,18 @@
   background: var(--color-warning-subtle);
   border-radius: 24rpx;
   padding: 20rpx 24rpx;
-  font-size: 24rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
   color: var(--color-warning);
   line-height: 1.55;
 }
 
 .ref-links { margin-top: 24rpx; display: flex; flex-direction: column; gap: 14rpx; }
-.ref-lab { font-size: 24rpx; font-weight: 700; color: var(--text-secondary); }
-.ref-link { font-size: 24rpx; color: var(--text-link); line-height: 1.5; word-break: break-all; }
+.ref-lab { font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 700; color: var(--text-secondary); }
+.ref-link { font-size: calc(24rpx * var(--font-scale-meta, 1)); color: var(--text-link); line-height: 1.5; word-break: break-all; }
 
 .foot-note {
   text-align: center;
-  font-size: 22rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
   margin: 32rpx 0;
 }

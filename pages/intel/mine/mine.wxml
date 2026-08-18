@@ -1,6 +1,7 @@
 <!-- INTEL-MODULE: AI 情报官模块 · 我的（FAB 入口落地页） -->
-<view class="page {{themeClass}} intel-mine">
-  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+<view class="page {{themeClass}} intel-mine" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+  <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
 
   <view class="nav">
     <text class="nav-back" bindtap="goBack">‹</text>

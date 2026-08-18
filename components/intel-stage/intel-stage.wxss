@@ -1,15 +1,27 @@
-/* INTEL-MODULE: AI 情报官 · 情报首页样式。设计令牌全部引用 theme.json，零新增 hex。 */
-.intel-home {
-  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷，
-     导致 .content 无法上下滚动，与 One News 顶到胶囊一致）。 */
-  height: 100vh;
-  overflow: hidden;
+/* INTEL-MODULE: AI 情报官 · 情报首页（内嵌横滑屏）样式。设计令牌全部引用 theme.json，零新增 hex。 */
+.intel-stage {
+  /* 覆盖层：铺满 One News 首页，默认藏在屏幕左侧（translateX -100%），右滑进入滑到 0 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  transform: translateX(-100%);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+  z-index: 60; /* 高于 One News 内容区(卡片/面板)，低于原生胶囊 */
   background-color: var(--bg-card);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+/* active：AI 情报屏覆盖到屏幕中央（translateX 0） */
+.intel-stage.in {
+  transform: translateX(0);
 }
 
-/* 状态栏背景层 / 顶部条带 —— 复用 One News 首页 .status-bar-fill/.fixed-top-bar 机制 */
+/* 状态栏背景层 —— 复用 One News 首页 .status-bar-fill 机制 */
 .status-bar-fill {
   position: fixed;
   top: 0;
@@ -18,16 +30,9 @@
   width: 100%;
   z-index: 16;
 }
-.fixed-top-bar {
-  position: fixed;
-  left: 0;
-  width: 100%;
-  z-index: 17;
-  pointer-events: none;
-}
 
 .nav {
-  /* 胶囊避让：内容顶到胶囊下方（menu-top + menu-height + 一点边距），避开原生胶囊 */
+  /* 胶囊避让：内容顶到胶囊下方（menu-top + menu-height + 边距），避开原生胶囊 */
   display: flex;
   align-items: baseline;
   gap: 12rpx;
@@ -85,71 +90,6 @@
   color: var(--text-tertiary);
 }
 .meta .src { color: var(--text-link); }
-
-/* 元信息条：数据截至 + 源健康提示（§7.6，全用 theme 令牌，零新增 hex） */
-.meta-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-  align-items: center;
-  margin: 16rpx 4rpx 0;
-}
-.data-asof {
-  font-size: 22rpx;
-  color: var(--text-tertiary);
-  background: var(--bg-subtle);
-  padding: 6rpx 16rpx;
-  border-radius: 24rpx;
-}
-.health-hint {
-  font-size: 22rpx;
-  color: var(--color-warning);
-  background: var(--color-warning-subtle);
-  padding: 6rpx 16rpx;
-  border-radius: 24rpx;
-}
-
-/* 状态占位（§7.7：空态 / 加载态） */
-.state-hint {
-  font-size: 26rpx;
-  color: var(--text-tertiary);
-  text-align: center;
-  padding: 80rpx 0;
-}
-
-/* 本周可试用清单（§7.5 / §7.6） */
-.try-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 20rpx;
-  background: var(--bg-card);
-  border: 1rpx solid var(--divider);
-  border-radius: 24rpx;
-  padding: 22rpx 26rpx;
-  margin-bottom: 20rpx;
-}
-.try-check {
-  width: 34rpx;
-  height: 34rpx;
-  border-radius: 50%;
-  border: 3rpx solid var(--divider);
-  margin-top: 4rpx;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-.try-check.on { background: var(--primary); border-color: var(--primary); }
-.try-body { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
-.try-title {
-  font-size: 27rpx;
-  color: var(--text-primary);
-  line-height: 1.4;
-}
-.try-min {
-  font-size: 23rpx;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
 .foot-note {
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
@@ -157,7 +97,7 @@
   margin: 8rpx 0 24rpx;
 }
 
-/* FAB：完全复刻 One News 首页 .floating-more（tag-bg 浅灰底、无文字、浮动动画） */
+/* FAB：复刻 One News 首页 .floating-more */
 .floating-more {
   position: fixed;
   right: 40rpx;

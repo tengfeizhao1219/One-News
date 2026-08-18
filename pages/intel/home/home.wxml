@@ -2,12 +2,15 @@
   INTEL-MODULE: AI 情报官模块 · 情报首页
   隔离说明：本目录 pages/intel/* 全部为新增，独立于 One News 既有业务；
   命名空间 intel_*，可整体摘除，不影响 One News 原有功能。
+  顶部对齐：复用 One News 首页机制——注入 --menu-top/--menu-height 对齐原生胶囊；
+  滚动：scroll-view 需确定高度（height:0 + flex:1 / 或 height:100%）才能滚动。
 -->
-<view class="page {{themeClass}} intel-home">
-  <!-- 状态栏占位（custom nav） -->
-  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchend="onSlideTouchEnd">
 
-  <!-- 自定义导航：‹ 返回 One News / 标题 -->
+  <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+
+  <!-- 自定义导航：‹ 返回 One News / 标题（顶到胶囊下方，避开原生胶囊） -->
   <view class="nav">
     <text class="nav-back" bindtap="goBack">‹</text>
     <text class="nav-title">AI 情报</text>

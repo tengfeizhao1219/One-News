@@ -1,6 +1,7 @@
 {
   "usingComponents": {
-    "category-wheel": "../../components/category-wheel/category-wheel"
+    "category-wheel": "../../components/category-wheel/category-wheel",
+    "intel-stage": "../../components/intel-stage/intel-stage"
   },
   "navigationStyle": "custom",
   "disableScroll": true,

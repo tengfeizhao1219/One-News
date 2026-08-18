@@ -63,6 +63,10 @@ Page({
     themeClass: '',
     isDark: false,
     statusBarHeight: 20,
+    menuHeight: 32,
+    topBarH: 44,           // 顶部条带高度（对齐原生胶囊 menuTop），内容从胶囊下方开始
+    _fontScaleValue: 1,    // 字体缩放（对齐 One News，注入 CSS --font-scale）
+    _metaScaleValue: 1,
     // 卡片流：默认为演示缓存，云函数返回后替换
     items: DEMO_ITEMS,
     // 页面元信息：数据截至 / 健康提示 / 空态 / 占位
@@ -81,11 +85,24 @@ Page({
 
   onLoad() {
     let statusBarHeight = 20
-    try { statusBarHeight = wx.getSystemInfoSync().statusBarHeight || 20 } catch (e) {}
+    let menuHeight = 32
+    let menuTop = 44
+    try {
+      const g = app.globalData
+      if (g) {
+        if (typeof g.statusBarHeight === 'number') statusBarHeight = g.statusBarHeight
+        if (typeof g.menuHeight === 'number') menuHeight = g.menuHeight
+        if (typeof g.menuTop === 'number') menuTop = g.menuTop
+      }
+    } catch (e) {}
     this.setData({
       themeClass: (app.globalData && app.globalData.themeClass) || 'page--light',
       isDark: this._isSystemDark(),
-      statusBarHeight: statusBarHeight
+      statusBarHeight: statusBarHeight,
+      menuHeight: menuHeight,
+      topBarH: menuTop, // 顶部条带顶到胶囊顶部，内容区从胶囊下方开始（避开原生胶囊）
+      _fontScaleValue: (app.globalData && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1,
+      _metaScaleValue: (app.globalData && typeof app.globalData._metaScaleValue === 'number') ? app.globalData._metaScaleValue : 1,
     })
     this._loadBrief()
   },
@@ -143,6 +160,14 @@ Page({
 
   goDetail(e) {
     const id = e.currentTarget.dataset.id
+    // 方案A：把选中卡片的完整数据透传给详情页（经 app.globalData，与 One News detailContext 同模式），
+    // 详情页据此渲染匹配的标题/来源角标/正文，避免「点 arXiv 卡却进 Claude 详情」的内容错配。
+    var card = null
+    var list = this.data.items || []
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === id) { card = list[i]; break }
+    }
+    app.globalData.intelDetailCard = card || null
     wx.navigateTo({ url: `/pages/intel/detail/detail?id=${id}` })
   },
 
@@ -161,5 +186,30 @@ Page({
   // 返回 One News 首页（由右滑入口经 navigateTo 进入，故用 navigateBack）
   goBack() {
     wx.navigateBack({ fail: () => wx.reLaunch({ url: '/pages/home/home' }) })
+  },
+
+  // ===== 左滑返回手势（INTEL-MODULE）：在 AI 情报首页左滑（dx<0）→ 返回 One News 首页。
+  // 与进入方向对称：进入是右滑进入（从左侧滑入），返回是左滑后回到 One News（从右侧滑入回）。
+  _slideX: 0,
+  _slideY: 0,
+  _slideT: 0,
+  _slideLock: false,
+  onSlideTouchStart(e) {
+    this._slideX = e.touches[0].clientX
+    this._slideY = e.touches[0].clientY
+    this._slideT = Date.now()
+  },
+  onSlideTouchEnd(e) {
+    if (this._slideX === undefined || this._slideLock) return
+    var dx = e.changedTouches[0].clientX - this._slideX
+    var dy = e.changedTouches[0].clientY - this._slideY
+    var dt = Date.now() - this._slideT
+    // 左滑返回：dx<0 且横向为主且快速（对应进入手势的对称阈值 60px）
+    if (dx < -60 && Math.abs(dx) > Math.abs(dy) && dt < 800) {
+      this._slideLock = true
+      var that = this
+      setTimeout(function () { that._slideLock = false }, 1000)
+      this.goBack()
+    }
   }
 })

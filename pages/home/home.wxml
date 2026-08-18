@@ -203,4 +203,15 @@
     </view>
   </view>
 
+  <!-- ========== INTEL-BRIDGE (START): AI 情报官模块 — AI 情报屏（同屏横滑，覆盖层） ========== -->
+  <!-- owner 2026-08-18 拍板：内嵌横滑面板。AI 情报屏为覆盖层，默认藏在屏幕左侧；
+       在 One News 首页右滑 → 情报屏从左侧滑入；在情报屏左滑 → 从右侧滑回 One News。
+       与右滑进入判定在 home.js onIntelTouchEnd 统一处理，互不冲突。
+       摘除方式：删除此处 <intel-stage> + home.json 注册 + onIntelTouch* 桥接即可。 -->
+  <intel-stage
+    active="{{intelActive}}"
+    bind:reqback="onIntelReqBack">
+  </intel-stage>
+  <!-- ========== INTEL-BRIDGE (END) ========== -->
+
 </view>
