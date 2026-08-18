@@ -286,7 +286,14 @@ function extractParagraphs(containerHtml) {
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
-      .replace(/&#\d+;/g, ' ')
+      // 数字实体一律解码为字符（合法码点还原，非法/超出用空格兜底，避免丢字）
+      .replace(/&#(\d+);/g, (_, code) => {
+        const cp = parseInt(code, 10)
+        // 0x10FFFF 是 Unicode 单码位上限；代理区/控制字符码点换成空格防脏字符
+        return cp > 0 && cp <= 0x10FFFF && !(cp >= 0xd800 && cp <= 0xdfff) && !(cp < 0x20 && !/[\t\n\r]/.test(String.fromCodePoint(cp)))
+          ? String.fromCodePoint(cp)
+          : ' '
+      })
       .replace(/\s+/g, ' ')
       .trim()
     // 过滤过短段落（导航/图片说明）
