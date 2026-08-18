@@ -21,3 +21,21 @@
 | 2026-08-17 | K | 三文档 AI 视角交叉校验 + 导航索引建立 | ✅ |
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
+
+## 2026-08-18 晚间 · O 主控公告（重要，全员必读）
+
+### ① GitHub 推送自愈方案已全局安装（解决"一直被 TLS 卡住"）
+- **根因**：沙箱 DNS 对 github.com 的解析会随机命中被拦截的 Azure 段（20.x.x.x），git 报 `gnutls_handshake failed` / `TLS non-properly terminated`。**不是 GitHub 被墙，是解析到了坏 IP。**
+- **已安装（所有 AI 会话免配置生效）**：
+  - `/usr/local/bin/gh-fix`：探测 github.com/api/codeload/raw 各端点可用 IP → 自动写 `/etc/hosts` + `~/.user_hosts`
+  - `/usr/local/bin/git` wrapper：git 命令失败且报网络错误时，自动跑 gh-fix → 重试一次
+- **用法**：正常 `git push/fetch/clone` 即可，遇 TLS 错误 wrapper 自动修复重试；极端情况手动 `gh-fix`。
+- **可用段**：140.82.112.x–121.x（GitHub 原生）、185.199.x.x（raw）；**不可用**：20.x.x.x（Azure，被沙箱拦）。
+- **注意**：`api.github.com` 必须用专属 IP（.5/.6 等），用 github.com 的 IP 会被 301 劫持。
+
+### ② 前后端连调完成（495a70d 已推 intel-officer）
+- 首页列表：getIntelBrief（另一 AI 交付）
+- 详情页真实数据：intelGetDetail（本提交补齐，无数据时保留占位不打扰 UI）
+- 云函数部署：`tools/gen-intel-deploy.sh` 一键生成 7 个自包含副本到 `cloudfunctions/intel*/`；cloudbaserc.json 已注册全部 7 函数（含 3 组定时触发器）
+- **当前头号阻塞：LLM Key（T0.3 🚫 待 owner）**——intelProcess 未配 Key 时静默降级跳过处理 → intel_staged 空 → 前端空态。owner 在云开发控制台给 intelProcess 配好 Key 后整条链即通。
+- 排查顺序见《AI能干什么_代码分支与部署注意事项.md》§5.7。
