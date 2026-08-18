@@ -427,6 +427,38 @@ async function fetchSource(feed, ctx = {}) {
     return { items, cursor: ctx.sinceMs || null }
   }
 
+  if (type === 'wechat') {
+    // 公众号本地解析（T2.5）：云端 worker 只消费本地进程暴露的 HTTP API。
+    // 物理通道未落地（本地进程不在此网络）→ 静默降级（degraded），绝不 throw 阻塞整轮巡检，
+    // 也不累加 errorStreak（返空 + degraded，由 runWorker 的 empty 分支轻量处理）。
+    const base = (cfg.localApiBase) || process.env.WECHAT_LOCAL_API_BASE || 'http://127.0.0.1:8787'
+    try {
+      const sinceSec = ctx.sinceMs ? Math.floor(ctx.sinceMs / 1000) : 0
+      const url = buildUrl(`${base}/api/items`, { since: String(sinceSec), limit: String(cfg.maxItems || 30) })
+      const res = await intelHttpGet(url, { headers: { Accept: 'application/json' } })
+      if (!res.ok || !res.text) return { items: [], cursor: ctx.sinceMs || null, degraded: true }
+      let json
+      try { json = JSON.parse(res.text) } catch (e) { return { items: [], cursor: ctx.sinceMs || null, degraded: true } }
+      const list = Array.isArray(json) ? json : (json.items || [])
+      const items = list
+        .filter((r) => r.title || r.url || r.link)
+        .map((r) => ({
+          title: _cleanStr(r.title) || '(无标题)',
+          url: _cleanStr(r.url || r.link || r.app_msg_url) || '',
+          pubDate: _cleanStr(r.published_at || r.publish_time) || '',
+          guid: _cleanStr(r.guid) || `wechat:${sha256(r.url || r.link || r.title + r.published_at)}`,
+          desc: _cleanStr(r.summary || r.digest || r.content || r.title),
+          content: _cleanStr(r.content || r.digest || ''),
+          category: _cleanStr(r.author || ''),
+        }))
+      return { items, cursor: ctx.sinceMs || null, degraded: items.length === 0 }
+    } catch (e) {
+      // 合规红线：本地进程不可达 → 静默降级，不向云端抛错
+      console.warn(`[worker] ${feed.key || feed._id} 公众号本地进程不可达，静默降级:`, e.message)
+      return { items: [], cursor: ctx.sinceMs || null, degraded: true }
+    }
+  }
+
   throw new Error(`未支持的 sourceType=${type}`)
 }
 

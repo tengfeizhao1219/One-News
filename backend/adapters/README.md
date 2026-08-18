@@ -112,4 +112,4 @@ fetchType=wechat → templates/wechatAdapter.js （本地 SQLite 解析 / 云端
 3. **HN 时间窗**：Algolia 必带 `created_at_i>`，否则返 2019 旧文（调研实测），模板已参数化。
 4. **Reddit 出口**：本沙箱出口被网络风控拦截，源本身有效，落地到正常服务器即可（调研 §3.3 实测注记）。
 5. **官网选择器（T2.4 已实测定论）**：webAdapter 的 `SITE_RULES` 为正则占位。T2.4 实测量 5 个官网源，**零依赖纯 Node（worker `scrape` 分支 + contentFetcher）下 4/5 不可达**：the_neuron 403 / meta 400（Cloudflare 反爬）、anthropic 是 JS 客户端渲染无静态文章列表、机器之心 200 但 12.6KB 降级壳（仅 PRO teaser）；仅 the_batch 能取 HTML 但无 issue-NNN 卡片（仅最新外部 teaser）。**结论：现代官网多为 JS 渲染 + 严格反爬，纯零依赖无法有效抓取，已按 owner 拍板「降级 + 补位」落地**——seedSources 将 4 源 defaultOn=false（不参与巡检、不误告警），保留 25 源清单完整性；抗干扰由已有 RSS 科技媒体覆盖，中文层由 qbitai（量子位 RSS）补位。待 Phase 3（LLM/授权）或换合规抓取路线再启用。
-6. **公众号合规**：本地 SQLite 路径依赖用户设备微信客户端同步；不可达时静默降级（模板已内置）。
+6. **公众号合规（T2.5 已落地为可运行双模组件）**：`wechatAdapter.js` 已从模板升级为可运行组件——本地模式（RUN_LOCAL=true）直读微信 SQLite（better-sqlite3，三路择优：SQLite/JSON导出/CSV解析）+ `serveLocal()` 暴露 `/api/items`；云端 worker `fetchSource` 已加 `wechat` 分支（消费本地进程 HTTP API，不可达静默降级 degraded 绝不 throw/不阻塞巡检）。**⚠️ 已知设计缺口（待 owner 拍部署形态）**：云端 worker 运行在 CloudBase 无法直连用户设备 127.0.0.1，「本地进程 → 云端」物理通道（设备凭据/上传网关/合规隧道）尚未落地；默认 `defaultOn=false` 不参与巡检，避免白抓。
