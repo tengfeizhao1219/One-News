@@ -267,7 +267,9 @@
   justify-content: center;
   gap: 8rpx;
   padding: 16rpx 0 calc(16rpx + env(safe-area-inset-bottom));
-  background: linear-gradient(transparent, var(--bg-card) 40%);
+  /* owner 2026-08-18 18:40：去掉底部白色渐变遮罩，首页底部保持完全透明，
+     hint 文字本身仍可见（文字 opacity 已有 0.45 的弱化处理，不需要底色托底） */
+  background: transparent;
   pointer-events: none;
   z-index: 20;
   opacity: 1;
