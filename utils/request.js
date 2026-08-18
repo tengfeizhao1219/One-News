@@ -129,8 +129,12 @@ function formatNewsItem(item, includeContent = false) {
     aiOpinion: item.aiOpinion || '',
     sourceUrl: item.sourceUrl || item._url || '',
     picUrl: item.picUrl || '',
-    time: formatRelativeTime(item.publishTime || item.time),
+    // 2026-08-18 owner 方案1：前端相对时间用落库时刻 createdAt（True freshness）
+    // 旧逻辑用 publishTime 会因源站篡改/补填发布时间导致排序错位与时间误显
+    // publishTime 仍透传详情页作原创发布时间参照
+    time: formatRelativeTime(item.createdAt || item.publishTime || item.time),
     publishTime: item.publishTime || item.time,
+    createdAt: item.createdAt,
     isRetained: item.isRetained === true
   }
 }

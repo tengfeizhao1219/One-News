@@ -1,7 +1,8 @@
-// 获取新闻列表云函数 v7.2 — FinalScore 质量排序 — 纯智谱/DeepSeek，不降级不兜底，全是真实数据
-// v7.2（FS-质量把控 v2, 2026-08-12）：news_cache 排序改为 orderBy('finalScore','desc').orderBy('publishTime','desc')
-//   FinalScore 由 refreshNews qualityScorer 落库（0-100），质量+热度融合排序；未评分旧数据沉底。
-//   backup 层保留 publishTime 排序（历史快照一般无 finalScore），但附加评分字段与主路径对齐。
+// 获取新闻列表云函数 v7.3 — FinalScore 质量排序 — 纯智谱/DeepSeek，不降级不兜底，全是真实数据
+// v7.3（2026-08-18 owner 方案1）：次排序键 publishTime → createdAt，解决源站 publishTime 可能晚于落库时间
+//   所致排序错位（如 14:00 抓入但 publishTime 标为 15:00 → 排在 15:00 那批前）。createdAt 是落库
+//   时刻，反映"True freshness"，防止旧批次靠源站更新的 publishTime 穿插到新位置。
+//   FinalScore 仍是主键（质量+热度），未评分旧数据沉底。backup 层同改。
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -85,13 +86,13 @@ async function queryCache(where, pageNum, pageSize) {
   try {
     // FS-质量把控 v2（2026-08-12）：排序 FinalScore 优先（质量+热度），同分按发布时间。
     //   - finalScore 由 refreshNews qualityScorer 落库（0-100 整数）；未评分的旧数据 finalScore=null。
-    //   - ⚠️ 部署前置：news_cache 需建组合索引 (finalScore desc, publishTime desc)，
+    //   - ⚠️ 部署前置：news_cache 需建组合索引 (finalScore desc, createdAt desc)，
     //     否则链式 orderBy 可能查询失败或退化为单字段排序（见 .workbuddy/reports/FS-SSH-push通道修复经验-2026-08-12.md 旁 FS-质量把控 交接）。
-    //     回滚：删除此行注释回到单 orderBy('publishTime','desc') 即可恢复原行为。
+    //     回滚：删除此行注释回到单 orderBy('createdAt','desc') 即可恢复原行为。
     const res = await db.collection('news_cache')
       .where(where)
       .orderBy('finalScore', 'desc')
-      .orderBy('publishTime', 'desc')
+      .orderBy('createdAt', 'desc')
       .skip((pageNum - 1) * pageSize)
       .limit(pageSize)
       .get()
@@ -179,7 +180,7 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
       : {}
     const res = await db.collection('news_cache_backup')
       .where(where)
-      .orderBy('publishTime', 'desc')
+      .orderBy('createdAt', 'desc')
       .skip((pageNum - 1) * pageSize)
       .limit(pageSize)
       .get()
