@@ -805,7 +805,7 @@ Page({
     this._intelTouchT = Date.now()
   },
   onIntelTouchEnd(e) {
-    if (!this._intelBridgeEnabled) return
+    if (!this.data._intelBridgeEnabled) return
     if (this._intelTouchX === undefined) return
     var dx = e.changedTouches[0].clientX - this._intelTouchX
     var dy = e.changedTouches[0].clientY - this._intelTouchY
