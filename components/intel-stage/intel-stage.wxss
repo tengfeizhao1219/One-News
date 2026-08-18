@@ -70,16 +70,18 @@
 }
 .card-title {
   display: block;
-  font-size: calc(30rpx * var(--font-scale));
+  /* 对齐 One News 信息流：标题基准 32rpx（与首页摘要同档），行高放宽到 1.5 */
+  font-size: calc(32rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1.4;
+  line-height: 1.5;
 }
 .card-desc {
   display: block;
-  font-size: calc(26rpx * var(--font-scale));
+  /* 对齐 One News：正文基准 28rpx，行高 1.6，更贴近首页摘要排版 */
+  font-size: calc(28rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 1.5;
+  line-height: 1.6;
   margin-top: 12rpx;
 }
 .meta {

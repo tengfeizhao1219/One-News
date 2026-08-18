@@ -54,8 +54,8 @@
   padding: 24rpx 28rpx;
   margin-bottom: 20rpx;
 }
-.card-title { display: block; font-size: calc(30rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
-.card-desc { display: block; font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); margin-top: 8rpx; line-height: 1.5; }
+.card-title { display: block; font-size: calc(32rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); line-height: 1.5; }
+.card-desc { display: block; font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); margin-top: 8rpx; line-height: 1.6; }
 
 .foot-note {
   text-align: center;

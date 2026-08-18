@@ -9,7 +9,11 @@ const app = getApp()
 Component({
   properties: {
     // 父组件控制：true=AI 情报屏覆盖显示（translateX 0）；false=藏在屏幕左侧（translateX -100%）
-    active: { type: Boolean, value: false }
+    active: { type: Boolean, value: false },
+    // 字体缩放（对齐 One News 字号档位）：由父页面 _syncFontScale 传入，组件 isolated 读不到父级 CSS 变量，
+    // 故经 property 实时同步，改动档位后立即生效
+    fontScaleValue: { type: Number, value: 1 },
+    metaScaleValue: { type: Number, value: 1 }
   },
 
   data: {
@@ -54,7 +58,14 @@ Component({
 
   observers: {
     // 父组件首次进入时确保主题就绪
-    'active': function () {}
+    'active': function () {},
+    // 父页面改动字号档位时，同步字体缩放（组件 isolated，父级 CSS 变量穿透不进来，须经 property → data 映射）
+    'fontScaleValue, metaScaleValue': function (v, m) {
+      this.setData({
+        _fontScaleValue: (typeof v === 'number' && v > 0) ? v : 1,
+        _metaScaleValue: (typeof m === 'number' && m > 0) ? m : 1
+      })
+    }
   },
 
   methods: {

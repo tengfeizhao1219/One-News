@@ -210,6 +210,8 @@
        摘除方式：删除此处 <intel-stage> + home.json 注册 + onIntelTouch* 桥接即可。 -->
   <intel-stage
     active="{{intelActive}}"
+    font-scale-value="{{_fontScaleValue}}"
+    meta-scale-value="{{_metaScaleValue}}"
     bind:reqback="onIntelReqBack">
   </intel-stage>
   <!-- ========== INTEL-BRIDGE (END) ========== -->
