@@ -21,12 +21,12 @@ function toListItem(doc) {
   const src = sop.source || {}
   return {
     id: doc.itemId || doc._id || '',
-    title: doc.title || '',
-    desc: sop.definition || doc.summary || '',
-    src: src.name || doc.sourceId || '',
-    time: doc.processedAt || src.publishedAt || '',
+    title: doc.title || doc.sourceName || '',
+    desc: sop.definition || doc.summary || doc.minAction || '',
+    src: src.name || doc.sourceId || doc.sourceName || '',
+    time: doc.processedAt || src.publishedAt || doc.publishedAt || '',
     url: doc.url || src.url || '',
-    relevance: doc.relevance || '',
+    relevance: doc.relevance || doc.sceneHits || '',
     sceneTags: Array.isArray(doc.sceneTags) ? doc.sceneTags : [],
     tryable: doc.tryable === true,
     status: doc.status || ''
@@ -38,24 +38,10 @@ exports.main = async (event = {}) => {
   const pageSize = Math.min(50, Math.max(1, Number(event.pageSize) || 20))
   const skip = (pageNum - 1) * pageSize
 
-  // 1) 优先 intel_current（发布闸门后的当期）
-  try {
-    const cur = await db.collection(INTEL_CURRENT)
-      .where({ isCurrent: true })
-      .orderBy('publishAt', 'desc')
-      .skip(skip).limit(pageSize)
-      .get()
-    if (cur.data && cur.data.length) {
-      return {
-        code: 0,
-        data: { list: cur.data.map(toListItem), total: cur.data.length, source: 'current' }
-      }
-    }
-  } catch (e) {
-    console.warn('[intelGetList] intel_current 读取失败（回退 staged）:', e.message)
-  }
-
-  // 2) 回退 intel_staged（status=staged/released）
+  // 说明：intel_current 存储的是 Brief Markdown 快照（items[].card 文本），结构化转换
+  //   由 getIntelBrief 云函数（Channels 层 OneNewsChannel.render）负责；本函数专供
+  //   详情页/备用列表，直接读结构化的 intel_staged（status=staged/released）。
+  // 1) intel_staged（处理后待发布/已发布，结构化）
   try {
     const res = await db.collection(INTEL_STAGED)
       .where({ status: _.in(['staged', 'released']) })

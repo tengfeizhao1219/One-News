@@ -3,7 +3,7 @@
 // ⚠️ 复用 One News utils/request.js 的「wx.cloud.callFunction 云函数调用」范式（非其业务），
 //    intel_* 命名空间隔离，可整体摘除；不触碰 One News 阅读数据请求层。
 //
-// 调用的云函数：getIntelBrief（backend/intelBrief/，读 intel_current isCurrent 当期 Brief，
+// 调用的云函数：intelBrief（backend/intelBrief/，读 intel_current isCurrent 当期 Brief，
 //    经 Channels 层 OneNewsChannel 渲染为 payload：今日关注 + 本周可试用 + 数据截至 + 源健康）。
 //
 // 数据契约（OneNewsChannel.render 输出）：
@@ -25,7 +25,7 @@
  */
 function getIntelBrief({ channel = 'oneNews', date } = {}) {
   return wx.cloud.callFunction({
-    name: 'getIntelBrief',
+    name: 'intelBrief',
     data: { channel, date },
   }).then((res) => {
     const result = res.result || {}
