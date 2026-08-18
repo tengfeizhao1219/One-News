@@ -1,0 +1,21 @@
+{
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "intelDispatcher0500",
+      "type": "timer",
+      "config": "0 0 5 * * * *"
+    },
+    {
+      "name": "intelDispatcher1100",
+      "type": "timer",
+      "config": "0 0 11 * * * *"
+    },
+    {
+      "name": "intelDispatcher1800",
+      "type": "timer",
+      "config": "0 0 18 * * * *"
+    }
+  ]
+}
