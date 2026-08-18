@@ -1,7 +1,9 @@
 // INTEL-MODULE: AI 情报官 · 情报详情
 // 隔离说明：本文件为新增页面逻辑，独立于 One News 既有业务；命名空间 intel_*。
-// 演示数据（占位）：claude1m 为真实调研示例；其余 id 显示占位，待后端处理层下发。
+// 数据说明：优先调云函数 intelGetDetail 拉真实详情（intel_staged / intel_current）；
+//           后端无数据时保留原占位逻辑（claude1m 演示 / 卡片降级）。
 const app = getApp()
+const { getIntelDetail } = require('../../utils/intelApi')
 
 Page({
   data: {
@@ -67,6 +69,35 @@ Page({
       // 兜底（无卡片数据进来）
       this.setData({ relateItems: [{ who: '工作', txt: '该情报点的详情内容尚未生成，待后端处理层就绪后自动填充。' }] })
     }
+
+    // 真实数据连调：非演示卡片尝试拉取 intelGetDetail，成功则覆盖占位内容
+    if (!isFull && id) {
+      this.loadRealDetail(id)
+    }
+  },
+
+  /** 拉取真实详情（云函数 intelGetDetail；无数据/失败时保留占位，不打扰用户） */
+  loadRealDetail(id) {
+    getIntelDetail(id)
+      .then(d => {
+        // 有真实正文才算连调成功，否则保持占位
+        if (!d || (!d.definition && !d.sceneMapping)) return
+        const relateItems = d.sceneMapping
+          ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + d.sceneTags.join(' / ') : ''), txt: d.sceneMapping }]
+          : [{ who: '工作', txt: '这条情报的场景拆解尚未生成，当前展示原文要点。' }]
+        this.setData({
+          title: d.title || this.data.title,
+          descText: d.definition || this.data.descText,
+          srcName: d.srcName || this.data.srcName,
+          relateItems: relateItems,
+          relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
+          hasMore: !!(d.sourceUrl || (d.references && d.references.length))
+        })
+        console.log('[intel-detail] 真实详情已加载:', id)
+      })
+      .catch(err => {
+        console.warn('[intel-detail] 真实详情拉取失败（保留占位）:', err && err.message)
+      })
   },
 
   // claude1m：完整叙事（真实调研内容）

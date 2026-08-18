@@ -1,0 +1,9 @@
+{
+  "name": "intelGetDetail",
+  "version": "1.0.0",
+  "description": "AI 情报官 · intelGetDetail（自包含部署副本，由 tools/gen-intel-deploy.sh 生成，勿手改；源码见 backend/）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
