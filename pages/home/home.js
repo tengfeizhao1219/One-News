@@ -1,10 +1,15 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, RECOMMEND_PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, getNewsDelta, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
 const app = getApp()
+
+// 2026-08-18（owner 决策）：分类首页首屏尺寸——recommend 读满落库 cap(15)，其余分类 8。
+const firstPageSize = function (cat) {
+  return cat === 'recommend' ? RECOMMEND_PAGE_SIZE : PAGE_SIZE
+}
 
 // 侧边栏分类列表（纯新闻分类，收藏入口已迁移至 dock 菜单「我的收藏」）
 var PANEL_CATEGORIES = CATEGORIES
@@ -355,7 +360,7 @@ Page({
   async _loadAllAggregated() {
     var that = this
     var fetches = CONTENT_CATEGORIES.map(function (c) {
-      return getNewsList({ category: c.id, pageNum: 1, pageSize: PAGE_SIZE })
+      return getNewsList({ category: c.id, pageNum: 1, pageSize: firstPageSize(c.id) })
         .then(function (res) { return res.list || [] })
         .catch(function (err) {
           console.warn('[home] 全部聚合分类拉取失败:', c.id, err)
@@ -580,7 +585,7 @@ Page({
       // 整页重拉兜底：保证与数据库一致（增量轮询可能因 createdAt 批次/排序漏掉 publishTime 更前的）
       const list = category === 'all'
         ? await this._loadAllAggregated()
-        : (await getNewsList({ category, pageNum: 1, pageSize: PAGE_SIZE })).list || []
+        : (await getNewsList({ category, pageNum: 1, pageSize: firstPageSize(category) })).list || []
       if (list.length > 0) {
         this.setData({ newsList: list, currentPage: 1, currentIndex: 0, loadMoreCount: 0 })
         this.renderCards(list, 0)
@@ -911,7 +916,7 @@ Page({
     this._showStatusPill('正在阅读：' + nextCat.name)
 
     // 拉取下一分类首页
-    getNewsList({ category: nextCat.id, pageNum: 1, pageSize: PAGE_SIZE })
+    getNewsList({ category: nextCat.id, pageNum: 1, pageSize: firstPageSize(nextCat.id) })
       .then(res => {
         const list = res.list || []
         if (this._destroyed) return
@@ -980,7 +985,7 @@ Page({
    * BUG-20260806-022: 切换到指定分类（供无数据跳过递归复用）
    */
   _switchToCategory(catId, catName) {
-    getNewsList({ category: catId, pageNum: 1, pageSize: PAGE_SIZE })
+    getNewsList({ category: catId, pageNum: 1, pageSize: firstPageSize(catId) })
       .then(res => {
         const list = res.list || []
         if (this._destroyed) return

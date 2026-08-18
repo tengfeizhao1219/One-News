@@ -6,7 +6,7 @@
 //
 // 2026-08-03 owner 裁定：全链路真实数据，所有 mock 数据文件已物理删除。
 
-const { PAGE_SIZE, CATEGORY_MAP } = require('./constants')
+const { PAGE_SIZE, RECOMMEND_PAGE_SIZE, CATEGORY_MAP } = require('./constants')
 const { formatRelativeTime } = require('./util')
 
 /**
@@ -14,13 +14,14 @@ const { formatRelativeTime } = require('./util')
  * @param {Object} params
  * @param {string} params.category 分类ID，默认'recommend'（DG-03: all → recommend）
  * @param {number} params.pageNum   页码，默认1
- * @param {number} params.pageSize  每页条数，默认10（PAGE_SIZE）
+ * @param {number} params.pageSize  每页条数；不传时按分类默认：recommend→15（对齐落库 cap），其余→8（PAGE_SIZE）
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
-function getNewsList({ category = 'recommend', pageNum = 1, pageSize = PAGE_SIZE } = {}) {
+function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
+  const size = pageSize || (category === 'recommend' ? RECOMMEND_PAGE_SIZE : PAGE_SIZE)
   return wx.cloud.callFunction({
     name: 'getNewsList',
-    data: { category, pageNum, pageSize }
+    data: { category, pageNum, pageSize: size }
   }).then(res => {
     if (res.result.code !== 0) {
       const err = new Error(res.result.message || '获取新闻列表失败')

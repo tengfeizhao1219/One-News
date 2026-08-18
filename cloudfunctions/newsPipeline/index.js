@@ -427,9 +427,15 @@ async function stageAi(deadline) {
 
   // 续跑 / 接力——修复请求风暴：只统计「可认领」的待办（claimablePendingCount），
   // 不把正在被其他实例处理的 processing 误判为待办，避免空转触发
-  const sp = await stagingStore.claimablePendingCount()
-  if (sp > 0) trigger('ai')
-  else trigger('run')
+  // 优先级修正（2026-08-18）：本批刚标 done，若有 done 待落库，优先触发 publish「收割」，
+  // 避免已完成 AI 的新数据被新一轮 ai 挤占 + 60s 冷却窗口而饿死、迟迟不落库。
+  const sd = await stagingStore.doneCount()
+  if (sd > 0) trigger('publish')
+  else {
+    const sp = await stagingStore.claimablePendingCount()
+    if (sp > 0) trigger('ai')
+    else trigger('run')
+  }
   return { stage: 'ai', processed }
 }
 
@@ -780,10 +786,13 @@ async function run() {
   try { await dedupByDkSweep() } catch (e) { /* 放行 */ }
   const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
   if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
-  const sp = await stagingStore.claimablePendingCount()
-  if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending' } }
+  // 优先级修正（2026-08-18）：done→publish「收割」优先于可认领→ai「生产」。
+  // 否则当 staging 同时有可认领 pending + done 时，run() 走 ai 提前 return，publish 分支被饿死，
+  // 已完成 AI 的新新闻（如 47 条）永远不落库，前端真实机一直看到旧数据。
   const sd = await stagingStore.doneCount()
   if (sd > 0) { trigger('publish'); return { step: 'publish', reason: 'staging 有 done' } }
+  const sp = await stagingStore.claimablePendingCount()
+  if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending' } }
   return { step: 'idle' }
 }
 

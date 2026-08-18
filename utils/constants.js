@@ -52,7 +52,10 @@ const PANEL_SWIPE_THRESHOLD = 60 // 左滑呼出面板阈值
 // 单次连续拉取总追加 24 条，累计上限 10+24=34 条后提示稍后再读。
 // FS-06（2026-08-07 · owner 决策）：PAGE_SIZE 10→8，与 refreshNews 每分类生成条数（PER_CATEGORY_COUNT=8）一致，
 // 首屏请求 8 条正好拿满缓存 8 条（此前请求 10 条但缓存仅 8 条 → 首屏少 2 条的观感）；累计上限 8+24=32 条。
-const PAGE_SIZE = 8        // 首次加载（FS-06：10 → 8，与每分类缓存条数一致）
+const PAGE_SIZE = 8        // 首次加载普通分类（FS-06：10 → 8，与每分类缓存条数一致）
+// 2026-08-18（owner 决策）：推荐分类落库 cap 从 8 提升到 15（方案A CATEGORY_CAP.recommend=15），
+// 前端读接口默认尺寸随之对齐 → 推荐首屏显示 15 条；其余分类仍 8 条。
+const RECOMMEND_PAGE_SIZE = 15
 const MORE_PAGE_SIZE = 8   // 翻底/翻顶每次追加量（FS-01：5 → 8）
 const MORE_PAGE_LIMIT = 3  // 连续拉取上限次数（方案 5 改动 B）
 // DG-03（数据治理 3.3）：纯本地存储上限（历史 500 / 收藏 200，常量统一）
@@ -71,6 +74,7 @@ module.exports = {
   SWIPE_THRESHOLD,
   PANEL_SWIPE_THRESHOLD,
   PAGE_SIZE,
+  RECOMMEND_PAGE_SIZE,
   MORE_PAGE_SIZE,
   MORE_PAGE_LIMIT,
   HISTORY_LIMIT,
