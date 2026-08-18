@@ -21,7 +21,7 @@
 |---|---|---|
 | `intelLLM.js` | 通用 multi-engine chat（混元前置→智谱→Qwen→DeepSeek，复用 One News interpretNews 降级链，注入自定义 SOP prompt） | ✅ T3.1 地基 |
 | `intelRouter.js` | 分层路由（规则+信号词打分 high/medium/low，三重身份权重 + 合同/接口变更特殊路由） | ✅ T3.2 |
-| `ensureSchema.js` | intel_* 六集合自愈建表 + 唯一索引 | ✅ T1.1 |
+| `ensureSchema.js` | intel_* 集合自愈建表 + 唯一索引 | ✅ T1.1 |
 | `contentFetcher.js` | 零依赖 HTML 抓取（官网正文） | ✅ T1.3 |
 | `channels/` | **Channels 渠道抽象层（§7.6/§7.8）**：IntelChannel 基类 + OneNewsChannel 实现 + 注册表 | ✅ T4.x |
 | `adapters/` | RSS/API/Scrape/WeChat 四类源适配器模板 | ✅ T2 |
@@ -91,6 +91,10 @@ intel_ingest(status=pending)
 - intelProcess 消费 `intel_ingest(status=pending)` → 分层路由 → SOP → 写 `intel_staged`。
 - intelDispatcher 在目标时刻组装发布（发布闸门），处理需**先于或并行于**发布完成；错峰隔离避免相互拖慢。
 - 成本集中在处理档，便于核算。
+
+**⚠️ self-fan-out 并发纪律（联调实测）**：intelProcess 不可并行 invoke（勿放开并行扇出）——
+  并行会争抢同一批 pending（多个 run 报一致 remaining、重复 LLM 调用、计数错乱）。
+  **唯一安全模式 = 串行 `disableFanout:true`**，靠应用层 already-staged 去重兜底但不省钱。定时器单触发天然串行，安全；手动联调务必传 `disableFanout:true` 逐个跑。
 
 ## 待办 / 缺口（需 owner）
 

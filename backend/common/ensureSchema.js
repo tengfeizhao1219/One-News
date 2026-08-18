@@ -146,6 +146,18 @@ async function ensureIntelProfile() {
 }
 
 /**
+ * intel_config：intel_* 全局配置/指针表（单文档）——发布闸门 T4.1 在此记
+ * `intel_current_issue` 文档（{ currentIssueId, date, version }，§7.4 currentIssue 指针）。
+ * 新增于 T4.1 联调（Dispatcher 指针升级曾报 -502005 collection not exists）。
+ */
+async function ensureIntelConfig() {
+  await ensureCollection('intel_config')
+  await ensureIndexes('intel_config', [
+    { key: { key: 1 }, name: 'intel_config_key', unique: true },
+  ])
+}
+
+/**
  * 一键初始化全部 intel_* schema（幂等，可多次调用）。
  */
 function ensureSchema() {
@@ -157,6 +169,7 @@ function ensureSchema() {
       await ensureIntelSources()
       await ensureIntelHealth()
       await ensureIntelProfile()
+      await ensureIntelConfig()
     })()
   }
   return _ensurePromise
