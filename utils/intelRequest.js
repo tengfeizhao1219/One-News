@@ -90,4 +90,44 @@ function normalizeTryable(it) {
   }
 }
 
-module.exports = { getIntelBrief }
+/**
+ * 读取当前用户画像（默认 owner）。
+ * @param {string} [userId] 可选 userId，缺省 'owner'
+ * @returns {Promise<Object|null>} 画像对象；无画像时返回 null
+ */
+function getIntelProfile(userId) {
+  return wx.cloud.callFunction({
+    name: 'intelProfile',
+    data: { action: 'get', userId },
+  }).then((res) => {
+    const result = res.result || {}
+    if (result.code !== 0) {
+      const err = new Error(result.message || '获取画像失败')
+      err.errorCode = result.errorCode
+      throw err
+    }
+    return result.data || null
+  })
+}
+
+/**
+ * 保存（upsert）当前用户画像。
+ * @param {Object} profile 完整画像对象（identities/focusTags/depth/langPref/consentSigned 等）
+ * @returns {Promise<Object>} 落库后的画像（含 _id + updatedAt）
+ */
+function saveIntelProfile(profile) {
+  return wx.cloud.callFunction({
+    name: 'intelProfile',
+    data: { action: 'save', profile },
+  }).then((res) => {
+    const result = res.result || {}
+    if (result.code !== 0) {
+      const err = new Error(result.message || '保存画像失败')
+      err.errorCode = result.errorCode
+      throw err
+    }
+    return result.data || null
+  })
+}
+
+module.exports = { getIntelBrief, getIntelProfile, saveIntelProfile }
