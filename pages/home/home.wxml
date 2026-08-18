@@ -5,7 +5,9 @@
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --status-bar-height: {{statusBarHeight}}px; --menu-top: {{menuTop}}px; --menu-height: {{menuHeight}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --status-bar-height: {{statusBarHeight}}px; --menu-top: {{menuTop}}px; --menu-height: {{menuHeight}}px;"
+  bindtouchstart="onIntelTouchStart"
+  bindtouchend="onIntelTouchEnd">
 
   <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
   <!-- D-09 v1.2（BUG-20260806-007）: 占位对齐胶囊，高度仅下扩展 12px（与全页面条带规范一致） -->

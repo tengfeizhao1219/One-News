@@ -762,17 +762,6 @@ Page({
       return
     }
 
-    // ============ INTEL-BRIDGE (START): AI 情报模块入口——右滑进入（最小可摘除） ============
-    // 隔离说明：本段为 AI 情报官模块新增，独立于 One News 既有业务。
-    //  - 仅处理「右滑」(dx > 0 且 |dx| > |dy|)；原 onTouchEnd 对右滑无行为，故为纯增量，不影响左滑/纵向手势。
-    //  - 置于纵向早退之前，确保横向右滑不被纵向判定吃掉。
-    //  - 命名空间 intel_*；将 _intelBridgeEnabled 置 false 或整段删除即可摘除。
-    if (dx > INTEL_ENTER_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) && this._intelBridgeEnabled) {
-      wx.navigateTo({ url: '/pages/intel/home/home', fail: (err) => console.warn('[intel-bridge] navigate fail:', err) })
-      return
-    }
-    // ============ INTEL-BRIDGE (END) ============
-
     // 纵向翻页判定（与详情页完全一致：70px + 500ms flick-only，慢拖不翻）
     if (Math.abs(dy) < SWIPE_THRESHOLD || dt > 500) return
     // 首次有效上/下滑 → 提示消失（与详情页一致），同会话内不再复现
@@ -795,6 +784,42 @@ Page({
       else this._animateSwipePrev()
     }
   },
+
+  // ============ INTEL-BRIDGE (START): AI 情报模块入口——右滑进入（最小可摘除） ============
+  // 说明：本段为 AI 情报官模块新增，独立于 One News 既有业务。
+  //  入口事件绑定在页面根节点（home.wxml: bindtouchstart/bindtouchend →
+  //  onIntelTouchStart/onIntelTouchEnd），与 card-stage 的 One News 翻页手势完全解耦：
+  //  - 页面非 ready 状态（loading/error）时 card-stage 不存在，根节点仍能接收右滑 → 可进 AI 情报；
+  //  - 滑动起点在顶栏/边缘等非卡片区域同样生效；
+  //  - One News 翻页手势（onTouchStart/onTouchEnd）不受影响（右滑对原逻辑本就无行为）。
+  //  摘除方式：删除本段 + home.wxml 根节点两行绑定 + 顶部常量 + data._intelBridgeEnabled 即可。
+  onIntelTouchStart(e) {
+    this._intelTouchX = e.touches[0].clientX
+    this._intelTouchY = e.touches[0].clientY
+    this._intelTouchT = Date.now()
+  },
+  onIntelTouchEnd(e) {
+    if (!this._intelBridgeEnabled) return
+    if (this._intelTouchX === undefined) return
+    var dx = e.changedTouches[0].clientX - this._intelTouchX
+    var dy = e.changedTouches[0].clientY - this._intelTouchY
+    var dt = Date.now() - this._intelTouchT
+    // 防抖：1 秒内只允许触发一次（避免与 card-stage 冒泡重复/连点）
+    if (this._intelNavLock) return
+    if (dx > INTEL_ENTER_SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy) && dt < 800) {
+      this._intelNavLock = true
+      var that = this
+      setTimeout(function () { that._intelNavLock = false }, 1000)
+      console.log('[intel-bridge] navigate to AI 情报, dx=', dx)
+      wx.navigateTo({
+        url: '/pages/intel/home/home',
+        success: function () { console.log('[intel-bridge] navigate OK') },
+        fail: function (err) { console.warn('[intel-bridge] navigate FAIL:', err); that._intelNavLock = false }
+      })
+    }
+  },
+  // ============ INTEL-BRIDGE (END) ============
+
   // ============ 动画切换逻辑（v5.9: 与详情页 out-in 两阶段完全一致） ============
 
   /**
