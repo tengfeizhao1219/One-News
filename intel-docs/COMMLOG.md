@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-19 | I/P | **后端三项优化落地（commit 95b1cbc，已部署 + 重组装 v14）**。① 聚合类资讯过滤：intelClean qualify 加 `multi-news-aggregate`（标题含「；」多新闻揉合/综述词 → rejected 丢弃），今日已剔 6 条（极客早报类），brief 22→16 条；② 试试看语气：SOP prompt 改**轻松引导口吻**（禁止「本周X前/必须/请尽快」命令式）——明日批次生效；③ 数据截至：Dispatcher 组装 brief 记 `batchFetchedAt`（读 intel_health 最新巡检时间），channel 优先展示批次抓取时间（当前 17:55，明日 17:40）。部署注意：部署副本 require 必须 `./common/`（backend 用 `../common/`），用 base64 zip 打包含 common/ | ✅ 已推 |
 | 2026-08-19 | I/O | **intelDispatcher 发布崩溃修复 + 今日 18:00 批次手动补发**。① 根因：intelRouter.js:66 三元表达式 `profile && … ? 3 : (profile.depth… )` 在 `score(d, null)` 时访问 null.depth 崩溃（index.js:245 传 null）；修复为 `profile && profile.depth === 'lite'`。② 已重新部署 intelDispatcher（部署后首触发仍旧实例，8s 后重试成功）。③ 手动触发 summary 发布：version 12→13，items 22，tryable 21，upgradedAt 19:04。真机刷新可见。**教训：部署后需验证新实例生效（LEARNINGS 部署验证条目）** | ✅ 已推 |
 | 2026-08-19 | O/Owner | **拍板：18:00 批次提前，6 点准时发布**（ADR-10）。intelFetch 17:55→**17:40** / intelRssPoll 18:00→**17:45** / intelProcess 18:10→**17:50** / intelDispatcher 18:30→**18:00**。触发器已远程更新部署（4 个函数已验证），cloudbaserc.json 已同步。**所有涉及调度角色留意** | ✅ 已推 |
 | 2026-08-19 | D/Owner | **拍板：删除首页导航副标题「情报官已为你梳理今日值得关注的进展」**（纯属多余）。已从 components/intel-stage/intel-stage.wxml 移除，导航只留 ‹ 返回 + AI 情报 | ✅ 已推 |

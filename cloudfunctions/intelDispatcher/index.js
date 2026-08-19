@@ -419,10 +419,17 @@ async function runIncremental(dayKey) {
 
   const rendered = renderBrief(allRank, weekTryable)
   const version = priorVersion + 1
+  // owner 2026-08-19：数据截至展示「批次抓取时间」——从 intel_health 最新 inspection 记录读
+  let batchFetchedAt = new Date().toISOString()
+  try {
+    const hq = await db.collection('intel_health').where({ kind: 'inspection' }).orderBy('createdAt', 'desc').limit(1).get()
+    if (hq.data && hq.data[0] && hq.data[0].createdAt) batchFetchedAt = hq.data[0].createdAt
+  } catch (e) { console.warn('[intelDispatcher] 读批次抓取时间失败，回退 now:', e.message) }
   const brief = {
     date: dayKey,
     version,
     mode: 'increment',
+    batchFetchedAt,
     items: rendered.items,
     tryable: rendered.tryable,
     generatedAt: new Date().toISOString(),
@@ -456,6 +463,12 @@ async function runSummary(dayKey) {
   const weekTryable = await fetchWeekTryable()
   const sourceHealth = await snapshotSourceHealth(dayKey)
   const health = healthSummary(sourceHealth)
+  // owner 2026-08-19：数据截至展示「批次抓取时间」——从 intel_health 最新 inspection 记录读
+  let batchFetchedAt = new Date().toISOString()
+  try {
+    const hq = await db.collection('intel_health').where({ kind: 'inspection' }).orderBy('createdAt', 'desc').limit(1).get()
+    if (hq.data && hq.data[0] && hq.data[0].createdAt) batchFetchedAt = hq.data[0].createdAt
+  } catch (e) { console.warn('[intelDispatcher] 读批次抓取时间失败，回退 now:', e.message) }
 
   // 处理层大面积失败 → 出「今日无可靠更新」占位（§7.7）
   const todayNew = await fetchUnreleased(BATCH_LIMIT)
@@ -464,6 +477,7 @@ async function runSummary(dayKey) {
       date: dayKey,
       version: 0,
       mode: 'summary',
+      batchFetchedAt,
       items: [],
       tryable: [],
       generatedAt: new Date().toISOString(),
@@ -495,6 +509,7 @@ async function runSummary(dayKey) {
     date: dayKey,
     version,
     mode: 'summary',
+    batchFetchedAt,
     items: rendered.items,
     tryable: rendered.tryable,
     generatedAt: new Date().toISOString(),

@@ -28,7 +28,15 @@
       "disablePlugins": [],
       "outputPath": ""
     },
-    "condition": false
+    "condition": false,
+    "compileWorklet": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false
   },
   "appid": "wx1ccb4d171dd88162",
   "projectname": "yiyue",
@@ -41,18 +49,57 @@
   },
   "packOptions": {
     "ignore": [
-      { "type": "folder", "value": "scripts" },
-      { "type": "folder", "value": "test" },
-      { "type": "folder", "value": "docs" },
-      { "type": "folder", "value": "demo" },
-      { "type": "folder", "value": "node_modules" },
-      { "type": "folder", "value": ".github" },
-      { "type": "folder", "value": ".github-scripts" },
-      { "type": "folder", "value": ".notion_build" },
-      { "type": "folder", "value": ".git-staging" },
-      { "type": "regexp", "value": "\\.md$" },
-      { "type": "regexp", "value": "\\.py$" },
-      { "type": "regexp", "value": "\\.sh$" }
-    ]
-  }
+      {
+        "value": "scripts",
+        "type": "folder"
+      },
+      {
+        "value": "test",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      },
+      {
+        "value": "demo",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": ".github",
+        "type": "folder"
+      },
+      {
+        "value": ".github-scripts",
+        "type": "folder"
+      },
+      {
+        "value": ".notion_build",
+        "type": "folder"
+      },
+      {
+        "value": ".git-staging",
+        "type": "folder"
+      },
+      {
+        "value": "\\.md$",
+        "type": "regexp"
+      },
+      {
+        "value": "\\.py$",
+        "type": "regexp"
+      },
+      {
+        "value": "\\.sh$",
+        "type": "regexp"
+      }
+    ],
+    "include": []
+  },
+  "compileType": "miniprogram",
+  "simulatorPluginLibVersion": {}
 }

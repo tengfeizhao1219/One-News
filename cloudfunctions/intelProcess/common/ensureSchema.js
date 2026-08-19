@@ -108,6 +108,8 @@ async function ensureIntelCurrent() {
     { key: { date: 1, isCurrent: 1 }, name: 'intel_current_date_isCurrent', unique: false },
     { key: { version: 1 }, name: 'intel_current_version', unique: false },
   ])
+  // 2026-08-19 复盘：brief 历史归档集合（persistBrief 覆盖前快照，可追溯/回滚）
+  await ensureCollection('intel_current_archive')
 }
 
 /**
