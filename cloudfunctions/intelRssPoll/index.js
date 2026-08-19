@@ -46,7 +46,8 @@ const MAX_BATCH_INSERT = 200   // 单轮入库 ≥ 此值 → 大批量告警
 const MAX_SERIAL_SOURCES = 3   // 无参编排下串行上限，超过则自我分片
 
 // ─── 单源超时预算（硬约束 #5：5–15s）───
-const TIMEOUT_BY_TYPE = { rss: 8000, news: 8000, api: 10000, scrape: 15000, wechat: 5000 }
+// 2026-08-19 复盘：arXiv api 类 10s 实测超时（export.arxiv.org 慢），api 预算放宽到 15s
+const TIMEOUT_BY_TYPE = { rss: 8000, news: 8000, api: 15000, scrape: 15000, wechat: 5000 }
 
 // ───────────────────────────
 // 复用 One News rssFetcher/utils/apiFetch.js（非其业务）：HTTP 抓取 + 重试 + GBK 解码
@@ -177,6 +178,23 @@ function _cleanStr(v) {
   return String(v).trim()
 }
 
+/** 提取完整分类列表（RSS <category> 可多个；Atom category@term）。2026-08-19 复盘：量子位噪音需按全部分类过滤 */
+function _categoryList(v) {
+  if (v == null) return []
+  const arr = Array.isArray(v) ? v : [v]
+  const out = []
+  for (const c of arr) {
+    let s = ''
+    if (typeof c === 'string') s = c.trim()
+    else if (c && typeof c === 'object') {
+      if (typeof c['@_term'] === 'string') s = c['@_term'].trim()
+      else s = _cleanStr(c)
+    }
+    if (s) out.push(s)
+  }
+  return out
+}
+
 function _cleanSummary(v) {
   const s = _cleanStr(v)
   if (!s) return ''
@@ -223,6 +241,7 @@ function intelParseXml(xmlText) {
         pubDate: _cleanStr(it.pubDate || it['dc:date'] || it.date),
         guid: _cleanStr(it.guid) || _cleanStr(it.link),
         category: _cleanStr(it.category),
+        categoryAll: _categoryList(it.category),
         desc: _cleanSummary(it.description || it.summary || it['content:encoded'] || ''),
         content: _cleanContent(it['content:encoded'] || it.description || it.summary || ''),
       }))
@@ -248,6 +267,7 @@ function intelParseXml(xmlText) {
         pubDate: _cleanStr(it.published || it.updated || ''),
         guid: _cleanStr(it.id) || _cleanStr(url),
         category: _cleanStr((it.category && (it.category['@_term'] || it.category['#text'])) || it.category),
+        categoryAll: _categoryList(it.category),
         desc: _cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
         content: _cleanContent(atomContent),
       }
@@ -331,6 +351,30 @@ function passTitleFilter(title, extraKeywords) {
   return true
 }
 
+/** 分类过滤（2026-08-19 新增）：feed.blockCategoryKeywords 命中的分类直接剔除。
+ *  例：量子位 RSS 全站内容，「智能车参考/车圈/比亚迪/吉利」等分类为汽车/商业噪音。 */
+function passCategoryFilter(raw, extraKeywords) {
+  const kws = (extraKeywords || []).map((k) => String(k).toLowerCase()).filter(Boolean)
+  if (!kws.length) return true
+  const cats = (raw && raw.categoryAll && raw.categoryAll.length ? raw.categoryAll : [raw && raw.category])
+    .map((c) => String(c || '').toLowerCase())
+    .filter(Boolean)
+  for (const c of cats) {
+    for (const k of kws) {
+      if (c.includes(k)) return false
+    }
+  }
+  return true
+}
+
+/** 标题清洗（2026-08-19 新增）：剥离聚合源前缀噪音，如 Latent Space AINews 的 "AINews] " */
+function cleanItemTitle(title) {
+  const t = String(title || '').trim()
+  if (!t) return t
+  const cleaned = t.replace(/^AINews\]\s*/i, '').trim()
+  return cleaned || t
+}
+
 // ───────────────────────────
 // 抓取适配器（四类：rss / news / api / scrape）
 // ───────────────────────────
@@ -389,8 +433,11 @@ async function fetchSource(feed, ctx = {}) {
     if (ctx.sinceMs) {
       if (feed.key === 'hacker_news') {
         const nf = String(params.numericFilters || '')
-        params.numericFilters = `points>100,created_at_i>${Math.floor(ctx.sinceMs / 1000)}`
-        if (nf && !nf.includes('created_at_i')) params.numericFilters = `${nf},created_at_i>${Math.floor(ctx.sinceMs / 1000)}`
+        // 2026-08-19 复盘：HN 时间窗放宽到 24h 回看（原严格 since 只出 1-2 条），
+        // 多拉候选靠 guid 去重，提高单轮候选量
+        const sinceSec = Math.max(0, Math.floor((ctx.sinceMs - 24 * 3600 * 1000) / 1000))
+        params.numericFilters = `points>100,created_at_i>${sinceSec}`
+        if (nf && !nf.includes('created_at_i')) params.numericFilters = `${nf},created_at_i>${sinceSec}`
       } else if (feed.key === 'arxiv_ai') {
         // arXiv 时间窗：submittedDate:[YYYYMMDDHHMM TO YYYYMMDDHHMM]
         const toTs = Date.now()
@@ -434,8 +481,14 @@ async function fetchSource(feed, ctx = {}) {
     // 官网正文/列表抓取（零依赖 contentFetcher；Phase 2 A 角色按源细化解析规则）
     const html = await fetchWebPage(endpoint)
     if (!html) throw new Error(`官网抓取失败 endpoint=${endpoint}`)
-    // 通用列表启发式：取 <h2>/<h3>/<h4>/<article> 内的链接（Anthropic/Meta/The Batch/The Neuron/机器之心）
-    const items = extractListLinks(html)
+    // 2026-08-19 复盘：entryMode=changelog（Docusaurus 更新日志单页）走专用提取；
+    // 否则通用列表启发式（<h><a> 标题 + 可选 urlPattern 卡片式第二遍）
+    let items = []
+    if (cfg.entryMode === 'changelog') {
+      items = extractChangelogEntries(html, { base: endpoint })
+    } else {
+      items = extractListLinks(html, { base: endpoint, urlPattern: cfg.urlPattern })
+    }
     // 兜底：抓取整页正文（如无列表结构）
     if (items.length === 0) {
       const body = extractContentFromHtml(html)
@@ -481,25 +534,123 @@ async function fetchSource(feed, ctx = {}) {
   throw new Error(`未支持的 sourceType=${type}`)
 }
 
-/** 官网列表页通用链接提取（标题级链接启发式，供 scrape 类源使用） */
-function extractListLinks(html) {
+/**
+ * 官网列表页通用链接提取（标题级链接启发式，供 scrape 类源使用）。
+ * 2026-08-19 复盘增强：
+ *  - 原实现只认 <h\d><a>标题</a></h\d>；多数现代官网是「卡片式 <a><h2-6>标题</h2-6><p>描述</p></a>」
+ *  - 新增第二遍 anchor-block 扫描：仅当 adapterConfig.urlPattern 提供时启用（不改变既有源行为），
+ *    从 <a> 块内提取 h2-h6 标题 + 中文/ISO 日期 + 首个 <p> 描述
+ * @param {string} html
+ * @param {Object} [opts] { base, urlPattern, maxItems }
+ */
+function extractListLinks(html, opts = {}) {
   const items = []
   const seen = new Set()
-  // 标题容器内的链接：<h2|h3|h4><a href>标题</a></h\d> 或 <a>…</a> 带 class 标题特征
+  const base = opts.base || 'https://x'
+  const maxItems = opts.maxItems || 30
+  const resolve = (u) => (/^https?:\/\//i.test(u) ? u : new URL(u, base).toString())
+
+  // 遍 1：<h\d><a>标题</a></h\d>（既有行为保留）
   const re = /<h([1-4])[^>]*>\s*<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>\s*<\/h\1>/gi
   let m
   while ((m = re.exec(html)) !== null) {
     const title = m[3].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-    let url = m[2].trim()
+    let url = resolve(m[2].trim())
     if (!title || title.length < 4) continue
-    if (!/^https?:\/\//i.test(url)) url = new URL(url, 'https://x').toString() // 相对链接兜底
+    if (opts.urlPattern && !new RegExp(opts.urlPattern, 'i').test(url)) continue
     const fp = sha256(url)
     if (seen.has(fp)) continue
     seen.add(fp)
     items.push({ title, url, pubDate: '', guid: url, desc: '', content: '' })
+    if (items.length >= maxItems) break
+  }
+  if (items.length >= maxItems) return items
+
+  // 遍 2：卡片式 <a href><h2-6>标题…</h2-6>…</a>（仅 urlPattern 源启用，避免影响既有源）
+  if (opts.urlPattern) {
+    const anchorRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]{0,6000}?)<\/a>/gi
+    while ((m = anchorRe.exec(html)) !== null) {
+      const rawUrl = m[1].trim()
+      const inner = m[2]
+      if (rawUrl.startsWith('#') || rawUrl.startsWith('javascript:')) continue
+      let url = resolve(rawUrl)
+      if (!new RegExp(opts.urlPattern, 'i').test(url)) continue
+      if (inner.length < 60) continue
+      const h = inner.match(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i)
+      if (!h) continue
+      const title = h[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (title.length < 4) continue
+      let pubDate = ''
+      const dm = inner.match(/(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/) ||
+        inner.match(/(\d{4})-(\d{1,2})-(\d{1,2})/) ||
+        inner.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/)
+      if (dm) pubDate = `${dm[1]}-${String(dm[2]).padStart(2, '0')}-${String(dm[3]).padStart(2, '0')}`
+      let desc = ''
+      const ps = inner.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || []
+      for (const p of ps) {
+        const t = p.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+        // 跳过纯日期/栏目行（如「动态 2026 年 4 月 24 日」）
+        if (t.length > 10 && t !== title && !/^(动态|新闻|公告|更新|资讯)?\s*\d{4}\s*[年\/\-]/.test(t)) {
+          desc = t.slice(0, 300); break
+        }
+      }
+      const fp = sha256(url)
+      if (seen.has(fp)) continue
+      seen.add(fp)
+      items.push({ title, url, pubDate, guid: url, desc, content: desc })
+      if (items.length >= maxItems) break
+    }
+  }
+  return items
+}
+
+/**
+ * Docusaurus 风格更新日志提取（2026-08-19 新增，deepseek_changelog 用）：
+ * 单页结构：<h2>Date: YYYY-MM-DD</h2> <h3>标题</h3> 正文…
+ * 按日期 h2 切块，取每块 h3 标题 + 正文摘要 + 页面锚点 URL。
+ */
+function extractChangelogEntries(html, opts = {}) {
+  const items = []
+  const base = opts.base || 'https://x'
+  const dateRe = /<h2[^>]*>\s*Date:\s*(\d{4})-(\d{1,2})-(\d{1,2})/gi
+  let m = dateRe.exec(html)
+  if (!m) return items
+  const blocks = []
+  let lastStart = m.index
+  let lastDate = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`
+  while ((m = dateRe.exec(html)) !== null) {
+    blocks.push({ date: lastDate, html: html.slice(lastStart, m.index) })
+    lastStart = m.index
+    lastDate = `${m[1]}-${String(m[2]).padStart(2, '0')}-${String(m[3]).padStart(2, '0')}`
+  }
+  blocks.push({ date: lastDate, html: html.slice(lastStart) })
+  const seen = new Set()
+  for (const b of blocks) {
+    const h3 = b.html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i)
+    if (!h3) continue
+    const title = h3[1].replace(/<[^>]+>/g, ' ').replace(/\u200b/g, '').replace(/\s+/g, ' ').trim()
+    if (title.length < 4) continue
+    const content = b.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500)
+    const slug = title.toLowerCase().replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-').replace(/^-|-$/g, '') || sha256(title).slice(0, 12)
+    const url = `${base}#${slug}`
+    const fp = sha256(url)
+    if (seen.has(fp)) continue
+    seen.add(fp)
+    items.push({ title, url, pubDate: b.date, guid: url, desc: content.slice(0, 300), content })
     if (items.length >= 30) break
   }
   return items
+}
+
+/** 正向关键词过滤（2026-08-19 新增）：requireTitleKeywords 任一命中才放行（媒体全站 feed 用，省 LLM token） */
+function passRequireKeywords(title, requireKeywords) {
+  const kws = (requireKeywords || []).map((k) => String(k).toLowerCase()).filter(Boolean)
+  if (!kws.length) return true
+  const t = String(title || '').toLowerCase()
+  for (const k of kws) {
+    if (t.includes(k)) return true
+  }
+  return false
 }
 
 // ───────────────────────────
@@ -620,7 +771,8 @@ async function runWorker(feed, now, ctx = {}) {
 
   const rawItems = fetched.items || []
   if (rawItems.length === 0) {
-    console.warn(`[worker] ${sourceId} 解析后 0 条（可能停更或解析规则待调）`)
+    // 2026-08-19 复盘：区分「无新增」与「源本身空/解析失败」，便于告警归因
+    console.warn(`[worker] ${sourceId} 解析后 0 条${fetched.timedOut ? '（超时）' : ''}（可能停更、无新增或解析规则待调，cursor=${sinceMs}）`)
     await updateSource(sourceId, { lastFetchStatus: 'empty' })
     return summarize({ sourceId, status: 'empty', inserted: 0 })
   }
@@ -638,6 +790,10 @@ async function runWorker(feed, now, ctx = {}) {
   let invalid = 0
   for (const raw of rawItems) {
     if (!passTitleFilter(raw.title, feed.blockTitleKeywords)) { filtered++; continue }
+    if (!passRequireKeywords(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
+    if (!passCategoryFilter(raw, feed.blockCategoryKeywords)) { filtered++; continue }
+    // 2026-08-19 复盘：剥离聚合源标题前缀（AINews]），避免噪音直达前端
+    raw.title = cleanItemTitle(raw.title)
     const vRes = validateIntelItem({ title: raw.title, url: raw.url, pubDate: raw.pubDate, desc: raw.desc, content: raw.content, guid: raw.guid }, meta)
     if (!vRes.ok) { invalid++; continue }
     candidates.push(vRes.item)

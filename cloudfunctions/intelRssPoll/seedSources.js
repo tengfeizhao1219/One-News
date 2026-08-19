@@ -238,7 +238,7 @@ const INTEL_SEED_SOURCES = [
     adapterConfig: {
       endpoint: 'http://export.arxiv.org/api/query',
       params: { search_query: 'cat:cs.AI OR cat:cs.CL OR cat:cs.CV', sortBy: 'submittedDate', sortOrder: 'descending', max_results: 30 },
-      timeoutMs: 10000, rateLimit: '3s',
+      timeoutMs: 15000, rateLimit: '3s', // 2026-08-19 复盘：export.arxiv.org 慢，10s 实测超时 → 15s
     },
     pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research', 'paper'],
     blockTitleKeywords: [],
@@ -291,7 +291,7 @@ const INTEL_SEED_SOURCES = [
     key: 'jiqizhixin',
     name: '机器之心',
     layer: 'F',
-    sourceType: 'scrape', // T2.4 实测 200 但仅 12.6KB 降级壳（只给 PRO 付费 teaser，免费列表不出现），RSS 已转付费订阅；默认不开启，中文层由 qbitai（量子位 RSS）补位
+    sourceType: 'scrape', // 2026-08-19 复盘确认：RSS 已转付费订阅、首页仅 3.4KB JS 壳（PRO 付费 teaser）→ scrape 无法提取文章列表，保持默认关闭；中文内容由 qbitai（修复后）与新接入的 AI 公司官方中文源补位
     baseUrl: 'https://www.jiqizhixin.com/',
     adapterConfig: { endpoint: 'https://www.jiqizhixin.com/', timeoutMs: 15000, rateLimit: 'polite' },
     pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech', 'zh'],
@@ -305,8 +305,10 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://www.qbitai.com/feed',
     adapterConfig: { endpoint: 'https://www.qbitai.com/feed', timeoutMs: 10000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech', 'zh'],
+    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech', 'zh'],
+    // 2026-08-19 复盘：RSS 全站内容，按分类剔除汽车/商业噪音（智能车参考=量子位汽车子品牌等）
     blockTitleKeywords: ['广告', '招聘'],
+    blockCategoryKeywords: ['智能车参考', '车圈', '比亚迪', '吉利'],
   },
   {
     _id: 'wechat_officials',
@@ -318,6 +320,54 @@ const INTEL_SEED_SOURCES = [
     adapterConfig: { endpoint: '{WECHAT_LOCAL_DATA_DIR}/wechat.db', timeoutMs: 15000, rateLimit: 'low', note: 'T2.5 落地 wechat adapter；云端不直连微信服务器' },
     pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'zh'],
     blockTitleKeywords: ['广告'],
+  },
+  // ── F 层 · 中文官方/媒体补充（2026-08-19 复盘新增：原仅 qbitai 且噪音大，补官方源 + 媒体 AI 筛选）──
+  {
+    _id: 'deepseek_news',
+    key: 'deepseek_news',
+    name: 'DeepSeek 官方动态',
+    layer: 'F',
+    sourceType: 'scrape', // 服务端渲染卡片列表（实测 <a><h3>标题</h3><p>描述</p></a>），urlPattern 限定 /news/
+    baseUrl: 'https://www.deepseek.com/news',
+    adapterConfig: { endpoint: 'https://www.deepseek.com/news', timeoutMs: 15000, rateLimit: 'polite', urlPattern: '/news/[a-z0-9-]+/?$' },
+    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    blockTitleKeywords: ['招聘'],
+  },
+  {
+    _id: 'deepseek_changelog',
+    key: 'deepseek_changelog',
+    name: 'DeepSeek API 更新日志',
+    layer: 'F',
+    sourceType: 'scrape', // Docusaurus 单页 changelog：h2 Date + h3 标题 + 正文，走 entryMode=changelog 提取
+    baseUrl: 'https://api-docs.deepseek.com/updates/',
+    adapterConfig: { endpoint: 'https://api-docs.deepseek.com/updates/', timeoutMs: 15000, rateLimit: 'polite', entryMode: 'changelog' },
+    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    blockTitleKeywords: ['招聘'],
+  },
+  {
+    _id: 'infoq_cn',
+    key: 'infoq_cn',
+    name: 'InfoQ 中文（AI 相关）',
+    layer: 'F',
+    sourceType: 'rss',
+    baseUrl: 'https://www.infoq.cn/feed',
+    adapterConfig: { endpoint: 'https://www.infoq.cn/feed', timeoutMs: 10000, rateLimit: 'none' },
+    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    // 全站 feed 无分类：正向关键词过滤，只收 AI 相关（省 LLM token）
+    requireTitleKeywords: ['AI', '人工智能', '智能', '大模型', '模型', 'Agent', '智能体', '机器人', '芯片', '算力', '算法', '开源', 'DeepSeek', 'OpenAI', 'GPT', 'LLM', '多模态', '推理', 'AGI', '英伟达', '自动驾驶'],
+    blockTitleKeywords: ['招聘', '广告'],
+  },
+  {
+    _id: 'geekpark_ai',
+    key: 'geekpark_ai',
+    name: '极客公园（AI 相关）',
+    layer: 'F',
+    sourceType: 'rss',
+    baseUrl: 'https://www.geekpark.net/rss',
+    adapterConfig: { endpoint: 'https://www.geekpark.net/rss', timeoutMs: 10000, rateLimit: 'none' },
+    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    requireTitleKeywords: ['AI', '人工智能', '智能', '大模型', '模型', 'Agent', '智能体', '机器人', '芯片', '算力', '算法', '开源', 'DeepSeek', 'OpenAI', 'GPT', 'LLM', '多模态', '推理', 'AGI', '英伟达', '自动驾驶'],
+    blockTitleKeywords: ['招聘', '广告'],
   },
 ]
 

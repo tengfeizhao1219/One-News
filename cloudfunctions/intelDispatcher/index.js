@@ -43,6 +43,7 @@ const router = require('./common/intelRouter')
 // ─── 集合名（intel_* 命名空间）───
 const INTEL_STAGED = 'intel_staged'      // 处理层产物（status=staged/released, releasedAt）
 const INTEL_CURRENT = 'intel_current'    // 用户可见 Brief（isCurrent 指针，§8.2/§7.2）
+const INTEL_CURRENT_ARCHIVE = 'intel_current_archive' // 2026-08-19 复盘：历史 Brief 归档（版本可追溯/回滚）
 const INTEL_SOURCES = 'intel_sources'    // 源注册表 + 健康度（sourceHealth 快照）
 const INTEL_CONFIG = 'intel_config'      // 全局开关 / 指针记录
 
@@ -324,6 +325,12 @@ async function persistBrief(dayKey, brief) {
   const found = await findTodayBrief(dayKey)
   if (found && found._id) {
     docId = found._id
+    // 2026-08-19 复盘：覆盖前把旧版快照归档，历史 Brief 可追溯/回滚
+    try {
+      const archive = Object.assign({}, found, { archivedAt: new Date().toISOString(), archiveNote: `superseded-by-v${brief.version}` })
+      delete archive._id
+      await db.collection(INTEL_CURRENT_ARCHIVE).add({ data: archive }).catch(() => {})
+    } catch (e) { /* 归档失败不阻塞发布 */ }
     try {
       await db.collection(INTEL_CURRENT).doc(found._id).update({ data: brief })
       console.log(`[intelDispatcher] 更新当日 brief v${brief.version} (${dayKey})`)
