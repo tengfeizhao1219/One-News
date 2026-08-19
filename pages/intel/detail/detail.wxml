@@ -1,7 +1,7 @@
 <!--
   INTEL-MODULE: AI 情报官模块 · 情报详情（UI 重构 v6 落地）
   变更要点：去顶部状态条；来源在标题下方展示；"落到你这里"浅蓝底卡；了解更多保持可展开。
-  数据结构不变（title/srcName/whatHappenedParagraphs/descText/relateItems/practiceText/minActionText/hasMore/sourceUrl）；标签"最小行动"→"想试试"（对齐 owner 拍板）。
+  数据结构不变（title/srcName/whatHappenedParagraphs/descText/relateItems/practiceText/minActionText/hasMore/sourceUrl）；标签"最小行动"→"想试试"→"试试看"（owner 2026-08-19 拍板：轻松引导语气，非命令式）。
 -->
 <view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
   <!-- 顶部条带（对齐原生胶囊） -->
@@ -60,11 +60,11 @@
         <view class="prose">{{practiceText}}</view>
       </block>
 
-      <!-- 想试试（owner 2026-08-19：最小行动改名想试试，仅可落地案例才展示） -->
+      <!-- 试试看（owner 2026-08-19：最小行动 → 试试看，轻松引导语气推荐；文案引导风格由后端 SOP 生成，见 COMMLOG） -->
       <block wx:if="{{minActionText}}">
         <view class="divider"></view>
-        <text class="block-label">想试试</text>
-        <view class="prose">{{minActionText}}</view>
+        <text class="block-label">试试看</text>
+        <view class="try-guide">{{minActionText}}</view>
       </block>
 
       <!-- 了解更多 ▸（有真实来源时才展示） -->

@@ -149,3 +149,13 @@
   color: var(--text-tertiary);
   margin: 32rpx 0 calc(16rpx + var(--safe-bottom, 0px));
 }
+
+/* UI 重构：试试看 —— 引导式语气容器（owner 2026-08-19：轻松推荐，非命令式步骤） */
+.try-guide {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.8;
+  background: var(--bg-subtle);
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+}

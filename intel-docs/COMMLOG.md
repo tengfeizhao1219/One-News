@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-19 | D/Owner | **拍板：详情页「想试试」→「试试看」+ 引导语气**。① 标签改名已落地（detail.wxml）；② 内容须为轻松引导式推荐（"想体验的话可以试试…"），**非命令式步骤/催促**——前端结构已就绪（.try-guide 浅底容器），文案语气由 P 角色在 intelProcess SOP 生成 minAction 时遵循（COMMLOG 交接，无需改前端）。三页 UI v6 已全部落地（b3bc50e/3c9902a + 本次）：首页卡片流+对你最重要tag+浅蓝底+去来源时间+去今日关注标题、详情页去状态条+来源前置+落到你这里浅蓝底、我的页精简画像+合规；FAB 未动、零新增 hex | ✅ 已推 |
 | 2026-08-19 | O/Owner | **拍板：定时档 = 固定节点无条件抓取**。05/11/18 触发器一到即抓全部启用源，不看 `lastFetchTime`/`pollSeconds` 间隔，手动抓取不消费定时档机会。`intelRssPoll` 已由 `listDueFeeds`(6h 间隔)改为 `listEnabledFeeds`(无条件)，部署 Active，提交 `d85ae00`。设计 §5.8 / TASK_BOARD T1.4 / 本导航索引已同步。**所有涉及抓取调度的角色留意** | ✅ |
 | 2026-08-18 | Q/O | 25 源权威清单对齐：O 裁决 A9/B4/C6/D2/E1/F3（剔 semianalysis/one_useful_thing，补量子位+公众号），id 统一下划线，seedSources 与 manifest 100% 一致 | ✅ |
 | 2026-08-18 | O | 代码已推送 GitHub `One-News#intel-officer` 分支；git 守护每 60s 自动同步 | ✅ |
