@@ -37,12 +37,12 @@
     <block wx:else>
       <view class="card {{item.contract ? 'card-contract' : ''}} {{index === 0 ? 'card-focus' : ''}}" wx:for="{{items}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
         <!-- 重点卡（首条）：对你最重要 tag + 浅蓝底对你行 -->
-        <text class="focus-tag" wx:if="{{index === 0}}">对你最重要</text>
+        <text class="focus-tag" wx:if="{{item.focus}}">对你最重要</text>
         <text class="card-title">{{item.title}}</text>
-        <view class="card-for" wx:if="{{index === 0 && item.desc}}">
-          <text class="for-k">对你：</text><text>{{item.desc}}</text>
+        <view class="card-for" wx:if="{{item.focus && (item.focusFor || item.desc)}}">
+          <text class="for-k">对你：</text><text>{{item.focusFor || item.desc}}</text>
         </view>
-        <text class="card-desc" wx:elif="{{item.desc}}">{{item.desc}}</text>
+        <text class="card-desc" wx:if="{{!item.focus && item.desc}}">{{item.desc}}</text>
       </view>
     </block>
 
@@ -63,6 +63,7 @@
 
   <!-- 悬浮按钮：完全复刻 One News 首页 .floating-more，作为「我的」入口（未动） -->
   <view class="floating-more" bindtap="goMine">
-    <image class="more-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    <image class="more-icon-img more-light" src="/assets/icons/settings.svg" mode="aspectFit"></image>
+    <image class="more-icon-img more-dark" src="/assets/icons/settings-dark.svg" mode="aspectFit"></image>
   </view>
 </view>

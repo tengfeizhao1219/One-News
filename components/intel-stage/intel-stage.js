@@ -7,7 +7,7 @@
 // owner 2026-08-18 19:45：前端不放任何 mock 数据，空态展示友好提示。
 const app = getApp()
 const { getIntelBrief, getIntelProfile } = require('../../utils/intelRequest')
-const { toCards } = require('../../utils/intelRender')
+const { toCards, markFocus } = require('../../utils/intelRender')
 
 Component({
   properties: {
@@ -148,6 +148,10 @@ Component({
           tryable: (brief.tryable || []).map((t) => ({ id: t.id, title: t.title, minAction: t.minAction, done: false })),
           meta,
         })
+        // 对你最重要：按画像 focusTags 命中标记
+        if (!meta.placeholder && cards.length) {
+          this.applyFocusMark(cards)
+        }
       } catch (err) {
         console.warn('[intel-stage] 拉取 brief 失败:', err.message || err)
         this.setData({ items: [], 'meta.loading': false, 'meta.empty': true })
@@ -174,6 +178,19 @@ Component({
 
     // 通知父组件：请求滑回 One News（由父置 active=false）
     /** 本周可试用清单勾选（与 pages/intel/home 一致） */
+    /** 拉取画像并按 focusTags 命中标记"对你最重要"卡片 */
+    async applyFocusMark(cards) {
+      try {
+        const profile = await getIntelProfile()
+        const marked = markFocus(cards, profile)
+        if (marked.some((it) => it.focus)) {
+          this.setData({ items: marked })
+        }
+      } catch (e) {
+        console.warn('[intel-stage] 画像命中标记失败:', (e && e.message) || e)
+      }
+    },
+
     toggleTryable(e) {
       const id = e.currentTarget.dataset.id
       const tryable = (this.data.tryable || []).map((t) =>

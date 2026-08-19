@@ -56,15 +56,15 @@
 
 /* 滚动容器 */
 .content {
-  /* 页面底 = bg-page（#F5F3F0 light / #000 dark），卡片 bg-card 浮出层次；硬编码 token 值（var 带 fallback 在部分版本被丢弃） */
-  background-color: #F5F3F0;
+  /* 页面底 = bg-page（CSS 变量实时继承主题，卡片 bg-card 浮出层次） */
+  background-color: var(--bg-page);
   flex: 1;
   height: 0;
   padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
-.page--dark .content { background-color: #000000; }
+/* dark 由 var(--bg-page) 自动切换 */
 
 /* 区块标题（仅"本周可试用清单"保留）*/
 .sect-head {
@@ -186,6 +186,10 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 .more-icon-img { width: 56rpx; height: 56rpx; }
+/* FAB 图标深浅切换：CSS 控制（不依赖 isDark 一次性判断，对齐 One News 主题响应） */
+.more-dark { display: none; }
+.page--dark .more-light { display: none; }
+.page--dark .more-dark { display: block; }
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }

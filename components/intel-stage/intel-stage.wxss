@@ -78,7 +78,7 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
-.intel-stage.page--dark .content { background-color: #000000; }
+.intel-stage/* dark 由 var(--bg-page) 自动切换 */
 
 .sect-head {
   font-size: calc(26rpx * var(--font-scale));
@@ -199,6 +199,10 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 .more-icon-img { width: 56rpx; height: 56rpx; }
+/* FAB 图标深浅切换：CSS 控制（不依赖 isDark 一次性判断，对齐 One News 主题响应） */
+.more-dark { display: none; }
+.page--dark .more-light { display: none; }
+.page--dark .more-dark { display: block; }
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }

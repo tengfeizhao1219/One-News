@@ -12,11 +12,30 @@
  * @param {Array} focusItems focusItems 原始数组（可能为空 / undefined）
  * @returns {Array<{id,title,desc,src,time,contract,sceneTags,rank}>}
  */
+/**
+ * 按用户画像 focusTags 标记卡片"对你最重要"：
+ * 命中 = item.sceneTags（后端已含命中 focusTags 原文）与 profile.focusTags 有交集。
+ * 未初始化画像（focusTags 为空）→ 无任何标记（没有画像就没有"强相关"）。
+ * @param {Array} items - toCards 产物（含 sceneTags/focusFor）
+ * @param {Object|null} profile - getIntelProfile 产物（含 focusTags）
+ * @returns {Array} 每项追加 focus:boolean（命中画像 → true）
+ */
+function markFocus(items, profile) {
+  const tags = (profile && Array.isArray(profile.focusTags)) ? profile.focusTags.map(String) : []
+  if (!tags.length) return (items || []).map((it) => Object.assign({}, it, { focus: false }))
+  return (items || []).map((it) => {
+    const st = Array.isArray(it.sceneTags) ? it.sceneTags.map(String) : []
+    const focus = st.some((t) => tags.includes(t))
+    return Object.assign({}, it, { focus })
+  })
+}
+
 function toCards(focusItems) {
   return (focusItems || []).map((it) => ({
     id: it.id || it.itemId || '',
     title: it.title || '',
     desc: it.definition || it.sceneMapping || '',   // 卡片副文本：一句话定义兜底
+    focusFor: it.sceneMapping || '',                // 与用户画像的关联介绍（sceneMapping 原文，命中画像时浅蓝区展示）
     src: it.sourceName || '',
     time: it.publishedAt ? formatLabel(it.publishedAt) : '',
     contract: it.contract === true,

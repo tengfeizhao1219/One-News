@@ -8,7 +8,7 @@
 // owner 2026-08-18 19:45 要求：前端不放任何 mock 数据，空态展示友好提示。
 const app = getApp()
 const { getIntelBrief, getIntelProfile } = require('../../../utils/intelRequest')
-const { toCards, getSafeBottom } = require('../../../utils/intelRender')
+const { toCards, getSafeBottom, markFocus } = require('../../../utils/intelRender')
 const C = require('../../../utils/constants')
 
 Page({
@@ -115,6 +115,10 @@ Page({
         tryable: (brief.tryable || []).map((t) => ({ id: t.id, title: t.title, minAction: t.minAction, done: false })),
         meta,
       })
+      // 对你最重要：按画像 focusTags 命中标记（sceneTags ∩ focusTags），命中则浅蓝区展示 focusFor 关联介绍
+      if (!meta.placeholder && cards.length) {
+        this.applyFocusMark(cards)
+      }
     } catch (err) {
       console.warn('[intel-home] 拉取 brief 失败:', err.message || err)
       this.setData({ items: [], 'meta.loading': false, 'meta.empty': true })
@@ -148,6 +152,20 @@ Page({
   },
 
   // 本周可试用清单勾选（本地暂存，非持久）
+  /** 拉取画像并按 focusTags 命中标记"对你最重要"卡片（命中后 setData 更新 focus/focusFor 展示） */
+  async applyFocusMark(cards) {
+    try {
+      const profile = await getIntelProfile()
+      const marked = markFocus(cards, profile)
+      // 仅当有命中项时更新（避免无谓 setData）
+      if (marked.some((it) => it.focus)) {
+        this.setData({ items: marked })
+      }
+    } catch (e) {
+      console.warn('[intel-home] 画像命中标记失败:', (e && e.message) || e)
+    }
+  },
+
   toggleTryable(e) {
     const id = e.currentTarget.dataset.id
     const tryable = (this.data.tryable || []).map((t) =>
