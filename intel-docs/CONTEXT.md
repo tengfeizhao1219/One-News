@@ -41,5 +41,8 @@ One News 仓库（不改原有逻辑）
 ## 🔑 常用速查
 - **Notion 同步**：后台守护每 60s 运行 `notion_sync.py`（幂等，未变更跳过）
 - **GitHub 同步**：`sync_all.sh`（代码 commit+push，目标仓库待定）
-- **凭证**：GitHub PAT / Notion Token 存于沙箱 `secrets.env`（600，未入库）
+- **凭证**：GitHub PAT / Notion Token 存于沙箱 `se
+
+> v2 新增必读：**LEARNINGS.md**（教训库，开工前必读）· **ADR.md**（决策日志）。关口前跑 `python3 scripts/check.py intel-docs`。
+crets.env`（600，未入库）
 - **GitHub DNS 修复**：`/etc/hosts` 写入 `140.82.113.4 github.com`；或 `git -c http.curloptResolve=github.com:443:140.82.113.4 pull --rebase`

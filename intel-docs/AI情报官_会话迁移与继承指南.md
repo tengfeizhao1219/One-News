@@ -62,14 +62,18 @@ git clone -b intel-officer https://github.com/tengfeizhao1219/One-News.git
 3. 读 TASK_BOARD.md —— 任务看板（当前所有任务状态、关口检查记录）
 4. 读 COMMLOG.md —— 沟通交接记录（倒序，看最新进展）
 5. 读 RELAY.md —— 既定任务跟踪表（当前阶段与里程碑）
-6. 读 AI情报官_协作机制.md —— 协作总规（认领/交付/关口/Git 纪律）
-7. 如需要更细上下文，读 docs/ 下其余文档（需求/调研/设计/复用审计/UI 规范等）
+6. 读 AI情报官_协作机制.md —— 协作总规（认领/交付/关口/Git 纪律，含 v2 质量门禁/DoD）
+7. 读 LEARNINGS.md —— 教训库（本项目的坑，开工前必读）
+8. 读 ADR.md —— 决策日志（owner 拍板与关键决策）
+9. 如需要更细上下文，读 intel-docs/ 下其余文档（需求/调研/设计/复用审计/UI 规范等）
+10. 跑 `python3 scripts/check.py intel-docs` —— 一致性审计，结果纳入继承摘要（有阻断项先报告）
 
 第二步：向用户汇报继承摘要（300 字内）：
 - 当前阶段（如 Phase 2 抓取层）
 - 最近完成项（参照 COMMLOG 最新 3 条）
 - 当前待办（参照 TASK_BOARD 进行中任务）
-- 待 owner 拍板项（参照 RELAY 末尾）
+- 待 owner 拍板项（参照 RELAY 末尾 + ADR 中 🔄 状态条目）
+- check.py 审计结果（有阻断项先报告，不自行修复）
 
 第三步：等待用户指令，按协作机制推进；改文件后立即 commit+push（git pull --rebase 先行）。
 ```
