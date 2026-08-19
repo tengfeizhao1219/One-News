@@ -1,0 +1,172 @@
+<!--
+  INTEL-MODULE: AI 情报官 · 首次进入引导（4 步 stepper）
+  步骤：0 身份 / 1 关注领域 / 2 深度+语言+可试用 / 3 合规
+  顶部进度条 + 中间表单 + 底部固定「上一步 / 下一步 / 完成」。
+-->
+<view class="page {{themeClass}} intel-onboard" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+  <!-- 状态栏背景层 -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+
+  <!-- 顶部：标题 + 进度 -->
+  <view class="nav">
+    <view class="nav-row">
+      <text class="nav-title">初始化情报画像</text>
+      <text class="nav-sub">{{step + 1}} / 4 · {{stepTitles[step]}}</text>
+    </view>
+    <view class="step-bar">
+      <view class="step-bar-fill" style="width: {{(step + 1) * 25}}%;"></view>
+    </view>
+    <view class="step-dots">
+      <view class="step-dot {{step >= 0 ? 'on' : ''}}"></view>
+      <view class="step-dot {{step >= 1 ? 'on' : ''}}"></view>
+      <view class="step-dot {{step >= 2 ? 'on' : ''}}"></view>
+      <view class="step-dot {{step >= 3 ? 'on' : ''}}"></view>
+    </view>
+  </view>
+
+  <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
+
+    <!-- ===== Step 0 身份 ===== -->
+    <block wx:if="{{step === 0}}">
+      <view class="step-h">告诉我们你是谁</view>
+      <view class="step-sub">三段短文本，写你最常切换的身份即可，至少填一段。</view>
+
+      <view class="field">
+        <text class="field-label">工作 <text class="field-meta">· 公司 / 岗位 / 关键议题</text></text>
+        <textarea class="field-input"
+                  placeholder="例：某 SaaS 公司产品经理，关注 AI 提效与跨境合规"
+                  maxlength="120"
+                  auto-height
+                  value="{{identities.work}}"
+                  data-group="identities" data-key="work"
+                  bindinput="onInput"></textarea>
+      </view>
+
+      <view class="field">
+        <text class="field-label">产品 <text class="field-meta">· 正在做的事</text></text>
+        <textarea class="field-input"
+                  placeholder="例：AI 写作工具 v0.x，主打公众号二创提效"
+                  maxlength="120"
+                  auto-height
+                  value="{{identities.product}}"
+                  data-group="identities" data-key="product"
+                  bindinput="onInput"></textarea>
+      </view>
+
+      <view class="field">
+        <text class="field-label">家庭 / 生活 <text class="field-meta">· 业余焦点</text></text>
+        <textarea class="field-input"
+                  placeholder="例：奶爸 + 长跑训练，关注健康类 AI 应用"
+                  maxlength="120"
+                  auto-height
+                  value="{{identities.life}}"
+                  data-group="identities" data-key="life"
+                  bindinput="onInput"></textarea>
+      </view>
+    </block>
+
+    <!-- ===== Step 1 关注领域 ===== -->
+    <block wx:elif="{{step === 1}}">
+      <view class="step-h">你日常最关心哪些议题</view>
+      <view class="step-sub">勾选下方预设词，可自填补充。至少 1 个，越具体越准。</view>
+
+      <view class="chip-grid">
+        <view class="chip {{focusTags.indexOf(tag) >= 0 ? 'on' : ''}}"
+              wx:for="{{presetFocus}}" wx:key="*this"
+              data-tag="{{item}}" bindtap="onChipToggle">{{item}}</view>
+      </view>
+
+      <!-- 自填补充 -->
+      <view class="custom-tag">
+        <input class="custom-input"
+               placeholder="自填关注词（回车加入）"
+               value="{{customTag}}"
+               data-field="customTag"
+               bindinput="onInput"
+               bindconfirm="onAddTag"
+               confirm-type="done"></input>
+        <view class="custom-add" bindtap="onAddTag">添加</view>
+      </view>
+
+      <!-- 已选列表 -->
+      <view wx:if="{{focusTags.length}}" class="picked">
+        <text class="picked-label">已选（{{focusTags.length}}）：</text>
+        <text class="picked-item" wx:for="{{focusTags}}" wx:key="*this">#{{item}}</text>
+      </view>
+    </block>
+
+    <!-- ===== Step 2 深度 + 语言 + 可试用 ===== -->
+    <block wx:elif="{{step === 2}}">
+      <view class="step-h">情报深度与语言</view>
+      <view class="step-sub">决定每日情报的展开粒度、混排语言和是否附带「本周可试用」。</view>
+
+      <view class="step-section-label">深度档位</view>
+      <view class="seg">
+        <view class="seg-item {{depth === 'lite' ? 'on' : ''}}" data-v="lite" bindtap="setDepth">lite</view>
+        <view class="seg-item {{depth === 'std' ? 'on' : ''}}" data-v="std" bindtap="setDepth">std</view>
+        <view class="seg-item {{depth === 'deep' ? 'on' : ''}}" data-v="deep" bindtap="setDepth">deep</view>
+      </view>
+      <view class="depth-desc">{{depthMeta[depth].label}} · {{depthMeta[depth].desc}}</view>
+
+      <view class="step-section-label">语言偏好</view>
+      <view class="seg">
+        <view class="seg-item {{langPref === 'zh' ? 'on' : ''}}" data-v="zh" bindtap="setLang">中文</view>
+        <view class="seg-item {{langPref === 'mixed' ? 'on' : ''}}" data-v="mixed" bindtap="setLang">中英混排</view>
+        <view class="seg-item {{langPref === 'en' ? 'on' : ''}}" data-v="en" bindtap="setLang">English</view>
+      </view>
+
+      <view class="switch-row">
+        <view class="switch-row-body">
+          <text class="switch-row-label">本周可试用清单</text>
+          <text class="switch-row-sub">勾选后情报下方附带可勾选的最小行动项</text>
+        </view>
+        <view class="switch {{wantTryable ? 'on' : ''}}" bindtap="toggleWantTryable">
+          <view class="switch-knob"></view>
+        </view>
+      </view>
+    </block>
+
+    <!-- ===== Step 3 合规 ===== -->
+    <block wx:elif="{{step === 3}}">
+      <view class="step-h">合规与版权告知</view>
+      <view class="step-sub">请阅读以下告知，勾选底部授权后即可完成初始化。</view>
+
+      <view class="notice-card">
+        <view class="notice-title">风险告知</view>
+        <view class="notice-body">
+          AI 情报官每日汇总的资讯来自第三方公开信源（公众号、博客、arXiv 等），内容经过自动摘要与转述，仅供你了解领域动态与做下一步判断的参考，不构成任何投资、法律或医疗建议；摘要可能与原文存在偏差，关键决策请回到原文核对。
+        </view>
+      </view>
+
+      <view class="notice-card">
+        <view class="notice-title">版权与转发范围</view>
+        <view class="notice-body">
+          第三方源（含微信公众号文章）的版权归原作者所有。情报官为你做的转述与场景映射仅在你本人范围内使用，不得整段复制原文并对外再分发；如需引用，请回到原文链接并按原作者要求注明出处。
+        </view>
+      </view>
+
+      <view class="consent" bindtap="toggleConsent">
+        <view class="consent-box {{consentSigned ? 'on' : ''}}">
+          <text wx:if="{{consentSigned}}" class="consent-check">✓</text>
+        </view>
+        <text class="consent-text">我已阅读上述告知，并同意授权 AI 情报官基于我的画像生成摘要与可试用清单</text>
+      </view>
+    </block>
+
+    <!-- 错误提示 -->
+    <view wx:if="{{errMsg}}" class="err-msg">{{errMsg}}</view>
+
+    <view class="foot-note">所有数据仅保存在你的小程序云端，随时可在「我的」里编辑或撤销授权</view>
+  </scroll-view>
+
+  <!-- 底部固定按钮 -->
+  <view class="footer">
+    <view class="btn btn-ghost {{step === 0 ? 'disabled' : ''}}" bindtap="prevStep">上一步</view>
+    <block wx:if="{{step < 3}}">
+      <view class="btn btn-primary" bindtap="nextStep">下一步</view>
+    </block>
+    <block wx:else>
+      <view class="btn btn-primary {{(!consentSigned || submitting) ? 'disabled' : ''}}" bindtap="onSubmit">{{submitting ? '保存中…' : '完成'}}</view>
+    </block>
+  </view>
+</view>

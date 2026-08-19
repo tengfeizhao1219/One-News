@@ -5,20 +5,34 @@
   top: 0;
   left: 0;
   right: 0;
+  /* 高度锚定改为 top+bottom 双端（不再依赖 windowHeight/100vh 数值）：
+     覆盖层恒等于「可见窗口」高度。若真机上 windowHeight 与可视区不一致
+     （Android 手势条/部分机型），固定数值会导致覆盖层比屏幕矮、
+     底部露出 One News 内容——top+bottom 双端锚定彻底规避 */
+  bottom: 0;
   width: 100%;
-  height: 100%;
+  height: auto;
   transform: translateX(-100%);
-  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0.32s;
   will-change: transform;
   z-index: 60; /* 高于 One News 内容区(卡片/面板)，低于原生胶囊 */
   background-color: var(--bg-card);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* owner 2026-08-18 19:40：非激活态显式 visibility:hidden，
+     防止微信 WebView 中 fixed + transform:translateX(-100%) 仍部分可见
+     形成「首页一打开就有米白底部遮罩」的渲染 bug。visibility 走 transition
+     延迟 0.32s 切换，保证进入动画无视觉跳变。 */
+  visibility: hidden;
+  pointer-events: none;
 }
 /* active：AI 情报屏覆盖到屏幕中央（translateX 0） */
 .intel-stage.in {
   transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 0s;
 }
 
 /* 状态栏背景层 —— 复用 One News 首页 .status-bar-fill 机制 */
@@ -43,12 +57,18 @@
 .nav-sub { font-size: calc(22rpx * var(--font-scale-meta, 1)); color: var(--text-tertiary); margin-left: auto; }
 
 .content {
+  /* 底部空白区（padding/占位）默认渲染为白色——显式硬编码着色与背景同色；
+     不用 var()（带 fallback 的 var() 在部分版本整条声明被丢弃，退回默认白） */
+  background-color: #FAF9F7;
   flex: 1;
   height: 0;
-  padding: 8rpx 32rpx calc(200rpx + env(safe-area-inset-bottom));
+  /* 底部仅留安全区避让（对齐关于页：无 spacer、无大 padding，内容直达底部） */
+  padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
+/* 深色模式：与 --bg-card dark(#0D0D0D) 同色 */
+.intel-stage.page--dark .content { background-color: #0D0D0D; }
 
 .sect-head {
   display: flex;
@@ -96,14 +116,16 @@
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  margin: 8rpx 0 24rpx;
+  margin: 8rpx 0 calc(16rpx + var(--safe-bottom, 0px));
 }
 
 /* FAB：复刻 One News 首页 .floating-more */
 .floating-more {
   position: fixed;
   right: 40rpx;
-  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  /* 底边抬高到 96rpx+env：env=0（Android 无 safe-area 注入）时也高于手势条(≈96rpx)，
+     避免悬浮按钮自身被手势条压住 */
+  bottom: calc(96rpx + var(--safe-bottom, 0px));
   z-index: 29;
   width: 96rpx;
   height: 96rpx;
@@ -125,4 +147,64 @@
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }
+}
+
+/* === 空态/加载态/元信息/tryable（与 pages/intel/home/home.wxss 同步） === */
+.meta-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  align-items: center;
+  margin: 16rpx 4rpx 0;
+}
+.data-asof {
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  background: var(--bg-subtle);
+  padding: 6rpx 16rpx;
+  border-radius: 24rpx;
+}
+.health-hint {
+  font-size: 22rpx;
+  color: var(--color-warning);
+  background: var(--color-warning-subtle);
+  padding: 6rpx 16rpx;
+  border-radius: 24rpx;
+}
+.state-hint {
+  font-size: 26rpx;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 80rpx 0;
+}
+.try-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 24rpx;
+  padding: 22rpx 26rpx;
+  margin-bottom: 20rpx;
+}
+.try-check {
+  width: 34rpx;
+  height: 34rpx;
+  border-radius: 50%;
+  border: 3rpx solid var(--divider);
+  margin-top: 4rpx;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.try-check.on { background: var(--primary); border-color: var(--primary); }
+.try-body { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
+.try-title {
+  font-size: 27rpx;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.try-min {
+  font-size: 23rpx;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }

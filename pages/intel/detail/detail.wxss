@@ -38,12 +38,20 @@
 }
 
 .content {
+  /* 底部空白区（padding/占位）默认渲染为白色——显式硬编码着色与背景同色；
+     不用 var()（带 fallback 的 var() 在部分版本整条声明被丢弃，退回默认白） */
+  background-color: #FAF9F7;
   flex: 1;
   height: 0;
-  padding: 8rpx 32rpx calc(80rpx + env(safe-area-inset-bottom));
+  padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
+/* 深色模式：与 --bg-card dark(#0D0D0D) 同色 */
+.page--dark .content { background-color: #0D0D0D; }
+
+/* 底部实体占位 = 清障主力（scroll-view padding 在真机部分机型不撑开滚动区）：
+   单独即可把最后内容顶到手势条(≈34px)/Android 手势条(≈96rpx)之上 */
 
 /* 状态条：降噪 */
 .status-strip {
@@ -191,5 +199,15 @@
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  margin: 32rpx 0;
+  /* 底部安全区避让：页脚 margin 是 in-flow 元素，必然撑开滚动区，
+     最后一行字可滚出手势条之上（scroll-view padding 真机不撑开滚动区） */
+  margin: 32rpx 0 calc(16rpx + var(--safe-bottom, 0px));
+}
+
+/* 空态/加载态友好提示 */
+.state-hint {
+  font-size: 28rpx;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 120rpx 0;
 }

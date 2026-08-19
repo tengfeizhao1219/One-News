@@ -1,5 +1,5 @@
 <!-- INTEL-MODULE: AI 情报官模块 · 我的（FAB 入口落地页） -->
-<view class="page {{themeClass}} intel-mine" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+<view class="page {{themeClass}} intel-mine" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
   <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
 
@@ -8,14 +8,29 @@
     <text class="nav-title">我的</text>
   </view>
 
-  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
     <view class="sect-head"><view class="dot"></view><text>画像与推送</text></view>
-    <view class="card"><text class="card-title">我的身份画像</text><text class="card-desc">工作 / 产品 / 家庭 三重身份与关注领域管理</text></view>
-    <view class="card"><text class="card-title">信息源管理</text><text class="card-desc">25 个情报源开关与权重</text></view>
-    <view class="card"><text class="card-title">推送档位与提前量 Δ</text><text class="card-desc">05 / 11 / 18 点三档发布节奏</text></view>
 
-    <view class="sect-head"><view class="dot"></view><text>合规</text></view>
-    <view class="card"><text class="card-title">风险告知与授权</text><text class="card-desc">公众号 / 第三方源使用范围</text></view>
+    <!-- T5.1 接入：身份画像改为可点编辑卡 -->
+    <view class="card card-action" bindtap="goEditProfile">
+      <view class="card-body">
+        <text class="card-title">我的身份画像</text>
+        <text class="card-desc" wx:if="{{identitiesSummary}}">{{identitiesSummary}}</text>
+        <text class="card-desc" wx:elif="{{focusTagsSummary}}">关注：{{focusTagsSummary}}</text>
+        <text class="card-desc" wx:else>尚未初始化 · 点击开始填写</text>
+      </view>
+      <text class="card-chev">›</text>
+    </view>
+
+    <!-- T5.1 接入：合规改为授权状态 + 撤销按钮 -->
+    <view class="card card-action">
+      <view class="card-body">
+        <text class="card-title">风险告知与授权</text>
+        <text class="card-desc" wx:if="{{consentSigned}}">已授权 · {{consentAt}}</text>
+        <text class="card-desc" wx:else>未授权 · 情报官不会为你生成新摘要</text>
+      </view>
+      <view class="revoke-btn {{consentSigned ? '' : 'disabled'}}" catchtap="revokeConsent">撤销授权</view>
+    </view>
 
     <view class="foot-note">由 AI 情报官生成 · 配置项待后端联调</view>
   </scroll-view>
