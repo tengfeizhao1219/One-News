@@ -8,30 +8,30 @@
 
 ## 一、分支基线（最重要，先看这条）
 
-**所有后续改动一律基于远端分支 `intel-officer`，绝不动 `master`/`main`。**
+**所有后续改动一律基于远端分支 `main`（2026-08-19 起规范分支；原 `intel-officer` 已全部并入 main 并退役，勿再基于旧分支）。**
 
 - 远端仓库：`https://github.com/tengfeizhao1219/One-News.git`
-- 分支：`intel-officer`（**完整可运行版**：One News 全量源码 + AI 情报官全部改动）
+- 分支：`main`（**完整可运行版**：One News 全量源码 + AI 情报官全部改动，2026-08-19 起规范分支）
 - 获取方式（任选其一）：
   ```bash
   # 方式 A（推荐）：全新 clone
-  git clone -b intel-officer https://github.com/tengfeizhao1219/One-News.git
+  git clone -b main https://github.com/tengfeizhao1219/One-News.git
 
   # 方式 B（已有 One-News 仓库）：
-  git fetch origin intel-officer
-  git checkout -b intel-officer origin/intel-officer
+  git fetch origin main
+  git checkout -b main origin/main
   ```
-- 微信开发者工具导入时：仓库填上面的 URL，**分支务必选 `intel-officer`**（不要选 master/main）。
-- 提交纪律：改前 `git pull --rebase`；改后立即 `git add <本职责文件> && git commit && git push origin intel-officer`。小步快推。
+- 微信开发者工具导入时：仓库填上面的 URL，**分支务必选 `main`**（2026-08-19 起规范分支，intel-officer 已退役）。
+- 提交纪律：改前 `git pull --rebase`；改后立即 `git add <本职责文件> && git commit && git push origin main`。小步快推。
 
-> ⚠️ 该分支 2026-08-18 曾被 force push 过一次（孤儿历史 → 完整历史）。若本地已有旧引用：`git fetch origin && git reset --hard origin/intel-officer`。
+> 📌 2026-08-19：`intel-officer` 分支已并入 `main` 并退役（远端已删除）。若本地仍有旧引用：`git fetch origin && git checkout main && git reset --hard origin/main`。
 
 ---
 
 ## 二、仓库目录地图
 
 ```
-One-News/（intel-officer 分支）
+One-News/（main 分支）
 ├── app.json / app.js / theme.json / pages/home / pages/detail / cloudfunctions/ …  ← One News 原有（只读，勿改）
 ├── pages/intel/                    ← ★ AI 情报官前端（本项目的核心交付物）
 │   ├── home/   情报首页（右滑进入的第一屏；数据源：云函数 getIntelBrief）
@@ -140,7 +140,7 @@ bash tools/gen-intel-deploy.sh          # 生成 cloudfunctions/ 下 7 个 intel
 
 | 通道 | 内容 | 机制 |
 |---|---|---|
-| GitHub `intel-officer` 分支 | 代码 + `intel-docs/` 文档 | 改后立即 commit+push；沙箱另有每 60s 自动守护 |
+| GitHub `main` 分支 | 代码 + `intel-docs/` 文档 | 改后立即 commit+push；沙箱另有每 60s 自动守护 |
 | Notion 库「AI 情报官项目资料」（「AI能干什么」页面下） | 全部文档 | `/workspace/*.md` 变更后 60s 内自动同步 |
 
 - 文档优先改 `/workspace/`（自动同步 Notion），如需进代码分支再复制到 `intel-docs/` 提交。
@@ -161,7 +161,7 @@ bash tools/gen-intel-deploy.sh          # 生成 cloudfunctions/ 下 7 个 intel
 - 里程碑：M3 首个真实情报产出（需 Phase 3 + LLM key）→ M4 常态化每日三档情报
 
 ### 新 AI 启动流程（前 5 分钟）
-1. `git clone -b intel-officer https://github.com/tengfeizhao1219/One-News.git`
+1. `git clone -b main https://github.com/tengfeizhao1219/One-News.git`
 2. 依次读：`intel-docs/CONTEXT.md` → `ROLE_CARDS.md` → `TASK_BOARD.md` → `COMMLOG.md` → `RELAY.md` → `AI情报官_协作机制.md`
 3. 确认角色（O 主控 / I 基础设施 / A 适配器 / P 处理 / D 前端UI / Q 校验 / K 文档）
 4. 认领任务后按 §三 硬约束 + §五 部署规范开工；GitHub 推送遇 TLS 错误先 `gh-fix`（或直接重试，wrapper 会自动修）

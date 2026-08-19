@@ -45,3 +45,8 @@
 - 云函数部署：`tools/gen-intel-deploy.sh` 一键生成 7 个自包含副本到 `cloudfunctions/intel*/`；cloudbaserc.json 已注册全部 7 函数（含 3 组定时触发器）
 - **当前头号阻塞：LLM Key（T0.3 🚫 待 owner）**——intelProcess 未配 Key 时静默降级跳过处理 → intel_staged 空 → 前端空态。owner 在云开发控制台给 intelProcess 配好 Key 后整条链即通。
 - 排查顺序见《AI能干什么_代码分支与部署注意事项.md》§5.7。
+## 2026-08-19 · intel-officer 修复并入 main + intel-officer 退役（owner 拍板：main 为规范分支）
+
+- 交接：owner 拍板「main 为规范分支」。intel-officer 中 main 尚缺的内容全部并入 main（提交 f76d289 + 1022739）：① pages/intel/home/* 新版（去 DEMO mock、safeBottom/pageH 注入、普通 scroll-view、scroll-view 背景硬编码、页脚安全区 margin）；② app.js/app.wxss/app.json 窗口/page 背景统一 --bg-card(#FAF9F7/#0D0D0D)；③ cloudfunctions/intelProfile 补入（mine/onboard 依赖的画像云函数）。
+- 产物：main 已 push（1022739）；intel-officer 远端+本地分支已删除；WorkBuddy / Desktop(DevTools) / One-News-latest 三副本全部切到 main；detail.js/wxml 保持 main 融合版（whatHappened 多段叙事/实操/最小行动）。
+- 下游：后续所有改动一律基于 main；微信开发者工具导入分支选 main；分支基线文档已同步更新。
