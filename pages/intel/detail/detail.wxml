@@ -6,7 +6,8 @@
   - 方案A：详情内容与所选卡片匹配，统一走云函数 intelGetDetail 拉真实数据。
   - owner 2026-08-18 19:45：不放 mock，空态展示友好提示。
   - 融合说明：以 Desktop(intel-officer) 的加载态/空态/安全区为骨架，融入 main 的
-    whatHappened 科普多段叙事 + 可以怎么做 + 最小行动。
+    whatHappened 科普多段叙事 + 可以怎么做 + 想试试（2026-08-19 owner：最小行动改名想试试，
+    仅可落地案例才展示；落到你这里仅强相关才关联）。
 -->
 <view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
   <!-- 顶部条带（对齐原生胶囊）：先铺背景，再把导航顶到胶囊下方，避免与胶囊重叠 -->
@@ -71,9 +72,9 @@
         <view class="divider"></view>
       </block>
 
-      <!-- 最小行动：一个可勾选的具体下一步 -->
+      <!-- 想试试：仅存在可立即上手的案例时展示（弱相关/不可落地留空自动隐藏） -->
       <block wx:if="{{minActionText}}">
-        <text class="block-label">最小行动</text>
+        <text class="block-label">想试试</text>
         <view class="prose">{{minActionText}}</view>
         <view class="divider"></view>
       </block>

@@ -653,6 +653,23 @@ function passRequireKeywords(title, requireKeywords) {
   return false
 }
 
+/** 综合新闻过滤（2026-08-19 owner 拍板）：标题用「；/;」分隔出多个主题（如"AI xx；比亚迪 xx；明星 xx"）
+ *  时，任一主题段不命中 AI 关键词即视为「综合新闻（AI+B/C 混排）」→ 一律过滤，只留 AI 专题文章。
+ *  仅对配置了 requireTitleKeywords 的源生效（避免误伤单主题长标题）。 */
+function passPureAiFilter(title, requireKeywords) {
+  const kws = (requireKeywords || []).map((k) => String(k).toLowerCase()).filter(Boolean)
+  if (!kws.length) return true
+  const t = String(title || '')
+  const segs = t.split(/[；;]/).map((s) => s.trim()).filter(Boolean)
+  if (segs.length <= 1) return true // 单主题 → 交给关键词/相关性把关
+  for (const seg of segs) {
+    const ls = seg.toLowerCase()
+    const ok = kws.some((k) => ls.includes(k))
+    if (!ok) return false
+  }
+  return true
+}
+
 // ───────────────────────────
 // 去重 + 写 intel_ingest
 // ───────────────────────────
@@ -788,17 +805,18 @@ async function runWorker(feed, now, ctx = {}) {
   const candidates = []
   let filtered = 0
   let invalid = 0
-  // 2026-08-19 复盘：新鲜度守卫——scrape 官网列表含历史全量（如 DeepSeek 动态列到 2025 年），
-  // 仅收近 10 天内容，旧闻不进处理层（省 LLM token，也不污染今日 brief）
-  const MAX_ITEM_AGE_MS = 10 * 24 * 3600 * 1000
+  // 2026-08-19 owner 拍板：严格「两批次间」窗口——只收 (上一批次 cursor, 当前时间] 发布的数据，
+  // 无有效日期/超窗条目一律过滤（防历史全量/旧闻灌入；首次运行无 cursor 回看 24h 引导）
+  const windowStart = sinceMs > 0 ? sinceMs : (Date.now() - 24 * 3600 * 1000)
   for (const raw of rawItems) {
     if (!passTitleFilter(raw.title, feed.blockTitleKeywords)) { filtered++; continue }
     if (!passRequireKeywords(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
     if (!passCategoryFilter(raw, feed.blockCategoryKeywords)) { filtered++; continue }
-    if (raw.pubDate) {
-      const t = new Date(raw.pubDate).getTime()
-      if (!Number.isNaN(t) && Date.now() - t > MAX_ITEM_AGE_MS) { filtered++; continue }
-    }
+    // 综合新闻过滤：标题多主题（；分隔）且任一段非 AI → 一律过滤（只留 AI 专题）
+    if (!passPureAiFilter(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
+    // 严格窗口：pubDate 必须有效且落在 (windowStart, now]
+    const t = raw.pubDate ? new Date(raw.pubDate).getTime() : NaN
+    if (Number.isNaN(t) || t <= windowStart || t > Date.now()) { filtered++; continue }
     // 2026-08-19 复盘：剥离聚合源标题前缀（AINews]），避免噪音直达前端
     raw.title = cleanItemTitle(raw.title)
     const vRes = validateIntelItem({ title: raw.title, url: raw.url, pubDate: raw.pubDate, desc: raw.desc, content: raw.content, guid: raw.guid }, meta)

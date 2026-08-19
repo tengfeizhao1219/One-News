@@ -148,6 +148,54 @@ async function processOne(item, profile) {
   return { itemId, status: 'ok', relevance: route.level, sceneHits: parsed.sceneHits, tryable: parsed.tryable }
 }
 
+/**
+ * ④ 每源每批次质量打分（2026-08-19 owner 拍板）：
+ *    quality = 10×(staged/processed) − 3×(rejected/processed)，clamp 0-10。
+ *    样本 ≥3 才打分；低于 6 分自动停用该源（status=retired, enabled=false，以后不再抓取），
+ *    滚动保存最近 5 次分数便于复盘/人工恢复。
+ */
+async function scoreSourceQuality(todo, results) {
+  try {
+    const stats = {}
+    for (let i = 0; i < todo.length; i++) {
+      const src = todo[i].sourceId || 'unknown'
+      const r = results[i] || {}
+      stats[src] = stats[src] || { processed: 0, staged: 0, low: 0, rejected: 0 }
+      const s = stats[src]
+      s.processed++
+      if (r.status === 'ok') s.staged++
+      else if (r.status === 'low') s.low++
+      else if (r.status === 'rejected') s.rejected++
+    }
+    for (const [src, s] of Object.entries(stats)) {
+      if (s.processed < 3) continue // 样本太少不打分，避免单条坏批次误杀
+      const quality = Math.max(0, Math.min(10,
+        Math.round((10 * (s.staged / s.processed) - 3 * (s.rejected / s.processed)) * 10) / 10))
+      const doc = await db.collection(INTEL_SOURCES).where({ key: src }).limit(1).get().catch(() => null)
+      const srcDoc = (doc && doc.data && doc.data[0]) || null
+      if (!srcDoc) continue
+      const prev = Array.isArray(srcDoc.qualityScores) ? srcDoc.qualityScores : []
+      const scores = [...prev, quality].slice(-5)
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length
+      const patch = {
+        qualityScore: quality,
+        qualityAvg: Math.round(avg * 10) / 10,
+        qualityScores: scores,
+        lastQualityAt: new Date().toISOString(),
+      }
+      if (quality < 6) {
+        patch.enabled = false
+        patch.status = 'retired'
+        patch.retireReason = `quality<6(${quality}): staged=${s.staged}/${s.processed}, low=${s.low}, rejected=${s.rejected}`
+        console.warn(`[intelProcess] 源 ${src} 质量分 ${quality}<6 自动停用（staged ${s.staged}/${s.processed}, rejected ${s.rejected}）`)
+      }
+      await db.collection(INTEL_SOURCES).where({ key: src }).update({ data: patch }).catch(() => {})
+    }
+  } catch (e) {
+    console.warn('[intelProcess] 源质量打分失败（非阻塞）:', e.message)
+  }
+}
+
 /** 查 intel_staged 是否已存在（itemId 幂等去重） */
 async function findStaged(itemId) {
   try {
@@ -208,17 +256,18 @@ function buildPrompts(item, profile, level) {
 务实、直接给结论，不堆参数、不软文、不夸大、不含糊其辞。英文专有名词保留原文（首现可括号注中文），不意译夸张措辞。${translatePref}`
 
   // depth 强化/轻量（仅 high 完整 SOP 路径注入；medium 轻量本就跳过实操）。
-  //   'deep' → 「最小行动」可落地深度，给出可复盘的细节步骤与产出物；
+  //   'deep' → 「想试试」可落地深度，给出可复盘的细节步骤与产出物；
   //   'lite' → 压缩实操，只给一两个关键动作，减少展开。
   let depthHint = ''
-  if (depth === 'deep') depthHint = '\n（深度档）「可以怎么做」「最小行动」须给到可复盘的细节步骤、所用工具/入口与产出物，不只罗列概念。'
-  else if (depth === 'lite') depthHint = '\n（精简档）「可以怎么做」压缩到 1-2 个关键动作，「最小行动」给最轻一步即可。'
+  if (depth === 'deep') depthHint = '\n（深度档）「可以怎么做」「想试试」须给到可复盘的细节步骤、所用工具/入口与产出物，不只罗列概念。'
+  else if (depth === 'lite') depthHint = '\n（精简档）「可以怎么做」压缩到 1-2 个关键动作，「想试试」给最轻一步即可。'
 
   if (level === 'medium') {
     return {
       system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
-先输出一行「发生了什么」：用大白话 2-3 句讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注，术语首现括号解释，让不懂的人也能看懂。
-再输出一句话定义（含能力边界）+ 一句「对老赵的意义」（命中至少一个身份）。不要实操步骤。${depth === 'lite' ? '（精简档，更短）' : ''}`,
+先输出「发生了什么」：用大白话分 1-2 段（不少于 100 字）讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注、背后怎么回事，术语首现用括号一句话解释，让行外人也看得懂。
+再输出一句话定义（含能力边界）。
+最后输出「对老赵的意义」：仅当本条与老赵初始化的行业/职位特征**强相关且能具体点出关联点**时才写（1-2 句，落到具体工作/产品/生活场景）；弱相关或无法具体关联时输出「无」，禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}`,
       user: `情报原文：\n${text}`,
     }
   }
@@ -226,21 +275,21 @@ function buildPrompts(item, profile, level) {
   const system = baseSystem + depthHint + `
 
 对下面单条情报按 SOP 六步硬性结构输出（欠一步即视为不合格）：
-0. 发生了什么（科普向，最关键）：用普通人都能听懂的话，分 2-4 段讲清楚这条情报/产品/事件「是什么、核心内容/发生了什么、为什么值得关注、背后怎么回事/工作原理或背景」。术语首现用括号一句话解释（如 RAG（检索增强生成，让 AI 先查资料再作答））；避免英文缩写轰炸和堆参数。约 200-400 字，让不关注这条新闻的行外人看完也能跟人讲明白。别只写成一句话。
+0. 发生了什么（科普向，最关键）：用普通人都能听懂的话，分 3-5 段（250-500 字）讲清楚这条情报/产品/事件「是什么、核心内容/发生了什么、为什么值得关注、背景与工作原理、可能的后续影响」。结构建议：先一句话结论 → 背景/上下文 → 进展/核心事实 → 通俗解释原理或意义 → 影响/展望。术语首现用括号一句话解释（如 RAG（检索增强生成，让 AI 先查资料再作答））；避免英文缩写轰炸和堆参数。让不关注这条新闻的行外人看完也能跟人讲明白。禁止只写一句话。
 1. 信息溯源：来源、发布时间、原文链接；来源存疑标「待验证」
 2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）
-3. 场景映射：命中老赵三重身份中至少一个（工作/产品/家庭），结合真实上下文，不空泛
+3. 场景映射（落到你这里）：仅当本条与老赵初始化的行业/职位特征**强相关**且能**具体点出关联点**（落到具体工作/产品/生活场景）时才写 1-2 句；弱相关、泛泛相关或无法具体关联时输出「无」，禁止强行关联凑数。
 4. 可落地实操案例：工具 + 步骤 + 收益 + 坑点，老赵明天就能用
-5. 今日/本周最小行动：一个具体可勾选可复盘的下一步
+5. 想试试：仅当本条存在一个老赵**现在就能上手尝试**的具体功能/产品/新特性（如新发布模型可直接调用、新工具可注册体验、新功能可在产品里打开）时，给出 1 条可落地案例，具体到「打开哪里 → 做什么 → 得到什么」；若本条是行业动态/收购/融资/观点类新闻，或与老赵岗位/产品/生活无明显可试点 → 输出「无」，禁止硬造尝试建议。
 
 输出用如下固定 Markdown 模板（严格对齐，字段缺失视为失败）：
 ### [条目标题]
-**发生了什么**：[科普向详细叙事，2-4 段，普通人都能懂，见步骤 0]
+**发生了什么**：[科普向详细叙事，3-5 段，普通人都能懂，见步骤 0]
 - **溯源**：[来源] · [发布时间] · [链接]
 - **一句话**：[定义 + 能力边界]
-- **对老赵的意义**：[工作/产品/家庭 至少一项映射，并给出身份名]
+- **对老赵的意义**：[仅强相关时写，否则「无」]
 - **可以怎么做**：[工具 + 步骤 + 收益 + 坑点]
-- **最小行动**：[今日/本周可做的一件事]
+- **想试试**：[仅存在可立即上手的案例时写，否则「无」]
 最后单独一行输出 JSON 供程序解析（务必严格 JSON）：
 {"sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`
   return { system, user: `情报原文：\n${text}` }
@@ -265,6 +314,16 @@ function describeIdentities(profile) {
  */
 function parseSopOut(text, item, profile, route) {
   const t = String(text || '')
+
+  /** 「无」/「无（…）」/空 → 归一为空串（弱相关不强行关联；想试试不可落地则留空） */
+  function normNone(v) {
+    const s = String(v || '').trim()
+    if (!s) return ''
+    if (/^无[。）)]?$/.test(s)) return ''
+    if (/^（?无关联）?$/.test(s)) return ''
+    return s
+  }
+
   const sceneTags = []
   const hitsIndicators = ['工作', '产品', '家庭', 'rcbc', 'framl', 'trustdecision', 'one news', 'onenews', '阅读引擎', 'theme.json', 'rss', '装修', '育儿', '自动化']
   let sceneHits = 0
@@ -319,9 +378,10 @@ function parseSopOut(text, item, profile, route) {
   return {
     whatHappened,
     definition: sec('-?\\*\\*一句话\\*\\*') || sec('一句话') || sec('2\\)?[．.、]?\\s*一句话') || sec('定义'),
-    sceneMapping: sec('-?\\*\\*对老赵的意义\\*\\*') || sec('对老赵的意义') || sec('3\\)?[．.、]?\\s*场景映射'),
+    // 「落到你这里」/「想试试」：仅强相关才产出；「无」归一为空（前端按空值隐藏区块，不强行关联）
+    sceneMapping: normNone(sec('-?\\*\\*对老赵的意义\\*\\*') || sec('对老赵的意义') || sec('3\\)?[．.、]?\\s*场景映射')),
     practice: sec('-?\\*\\*可以怎么做\\*\\*') || sec('可以怎么做') || sec('4\\)?[．.、]?\\s*可落地实操'),
-    minAction: sec('-?\\*\\*最小行动\\*\\*') || sec('最小行动') || sec('5\\)?[．.、]?\\s*今日/本周最小行动'),
+    minAction: normNone(sec('-?\\*\\*想试试\\*\\*') || sec('想试试') || sec('-?\\*\\*最小行动\\*\\*') || sec('最小行动') || sec('5\\)?[．.、]?\\s*今日/本周最小行动')),
     sceneTags: sceneTags.length ? sceneTags : (route.level === 'low' ? [] : ['life']),
     sceneHits,
     tryable,
@@ -379,6 +439,10 @@ exports.main = async (event = {}) => {
     results.push(await processOne(item, profile))
   }
   const okCount = results.filter((r) => r.status === 'ok').length
+
+  // ④ 2026-08-19 owner 拍板：每源每批次质量打分（0-10，staged 占比 - 拒绝惩罚），
+  //    低于 6 分自动停用该源（以后不再抓取）
+  await scoreSourceQuality(todo, results)
 
   // 总量仍有很多 pending → self-fan-out 续跑（fire-and-forget，不阻塞返回）
   let remaining = 0
