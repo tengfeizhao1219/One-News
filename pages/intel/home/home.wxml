@@ -46,17 +46,6 @@
       </view>
     </block>
 
-    <!-- 本周可试用清单 -->
-    <block wx:if="{{tryable.length}}">
-      <view class="sect-head">本周可试用清单</view>
-      <view class="card card-try" wx:for="{{tryable}}" wx:key="id" bindtap="toggleTryable" data-id="{{item.id}}">
-        <view class="try-check {{item.done ? 'on' : ''}}"></view>
-        <view class="try-body">
-          <text class="try-title {{item.done ? 'done' : ''}}">{{item.title}}</text>
-          <text class="try-min" wx:if="{{item.minAction}}">{{item.minAction}}</text>
-        </view>
-      </view>
-    </block>
 
     <view class="foot-note">由 AI 情报官生成 · 仅供参考</view>
   </scroll-view>

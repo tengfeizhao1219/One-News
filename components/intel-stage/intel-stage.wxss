@@ -135,23 +135,6 @@
 }
 .for-k { color: var(--primary); font-weight: 600; }
 
-/* 本周可试用清单 */
-.card-try { display: flex; align-items: flex-start; gap: 20rpx; padding: 24rpx 28rpx; }
-.try-check {
-  width: 36rpx;
-  height: 36rpx;
-  border-radius: 50%;
-  border: 3rpx solid var(--divider);
-  margin-top: 4rpx;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-.try-check.on { background: var(--primary); border-color: var(--primary); }
-.try-body { flex: 1; display: flex; flex-direction: column; gap: 8rpx; }
-.try-title { font-size: calc(28rpx * var(--font-scale)); color: var(--text-primary); line-height: 1.45; }
-.try-title.done { color: var(--text-tertiary); }
-.try-min { font-size: calc(24rpx * var(--font-scale-meta, 1)); color: var(--text-secondary); line-height: 1.45; }
-
 /* 状态占位 */
 .state-hint {
   padding: 100rpx 0;
