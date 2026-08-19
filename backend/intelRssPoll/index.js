@@ -463,12 +463,11 @@ function buildUrl(baseUrl, params) {
 function batchWindowStartMs(now) {
   const n = now || Date.now()
   const d = new Date(n)
-  const hour = d.getUTCHours() // CloudBase 环境 UTC；北京 = UTC+8
   const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
-  if (hour < 0) return day - 6 * 3600 * 1000
-  if (hour < 3) return day - 6 * 3600 * 1000      // 北京 <8 点 → 05 档 → 昨天 18:00 UTC(=10:00 UTC 前一天)
-  if (hour < 7) return day + 5 * 3600 * 1000 - 8 * 3600 * 1000 // 北京 <12 点 → 11 档 → 今天 05:00 北京 = 昨天 21:00 UTC
-  return day + 11 * 3600 * 1000 - 8 * 3600 * 1000 // 北京 ≥12 点 → 18 档 → 今天 11:00 北京 = 今天 03:00 UTC
+  const bh = (d.getUTCHours() + 8) % 24 // 北京小时
+  if (bh < 8) return day - 14 * 3600 * 1000   // 05 档：昨天 18:00 北京 = UTC 昨天 10:00
+  if (bh < 15) return day - 3 * 3600 * 1000   // 11 档：今天 05:00 北京 = UTC 昨天 21:00
+  return day + 3 * 3600 * 1000                // 18 档：今天 11:00 北京 = UTC 今天 03:00
 }
 
 async function fetchSource(feed, ctx = {}) {
