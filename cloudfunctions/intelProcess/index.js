@@ -102,6 +102,15 @@ async function processOne(item, profile) {
 
   // ④ 解析 LLM 输出 → 结构化 ProcessedItem（含场景标签命中计数）
   const parsed = parseSopOut(out.text, item, profile, route)
+
+  // ④.5 产出质量闸门（2026-08-19 治理）：一句话定义必填，为空判定低质产出 → 不进今日关注，只留痕可复盘
+  //   空 definition 会让调度侧落入「（定义待补充）」占位文案污染展示，这里源头拦截。
+  if (!parsed.definition || !String(parsed.definition).trim()) {
+    await markIngest(itemId, 'rejected', { reason: 'definition-empty', gateLevel: route.level })
+    console.log('[intelProcess] 定义缺失拦截 ' + itemId + ' (' + route.level + ') — parsed.definition 为空，不进 staged')
+    return { itemId, status: 'rejected', relevance: route.level, reason: 'definition-empty' }
+  }
+
   const staged = {
     itemId,
     sourceId: String(item.sourceId || ''),

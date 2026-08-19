@@ -264,10 +264,10 @@ function renderItemCard(d) {
   const src = (s.source) || {}
   const link = d.url || src.url || ''
   const linkText = link ? `[${link}](${link})` : '无链接'
-  const definition = s.definition || '（定义待补充）'
-  const sceneMapping = s.sceneMapping || '（场景映射待补充）'
-  const practice = s.practice || '（待补充）'
-  const minAction = s.minAction || '（待补充）'
+  const definition = s.definition ? String(s.definition).trim() : ''
+  const sceneMapping = s.sceneMapping ? String(s.sceneMapping).trim() : ''
+  const practice = s.practice ? String(s.practice).trim() : ''
+  const minAction = s.minAction ? String(s.minAction).trim() : ''
   const pinned = Boolean(d.contract) ? '\n> ⭐ 合同 / 接口变更 · 需重点关注' : ''
   return (
 `### ${d.title || '（无标题）'}${pinned}
@@ -289,14 +289,15 @@ function renderBrief(todayItems, weekTryable) {
     title: d.title,
     url: d.url,
     sourceId: d.sourceId,
-    sourceName: (d.sop && d.sop.source && d.sop.source.name) || d.sourceId,
+    sourceName: (d.sop && d.sop.source && d.sop.source.name) || (d.sourceId ? String(d.sourceId).replace(/_+/g, ' ') : '未知来源'),
     publishedAt: d.publishedAt || (d.sop && d.sop.source && d.sop.source.publishedAt) || '',
     relevance: d.relevance,
     sceneTags: d.sceneTags || [],
     sceneHits: d.sceneHits || 0,
     contract: Boolean(d.contract),
     card: renderItemCard(d), // §6.3 固定模板已渲染片段
-  }))
+    degraded: !(d.sop && d.sop.definition && String(d.sop.definition).trim()), // 定义缺失标记，供剔除/展示降级(2026-08-19 治理)
+  })).filter(function (it) { return !it.degraded }) // 定义缺失条目剔除，不显示占位文案
 
   // 本周可试用清单 = 当周 tryable 滚动去重
   const tryable = weekTryable.map((d) => ({
