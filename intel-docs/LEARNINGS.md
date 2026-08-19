@@ -8,6 +8,15 @@
 
 ## 教训条目（倒序，最新在上）
 
+### [2026-08-19] 三元表达式空指针：`profile && a ? b : (profile.c ? …)`（代码）
+
+- **症状**：intelDispatcher 发布崩溃 `Cannot read properties of null (reading 'depth')`，今日 18:00 批次卡在 staged 未发布。
+- **根因**：`const highTh = profile && profile.depth === 'deep' ? 3 : (profile.depth === 'lite' ? 5 : 4)`——profile 为 null 时第一个分支为 false，但 else 分支仍访问 `profile.depth` → 空指针。
+- **正确做法**：三元表达式若前置条件含 null 判断，else 分支必须重复判空：`profile && profile.depth === 'deep' ? 3 : (profile && profile.depth === 'lite' ? 5 : 4)`；或改用 if/else。调用方 `score(d, null)` 传 null 是合法场景，被调用方必须容错。
+- **错误路径**：以为是部署问题反复重试（部署后旧实例未刷新的干扰）；实际先看堆栈定位代码逻辑。
+- **涉及角色**：I / P
+
+
 ### [2026-08-19] 部署"成功"≠"生效"：首次部署未生效，需验证后确认（部署/验证）
 
 - **症状**：cloudbase 部署 intelFetch 后日志仍是旧格式（`staged=3 brief=1`），功能未生效。

@@ -63,7 +63,7 @@ function score(item, profile) {
 
   const s = base + focusBoost
   // 深度档位影响 high 门槛：deep 更敏感(≥3)，lite 更克制(≥5)，std 默认(≥4)
-  const highTh = profile && profile.depth === 'deep' ? 3 : (profile.depth === 'lite' ? 5 : 4)
+  const highTh = profile && profile.depth === 'deep' ? 3 : (profile && profile.depth === 'lite' ? 5 : 4)
 
   let level = 'low'
   let reason = '非 AI 内容或与关注议题无关'
