@@ -233,6 +233,8 @@ interface Item {
 - **不看 `lastFetchTime` / `pollSeconds` 间隔**：即使手动/其他途径刚抓过，定时档位到点仍照抓。手动抓取**不消费**定时档位的抓取机会。
 - **反例（已废弃）**：先前 `intelRssPoll` 兜底用 `listDueFeeds` 按 `now - lastFetchTime ≥ pollSeconds(6h)` 判"到点才抓"，导致"手动抓过 → 定时档空转"的偏离。已改为 `listEnabledFeeds`（仅过滤 enabled + 非 disabled），移除间隔判定。（提交 `d85ae00`）
 - **注意区分**：`lastSuccessCursor` 增量检查点（本条 #3）是**防重复**（只拉新内容、guid 去重），**不是**抓取节流开关——两者解开，互不冲突。
+**⭐ 方案 A 落地（2026-08-19，RSS 增量兜底）**：`intelRssPoll` 的 rss/news 分支在 `fetchSource` 内，有 `lastSuccessCursor` 时把该游标转成 `sinceMs`，对解析出的 RSS 条目按 `pubDate` 过滤，只保留**游标之后的新增**，单源本轮最多取 `maxItems`（默认 30）条，历史旧文直接不进 ingest。触发仍无条件（fixed node），但**内容增量**——避免 `google_deepmind` 等源全量拉历史造成旧文淹没新文、空烧 LLM 额度。（提交 `6eae924`）
+
 
 **完整性边界（写实）**：受源自身暴露量限制（RSS 多仅露最新 10–20 条、Google News ~100 上限、arXiv/HN 支持时间窗回溯），"当日完整"定义为**三次巡检成功结果的并集 + guid 去重**；超暴露上限部分标注为「尽力而为」。
 
