@@ -106,9 +106,12 @@
 
     <!-- ============ 降级占位（非 claude 卡片：标题/来源/正文与所选卡片匹配） ============ -->
     <block wx:else>
-      <!-- 发生了什么：用所选卡片的原文要点（desc）作为首段 -->
+      <!-- 发生了什么：优先展示科普向详细叙事（多段），无则回退一句话摘要 descText -->
       <text class="block-label">发生了什么</text>
-      <view class="prose">{{descText}}</view>
+      <block wx:if="{{whatHappenedParagraphs.length}}">
+        <view class="prose {{index ? 'prose-2' : ''}}" wx:for="{{whatHappenedParagraphs}}" wx:key="index">{{item}}</view>
+      </block>
+      <view class="prose" wx:else>{{descText}}</view>
 
       <view class="divider"></view>
 

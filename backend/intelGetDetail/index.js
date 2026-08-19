@@ -28,6 +28,8 @@ function toDetail(doc) {
     publishedAt: src.publishedAt || '',
     // 发生了什么（正文，可能含换行，前端按段渲染）
     definition: sop.definition || '',
+    // 发生了什么（科普向详细叙事，多段；无则前端回退 definition）
+    whatHappened: sop.whatHappened || '',
     // 落到你这里（场景映射散文 + 命中场景标签）
     sceneMapping: sop.sceneMapping || '',
     sceneTags: Array.isArray(doc.sceneTags) ? doc.sceneTags : [],

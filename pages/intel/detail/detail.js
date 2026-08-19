@@ -19,7 +19,9 @@ Page({
     _metaScaleValue: 1,
     // 详情内容（数据驱动，方案A：与所选卡片匹配）
     title: '',
-    descText: '',          // 非 claude 卡片「发生了什么」正文（取其原文 desc）
+    descText: '',          // 「发生了什么」正文（取 definition，一句话摘要兜底）
+    whatHappenedText: '',  // 「发生了什么」科普向详细叙事（sop.whatHappened，多段）
+    whatHappenedParagraphs: [], // 按换行分段，供多段渲染；有则优先展示，无则回退 descText
     practiceText: '',    // 「可以怎么做」实操案例（sop.practice，后端已生成、此前前端未渲染）
     minActionText: '',   // 「最小行动」（sop.minAction）
     relateItems: [],       // 「落到你这里」身份条目（who / txt）
@@ -90,6 +92,8 @@ Page({
         this.setData({
           title: d.title || this.data.title,
           descText: d.definition || this.data.descText,
+          whatHappenedText: d.whatHappened || d.definition || '',
+          whatHappenedParagraphs: String(d.whatHappened || '').split(/\n+\s*/).map(x => x.trim()).filter(Boolean),
           srcName: d.srcName || this.data.srcName,
           relateItems: relateItems,
           relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',

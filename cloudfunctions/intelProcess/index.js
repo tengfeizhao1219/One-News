@@ -122,6 +122,7 @@ async function processOne(item, profile) {
     sop: {
       source: { name: String(item.sourceName || ''), layer: String(item.layer || ''), publishedAt: String(item.publishedAt || ''), url: String(item.url || '') },
       definition: parsed.definition,
+      whatHappened: parsed.whatHappened,
       sceneMapping: parsed.sceneMapping,
       practice: parsed.practice,
       minAction: parsed.minAction,
@@ -208,22 +209,26 @@ function buildPrompts(item, profile, level) {
 
   if (level === 'medium') {
     return {
-      system: baseSystem + `\n对下面的单条情报做「轻量摘要」：一句话定义（含能力边界）+ 一句「对老赵的意义」（命中至少一个身份）。不要实操步骤。${depth === 'lite' ? '（精简档，更短）' : ''}`,
+      system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
+先输出一行「发生了什么」：用大白话 2-3 句讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注，术语首现括号解释，让不懂的人也能看懂。
+再输出一句话定义（含能力边界）+ 一句「对老赵的意义」（命中至少一个身份）。不要实操步骤。${depth === 'lite' ? '（精简档，更短）' : ''}`,
       user: `情报原文：\n${text}`,
     }
   }
 
   const system = baseSystem + depthHint + `
 
-对下面单条情报按 SOP 五步硬性结构输出（欠一步即视为不合格）：
+对下面单条情报按 SOP 六步硬性结构输出（欠一步即视为不合格）：
+0. 发生了什么（科普向，最关键）：用普通人都能听懂的话，分 2-4 段讲清楚这条情报/产品/事件「是什么、核心内容/发生了什么、为什么值得关注、背后怎么回事/工作原理或背景」。术语首现用括号一句话解释（如 RAG（检索增强生成，让 AI 先查资料再作答））；避免英文缩写轰炸和堆参数。约 200-400 字，让不关注这条新闻的行外人看完也能跟人讲明白。别只写成一句话。
 1. 信息溯源：来源、发布时间、原文链接；来源存疑标「待验证」
-2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数
+2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）
 3. 场景映射：命中老赵三重身份中至少一个（工作/产品/家庭），结合真实上下文，不空泛
 4. 可落地实操案例：工具 + 步骤 + 收益 + 坑点，老赵明天就能用
 5. 今日/本周最小行动：一个具体可勾选可复盘的下一步
 
 输出用如下固定 Markdown 模板（严格对齐，字段缺失视为失败）：
 ### [条目标题]
+**发生了什么**：[科普向详细叙事，2-4 段，普通人都能懂，见步骤 0]
 - **溯源**：[来源] · [发布时间] · [链接]
 - **一句话**：[定义 + 能力边界]
 - **对老赵的意义**：[工作/产品/家庭 至少一项映射，并给出身份名]
@@ -286,7 +291,26 @@ function parseSopOut(text, item, profile, route) {
   }
 
   const sec = (re) => { const m = t.match(new RegExp(re + '[:：](.{0,600})', 'i')); return m ? m[1].replace(/\n+/g, ' ').trim() : '' }
+  // 块级提取：取 startRe 匹配后的多段正文，直到遇到 endRe 为止（用于「发生了什么」多段科普叙事）
+  const secBlock = (startRe, endRe) => {
+    const t2 = String(t)
+    const sm = t2.match(startRe)
+    if (!sm) return ''
+    let start = sm.index + sm[0].length
+    let end = t2.length
+    if (endRe) {
+      const ei = t2.search(endRe)
+      if (ei >= start) end = ei
+    }
+    return t2.slice(start, end).replace(/^[\s\n*-]+|[\s\n]+$/g, '').replace(/\n{2,}/g, '\n').trim()
+  }
+  // 发生了什么：优先取模板块（标题下第一块，至溯源前）；否则取「发生了什么:」到「对老赵的意义」/「定义」之前的文本
+  const whatHappened =
+    secBlock(/\*\*发生了什么\*\*\s*[:：]?\s*/, /[-*]\s*\*\*溯源\*\*/) ||
+    secBlock(/发生了什么\s*[:：]/, /对老赵的意义|一句话|定义/) ||
+    ''
   return {
+    whatHappened,
     definition: sec('-?\\*\\*一句话\\*\\*') || sec('一句话') || sec('2\\)?[．.、]?\\s*一句话'),
     sceneMapping: sec('-?\\*\\*对老赵的意义\\*\\*') || sec('对老赵的意义') || sec('3\\)?[．.、]?\\s*场景映射'),
     practice: sec('-?\\*\\*可以怎么做\\*\\*') || sec('可以怎么做') || sec('4\\)?[．.、]?\\s*可落地实操'),
