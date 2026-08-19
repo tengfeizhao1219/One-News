@@ -361,7 +361,26 @@ async function fetchSource(feed, ctx = {}) {
     if (res.notModified) return { items: [], cursor: ctx.sinceMs || null, notModified: true }
     if (!res.ok || !res.text) throw new Error(`RSS 抓取失败 status=${res.status}`)
     const parsed = intelParseXml(res.text)
-    return { items: parsed.items, cursor: ctx.sinceMs || null, lastModified: res.lastModified, etag: res.etag }
+    // 增量兜底（§5.8 owner 08-19 决策，方案 A）：RSS 全量拉最近 N 篇，但有 lastSuccessCursor
+    // 时只保留「上次游标之后」的新增，历史旧文直接不进 ingest，避免旧文淹没新文、空烧 LLM。
+    let items = parsed.items || []
+    if (ctx.sinceMs) {
+      const limit = Number(cfg.maxItems || 0) || 30
+      const sorted = items.slice().sort((a, b) => {
+        const ta = a.pubDate ? new Date(a.pubDate).getTime() : 0
+        const tb = b.pubDate ? new Date(b.pubDate).getTime() : 0
+        return tb - ta
+      })
+      const filtered = []
+      for (const it of sorted) {
+        const t = it.pubDate ? new Date(it.pubDate).getTime() : 0
+        if (t && t <= ctx.sinceMs) continue       // 早于游标 → 旧文，跳过
+        filtered.push(it)
+        if (limit > 0 && filtered.length >= limit) break  // 单源本轮最多取最新 N 条
+      }
+      items = filtered
+    }
+    return { items, cursor: ctx.sinceMs || null, lastModified: res.lastModified, etag: res.etag }
   }
 
   if (type === 'api') {
