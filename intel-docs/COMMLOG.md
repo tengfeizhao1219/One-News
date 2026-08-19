@@ -26,7 +26,7 @@
 ## 2026-08-19 · intel 抓取「无条件触发 + 内容增量」（方案A）
 
 - **决策**：固定节点无条件抓不变，新增 RSS 增量兜底——`intelRssPoll` rss/news 分支按 `lastSuccessCursor`→`sinceMs` 过滤，只收游标之后的新增，单源本轮限 30 条，防旧文淹没新文、空烧 LLM。
-- **产物**：代码部署 `6eae924`；本轮 google_deepmind 全量捞进的 pending+low 旧文已清（仅留 rejected 复盘）。
+- **产物**：代码部署 `d49441f`；本轮 google_deepmind 全量捞进的 pending+low 旧文已清（仅留 rejected 复盘）。
 
 ## 2026-08-18 晚间 · O 主控公告（重要，全员必读）
 
