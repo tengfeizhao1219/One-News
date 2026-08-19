@@ -50,3 +50,12 @@
 - 交接：owner 拍板「main 为规范分支」。intel-officer 中 main 尚缺的内容全部并入 main（提交 f76d289 + 1022739）：① pages/intel/home/* 新版（去 DEMO mock、safeBottom/pageH 注入、普通 scroll-view、scroll-view 背景硬编码、页脚安全区 margin）；② app.js/app.wxss/app.json 窗口/page 背景统一 --bg-card(#FAF9F7/#0D0D0D)；③ cloudfunctions/intelProfile 补入（mine/onboard 依赖的画像云函数）。
 - 产物：main 已 push（1022739）；intel-officer 远端+本地分支已删除；WorkBuddy / Desktop(DevTools) / One-News-latest 三副本全部切到 main；detail.js/wxml 保持 main 融合版（whatHappened 多段叙事/实操/最小行动）。
 - 下游：后续所有改动一律基于 main；微信开发者工具导入分支选 main；分支基线文档已同步更新。
+## 2026-08-19 · 全流程复盘修复落地 + 中文源接入（owner 拍板执行）
+
+- 交接：手动触发 5 源全流程复盘后按 owner 拍板修复全部待提升项并接入中文源：
+  ① intelRssPoll：新增 blockCategoryKeywords（量子位剔汽车/商业噪音 10→3 条）、passRequireKeywords（媒体全站 feed 正向 AI 关键词过滤）、cleanItemTitle（AINews] 前缀）、提取器升级（卡片式 <a><h2-6> + urlPattern、changelog 单页模式）、api 超时 10s→15s（arXiv）、HN since 放宽 24h、新鲜度守卫（worker 10 天 + brief 7 天）、失败连击仅计「完全无产出」
+  ② intelRouter：product 信号补通用 AI 关键词（中文 AI 内容不再误判 low，极客公园 3 条 high 进 brief）
+  ③ intelDispatcher：persistBrief 覆盖前归档旧版（intel_current_archive，历史可追溯）
+  ④ 中文源接入：deepseek_news（官方动态 scrape，卡片提取验证 5 条）、deepseek_changelog（API 更新日志 scrape，19 版本块）、geekpark_ai（RSS 完整正文+AI 过滤，20 条）；InfoQ 弃用（feed 内容仅 6 字符）；机器之心确认付费墙不可修（保持禁用）
+- 产物：提交 b9d03c2 + 318097d（main 已 push）；三云函数已部署；v8 brief = 12 条（EN 官方 9 + 中文 3）
+- 下游：后续每日定时任务将自动抓取中文源（量子位/极客公园/DeepSeek）；注意相关性规则是「老赵三重身份个性化」打分，通用 AI 内容依赖补强关键词，后续可再调
