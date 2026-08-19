@@ -1,12 +1,12 @@
 /* INTEL-MODULE: AI 情报官 · 情报首页样式。设计令牌全部引用 theme.json，零新增 hex。 */
 .intel-home {
-  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷，
-     导致 .content 无法上下滚动，与 One News 顶到胶囊一致）。 */
+  /* 高度对齐本仓库已验证可用的 intel-detail/intel-mine 页：height:100vh（round 5 改 windowHeight 偏离该模式，回退）。
+     底部手势条由 .content 的 var(--safe-bottom, 0px) padding 避让。 */
   height: 100vh;
-  overflow: hidden;
   background-color: var(--bg-card);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 /* 状态栏背景层 / 顶部条带 —— 复用 One News 首页 .status-bar-fill/.fixed-top-bar 机制 */
@@ -38,12 +38,21 @@
 .nav-sub { font-size: calc(22rpx * var(--font-scale-meta, 1)); color: var(--text-tertiary); margin-left: auto; }
 
 .content {
+  /* 底部空白区（padding/占位）默认渲染为白色——显式硬编码着色与背景同色；
+     不用 var()（带 fallback 的 var() 在部分版本整条声明被丢弃，退回默认白） */
+  background-color: #FAF9F7;
+  /* 滚动容器：flex:1 + height:0 严格限制在屏内，scroll-view 原生滚动（对齐 intel-detail/mine 已验证结构）。
+     底部 padding 用 var(--safe-bottom, 0px) 避让 iOS 底部手势条安全区。 */
   flex: 1;
   height: 0;
-  padding: 8rpx 32rpx calc(200rpx + env(safe-area-inset-bottom));
+  padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
+/* 深色模式：与 --bg-card dark(#0D0D0D) 同色 */
+.page--dark .content { background-color: #0D0D0D; }
+
+
 
 .sect-head {
   display: flex;
@@ -156,14 +165,17 @@
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  margin: 8rpx 0 24rpx;
+  margin: 8rpx 0 calc(16rpx + var(--safe-bottom, 0px));
 }
 
-/* FAB：完全复刻 One News 首页 .floating-more（tag-bg 浅灰底、无文字、浮动动画） */
+/* FAB：完全复刻 One News 首页 .floating-more（tag-bg 浅灰底、无文字、浮动动画）。
+   定位用 absolute（非 fixed）以与 One News 完全一致：One News 首页 .floating-more 是
+   absolute，相对其 .page(100vh) 容器定位；本页 .intel-home 也是 100vh + position:relative，
+   故 absolute 相对它 bottom 定位，悬浮按钮屏幕高度与 One News 保持一致。 */
 .floating-more {
-  position: fixed;
+  position: absolute;
   right: 40rpx;
-  bottom: calc(48rpx + env(safe-area-inset-bottom));
+  bottom: calc(48rpx + var(--safe-bottom, 0px));
   z-index: 29;
   width: 96rpx;
   height: 96rpx;

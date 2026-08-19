@@ -230,10 +230,12 @@ App({
   _syncWindowStyle(theme) {
     try {
       if (wx.setBackgroundColor) {
+        // 窗口背景统一 --bg-card 两档（#FAF9F7 / #0D0D0D），与内容背景同色，
+        // 避免下拉回弹/页面露底处色差。
         wx.setBackgroundColor({
-          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
-          backgroundColorTop: theme === 'dark' ? '#000000' : '#F5F3F0',
-          backgroundColorBottom: theme === 'dark' ? '#000000' : '#F5F3F0',
+          backgroundColor: theme === 'dark' ? '#0D0D0D' : '#FAF9F7',
+          backgroundColorTop: theme === 'dark' ? '#0D0D0D' : '#FAF9F7',
+          backgroundColorBottom: theme === 'dark' ? '#0D0D0D' : '#FAF9F7',
         })
       }
       if (wx.setBackgroundTextStyle) {
@@ -248,7 +250,7 @@ App({
       if (wx.setNavigationBarColor) {
         wx.setNavigationBarColor({
           frontColor: theme === 'dark' ? '#ffffff' : '#000000',
-          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+          backgroundColor: theme === 'dark' ? '#0D0D0D' : '#FAF9F7',
         })
       }
     } catch (e) { /* ignore */ }
@@ -264,7 +266,7 @@ App({
       if (wx.setNavigationBarColor) {
         wx.setNavigationBarColor({
           frontColor: theme === 'dark' ? '#ffffff' : '#000000',
-          backgroundColor: theme === 'dark' ? '#000000' : '#F5F3F0',
+          backgroundColor: theme === 'dark' ? '#0D0D0D' : '#FAF9F7',
           animation: { duration: 0, timingFunc: 'linear' }
         })
       }

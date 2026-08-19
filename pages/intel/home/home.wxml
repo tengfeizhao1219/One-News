@@ -5,7 +5,7 @@
   顶部对齐：复用 One News 首页机制——注入 --menu-top/--menu-height 对齐原生胶囊；
   滚动：scroll-view 需确定高度（height:0 + flex:1 / 或 height:100%）才能滚动。
 -->
-<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchend="onSlideTouchEnd">
+<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --page-h: {{pageH}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchend="onSlideTouchEnd">
 
   <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
@@ -17,7 +17,7 @@
     <text class="nav-sub">情报官已为你梳理今日值得关注的进展</text>
   </view>
 
-  <scroll-view class="content" scroll-y type="list" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
     <!-- 数据截至 + 源健康提示（§7.6）-->
     <view class="meta-bar" wx:if="{{meta.dataAsOf || meta.healthTitle}}">
       <text class="data-asof" wx:if="{{meta.dataAsOf}}">{{meta.dataAsOf}}</text>
