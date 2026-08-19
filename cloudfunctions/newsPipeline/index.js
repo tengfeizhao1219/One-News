@@ -283,11 +283,18 @@ async function stageProcess(deadline) {
     if (!hasMore) break
   }
 
-  // 续跑 / 接力
-  const left = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
-  if (left.items.length > 0) trigger('process')
-  else trigger('run') // 让调度器决定是否进 ai
-
+  // 续跑 / 接力——公平调度（2026-08-19 优化）：process 不得无限接力抢占 60s 冷却锁，
+  // 否则当 news_raw 持续进料时 AI 阶段（及发布）会被彻底饿死（朱雀三号事故复盘）。
+  // 下游积压（done 待发布 / AI 待加工过量）时先让位，由 run() 的下游优先闸门交棒。
+  try {
+    const left = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
+    // 只要有下游积压，交给 run() 决策（pub/ai 优先）；否则有 raw 直接续 process
+    if (await hasDownstreamBacklog()) { trigger('run'); return { stage: 'process', written, consumed, yielded: true } }
+    if (left.items.length > 0) trigger('process')
+    else trigger('run')
+  } catch (e) {
+    trigger('run')
+  }
   return { stage: 'process', written, consumed }
 }
 
@@ -790,6 +797,25 @@ async function stagePublish(deadline) {
 }
 
 // ====================================================================
+// 公平调度闸门（2026-08-19 优化）：判定是否存在「下游积压」，若存在则 process
+// 应让位给 publish/ai，避免 news_raw 单向进料把 AI/发布阶段饿死（朱雀事故根因）。
+// 阈值设计：
+//   - 有 done（staging 已完成 AI 待落库）→ 立即让位发布（数据已就绪，不落库=白算）
+//   - claimablePending 超过 AI 单实例一次能吃的 ~3 倍（36 条）→ 判定 AI 明显落后，
+//     停止 process 进料，先让 AI 消化存量，防止 staging 无限堆积
+// ====================================================================
+const AI_BACKLOG_LATE_THRESHOLD = STAGE_BATCH.ai * 3 // 36：AI 单实例一批 12，连续 3 批都追不上即落后
+async function hasDownstreamBacklog() {
+  try {
+    const sd = await stagingStore.doneCount()
+    if (sd > 0) return true // 有 done 待发布
+    const sp = await stagingStore.claimablePendingCount()
+    if (sp >= AI_BACKLOG_LATE_THRESHOLD) return true // AI 明显落后
+  } catch (e) { /* 放行，返回 false，保持 process 默认行为 */ }
+  return false
+}
+
+// ====================================================================
 // 调度器 run()：幂等检查全局队列，触发下一个该跑的阶段
 // ====================================================================
 async function run() {
@@ -797,15 +823,18 @@ async function run() {
   try { await cleanupExpiredCache() } catch (e) { /* 放行 */ }
   // 去重兜底：调度 tick 也兜底合并跨批次重复副本
   try { await dedupByDkSweep() } catch (e) { /* 放行 */ }
-  const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
-  if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
-  // 优先级修正（2026-08-18）：done→publish「收割」优先于可认领→ai「生产」。
-  // 否则当 staging 同时有可认领 pending + done 时，run() 走 ai 提前 return，publish 分支被饿死，
-  // 已完成 AI 的新新闻（如 47 条）永远不落库，前端真实机一直看到旧数据。
+  // 公平调度（2026-08-19）：done「收割」始终最高优先；ai「生产」仅在明显落后时
+  // 覆盖 process「进料」，避免双向饿死：
+  //   - 朱雀根因：news_raw 持续进料 → run() 总走 process，AI 被饿死 → 让 ai 在落后时优先
+  //   - 反向风险：若 ai 无条件优先，而 AI 引擎慢，process 会被饿死 → news_raw 堆积
+  //   故 AI 需超过落后阈值才让 ai 抢跑；轻微积压（<36 条）仍让 process 进料（AI 靠 stageAi 自接力慢慢消化）。
   const sd = await stagingStore.doneCount()
   if (sd > 0) { trigger('publish'); return { step: 'publish', reason: 'staging 有 done' } }
   const sp = await stagingStore.claimablePendingCount()
-  if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending' } }
+  if (sp >= AI_BACKLOG_LATE_THRESHOLD) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending(落后)', backlog: sp } }
+  const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
+  if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
+  if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending', backlog: sp } }
   return { step: 'idle' }
 }
 
