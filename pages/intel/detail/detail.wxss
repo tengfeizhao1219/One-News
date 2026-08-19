@@ -31,7 +31,8 @@
   background-color: #F5F3F0;
   flex: 1;
   height: 0;
-  padding: 16rpx 32rpx calc(16rpx + var(--safe-bottom, 0px));
+  /* owner 2026-08-19：标题与顶部导航保留呼吸空间（16rpx → 44rpx） */
+  padding: 44rpx 32rpx calc(16rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
