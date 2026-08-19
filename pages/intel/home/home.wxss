@@ -36,11 +36,11 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 8rpx 32rpx 0;
+  padding: 28rpx 32rpx 0;
 }
 .hero-count {
-  font-size: calc(36rpx * var(--font-scale));
-  font-weight: 800;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 700;
   color: var(--text-primary);
   line-height: 1.35;
 }
@@ -79,7 +79,7 @@
   border: 1rpx solid var(--divider);
   border-radius: 32rpx;
   padding: 28rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 36rpx;
 }
 .card-title {
   display: block;
