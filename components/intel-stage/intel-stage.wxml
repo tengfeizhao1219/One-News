@@ -15,7 +15,7 @@
   <view class="nav">
     <text class="nav-back" bindtap="reqBack">‹</text>
     <text class="nav-title">AI 情报</text>
-    <text class="nav-sub">情报官已为你梳理今日值得关注的进展</text>
+    <!-- owner 2026-08-19：删除导航副标题"情报官已为你梳理…"（纯属多余） -->
   </view>
 
   <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
