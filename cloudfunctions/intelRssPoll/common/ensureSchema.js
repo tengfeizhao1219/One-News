@@ -107,6 +107,7 @@ async function ensureIntelCurrent() {
   await ensureIndexes('intel_current', [
     { key: { date: 1, isCurrent: 1 }, name: 'intel_current_date_isCurrent', unique: false },
     { key: { version: 1 }, name: 'intel_current_version', unique: false },
+    { key: { itemId: 1 }, name: 'intel_current_itemId', unique: false },  // 2026-08-19 详情兜底查询防全表扫描
   ])
 }
 
