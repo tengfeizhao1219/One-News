@@ -18,6 +18,7 @@
   visibility: hidden;
   pointer-events: none;
 }
+.intel-stage.page--dark { background-color: #000000; } /* 暗色兜底 */
 .intel-stage.in {
   transform: translateX(0);
   visibility: visible;
@@ -207,3 +208,6 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }
 }
+
+/* 暗色兜底 */
+.intel-stage.page--dark, .intel-stage.page--dark .content { background-color: #000000; }

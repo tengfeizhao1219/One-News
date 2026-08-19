@@ -2,6 +2,9 @@
 .intel-detail {
   height: 100vh;
   background-color: var(--bg-page);
+}
+.page--dark .intel-detail { background-color: #000000; } /* 暗色兜底 */
+.intel-detail {
   display: flex;
   flex-direction: column;
   position: relative;

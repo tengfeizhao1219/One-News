@@ -6,6 +6,8 @@
   flex-direction: column;
   position: relative;
 }
+/* 暗色兜底：var() 在部分真机基础库解析不可靠时，类覆盖硬编码保证背景正确 */
+.page--dark.intel-home { background-color: #000000; }
 
 /* 状态栏背景层 / 顶部条带 —— 复用 One News 首页机制 */
 .status-bar-fill {
@@ -64,6 +66,7 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
+.page--dark .content { background-color: #000000; } /* 暗色兜底 */
 /* dark 由 var(--bg-page) 自动切换 */
 
 /* 区块标题（仅"本周可试用清单"保留）*/

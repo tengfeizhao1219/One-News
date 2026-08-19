@@ -2,6 +2,9 @@
 .intel-mine {
   height: 100vh;
   background-color: var(--bg-page);
+}
+.page--dark .intel-mine { background-color: #000000; } /* 暗色兜底 */
+.intel-mine {
   display: flex;
   flex-direction: column;
   position: relative;
