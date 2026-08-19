@@ -43,7 +43,8 @@ Component({
       placeholder: false,
       banner: '',
     },
-    tryable: []
+    tryable: [],
+    refreshing: false,       // 下拉刷新中
   },
 
   lifetimes: {
@@ -124,6 +125,19 @@ Component({
      * 拉取当期情报 brief → 渲染卡片流 + 本周可试用 + 元信息。
      * owner 2026-08-18 19:45：后端未就绪/无当期 → 直接展示空态友好提示，不放 mock。
      */
+    /** 下拉刷新：重新拉取最新 brief */
+    async onRefresh() {
+      if (this.data.refreshing) return
+      this.setData({ refreshing: true })
+      try {
+        await this._loadBrief()
+      } catch (e) {
+        console.warn('[intel-stage] 下拉刷新失败:', (e && e.message) || e)
+      } finally {
+        this.setData({ refreshing: false })
+      }
+    },
+
     async _loadBrief() {
       try {
         const brief = await getIntelBrief()

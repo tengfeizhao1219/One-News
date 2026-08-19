@@ -34,7 +34,8 @@ Page({
       banner: '',
     },
     // 本周可试用清单（云函数返回后填充）
-    tryable: []
+    tryable: [],
+    refreshing: false,       // 下拉刷新中
   },
 
   onLoad() {
@@ -89,6 +90,19 @@ Page({
    * 拉取当期情报 brief → 渲染首页卡片流 + 本周可试用 + 元信息。
    * owner 2026-08-18 19:45：后端未就绪/无当期 → 直接展示空态友好提示，不放 mock。
    */
+  /** 下拉刷新：重新拉取最新 brief（保留当前内容，拉取完成关刷新态） */
+  async onRefresh() {
+    if (this.data.refreshing) return
+    this.setData({ refreshing: true })
+    try {
+      await this._loadBrief()
+    } catch (e) {
+      console.warn('[intel-home] 下拉刷新失败:', (e && e.message) || e)
+    } finally {
+      this.setData({ refreshing: false })
+    }
+  },
+
   async _loadBrief() {
     try {
       const brief = await getIntelBrief()

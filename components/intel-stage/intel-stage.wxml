@@ -26,7 +26,7 @@
     </view>
   </view>
 
-  <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y show-scrollbar="{{false}}" refresher-enabled refresher-default-style="{{isDark ? 'white' : 'black'}}" refresher-triggered="{{refreshing}}" bindrefresherrefresh="onRefresh">
     <!-- 加载态 -->
     <block wx:if="{{meta.loading}}">
       <view class="state-hint"><text class="state-t">情报官正在梳理中…</text><text class="state-s">通常在 5 分钟内完成</text></view>
