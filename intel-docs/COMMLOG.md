@@ -23,6 +23,15 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-19 · intel UI 微调 4 项（owner 反馈）
+
+- **① 返回按钮与胶囊垂直居中对齐**：三页 nav 改为 top=menu-top、height=menu-height、flex 居中（对齐 One News panel-header 做法），不再顶到胶囊下方。
+- **② 首页"数据截至"靠右**：hero 改单行（今日 N 条靠左 · 数据截至/源健康靠右，space-between）。
+- **③ 详情页标题下展示来源+时间**：meta 增加 pubTime（取自首页卡片 time，经 intelDetailCard 传入），与 srcName 并排；首页卡片保持无来源时间。
+- **④ 我的页画像自动回填**：onboard 增加 prefillExistingProfile——已初始化画像时再次打开自动填充 identities/focusTags/depth/langPref/wantTryable/合规，免重复填写。
+- **验证**：4 js node --check 通过。
+- **下游**：UI 规范 v1 待同步 v2（导航对齐/hero 单行/详情 meta/onboard 回填）。
+
 ## 2026-08-19 · intel 三页 UI 重构 v6 落地（owner 确认设计后实现）
 
 - **背景**：owner 反馈原 UI 不美观，要求"简洁、交互友好、重点突出"，经 6 版设计预览迭代定稿（卡片流 · 轻高亮 · 少图标）。

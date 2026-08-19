@@ -4,7 +4,7 @@
 // 数据契约与 T5.2 后端对齐：
 //   { userId:'owner', identities:{work,product,life}, focusTags[], depth, langPref, wantTryable, consentSigned, consentAt, updatedAt }
 const app = getApp()
-const { saveIntelProfile } = require('../../../utils/intelRequest')
+const { getIntelProfile, saveIntelProfile } = require('../../../utils/intelRequest')
 const { getSafeBottom } = require('../../../utils/intelRender')
 
 // 预设关注词 chip（与情报源 + 主题分类对齐；用户可在尾部自填补充）
@@ -46,6 +46,26 @@ Page({
     errMsg: ''
   },
 
+  /** 回填已有画像（编辑场景）：读取 getIntelProfile 预填表单，未初始化则无操作 */
+  async prefillExistingProfile() {
+    try {
+      const p = await getIntelProfile()
+      if (!p || !p.identities) return
+      this.setData({
+        identities: Object.assign({ work: '', product: '', life: '' }, p.identities || {}),
+        focusTags: Array.isArray(p.focusTags) ? p.focusTags : [],
+        depth: p.depth || 'std',
+        langPref: p.langPref || 'mixed',
+        wantTryable: p.wantTryable !== false,
+        consentSigned: !!p.consentSigned,
+        consentAt: p.consentAt || '',
+      })
+      console.log('[intel-onboard] 已回填已有画像')
+    } catch (e) {
+      console.warn('[intel-onboard] 回填画像失败:', (e && e.message) || e)
+    }
+  },
+
   onLoad() {
     let statusBarHeight = 20
     let menuTop = 44
@@ -68,6 +88,7 @@ Page({
       _fontScaleValue: (typeof g._fontScaleValue === 'number') ? g._fontScaleValue : 1,
       _metaScaleValue: (typeof g._metaScaleValue === 'number') ? g._metaScaleValue : 1
     })
+    this.prefillExistingProfile()
   },
 
   _isSystemDark() {

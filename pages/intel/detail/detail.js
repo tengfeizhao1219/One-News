@@ -18,6 +18,7 @@ Page({
     showMore: false,
     showTry: false,
     srcName: '',
+    pubTime: '',          // 发布时间（取自首页卡片 time，经 intelDetailCard 传入）
     _fontScaleValue: 1,    // 字体缩放（与 One News _applyFontScale 对齐，注入 CSS --font-scale）
     _metaScaleValue: 1,
     // 详情内容（数据驱动，方案A：与所选卡片匹配）
@@ -60,6 +61,7 @@ Page({
       // 底部安全区（px）：env() 真机失效，JS 计算注入 --safe-bottom
       safeBottom: getSafeBottom(),
       srcName: (card && card.src) || '',
+      pubTime: (card && card.time) || '',
       _fontScaleValue: (app.globalData && typeof app.globalData._fontScaleValue === 'number') ? app.globalData._fontScaleValue : 1,
       _metaScaleValue: (app.globalData && typeof app.globalData._metaScaleValue === 'number') ? app.globalData._metaScaleValue : 1,
       title: (card && card.title) || '',

@@ -29,8 +29,9 @@
     <block wx:else>
       <!-- 结论式标题 + 来源（时间字段后端补上后自动展示） -->
       <text class="detail-title">{{title}}</text>
-      <view class="meta" wx:if="{{srcName}}">
-        <text class="meta-src">{{srcName}}</text>
+      <view class="meta" wx:if="{{srcName || pubTime}}">
+        <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
+        <text wx:if="{{pubTime}}">{{pubTime}}</text>
       </view>
 
       <!-- 发生了什么 -->

@@ -15,10 +15,14 @@
   z-index: 16;
 }
 .nav {
+  /* 与原生胶囊垂直居中对齐：容器 top=胶囊顶(menu-top)、height=胶囊高(menu-height)、内部 flex 居中（对齐 One News panel-header 做法） */
+  position: relative;
+  height: var(--menu-height, 32px);
+  margin-top: var(--menu-top, 44px);
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
+  padding: 0 32rpx;
 }
 .nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
 .nav-title { font-size: calc(32rpx * var(--font-scale)); font-weight: 600; color: var(--text-primary); }

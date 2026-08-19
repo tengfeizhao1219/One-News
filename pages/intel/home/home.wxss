@@ -19,25 +19,35 @@
 
 /* 导航：仅返回 + 标题 */
 .nav {
+  /* 与原生胶囊垂直居中对齐：容器 top=胶囊顶(menu-top)、height=胶囊高(menu-height)、内部 flex 居中（对齐 One News panel-header 做法） */
+  position: relative;
+  height: var(--menu-height, 32px);
+  margin-top: var(--menu-top, 44px);
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
+  padding: 0 32rpx;
 }
 .nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
 .nav-title { font-size: calc(36rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
 
 /* 摘要区：今日条数 + 数据截至小字 */
-.hero { padding: 12rpx 32rpx 0; }
+.hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 8rpx 32rpx 0;
+}
 .hero-count {
-  font-size: calc(40rpx * var(--font-scale));
+  font-size: calc(36rpx * var(--font-scale));
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.35;
 }
 .hero-num { color: var(--primary); }
 .hero-sub {
-  margin-top: 12rpx;
+  margin-left: auto;
+  text-align: right;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
 }
