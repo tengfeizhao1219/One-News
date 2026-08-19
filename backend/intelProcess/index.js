@@ -83,7 +83,7 @@ async function processOne(item, profile) {
   //   raw 层空壳/陈旧/脏文本在这里被拦下，不进 LLM、不进 staged，只留痕。
   const gate = qualify(item, GATE)
   if (!gate.pass) {
-    await markIngest(itemId, 'rejected') // 留痕，不再重试
+    await markIngest(itemId, 'rejected', { reason: gate.reasons.join('/'), gateLevel: route.level }) // 留痕不再重试，reason 落库可复盘
     console.log(`[intelProcess] 质量闸门拦截 ${itemId} (${route.level}) reason=${gate.reasons.join('/')}`)
     return { itemId, status: 'rejected', relevance: route.level, reason: gate.reasons.join('/') }
   }
@@ -153,11 +153,11 @@ async function upsertStaged(staged) {
   }
 }
 
-/** 回写 intel_ingest 消费状态（pending → done/low，幂等） */
-async function markIngest(itemId, status) {
+/** 回写 intel_ingest 消费状态（pending → done/low，幂等）；extra 合并进 data（如被拦截的 reason） */
+async function markIngest(itemId, status, extra = {}) {
   try {
     await db.collection(INTEL_INGEST).where({ guid: itemId }).update({
-      data: { status, processedAt: new Date().toISOString() },
+      data: { status, processedAt: new Date().toISOString(), ...extra },
     })
   } catch (e) { /* 非阻塞 */ }
 }
