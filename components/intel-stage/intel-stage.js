@@ -173,6 +173,14 @@ Component({
     },
 
     // 通知父组件：请求滑回 One News（由父置 active=false）
+    /** 本周可试用清单勾选（与 pages/intel/home 一致） */
+    toggleTryable(e) {
+      const id = e.currentTarget.dataset.id
+      const tryable = (this.data.tryable || []).map((t) =>
+        t.id === id ? Object.assign({}, t, { done: !t.done }) : t)
+      this.setData({ tryable })
+    },
+
     reqBack() {
       this.triggerEvent('reqback', {}, { bubbles: false, composed: false })
     }
