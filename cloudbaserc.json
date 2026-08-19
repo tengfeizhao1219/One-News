@@ -92,7 +92,7 @@
         {
           "name": "intelFetch1800",
           "type": "timer",
-          "config": "0 30 17 * * * *"
+          "config": "0 40 17 * * * *"
         }
       ]
     },
@@ -116,7 +116,7 @@
         {
           "name": "intelPoll1800",
           "type": "timer",
-          "config": "0 35 17 * * * *"
+          "config": "0 45 17 * * * *"
         }
       ]
     },
@@ -140,7 +140,7 @@
         {
           "name": "intelProcess1800",
           "type": "timer",
-          "config": "0 40 17 * * * *"
+          "config": "0 50 17 * * * *"
         }
       ]
     },

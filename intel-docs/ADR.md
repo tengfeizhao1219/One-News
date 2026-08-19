@@ -69,9 +69,9 @@
 ### ADR-10 · 18:00 批次提前，18:00 准时发布
 
 - **日期**：2026-08-19
-- **决策**：owner 拍板：晚班调度提前——intelFetch 17:55→**17:30**，intelRssPoll 18:00→**17:35**，intelProcess 18:10→**17:40**，intelDispatcher 18:30→**18:00**（读者 6 点准时看到当天汇总）。
+- **决策**：owner 拍板：晚班调度提前——intelFetch 17:55→**17:40**，intelRssPoll 18:00→**17:45**，intelProcess 18:10→**17:50**，intelDispatcher 18:30→**18:00**（读者 6 点准时看到当天汇总；抓取定 17:40，处理秒级足够）。
 - **理由**：原 18:30 发布比用户预期晚半小时；实测处理链路秒级完成（18:10 触发→18:10:08 写入 staged），提前完全可行。
-- **影响**：触发器已远程更新部署（intelFetch1800/intelPoll1800/intelProcess1800/intelDispatcher1800）；cloudbaserc.json 已同步；17:30 抓取至 18:00 有 30 分钟增量空窗（如需可加 17:55 补抓）。
+- **影响**：触发器已远程更新部署（intelFetch1800 17:40/intelPoll1800 17:45/intelProcess1800 17:50/intelDispatcher1800 18:00）；cloudbaserc.json 已同步；17:40 抓取至 18:00 有 20 分钟增量空窗（如需可加 17:55 补抓）。
 - **记录人**：O
 
 ### ADR-9 · 反爬 UA 策略（待定）

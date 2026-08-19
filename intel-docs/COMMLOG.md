@@ -7,7 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
-| 2026-08-19 | O/Owner | **拍板：18:00 批次提前，6 点准时发布**（ADR-10）。intelFetch 17:55→17:30 / intelRssPoll 18:00→17:35 / intelProcess 18:10→17:40 / intelDispatcher 18:30→18:00。触发器已远程更新部署（4 个函数已验证），cloudbaserc.json 已同步。**所有涉及调度角色留意** | ✅ 已推 |
+| 2026-08-19 | O/Owner | **拍板：18:00 批次提前，6 点准时发布**（ADR-10）。intelFetch 17:55→**17:40** / intelRssPoll 18:00→**17:45** / intelProcess 18:10→**17:50** / intelDispatcher 18:30→**18:00**。触发器已远程更新部署（4 个函数已验证），cloudbaserc.json 已同步。**所有涉及调度角色留意** | ✅ 已推 |
 | 2026-08-19 | D/Owner | **拍板：删除首页导航副标题「情报官已为你梳理今日值得关注的进展」**（纯属多余）。已从 components/intel-stage/intel-stage.wxml 移除，导航只留 ‹ 返回 + AI 情报 | ✅ 已推 |
 | 2026-08-19 | D/Owner | **拍板：详情页「想试试」→「试试看」+ 引导语气**。① 标签改名已落地（detail.wxml）；② 内容须为轻松引导式推荐（"想体验的话可以试试…"），**非命令式步骤/催促**——前端结构已就绪（.try-guide 浅底容器），文案语气由 P 角色在 intelProcess SOP 生成 minAction 时遵循（COMMLOG 交接，无需改前端）。三页 UI v6 已全部落地（b3bc50e/3c9902a + 本次）：首页卡片流+对你最重要tag+浅蓝底+去来源时间+去今日关注标题、详情页去状态条+来源前置+落到你这里浅蓝底、我的页精简画像+合规；FAB 未动、零新增 hex | ✅ 已推 |
 | 2026-08-19 | O/Owner | **拍板：定时档 = 固定节点无条件抓取**。05/11/18 触发器一到即抓全部启用源，不看 `lastFetchTime`/`pollSeconds` 间隔，手动抓取不消费定时档机会。`intelRssPoll` 已由 `listDueFeeds`(6h 间隔)改为 `listEnabledFeeds`(无条件)，部署 Active，提交 `d85ae00`。设计 §5.8 / TASK_BOARD T1.4 / 本导航索引已同步。**所有涉及抓取调度的角色留意** | ✅ |
