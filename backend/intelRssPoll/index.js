@@ -559,9 +559,13 @@ async function updateSource(sourceId, patch) {
 
 /** 计算本批最新 publishedAt → 新的增量游标（ISO 字符串） */
 function computeCursor(items, fallbackNow) {
+  // fix(2026-08-19): rawItems 只有 pubDate（无 publishedAt），fresh 为空回退 rawItems 时
+  // 旧逻辑读不到 publishedAt → 游标退化成抓取时刻，失去增量基线意义（openai_blog cursor 变 now）。
+  // 改为同时读 publishedAt || pubDate，解析失败的条目跳过。
   let maxTs = 0
   for (const it of items) {
-    const t = it.publishedAt ? new Date(it.publishedAt).getTime() : 0
+    const src = it.publishedAt || it.pubDate || ''
+    const t = src ? new Date(src).getTime() : 0
     if (t && t > maxTs) maxTs = t
   }
   return maxTs ? new Date(maxTs).toISOString() : new Date(fallbackNow).toISOString()

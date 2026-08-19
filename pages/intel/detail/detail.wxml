@@ -120,6 +120,22 @@
           <view class="relate-txt">{{item.txt}}</view>
         </view>
       </view>
+
+      <view class="divider" wx:if="{{practiceText || minActionText}}"></view>
+
+      <!-- 可以怎么做（实操案例）：后端 sop.practice 已生成，补渲染供用户直接落地 -->
+      <block wx:if="{{practiceText}}">
+        <text class="block-label">可以怎么做</text>
+        <view class="prose">{{practiceText}}</view>
+        <view class="divider"></view>
+      </block>
+
+      <!-- 最小行动：一个可勾选的具体下一步 -->
+      <block wx:if="{{minActionText}}">
+        <text class="block-label">最小行动</text>
+        <view class="prose">{{minActionText}}</view>
+        <view class="divider"></view>
+      </block>
     </block>
 
     <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>

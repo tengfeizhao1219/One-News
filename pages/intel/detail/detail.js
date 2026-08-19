@@ -20,6 +20,8 @@ Page({
     // 详情内容（数据驱动，方案A：与所选卡片匹配）
     title: '',
     descText: '',          // 非 claude 卡片「发生了什么」正文（取其原文 desc）
+    practiceText: '',    // 「可以怎么做」实操案例（sop.practice，后端已生成、此前前端未渲染）
+    minActionText: '',   // 「最小行动」（sop.minAction）
     relateItems: [],       // 「落到你这里」身份条目（who / txt）
     relateSkip: '',        // 未命中身份时先跳过的提示
     hasMore: false,        // 是否有真实验证来源
@@ -91,7 +93,9 @@ Page({
           srcName: d.srcName || this.data.srcName,
           relateItems: relateItems,
           relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
-          hasMore: !!(d.sourceUrl || (d.references && d.references.length))
+          hasMore: !!(d.sourceUrl || (d.references && d.references.length)),
+          practiceText: d.practice || '',
+          minActionText: d.minAction || ''
         })
         console.log('[intel-detail] 真实详情已加载:', id)
       })
