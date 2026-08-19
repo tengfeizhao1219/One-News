@@ -292,6 +292,67 @@ function normalizeUrl(url) {
   return u
 }
 
+/** P0 优化（2026-08-19）：标题归一化指纹——去标点/空白/大小写与聚合前缀，取前 20 字符，
+ *  用于「跨源同主题去重」（同一新闻在量子位/极客公园等多源重复，只保留一条最完整版本，省 LLM） */
+function normTitleFp(title) {
+  const n = String(title || '').toLowerCase()
+    .replace(/[\s\W_]+/g, '')
+    .replace(/^(ainews|今日热点|热点|早报|晚报|日报)/, '')
+    .slice(0, 20)
+  return n ? sha256(n).slice(0, 24) : ''
+}
+
+/** P0 跨源同主题去重：同批内按 normTitleFp 合并（保留 content 更长者）；再查库，
+ *  已有同主题且为 pending、新内容明显更完整 → 升级已有条目内容（保留原 guid，不重复入库） */
+async function crossSourceDedup(items) {
+  if (!items || !items.length) return items
+  // ① 同批内合并
+  const byFp = {}
+  const noFp = []
+  for (const it of items) {
+    const fp = it.normTitleFp || ''
+    if (!fp) { noFp.push(it); continue }
+    const prev = byFp[fp]
+    if (!prev) byFp[fp] = it
+    else if (String(it.content || '').length > String(prev.content || '').length) byFp[fp] = it
+  }
+  const uniq = [...Object.values(byFp), ...noFp]
+  // ② 查库去重（分 20 一批）
+  const fps = [...new Set(uniq.map((c) => c.normTitleFp).filter(Boolean))]
+  const existMap = {}
+  try {
+    for (let i = 0; i < fps.length; i += 20) {
+      const chunk = fps.slice(i, i + 20)
+      const res = await db.collection(INTEL_INGEST)
+        .where({ normTitleFp: db.command.in(chunk) })
+        .field({ _id: true, normTitleFp: true, content: true, summary: true, status: true, sourceId: true })
+        .limit(20).get()
+      ;(res.data || []).forEach((d) => { existMap[d.normTitleFp] = d })
+    }
+  } catch (e) {
+    console.warn('[worker] 跨源去重查库失败（降级为全部写入）:', e.message)
+  }
+  const out = []
+  for (const it of uniq) {
+    const fp = it.normTitleFp || ''
+    const ex = fp ? existMap[fp] : null
+    if (!ex) { out.push(it); continue }
+    const exLen = String(ex.content || ex.summary || '').length
+    const newLen = String(it.content || it.summary || '').length
+    if (ex.status === 'pending' && newLen > exLen + 200) {
+      // 已有条目尚未处理且新内容明显更完整 → 升级已有条目（内容/标题/来源），保留原 guid
+      try {
+        await db.collection(INTEL_INGEST).doc(ex._id).update({
+          data: { content: it.content, summary: it.summary, title: it.title, sourceId: it.sourceId, sourceName: it.sourceName },
+        })
+        console.log(`[worker] 跨源升级 ${ex.sourceId}→${it.sourceId}: ${String(it.title).slice(0, 30)}`)
+      } catch (e) { /* 非阻塞 */ }
+    }
+    // 否则丢弃重复主题（已有更完整/已处理版本）
+  }
+  return out
+}
+
 function cleanTitle(title) {
   return String(title || '').replace(/\s+/g, ' ').replace(/^[【\[]+|[】\]]+$/g, '').trim()
 }
@@ -328,6 +389,8 @@ function validateIntelItem(raw, meta) {
     title,
     url: rawUrl,
     urlFp: sha256(normalizeUrl(rawUrl)),
+    // P0 优化（2026-08-19）：归一化标题指纹，跨源同主题去重用（去标点/空白/大小写，取前 20 字符）
+    normTitleFp: normTitleFp(title),
     titleFp: sha256(title),
     summary: String(raw.desc || raw.summary || ''),
     // 版权红线：content 仅作 AI 加工源数据（瞬时 staging），intel_current 不落全文
@@ -481,6 +544,11 @@ async function fetchSource(feed, ctx = {}) {
     // 官网正文/列表抓取（零依赖 contentFetcher；Phase 2 A 角色按源细化解析规则）
     const html = await fetchWebPage(endpoint)
     if (!html) throw new Error(`官网抓取失败 endpoint=${endpoint}`)
+    // P2 优化：页面哈希缓存——页面未变直接 notModified，省重复解析/去重
+    const pageHash = sha256(html)
+    if (feed.lastPageHash && feed.lastPageHash === pageHash) {
+      return { items: [], cursor: ctx.sinceMs || null, notModified: true, pageHash }
+    }
     // 2026-08-19 复盘：entryMode=changelog（Docusaurus 更新日志单页）走专用提取；
     // 否则通用列表启发式（<h><a> 标题 + 可选 urlPattern 卡片式第二遍）
     let items = []
@@ -496,7 +564,7 @@ async function fetchSource(feed, ctx = {}) {
         items.push({ title: cleanTitle(feed.name || '官网'), url: endpoint, pubDate: '', guid: endpoint, desc: body.slice(0, 300), content: body })
       }
     }
-    return { items, cursor: ctx.sinceMs || null }
+    return { items, cursor: ctx.sinceMs || null, pageHash }
   }
 
   if (type === 'wechat') {
@@ -827,12 +895,15 @@ async function runWorker(feed, now, ctx = {}) {
   // 3. guid 幂等去重（查已有 + 唯一索引兜底）
   const existingGuids = await queryExistingGuids(candidates.map((c) => c.guid))
   const fresh = candidates.filter((c) => !existingGuids.has(c.guid))
+
+  // P0 优化：跨源同主题去重（同批 + 库内），只保留最完整版本，省重复 LLM
+  const deduped = await crossSourceDedup(fresh)
   const duplicates = candidates.length - fresh.length
 
-  // 4. 批量写 intel_ingest
+  // 4. 批量写 intel_ingest（P0：跨源去重后的 deduped）
   let written = 0
-  if (fresh.length) {
-    const wr = await batchInsertIngest(fresh)
+  if (deduped.length) {
+    const wr = await batchInsertIngest(deduped)
     written = wr.written
     if (wr.failed.length) {
       console.warn(`[worker] ${sourceId} ${wr.failed.length} 条写入失败（幂等，下轮重试）`)
@@ -857,6 +928,8 @@ async function runWorker(feed, now, ctx = {}) {
     lastSuccessCursor: cursor,           // 增量游标：下次巡检续传起点
     lastModified: fetched.lastModified || feed.lastModified,
     etag: fetched.etag || feed.etag,
+    // P2 优化：scrape 源页面哈希缓存（页面未变则下轮直接 notModified 跳过）
+    lastPageHash: fetched.pageHash || feed.lastPageHash,
     health: { status: 'ok', consecutiveFails: 0, lastError: '', lastSuccessAt: nowIso },
   }
   await updateSource(sourceId, patch)
@@ -888,8 +961,8 @@ async function runWorker(feed, now, ctx = {}) {
 // ───────────────────────────
 // listEnabledFeeds（固定节点无条件抓取全部启用源）
 // ───────────────────────────
-// 注：按 owner 2026-08-19 拍板，定时档位一到就无条件抓所有启用源，
-//     **不看 lastFetchTime / pollSeconds 间隔**。手动抓取不影响定时档位抓取机会。
+// 注：按 owner 2026-08-19 拍板，定时档位一到就抓所有启用源；P2 优化（同日晚些）：
+//     尊重 per-source pollSeconds——低频源（官方博客周更）未到间隔则跳过，省抓取请求。
 async function listEnabledFeeds(nowMs) {
   let feeds = []
   try {
@@ -902,6 +975,10 @@ async function listEnabledFeeds(nowMs) {
   for (const f of feeds) {
     if (f.enabled !== true) continue
     if (f.status === 'disabled') continue
+    // P2 低频源降频：最近一次抓取距现在 < pollSeconds（默认 6h）→ 跳过
+    const pollMs = (Number(f.pollSeconds) || 21600) * 1000
+    const last = f.lastFetchedAt ? new Date(f.lastFetchedAt).getTime() : 0
+    if (last && nowMs - last < pollMs) continue
     due.push(f)
   }
   return due

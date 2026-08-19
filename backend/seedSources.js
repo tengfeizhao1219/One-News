@@ -136,7 +136,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'scrape', // T2.4 实测能取到 HTML，但列表页为 JS 渲染、无 issue-NNN 静态卡片，通用提取仅能取最新 teaser（外部 bit.ly 链接）；保守保留开启，正文待 Phase 3 深挖
     baseUrl: 'https://www.deeplearning.ai/the-batch/',
     adapterConfig: { endpoint: 'https://www.deeplearning.ai/the-batch/', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'research'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
   {
@@ -147,7 +147,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://jackclark.substack.com/feed',
     adapterConfig: { endpoint: 'https://jackclark.substack.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research', 'policy'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'research', 'policy'],
     blockTitleKeywords: [],
   },
   {
@@ -158,7 +158,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://magazine.sebastianraschka.com/feed',
     adapterConfig: { endpoint: 'https://magazine.sebastianraschka.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'research'],
     blockTitleKeywords: [],
   },
   {
@@ -169,7 +169,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://www.latent.space/feed',
     adapterConfig: { endpoint: 'https://www.latent.space/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'engineering'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'engineering'],
     blockTitleKeywords: [],
   },
   // ── C 层 · 趋势判断（官方一手）──
@@ -181,7 +181,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss', // RSS + 官方页（端点待验证）
     baseUrl: 'https://openai.com/news/rss.xml',
     adapterConfig: { endpoint: 'https://openai.com/news/rss.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'official'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'official'],
     blockTitleKeywords: [],
   },
   {
@@ -192,7 +192,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'scrape', // T2.4 实测 414KB HTML 但文章卡片为 JS 客户端渲染，无静态列表；零依赖纯 Node 不可达，默认不开启，内容由 TechCrunch/Verge 等 RSS 覆盖
     baseUrl: 'https://www.anthropic.com/news',
     adapterConfig: { endpoint: 'https://www.anthropic.com/news', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'official', 'safety'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'official', 'safety'],
     blockTitleKeywords: [],
   },
   {
@@ -203,7 +203,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss', // RSS + 官方页（端点待验证）
     baseUrl: 'https://deepmind.google/blog/rss.xml',
     adapterConfig: { endpoint: 'https://deepmind.google/blog/rss.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'official', 'research'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'official', 'research'],
     blockTitleKeywords: [],
   },
   {
@@ -214,7 +214,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'scrape', // T2.4 实测 400（Cloudflare 拒绝），零依赖纯 Node 不可达；默认不开启，内容由 TechCrunch/Verge 等 RSS 覆盖
     baseUrl: 'https://ai.meta.com/blog/',
     adapterConfig: { endpoint: 'https://ai.meta.com/blog/', timeoutMs: 15000, rateLimit: 'polite' },
-    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'official', 'open_source'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'official', 'open_source'],
     blockTitleKeywords: [],
   },
   {
@@ -225,7 +225,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://huggingface.co/blog/feed.xml',
     adapterConfig: { endpoint: 'https://huggingface.co/blog/feed.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'open_source'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'open_source'],
     blockTitleKeywords: [],
   },
   {
@@ -330,7 +330,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'scrape', // 服务端渲染卡片列表（实测 <a><h3>标题</h3><p>描述</p></a>），urlPattern 限定 /news/
     baseUrl: 'https://www.deepseek.com/news',
     adapterConfig: { endpoint: 'https://www.deepseek.com/news', timeoutMs: 15000, rateLimit: 'polite', urlPattern: '/news/[a-z0-9-]+/?$' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'zh'],
     blockTitleKeywords: ['招聘'],
   },
   {
@@ -341,7 +341,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'scrape', // Docusaurus 单页 changelog：h2 Date + h3 标题 + 正文，走 entryMode=changelog 提取
     baseUrl: 'https://api-docs.deepseek.com/updates/',
     adapterConfig: { endpoint: 'https://api-docs.deepseek.com/updates/', timeoutMs: 15000, rateLimit: 'polite', entryMode: 'changelog' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
+    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'zh'],
     blockTitleKeywords: ['招聘'],
   },
   {

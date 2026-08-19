@@ -94,7 +94,13 @@ async function processOne(item, profile) {
   const { system, user } = buildPrompts(item, profile, route.level)
 
   // ③ LLM 调用（未配 Key → intelChat 内部降级返回 null，静默跳过不阻塞）
-  const out = await intelChat({ systemPrompt: system, user, minAccept: 15, maxTokens: 900, tag: 'intelProcess/sop' })
+  // P1 优化：medium 轻量路径 maxTokens 400（只需简短摘要），high 完整 SOP 900
+  const out = await intelChat({
+    systemPrompt: system, user,
+    minAccept: 15,
+    maxTokens: route.level === 'medium' ? 400 : 900,
+    tag: 'intelProcess/sop',
+  })
   if (!out || !out.text) {
     // 2026-08-19 复盘：LLM 失败重试上限——连续 3 次仍失败则 rejected 留痕，避免永久 pending 死循环
     const prevRetry = Number(item.retryCount) || 0
@@ -235,7 +241,8 @@ async function markIngest(itemId, status, extra = {}) {
 function buildPrompts(item, profile, level) {
   const identities = describeIdentities(profile)
   const sx = String(item.title || '') + '\n' + String(item.content || item.summary || '')
-  const text = sx.slice(0, 2400)
+  // P1 优化（2026-08-19）：medium 轻量路径只需简短摘要，内容切片减半省输入 token
+  const text = sx.slice(0, level === 'medium' ? 1200 : 2400)
 
   // ── 画像参数（Phase 5 / T5.2）：depth/langPref 强化或调整 prompt ──
   // depth: 'deep' 强化深度/落地粒度；'lite' 走更轻量路径；'std'（缺省）维持原状
@@ -433,10 +440,24 @@ exports.main = async (event = {}) => {
     return { ok: true, processed: 0, note: '无待处理条目' }
   }
 
-  // 本批串行处理（每批 ~20 条，单条 LLM ≤5s，最坏可控在 60s 内）
+  // 本批处理（P1 优化：>48h 的旧 pending 直接拒绝不进 LLM，防积压旧条白烧 token；
+  //  P2 优化：同批内 2 条并发，300s 窗口吞吐×2）
+  const STALE_PENDING_MS = 48 * 3600 * 1000
   const results = []
-  for (const item of todo) {
-    results.push(await processOne(item, profile))
+  for (let i = 0; i < todo.length; i += 2) {
+    const chunk = todo.slice(i, i + 2)
+    const rs = await Promise.all(chunk.map(async (item) => {
+      if (item.fetchedAt) {
+        const t = new Date(item.fetchedAt).getTime()
+        if (!Number.isNaN(t) && Date.now() - t > STALE_PENDING_MS) {
+          const id = String(item.guid || item.itemId || '')
+          await markIngest(id, 'rejected', { reason: 'stale-pending(>48h)' })
+          return { itemId: id, status: 'rejected', reason: 'stale-pending(>48h)' }
+        }
+      }
+      return processOne(item, profile)
+    }))
+    results.push(...rs)
   }
   const okCount = results.filter((r) => r.status === 'ok').length
 

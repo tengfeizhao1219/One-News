@@ -96,6 +96,9 @@ function requestHunyuan(config, systemPrompt, userText, minAccept, isAvailable) 
  * @param {string} [opts.tag] - 日志标签（如 intelProcess/sop）
  * @returns {Promise<{text:string, engine: '智谱'|'Qwen'|'DeepSeek'|'混元'}|null>}
  */
+// P1 优化（2026-08-19）：引擎记忆——上次成功引擎优先尝试，避免故障引擎每次白白 20s 超时
+let _lastEngine = null
+
 async function intelChat(opts = {}) {
   const { systemPrompt = DEFAULT_SYSTEM, user = '', minAccept = 20, maxTokens = 900, temperature = 0.7, tag = 'intel' } = opts
   if (!user || !String(user).trim()) return null
@@ -136,6 +139,15 @@ async function intelChat(opts = {}) {
   if (hyEnabled) {
     providers.unshift({ kind: 'hunyuan' })
   }
+  // P1 引擎记忆：把上次成功引擎提到混元之后、其余引擎之前
+  if (_lastEngine && providers.length > 1) {
+    const idx = providers.findIndex((p) => p.kind !== 'hunyuan' && p.eng && p.eng.name === _lastEngine)
+    if (idx > 0) {
+      const [moved] = providers.splice(idx, 1)
+      const hyIdx = providers.findIndex((p) => p.kind === 'hunyuan')
+      providers.splice(hyIdx === -1 ? 0 : hyIdx + 1, 0, moved)
+    }
+  }
 
   if (providers.length === 0) {
     console.warn(`[intelLLM] ${tag} 未配置任何引擎，跳过 LLM 调用`)
@@ -146,11 +158,11 @@ async function intelChat(opts = {}) {
     try {
       if (p.kind === 'hunyuan') {
         const r = await requestHunyuan(hunyuanCfg, systemPrompt, user, minAccept, isAvailable)
-        if (r) { console.log(`[intelLLM] ${tag} 混元成功（${r.text.length}字）`); return Object.assign(r, { engine: '混元' }) }
+        if (r) { console.log(`[intelLLM] ${tag} 混元成功（${r.text.length}字）`); _lastEngine = '混元'; return Object.assign(r, { engine: '混元' }) }
       } else {
         const body = JSON.parse(p.body)
         const r = await requestOpenAI(p.eng, body)
-        if (r && r.text && r.text.length >= minAccept) { console.log(`[intelLLM] ${tag} ${p.eng.name} 成功（${r.text.length}字）`); return Object.assign(r, { engine: p.eng.name }) }
+        if (r && r.text && r.text.length >= minAccept) { console.log(`[intelLLM] ${tag} ${p.eng.name} 成功（${r.text.length}字）`); _lastEngine = p.eng.name; return Object.assign(r, { engine: p.eng.name }) }
         console.warn(`[intelLLM] ${tag} ${p.eng.name} 失败（${r && r.reason || '过短'}），尝试下一引擎`)
       }
     } catch (e) {
