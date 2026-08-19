@@ -235,13 +235,35 @@ function healthSummary(sourceHealth) {
 }
 
 // ─── 排序：合同/接口变更置顶，其余按场景命中强度降序 ───
-/** owner 2026-08-19：brief 只保留当天资讯——剔除 publishedAt 跨天条目（历史数据不展示）。
- * dayKey 形如 2026-08-19（北京时区）；publishedAt 取顶层或 sop.source 字段。 */
-function filterTodayOnly(items, dayKey) {
+/** owner 2026-08-19：brief 只展示「两次抓取间隔之间」的新闻——按抓取档位窗口过滤 publishedAt。
+ * 档位窗口（北京时区）：05:00 批次 = [昨天 18:00, 今天 05:00)；11:00 = [今天 05:00, 11:00)；18:00 = [今天 11:00, 18:00)。
+ * 这样 18:00 批次展示的是 11:00→18:00 之间发布的新闻，8/13–8/18 旧文（不在窗口）不混入。
+ * @param {number} batchHour 本次抓取时刻的小时（0-23，北京时区）
+ */
+function batchWindowStart(dayKey, batchHour) {
+  const [y, m, d] = String(dayKey).split('-').map(Number)
+  let start = new Date(Date.UTC(y, m - 1, d, 0, 0, 0))
+  if (batchHour < 8) {         // 05:00 档：起点 = 昨天 18:00
+    start = new Date(Date.UTC(y, m - 1, d - 1, 18, 0, 0))
+  } else if (batchHour < 15) { // 11:00 档：起点 = 今天 05:00
+    start = new Date(Date.UTC(y, m - 1, d, 5, 0, 0))
+  } else {                     // 18:00 档：起点 = 今天 11:00
+    start = new Date(Date.UTC(y, m - 1, d, 11, 0, 0))
+  }
+  return start
+}
+
+/** 按批次窗口过滤：publishedAt ∈ [窗口起点, 本次抓取时刻]。 */
+function filterByBatchWindow(items, dayKey, batchFetchedAt) {
   if (!Array.isArray(items) || !dayKey) return items
+  const bh = batchFetchedAt ? new Date(batchFetchedAt).getUTCHours() : new Date().getUTCHours()
+  const winStart = batchWindowStart(dayKey, bh).getTime()
+  const winEnd = batchFetchedAt ? new Date(batchFetchedAt).getTime() : Date.now()
   return items.filter((it) => {
-    const pa = String((it && (it.publishedAt || (it.sop && it.sop.source && it.sop.source.publishedAt))) || '')
-    return pa.slice(0, 10) === dayKey
+    const pa = (it && (it.publishedAt || (it.sop && it.sop.source && it.sop.source.publishedAt))) || ''
+    if (!pa) return true // 无发布时间不拦（保底）
+    const t = new Date(pa).getTime()
+    return !Number.isNaN(t) && t >= winStart && t <= winEnd
   })
 }
 
@@ -422,7 +444,7 @@ async function runIncremental(dayKey) {
   // 新增 items 组装进当日 brief（今日关注 = 老 items + 新 items 重排）
   const merged = [...priorItemsMapped(prior), ...newItems]
   const todayReleased = await fetchTodayReleasedItems(dayKey)
-  const allRank = rankItems(filterTodayOnly(mergeByItemId(todayReleased, merged), dayKey))
+  const allRank = rankItems(filterByBatchWindow(mergeByItemId(todayReleased, merged), dayKey, batchFetchedAt))
   const weekTryable = await fetchWeekTryable()
   const sourceHealth = await snapshotSourceHealth(dayKey)
   const health = healthSummary(sourceHealth)
@@ -510,7 +532,7 @@ async function runSummary(dayKey) {
   const prior = await findTodayBrief(dayKey)
   const priorVersion = (prior && prior.version) || 0
   // 汇总结案须纳入：当日已发布 items + 最新窗口尚未纳入 brief 的未发布 items（含 05/11 no-op 情形）
-  const allToday = filterTodayOnly(mergeByItemId(todayItems, todayNew), dayKey)
+  const allToday = filterByBatchWindow(mergeByItemId(todayItems, todayNew), dayKey, batchFetchedAt)
   const rendered = renderBrief(allToday, weekTryable)
 
   // 汇总结案 = 当日终版（version 递增，mode=summary）
