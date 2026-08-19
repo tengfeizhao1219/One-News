@@ -456,6 +456,21 @@ function buildUrl(baseUrl, params) {
  * @param {Object} feed intel_sources 文档
  * @param {Object} ctx { sinceMs } 增量游标（api 类用）
  */
+/** owner 2026-08-19：档位窗口起点——无游标（首次/丢失）时兜底，只收「上次抓取点之后」发布的。
+ * 05:00 档→昨天18:00；11:00 档→今天05:00；18:00 档→今天11:00（北京时区）。
+ * @param {number} [now] 当前时刻（ms），默认 Date.now()
+ */
+function batchWindowStartMs(now) {
+  const n = now || Date.now()
+  const d = new Date(n)
+  const hour = d.getUTCHours() // CloudBase 环境 UTC；北京 = UTC+8
+  const day = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())
+  if (hour < 0) return day - 6 * 3600 * 1000
+  if (hour < 3) return day - 6 * 3600 * 1000      // 北京 <8 点 → 05 档 → 昨天 18:00 UTC(=10:00 UTC 前一天)
+  if (hour < 7) return day + 5 * 3600 * 1000 - 8 * 3600 * 1000 // 北京 <12 点 → 11 档 → 今天 05:00 北京 = 昨天 21:00 UTC
+  return day + 11 * 3600 * 1000 - 8 * 3600 * 1000 // 北京 ≥12 点 → 18 档 → 今天 11:00 北京 = 今天 03:00 UTC
+}
+
 async function fetchSource(feed, ctx = {}) {
   const type = feed.sourceType || 'rss'
   const cfg = (feed.adapterConfig || {})
@@ -481,7 +496,7 @@ async function fetchSource(feed, ctx = {}) {
       const filtered = []
       for (const it of sorted) {
         const t = it.pubDate ? new Date(it.pubDate).getTime() : 0
-        if (t && t <= ctx.sinceMs) continue       // 早于游标 → 旧文，跳过
+        if (!t || t <= ctx.sinceMs) continue       // owner 2026-08-19：pubDate 无效或早于游标 → 跳过（防旧文/无时间戳混入）
         filtered.push(it)
         if (limit > 0 && filtered.length >= limit) break  // 单源本轮最多取最新 N 条
       }
@@ -830,7 +845,8 @@ async function runWorker(feed, now, ctx = {}) {
   //    增量游标续传（§5.8 #3）：lastSuccessCursor → sinceMs，api 类源（HN/arXiv）
   //    按时间窗拉增量；rss/scrape 类只露最新 N 条，靠 guid 去重不硬过滤。
   const timeoutMs = (feed.adapterConfig && feed.adapterConfig.timeoutMs) || TIMEOUT_BY_TYPE[feed.sourceType] || 10000
-  const sinceMs = feed.lastSuccessCursor ? new Date(feed.lastSuccessCursor).getTime() : 0
+  // owner 2026-08-19：无游标（首次/丢失）→ 用档位窗口起点兜底，不再全量拉旧文
+  const sinceMs = feed.lastSuccessCursor ? new Date(feed.lastSuccessCursor).getTime() : batchWindowStartMs()
   let fetched
   try {
     fetched = await Promise.race([
