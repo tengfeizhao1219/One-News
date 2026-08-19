@@ -91,9 +91,10 @@ class OneNewsChannel extends IntelChannel {
       locked: brief.locked === true,
       // 「数据截至 HH:MM」（§7.6）
       dataAsOf: {
-        hhmm: formatHHMM(brief.generatedAt),
-        generatedAt: brief.generatedAt || '',
-        label: brief.generatedAt ? `数据截至 ${formatHHMM(brief.generatedAt)}` : '',
+        // owner 2026-08-19：优先展示「批次抓取时间」batchFetchedAt（Dispatcher 组装时写入），回退 brief 生成时刻
+        hhmm: formatHHMM(brief.batchFetchedAt || brief.generatedAt),
+        generatedAt: brief.batchFetchedAt || brief.generatedAt || '',
+        label: (brief.batchFetchedAt || brief.generatedAt) ? `数据截至 ${formatHHMM(brief.batchFetchedAt || brief.generatedAt)}` : '',
       },
       // 今日关注卡片流
       focusItems: items,

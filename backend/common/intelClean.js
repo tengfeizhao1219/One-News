@@ -216,6 +216,17 @@ function qualify(item, cfg) {
     reasons.push('no-minimal-info')
   }
 
+  // ④ 多新闻聚合检测（owner 2026-08-19 拍板：一条含多条新闻揉合在一起的综述/聚合资讯完全丢弃）
+  //    典型：标题用「；」连接 2+ 独立新闻点（如"苹果摄像头耳机曝光；小米机器人将亮相"），
+  //    或标题带综述/盘点/早报/晚报/汇总/合集等聚合特征词且较长。此类条目 content 多主题混排，
+  //    SOP 处理会错乱（正文与标题对不上），直接拒绝留痕。
+  const _title = String(clean.title || '').trim()
+  if (/[；;]/.test(_title)) {
+    reasons.push('multi-news-aggregate(;-title)')
+  } else if ((/综述|盘点|早报|晚报|速览|汇总|合集|多领域|大事件/.test(_title)) && _title.length >= 15) {
+    reasons.push('multi-news-aggregate(roundup-word)')
+  }
+
   // 附：有效正文字数（供日志/留痕），并给清洗后条目打上截断上限，防超长入 LLM
   clean._contentLen = len
   clean._cleanVersion = 1
