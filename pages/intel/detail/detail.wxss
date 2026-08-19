@@ -1,13 +1,11 @@
-/* INTEL-MODULE: AI 情报官 · 情报详情样式。设计令牌全部引用 theme.json，零新增 hex。 */
+/* INTEL-MODULE: AI 情报官 · 情报详情样式（UI 重构 v6）。设计令牌全部引用 theme.json，零新增 hex。 */
 .intel-detail {
-  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷） */
   height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-card);
+  background-color: var(--bg-page);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
-/* 状态栏背景层 + 导航避让：复制 One News 首页机制（menuTop/menuHeight 对齐原生胶囊） */
 .status-bar-fill {
   position: fixed;
   top: 0;
@@ -16,198 +14,134 @@
   width: 100%;
   z-index: 16;
 }
-
 .nav {
-  /* 顶到胶囊下方（胶囊 = menuTop 顶 + menuHeight 高），不再从状态栏开始，避开原生胶囊 */
-  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
   display: flex;
   align-items: center;
   gap: 12rpx;
-  position: relative;
-  z-index: 17;
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
 }
 .nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
-.nav-title { font-size: 34rpx; font-weight: 700; color: var(--text-primary); }
-.src-chip {
-  margin-left: auto;
-  font-size: 22rpx;
-  color: var(--text-secondary);
-  background: var(--bg-subtle);
-  border-radius: 999rpx;
-  padding: 6rpx 18rpx;
-}
+.nav-title { font-size: calc(32rpx * var(--font-scale)); font-weight: 600; color: var(--text-primary); }
 
 .content {
-  /* 底部空白区（padding/占位）默认渲染为白色——显式硬编码着色与背景同色；
-     不用 var()（带 fallback 的 var() 在部分版本整条声明被丢弃，退回默认白） */
-  background-color: #FAF9F7;
+  background-color: #F5F3F0;
   flex: 1;
   height: 0;
-  padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
+  padding: 16rpx 32rpx calc(16rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
-/* 深色模式：与 --bg-card dark(#0D0D0D) 同色 */
-.page--dark .content { background-color: #0D0D0D; }
+.page--dark .content { background-color: #000000; }
 
-/* 底部实体占位 = 清障主力（scroll-view padding 在真机部分机型不撑开滚动区）：
-   单独即可把最后内容顶到手势条(≈34px)/Android 手势条(≈96rpx)之上 */
-
-/* 状态条：降噪 */
-.status-strip {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-  border-radius: 24rpx;
-  padding: 16rpx 24rpx;
-  font-size: 24rpx;
-  font-weight: 500;
-  margin-bottom: 24rpx;
-}
-.status-strip .dot-g { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--flash-life); }
-
+/* 结论式标题 + 来源 */
 .detail-title {
   display: block;
-  font-size: calc(38rpx * var(--font-scale));
+  font-size: calc(40rpx * var(--font-scale));
   font-weight: 800;
   color: var(--text-primary);
-  line-height: 1.4;
-  margin: 4rpx 2rpx 20rpx;
+  line-height: 1.5;
 }
+.meta {
+  margin-top: 16rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+}
+.meta-src { color: var(--text-link); }
 
+/* 区块标题（系统蓝）*/
 .block-label {
   display: block;
-  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  font-size: calc(28rpx * var(--font-scale));
   font-weight: 700;
   color: var(--primary);
-  letter-spacing: 0.5rpx;
-  margin: 0 0 16rpx;
+  margin: 40rpx 4rpx 16rpx;
 }
 
-/* 正文：与首页情报卡片正文对齐 28rpx / 1.6（owner 2026-08-18 18:36 要求详情页字号一并调整），跟随 --font-scale 缩放 */
+/* 正文（发生了什么 / 可以怎么做 / 最小行动）*/
 .prose {
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 1.6;
+  line-height: 1.75;
+  margin-bottom: 8rpx;
 }
-.prose-2 { margin-top: 20rpx; }
+.prose-2 { margin-top: 4rpx; }
 
-/* 高亮：淡浅蓝底 + 柔和灰字，不重、不抢眼。背景复用 theme.json --highlight-bg 令牌（零新增色值，自动跟随深浅色） */
-.hl {
+/* 落到你这里：浅蓝底卡 */
+.for-card {
   background: var(--highlight-bg);
+  border-radius: 24rpx;
+  padding: 22rpx 26rpx;
+  margin-bottom: 16rpx;
+}
+.for-k {
+  display: block;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 8rpx;
+}
+.for-body {
+  font-size: calc(26rpx * var(--font-scale));
   color: var(--text-body);
-  font-weight: 500;
-  padding: 0 6rpx;
-  border-radius: 8rpx;
+  line-height: 1.7;
+}
+.relate-skip {
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin: 8rpx 4rpx;
 }
 
-.divider { height: 1rpx; background: var(--divider); margin: 32rpx 0; }
-
-/* 落到你这里 */
-.relate { display: flex; flex-direction: column; gap: 24rpx; }
-.relate-item {
-  background: var(--bg-card);
-  border: 1rpx solid var(--divider);
-  border-radius: 28rpx;
-  padding: 24rpx 28rpx;
-}
-.who { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
-.who-ic {
-  width: 32rpx; height: 32rpx; border-radius: 10rpx;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 20rpx; font-weight: 700; color: var(--primary); background: transparent;
-}
-.who-txt { font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 600; color: var(--text-secondary); }
-.relate-txt { font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
-.relate-skip { font-size: calc(28rpx * var(--font-scale)); color: var(--text-tertiary); line-height: 1.6; font-style: italic; }
-
-/* 可展开区 */
+/* 了解更多 */
 .expand {
   background: var(--bg-card);
   border: 1rpx solid var(--divider);
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   margin-top: 24rpx;
   overflow: hidden;
 }
 .expand-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
   font-size: calc(28rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--text-primary);
-  padding: 26rpx 28rpx;
-}
-.expand-head .chev { margin-left: auto; font-size: 26rpx; color: var(--text-tertiary); transition: transform 0.2s; }
-.expand.open .expand-head .chev { transform: rotate(90deg); }
-.expand-body { padding: 0 28rpx 28rpx; }
-
-/* 了解更多：来源链接（点击复制） */
-.src-link {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  background: var(--bg-subtle);
-  border-radius: 20rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 16rpx;
-}
-.src-ico { font-size: 28rpx; }
-.src-txt { flex: 1; font-size: calc(28rpx * var(--font-scale)); color: var(--text-link); }
-.src-arr { color: var(--text-tertiary); opacity: 0.6; }
-
-/* 上手试试：步骤 */
-.steps { display: flex; flex-direction: column; }
-.step { display: flex; gap: 20rpx; padding: 20rpx 0; position: relative; }
-.step:not(:last-child)::before {
-  content: ""; position: absolute; left: 22rpx; top: 56rpx; bottom: 0;
-  width: 2rpx; background: var(--divider);
-}
-.step-n {
-  flex: 0 0 44rpx; height: 44rpx; border-radius: 50%;
-  background: var(--primary); color: var(--chip-text); /* 白字复用 theme.json --chip-text，零新增 hex */
-  font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 700;
-  display: flex; align-items: center; justify-content: center; z-index: 1;
-}
-.step-c { flex: 1; }
-.step-t { font-size: calc(28rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); margin-bottom: 6rpx; }
-.step-d { font-size: calc(28rpx * var(--font-scale)); color: var(--text-body); line-height: 1.6; }
-.code {
-  background: var(--bg-subtle);
-  border-radius: 10rpx;
-  padding: 2rpx 10rpx;
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-weight: 600;
   color: var(--text-primary);
 }
-
-.risk {
-  margin-top: 24rpx;
-  background: var(--color-warning-subtle);
-  border-radius: 24rpx;
-  padding: 20rpx 24rpx;
+.chev { color: var(--text-tertiary); font-size: calc(24rpx * var(--font-scale-meta, 1)); }
+.expand-body { padding: 0 28rpx 24rpx; }
+.src-link { padding: 8rpx 0; }
+.src-txt {
   font-size: calc(24rpx * var(--font-scale-meta, 1));
-  color: var(--color-warning);
-  line-height: 1.55;
+  color: var(--text-link);
+  word-break: break-all;
+  line-height: 1.6;
 }
 
-.ref-links { margin-top: 24rpx; display: flex; flex-direction: column; gap: 14rpx; }
-.ref-lab { font-size: calc(24rpx * var(--font-scale-meta, 1)); font-weight: 700; color: var(--text-secondary); }
-.ref-link { font-size: calc(24rpx * var(--font-scale-meta, 1)); color: var(--text-link); line-height: 1.5; word-break: break-all; }
+/* 分隔线 */
+.divider { height: 1rpx; background: var(--divider); margin: 32rpx 4rpx; }
+
+/* 状态占位 */
+.state-hint {
+  padding: 120rpx 0;
+  text-align: center;
+}
+.state-t {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.state-s {
+  display: block;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin-top: 14rpx;
+}
 
 .foot-note {
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  /* 底部安全区避让：页脚 margin 是 in-flow 元素，必然撑开滚动区，
-     最后一行字可滚出手势条之上（scroll-view padding 真机不撑开滚动区） */
   margin: 32rpx 0 calc(16rpx + var(--safe-bottom, 0px));
-}
-
-/* 空态/加载态友好提示 */
-.state-hint {
-  font-size: 28rpx;
-  color: var(--text-tertiary);
-  text-align: center;
-  padding: 120rpx 0;
 }

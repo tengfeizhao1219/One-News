@@ -1,49 +1,39 @@
 <!--
-  INTEL-MODULE: AI 情报官模块 · 情报详情
-  设计要点：
-  - 后端 SOP 藏为「看不见的劳动力」，用户只看到成品。
-  - 区块标题用系统蓝；正文 28rpx/1.6；高亮为系统蓝底+灰字，不抢眼。
-  - 方案A：详情内容与所选卡片匹配，统一走云函数 intelGetDetail 拉真实数据。
-  - owner 2026-08-18 19:45：不放 mock，空态展示友好提示。
-  - 融合说明：以 Desktop(intel-officer) 的加载态/空态/安全区为骨架，融入 main 的
-    whatHappened 科普多段叙事 + 可以怎么做 + 想试试（2026-08-19 owner：最小行动改名想试试，
-    仅可落地案例才展示；落到你这里仅强相关才关联）。
+  INTEL-MODULE: AI 情报官模块 · 情报详情（UI 重构 v6 落地）
+  变更要点：去顶部状态条；来源在标题下方展示；"落到你这里"浅蓝底卡；了解更多保持可展开。
+  数据结构不变（title/srcName/whatHappenedParagraphs/descText/relateItems/practiceText/minActionText/hasMore/sourceUrl）；标签"最小行动"→"想试试"（对齐 owner 拍板）。
 -->
 <view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
-  <!-- 顶部条带（对齐原生胶囊）：先铺背景，再把导航顶到胶囊下方，避免与胶囊重叠 -->
-  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+  <!-- 顶部条带（对齐原生胶囊） -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
-  <!-- 导航（顶到胶囊下方，避开原生胶囊）；title/back 垂直居中于胶囊高度区 -->
+  <!-- 导航 -->
   <view class="nav">
     <text class="nav-back" bindtap="goBack">‹</text>
     <text class="nav-title">情报详情</text>
-    <view class="src-chip" wx:if="{{srcName}}">{{srcName}}</view>
   </view>
 
   <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
 
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
-      <view class="state-hint">情报官正在梳理详情…</view>
+      <view class="state-hint"><text class="state-t">情报官正在梳理详情…</text></view>
     </block>
 
     <!-- 空态 -->
     <block wx:elif="{{empty}}">
-      <view class="state-hint">这条情报的详情尚未生成，稍后再来看看</view>
+      <view class="state-hint"><text class="state-t">这条情报的详情尚未生成</text><text class="state-s">稍后再来看看</text></view>
     </block>
 
     <!-- 真实数据 -->
     <block wx:else>
-      <!-- 状态条 -->
-      <view class="status-strip">
-        <view class="dot-g"></view>
-        <text>情报官已完成梳理</text>
+      <!-- 结论式标题 + 来源（时间字段后端补上后自动展示） -->
+      <text class="detail-title">{{title}}</text>
+      <view class="meta" wx:if="{{srcName}}">
+        <text class="meta-src">{{srcName}}</text>
       </view>
 
-      <!-- 结论式标题 -->
-      <text class="detail-title">{{title}}</text>
-
-      <!-- 发生了什么：优先展示科普向详细叙事（多段），无则回退一句话摘要 descText -->
+      <!-- 发生了什么 -->
       <text class="block-label">发生了什么</text>
       <block wx:if="{{whatHappenedParagraphs.length}}">
         <view class="prose {{index ? 'prose-2' : ''}}" wx:for="{{whatHappenedParagraphs}}" wx:key="index">{{item}}</view>
@@ -52,40 +42,37 @@
 
       <view class="divider" wx:if="{{relateItems.length}}"></view>
 
-      <!-- 落到你这里 -->
+      <!-- 落到你这里（浅蓝底卡） -->
       <block wx:if="{{relateItems.length}}">
         <text class="block-label">落到你这里</text>
-        <view class="relate">
-          <view class="relate-item" wx:for="{{relateItems}}" wx:key="who">
-            <view class="who"><text class="who-ic">工</text><text class="who-txt">{{item.who}}</text></view>
-            <view class="relate-txt">{{item.txt}}</view>
-          </view>
-          <view class="relate-skip" wx:if="{{relateSkip}}">{{relateSkip}}</view>
+        <view class="for-card" wx:for="{{relateItems}}" wx:key="who">
+          <text class="for-k">{{item.who}}</text>
+          <view class="for-body">{{item.txt}}</view>
         </view>
+        <view class="relate-skip" wx:if="{{relateSkip}}">{{relateSkip}}</view>
       </block>
 
-      <!-- 可以怎么做（实操案例）：后端 sop.practice 已生成，补渲染供用户直接落地 -->
+      <!-- 可以怎么做 -->
       <view class="divider" wx:if="{{practiceText}}"></view>
       <block wx:if="{{practiceText}}">
         <text class="block-label">可以怎么做</text>
         <view class="prose">{{practiceText}}</view>
-        <view class="divider"></view>
       </block>
 
-      <!-- 想试试：仅存在可立即上手的案例时展示（弱相关/不可落地留空自动隐藏） -->
+      <!-- 想试试（owner 2026-08-19：最小行动改名想试试，仅可落地案例才展示） -->
       <block wx:if="{{minActionText}}">
+        <view class="divider"></view>
         <text class="block-label">想试试</text>
         <view class="prose">{{minActionText}}</view>
-        <view class="divider"></view>
       </block>
 
       <!-- 了解更多 ▸（有真实来源时才展示） -->
       <block wx:if="{{hasMore}}">
         <view class="expand {{showMore ? 'open' : ''}}">
-          <view class="expand-head" bindtap="toggleMore">了解更多 <text class="chev">›</text></view>
+          <view class="expand-head" bindtap="toggleMore"><text>了解更多</text><text class="chev">{{showMore ? '▾' : '▸'}}</text></view>
           <view class="expand-body" wx:if="{{showMore}}">
             <view class="src-link" wx:if="{{sourceUrl}}" bindtap="copyLink" data-url="{{sourceUrl}}">
-              <text class="src-ico">📄</text><text class="src-txt">{{sourceUrl}}</text><text class="src-arr">↗</text>
+              <text class="src-txt">{{sourceUrl}}</text>
             </view>
           </view>
         </view>

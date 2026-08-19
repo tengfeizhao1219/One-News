@@ -1,7 +1,7 @@
-<!-- INTEL-MODULE: AI 情报官模块 · 我的（FAB 入口落地页） -->
+<!-- INTEL-MODULE: AI 情报官模块 · 我的（UI 重构 v6 落地：身份画像 + 合规；信息源/推送暂不支持已移除） -->
 <view class="page {{themeClass}} intel-mine" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
-  <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
-  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-card);"></view>
+  <!-- 状态栏背景层 -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
   <view class="nav">
     <text class="nav-back" bindtap="goBack">‹</text>
@@ -9,29 +9,31 @@
   </view>
 
   <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
-    <view class="sect-head"><view class="dot"></view><text>画像与推送</text></view>
-
-    <!-- T5.1 接入：身份画像改为可点编辑卡 -->
+    <!-- 身份画像（可点编辑） -->
+    <view class="sect-head">你的身份画像</view>
     <view class="card card-action" bindtap="goEditProfile">
       <view class="card-body">
         <text class="card-title">我的身份画像</text>
         <text class="card-desc" wx:if="{{identitiesSummary}}">{{identitiesSummary}}</text>
         <text class="card-desc" wx:elif="{{focusTagsSummary}}">关注：{{focusTagsSummary}}</text>
         <text class="card-desc" wx:else>尚未初始化 · 点击开始填写</text>
+        <text class="card-sub">情报按相关性排序，命中越多身份越靠前</text>
       </view>
       <text class="card-chev">›</text>
     </view>
 
-    <!-- T5.1 接入：合规改为授权状态 + 撤销按钮 -->
+    <!-- 合规：授权状态 + 撤销 -->
+    <view class="sect-head">合规</view>
     <view class="card card-action">
       <view class="card-body">
         <text class="card-title">风险告知与授权</text>
         <text class="card-desc" wx:if="{{consentSigned}}">已授权 · {{consentAt}}</text>
         <text class="card-desc" wx:else>未授权 · 情报官不会为你生成新摘要</text>
+        <text class="card-sub">数据仅用于相关性匹配，不对外共享</text>
       </view>
       <view class="revoke-btn {{consentSigned ? '' : 'disabled'}}" catchtap="revokeConsent">撤销授权</view>
     </view>
 
-    <view class="foot-note">由 AI 情报官生成 · 配置项待后端联调</view>
+    <view class="foot-note">由 AI 情报官生成 · 更多功能开发中</view>
   </scroll-view>
 </view>

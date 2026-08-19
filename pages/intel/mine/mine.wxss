@@ -1,14 +1,11 @@
-/* INTEL-MODULE: AI 情报官 · 我的样式。设计令牌全部引用 theme.json，零新增 hex。 */
+/* INTEL-MODULE: AI 情报官 · 我的页样式（UI 重构 v6）。设计令牌全部引用 theme.json，零新增 hex。 */
 .intel-mine {
-  /* 滚动修复：scroll-view 需确定高度，改用 height:100vh（原 min-height 使 flex:1 高度塌陷） */
   height: 100vh;
-  overflow: hidden;
-  background-color: var(--bg-card);
+  background-color: var(--bg-page);
   display: flex;
   flex-direction: column;
+  position: relative;
 }
-
-/* 状态栏背景层 —— 复用 One News 首页 .status-bar-fill 机制 */
 .status-bar-fill {
   position: fixed;
   top: 0;
@@ -17,94 +14,77 @@
   width: 100%;
   z-index: 16;
 }
-
 .nav {
-  /* 胶囊避让：内容顶到胶囊下方，避开原生胶囊 */
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 20rpx) 32rpx 16rpx;
+  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 12rpx) 32rpx 8rpx;
 }
 .nav-back { font-size: 44rpx; color: var(--primary); line-height: 1; }
-.nav-title { font-size: calc(34rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
+.nav-title { font-size: calc(36rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
 
 .content {
-  /* 底部空白区（padding/占位）默认渲染为白色——显式硬编码着色与背景同色；
-     不用 var()（带 fallback 的 var() 在部分版本整条声明被丢弃，退回默认白） */
-  background-color: #FAF9F7;
+  background-color: #F5F3F0;
   flex: 1;
   height: 0;
-  padding: 8rpx 32rpx calc(8rpx + var(--safe-bottom, 0px));
+  padding: 16rpx 32rpx calc(16rpx + var(--safe-bottom, 0px));
   box-sizing: border-box;
   overflow-y: auto;
 }
-/* 深色模式：与 --bg-card dark(#0D0D0D) 同色 */
-.page--dark .content { background-color: #0D0D0D; }
-
+.page--dark .content { background-color: #000000; }
 
 .sect-head {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
   font-size: calc(26rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-secondary);
-  margin: 24rpx 4rpx 20rpx;
+  margin: 28rpx 4rpx 16rpx;
 }
-.sect-head .dot { width: 16rpx; height: 16rpx; border-radius: 50%; background: var(--primary); }
 
-/* ===== T5.1：可点卡（编辑画像 / 合规授权） ===== */
+/* 卡片 */
 .card {
   background: var(--bg-card);
   border: 1rpx solid var(--divider);
-  border-radius: 28rpx;
-  padding: 24rpx 28rpx;
-  margin-bottom: 20rpx;
+  border-radius: 32rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
 }
-.card-title { display: block; font-size: calc(32rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); line-height: 1.5; }
-.card-desc { display: block; font-size: calc(26rpx * var(--font-scale)); color: var(--text-body); margin-top: 8rpx; line-height: 1.6; }
-
-.card-action {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  transition: background-color 0.15s;
+.card-action { display: flex; align-items: center; gap: 16rpx; }
+.card-body { flex: 1; min-width: 0; }
+.card-title {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
 }
-.card-action:active {
-  background-color: var(--bg-subtle);
+.card-desc {
+  display: block;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: 10rpx;
 }
-.card-body {
-  flex: 1;
-  min-width: 0;
-}
-.card-chev {
-  font-size: 44rpx;
+.card-sub {
+  display: block;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  line-height: 1;
-  flex-shrink: 0;
+  margin-top: 10rpx;
 }
+.card-chev { color: var(--text-tertiary); font-size: calc(36rpx * var(--font-scale)); }
 
 /* 撤销授权按钮 */
 .revoke-btn {
-  flex-shrink: 0;
-  padding: 14rpx 22rpx;
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
   color: var(--color-favorite);
-  background: var(--color-favorite-tint);
-  border-radius: 999rpx;
-  transition: opacity 0.15s;
+  border: 1rpx solid var(--color-favorite);
+  border-radius: 28rpx;
+  padding: 12rpx 24rpx;
+  flex-shrink: 0;
 }
-.revoke-btn.disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-.revoke-btn:active {
-  opacity: 0.7;
-}
+.revoke-btn.disabled { color: var(--text-tertiary); border-color: var(--divider); }
 
 .foot-note {
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  margin: 24rpx 0 calc(16rpx + var(--safe-bottom, 0px));
+  margin: 8rpx 0 calc(16rpx + var(--safe-bottom, 0px));
 }
