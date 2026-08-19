@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-19 | I/P | **窗口过滤 + 新 prompt 全链路验证（owner 语义：两次抓取间隔）**。① filterByBatchWindow 已部署：按档位窗口（05档=昨18点/11档=今5点/18档=今11点）过滤 publishedAt；② 重跑 71 条 ingest 验证：新评分（owner 版：取消三重身份，AI 底线+议题）筛掉 base<2 全 low；staged 新条目「黑鲸鱼 DSH」whatHappened 514 字多段 + 试试看不硬造（新 prompt 生效实证）；③ v16 重组装 items 0——今天抓的增量 publishedAt 多为 8/13–8/18 旧文，**窗口过滤正确地把历史全滤掉**（0 残留），暴露**增量抓取未严格按窗口**（lastSuccessCursor 后仍捞旧文）——待优化点：intelRssPoll 增量需按「上次抓取后发布」过滤 | ✅ 已推 |
 | 2026-08-19 | I/O | **历史数据删除确认 + 手动全流程验证（commit 1fc6aed，已部署 v15）**。① 确认：brief v14 16 条中 13 条为 8/13–8/18 历史（freshness 7 天捞入），已按 owner 拍板删除——intelProcess 新鲜度 7→1 天 + Dispatcher filterTodayOnly（brief 只含当天 publishedAt）；重组装 v15 仅剩当天 1 条。② 手动全流程：intelRssPoll 单源抓取（techcrunch_ai/the_rundown_ai 各 written 1）→ intelProcess 处理（质量闸门拦截 low/rejected 正常）→ Dispatcher 发布（version 15）。今日增量少+聚合/质量/当天三层过滤致 brief 少属正常，明日 17:40 批次生效后观察 | ✅ 已推 |
 <<<<<<< Updated upstream
 | 2026-08-19 | I/P | **后端三项优化落地（commit 95b1cbc，已部署 + 重组装 v14）**。① 聚合类资讯过滤：intelClean qualify 加 `multi-news-aggregate`（标题含「；」多新闻揉合/综述词 → rejected 丢弃），今日已剔 6 条（极客早报类），brief 22→16 条；② 试试看语气：SOP prompt 改**轻松引导口吻**（禁止「本周X前/必须/请尽快」命令式）——明日批次生效；③ 数据截至：Dispatcher 组装 brief 记 `batchFetchedAt`（读 intel_health 最新巡检时间），channel 优先展示批次抓取时间（当前 17:55，明日 17:40）。部署注意：部署副本 require 必须 `./common/`（backend 用 `../common/`），用 base64 zip 打包含 common/ | ✅ 已推 |
