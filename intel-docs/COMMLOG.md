@@ -7,11 +7,15 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-19 | I/O | **历史数据删除确认 + 手动全流程验证（commit 1fc6aed，已部署 v15）**。① 确认：brief v14 16 条中 13 条为 8/13–8/18 历史（freshness 7 天捞入），已按 owner 拍板删除——intelProcess 新鲜度 7→1 天 + Dispatcher filterTodayOnly（brief 只含当天 publishedAt）；重组装 v15 仅剩当天 1 条。② 手动全流程：intelRssPoll 单源抓取（techcrunch_ai/the_rundown_ai 各 written 1）→ intelProcess 处理（质量闸门拦截 low/rejected 正常）→ Dispatcher 发布（version 15）。今日增量少+聚合/质量/当天三层过滤致 brief 少属正常，明日 17:40 批次生效后观察 | ✅ 已推 |
+<<<<<<< Updated upstream
 | 2026-08-19 | I/P | **后端三项优化落地（commit 95b1cbc，已部署 + 重组装 v14）**。① 聚合类资讯过滤：intelClean qualify 加 `multi-news-aggregate`（标题含「；」多新闻揉合/综述词 → rejected 丢弃），今日已剔 6 条（极客早报类），brief 22→16 条；② 试试看语气：SOP prompt 改**轻松引导口吻**（禁止「本周X前/必须/请尽快」命令式）——明日批次生效；③ 数据截至：Dispatcher 组装 brief 记 `batchFetchedAt`（读 intel_health 最新巡检时间），channel 优先展示批次抓取时间（当前 17:55，明日 17:40）。部署注意：部署副本 require 必须 `./common/`（backend 用 `../common/`），用 base64 zip 打包含 common/ | ✅ 已推 |
 | 2026-08-19 | I/O | **intelDispatcher 发布崩溃修复 + 今日 18:00 批次手动补发**。① 根因：intelRouter.js:66 三元表达式 `profile && … ? 3 : (profile.depth… )` 在 `score(d, null)` 时访问 null.depth 崩溃（index.js:245 传 null）；修复为 `profile && profile.depth === 'lite'`。② 已重新部署 intelDispatcher（部署后首触发仍旧实例，8s 后重试成功）。③ 手动触发 summary 发布：version 12→13，items 22，tryable 21，upgradedAt 19:04。真机刷新可见。**教训：部署后需验证新实例生效（LEARNINGS 部署验证条目）** | ✅ 已推 |
 | 2026-08-19 | O/Owner | **拍板：18:00 批次提前，6 点准时发布**（ADR-10）。intelFetch 17:55→**17:40** / intelRssPoll 18:00→**17:45** / intelProcess 18:10→**17:50** / intelDispatcher 18:30→**18:00**。触发器已远程更新部署（4 个函数已验证），cloudbaserc.json 已同步。**所有涉及调度角色留意** | ✅ 已推 |
 | 2026-08-19 | D/Owner | **拍板：删除首页导航副标题「情报官已为你梳理今日值得关注的进展」**（纯属多余）。已从 components/intel-stage/intel-stage.wxml 移除，导航只留 ‹ 返回 + AI 情报 | ✅ 已推 |
 | 2026-08-19 | D/Owner | **拍板：详情页「想试试」→「试试看」+ 引导语气**。① 标签改名已落地（detail.wxml）；② 内容须为轻松引导式推荐（"想体验的话可以试试…"），**非命令式步骤/催促**——前端结构已就绪（.try-guide 浅底容器），文案语气由 P 角色在 intelProcess SOP 生成 minAction 时遵循（COMMLOG 交接，无需改前端）。三页 UI v6 已全部落地（b3bc50e/3c9902a + 本次）：首页卡片流+对你最重要tag+浅蓝底+去来源时间+去今日关注标题、详情页去状态条+来源前置+落到你这里浅蓝底、我的页精简画像+合规；FAB 未动、零新增 hex | ✅ 已推 |
+=======
+>>>>>>> Stashed changes
 | 2026-08-19 | O/Owner | **拍板：定时档 = 固定节点无条件抓取**。05/11/18 触发器一到即抓全部启用源，不看 `lastFetchTime`/`pollSeconds` 间隔，手动抓取不消费定时档机会。`intelRssPoll` 已由 `listDueFeeds`(6h 间隔)改为 `listEnabledFeeds`(无条件)，部署 Active，提交 `d85ae00`。设计 §5.8 / TASK_BOARD T1.4 / 本导航索引已同步。**所有涉及抓取调度的角色留意** | ✅ |
 | 2026-08-18 | Q/O | 25 源权威清单对齐：O 裁决 A9/B4/C6/D2/E1/F3（剔 semianalysis/one_useful_thing，补量子位+公众号），id 统一下划线，seedSources 与 manifest 100% 一致 | ✅ |
 | 2026-08-18 | O | 代码已推送 GitHub `One-News#intel-officer` 分支；git 守护每 60s 自动同步 | ✅ |
@@ -28,6 +32,7 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+<<<<<<< Updated upstream
 ## 2026-08-19 · intel UI 微调 4 项（owner 反馈）
 
 - **① 返回按钮与胶囊垂直居中对齐**：三页 nav 改为 top=menu-top、height=menu-height、flex 居中（对齐 One News panel-header 做法），不再顶到胶囊下方。
@@ -45,6 +50,8 @@
 - **验证**：node --check 三 js 通过；WXML 字段绑定与标签闭合核对通过。
 - **下游**：UI 规范 v1 的视觉细节需同步为 v2（待 K 角色更新）；详情页时间字段后端补上后自动展示。
 
+=======
+>>>>>>> Stashed changes
 ## 2026-08-19 · intel 抓取「无条件触发 + 内容增量」（方案A）
 
 - **决策**：固定节点无条件抓不变，新增 RSS 增量兜底——`intelRssPoll` rss/news 分支按 `lastSuccessCursor`→`sinceMs` 过滤，只收游标之后的新增，单源本轮限 30 条，防旧文淹没新文、空烧 LLM。

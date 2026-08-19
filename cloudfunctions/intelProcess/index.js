@@ -54,7 +54,7 @@ const BATCH_LIMIT = 10        // 单批处理条目数（防单实例串行超 6
 // ─── 数据质量闸门（raw→处理层 硬门槛，2026-08-19 治理）───
 const GATE = {
   minContent: 60,    // 有效正文最少字符数（空壳丢弃）
-  freshnessDays: 7,  // 新鲜度窗口，超过判为陈旧丢弃
+  freshnessDays: 1,  // 新鲜度窗口（owner 2026-08-19 收紧 7→1：历史数据不混入当天 brief）
 }
 
 /**
