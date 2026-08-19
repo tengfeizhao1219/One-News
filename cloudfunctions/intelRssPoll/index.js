@@ -1,7 +1,7 @@
 // 情报按源 worker（T1.4b / I 基础设施）
 // ============================================================
 // ⚠️ 复用 One News rssFetcher 的 per-source worker 范式（非其业务）：
-//    全局开关 + 自愈建表 + 幂等播种 + listDueFeeds + 每源 fetch→解析→去重→
+//    全局开关 + 自愈建表 + 幂等播种 + listEnabledFeeds（固定节点无条件抓全部启用源）+ 每源 fetch→解析→去重→
 //    写 intel_ingest + 更新 lastSuccessCursor + 四类告警。intel_* 命名空间隔离。
 //
 // 数据流（§1.1 / §7.2）：intel_ingest（原始）→ 质量门 → intel_staged（处理后）
@@ -680,9 +680,11 @@ async function runWorker(feed, now, ctx = {}) {
 }
 
 // ───────────────────────────
-// listDueFeeds（仿 rssFetcher/feedStore）
+// listEnabledFeeds（固定节点无条件抓取全部启用源）
 // ───────────────────────────
-async function listDueFeeds(nowMs) {
+// 注：按 owner 2026-08-19 拍板，定时档位一到就无条件抓所有启用源，
+//     **不看 lastFetchTime / pollSeconds 间隔**。手动抓取不影响定时档位抓取机会。
+async function listEnabledFeeds(nowMs) {
   let feeds = []
   try {
     const res = await db.collection(INTEL_SOURCES).limit(1000).get()
@@ -694,9 +696,7 @@ async function listDueFeeds(nowMs) {
   for (const f of feeds) {
     if (f.enabled !== true) continue
     if (f.status === 'disabled') continue
-    const poll = Number(f.pollSeconds) || 21600
-    const last = f.lastFetchTime ? new Date(f.lastFetchTime).getTime() : 0
-    if (!last || (nowMs - last) >= poll * 1000) due.push(f)
+    due.push(f)
   }
   return due
 }
@@ -746,14 +746,15 @@ exports.main = async (event = {}) => {
   }
 
   // ── 编排模式（intelRssPoll 定时器 05:15/11:15/18:00 兜底触发，与 intelFetch 错峰）──
-  console.log('[intelRssPoll] ========== 兜底巡检（无参）==========')
-  const dueFeeds = await listDueFeeds(now)
+  // 注：owner 2026-08-19 拍板——固定节点无条件抓所有启用源，不看 lastFetchTime 间隔。
+  console.log('[intelRssPoll] ========== 兜底巡检（固定节点，无条件抓取全部启用源）==========')
+  const dueFeeds = await listEnabledFeeds(now)
   if (!dueFeeds.length) {
-    console.log('[intelRssPoll] 无到点源，本轮结束')
+    console.log('[intelRssPoll] 无启用源，本轮结束')
     return { ok: true, scanned: 0 }
   }
 
-  // 到点源过多时自我分片（防单实例串行超 60s）；≤3 源直接串行
+  // 启用源过多时自我分片（防单实例串行超 60s）；≤3 源直接串行
   if (dueFeeds.length > MAX_SERIAL_SOURCES) {
     console.log(`[intelRssPoll] ${dueFeeds.length} 源超过串行上限，自我分片（fire-and-forget）`)
     for (const feed of dueFeeds) {
