@@ -15,6 +15,13 @@
 //   - medium → 轻量摘要（一句话 + 场景映射，跳过实操/最小行动展开）
 //   - low   → 置 status='low' 仅留痕，不进今日关注
 //
+// 数据质量闸门（2026-08-19 治理 前置「raw 加工清理」，设计在路由后、LLM 前）：
+//   qualify() 做四道硬门槛，不合格直接丢弃（markIngest 'rejected' 留痕，不进 LLM / staged）：
+//     ① 内容清洗：HTML 实体解码 + 清乱码/控制符 + 折叠空白（title/content/summary）
+//     ② 空壳判定：有效正文 < minContent(60) 丢弃（HN 全空 / PH 仅 tagline）
+//     ③ 新鲜度：publishedAt/fetchedAt 超 freshnessDays(7) 丢弃（旧文不混入今日）
+//   LLM 全程使用清洗后的 clean 条目（title/content/summary），杜绝脏数据向下游扩散。
+//
 // LLM 通道（设计 §6.8，独立 intelProcess 云函数 + 独立 env key）：
 //   复用 backend/common/intelLLM.js intelChat 多引擎降级链
 //   （混元前置 → 智谱 → Qwen → DeepSeek）。
@@ -35,6 +42,7 @@ const db = cloud.database()
 const { ensureSchema } = require('./common/ensureSchema')
 const { intelChat } = require('./common/intelLLM')
 const router = require('./common/intelRouter')
+const { qualify } = require('./common/intelClean')
 
 // ─── 集合名（intel_* 命名空间）───
 const INTEL_INGEST = 'intel_ingest'
@@ -43,6 +51,11 @@ const INTEL_PROFILE = 'intel_profile'
 
 // ─── 阈值（对齐 intelRssPoll 分批范式）───
 const BATCH_LIMIT = 20        // 单批处理条目数（防单实例串行超 60s）
+// ─── 数据质量闸门（raw→处理层 硬门槛，2026-08-19 治理）───
+const GATE = {
+  minContent: 60,    // 有效正文最少字符数（空壳丢弃）
+  freshnessDays: 7,  // 新鲜度窗口，超过判为陈旧丢弃
+}
 
 /**
  * 单条处理：路由 → SOP/轻量 → 写 intel_staged，并回写 ingest 消费状态。
@@ -65,6 +78,17 @@ async function processOne(item, profile) {
     await markIngest(itemId, 'low') // 留痕，不进今日关注
     return { itemId, status: 'low', relevance: 'low', reason: route.reason }
   }
+
+  // ①.5 数据质量闸门（2026-08-19 治理）：清洗 + 硬门槛，不合格直接丢弃
+  //   raw 层空壳/陈旧/脏文本在这里被拦下，不进 LLM、不进 staged，只留痕。
+  const gate = qualify(item, GATE)
+  if (!gate.pass) {
+    await markIngest(itemId, 'rejected') // 留痕，不再重试
+    console.log(`[intelProcess] 质量闸门拦截 ${itemId} (${route.level}) reason=${gate.reasons.join('/')}`)
+    return { itemId, status: 'rejected', relevance: route.level, reason: gate.reasons.join('/') }
+  }
+  // 通过：后续 LLM 与 staged 全部改用清洗后的条目
+  item = gate.clean
 
   // ② 组装 system prompt（角色 + 三重身份 + SOP 五步/轻量 + 固定模板）
   const { system, user } = buildPrompts(item, profile, route.level)

@@ -27,7 +27,7 @@ declare -a SPECS=(
   "intelGetList|backend/intelGetList/index.js:index.js|backend/intelGetList/config.json:config.json"
   "intelGetDetail|backend/intelGetDetail/index.js:index.js|backend/intelGetDetail/config.json:config.json"
   "intelRssPoll|backend/intelRssPoll/index.js:index.js|backend/intelRssPoll/config.json:config.json|backend/common/ensureSchema.js:common/ensureSchema.js|backend/common/contentFetcher.js:common/contentFetcher.js|backend/seedSources.js:seedSources.js"
-  "intelProcess|backend/intelProcess/index.js:index.js|backend/intelProcess/config.json:config.json|backend/common/ensureSchema.js:common/ensureSchema.js|backend/common/intelLLM.js:common/intelLLM.js|backend/common/intelRouter.js:common/intelRouter.js"
+  "intelProcess|backend/intelProcess/index.js:index.js|backend/intelProcess/config.json:config.json|backend/common/ensureSchema.js:common/ensureSchema.js|backend/common/intelLLM.js:common/intelLLM.js|backend/common/intelRouter.js:common/intelRouter.js|backend/common/intelClean.js:common/intelClean.js"
   "intelBrief|backend/intelBrief/index.js:index.js|backend/intelBrief/config.json:config.json|backend/common/ensureSchema.js:common/ensureSchema.js|backend/common/channels:common/channels"
   "intelDispatcher|backend/intelDispatcher/index.js:index.js|backend/intelDispatcher/config.json:config.json|backend/common/ensureSchema.js:common/ensureSchema.js|backend/common/intelRouter.js:common/intelRouter.js"
 )
