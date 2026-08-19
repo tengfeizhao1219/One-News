@@ -50,7 +50,7 @@ const INTEL_STAGED = 'intel_staged'
 const INTEL_PROFILE = 'intel_profile'
 
 // ─── 阈值（对齐 intelRssPoll 分批范式）───
-const BATCH_LIMIT = 20        // 单批处理条目数（防单实例串行超 60s）
+const BATCH_LIMIT = 10        // 单批处理条目数（防单实例串行超 60s）
 // ─── 数据质量闸门（raw→处理层 硬门槛，2026-08-19 治理）───
 const GATE = {
   minContent: 60,    // 有效正文最少字符数（空壳丢弃）
@@ -96,8 +96,15 @@ async function processOne(item, profile) {
   // ③ LLM 调用（未配 Key → intelChat 内部降级返回 null，静默跳过不阻塞）
   const out = await intelChat({ systemPrompt: system, user, minAccept: 15, maxTokens: 900, tag: 'intelProcess/sop' })
   if (!out || !out.text) {
-    await markIngest(itemId, 'pending') // 保持 pending，等 Key 配好重试
-    return { itemId, status: 'skip', reason: 'no-llm-key-or-engine' }
+    // 2026-08-19 复盘：LLM 失败重试上限——连续 3 次仍失败则 rejected 留痕，避免永久 pending 死循环
+    const prevRetry = Number(item.retryCount) || 0
+    const retryCount = prevRetry + 1
+    if (retryCount >= 3) {
+      await markIngest(itemId, 'rejected', { reason: 'llm-fail-retry-exhausted', retryCount })
+      return { itemId, status: 'rejected', reason: 'llm-fail-retry-exhausted', retryCount }
+    }
+    await markIngest(itemId, 'pending', { retryCount }) // 保持 pending，等 Key 配好/重试
+    return { itemId, status: 'skip', reason: 'no-llm-key-or-engine', retryCount }
   }
 
   // ④ 解析 LLM 输出 → 结构化 ProcessedItem（含场景标签命中计数）

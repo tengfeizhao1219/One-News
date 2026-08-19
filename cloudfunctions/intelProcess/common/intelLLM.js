@@ -105,11 +105,11 @@ async function intelChat(opts = {}) {
   // 其次读 config.zhipuSummary；baseUrl 缺省智谱官方兼容端点
   const zs = config.zhipuSummary || {}
   const zsKey = process.env.ZHIPU_API_KEY || zs.apiKey || ''
-  if (zsKey) engines.push({ name: '智谱', apiKey: zsKey, baseUrl: zs.baseUrl || 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: zs.model || 'glm-4-flash', timeout: 8000 })
+  if (zsKey) engines.push({ name: '智谱', apiKey: zsKey, baseUrl: zs.baseUrl || 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: zs.model || 'glm-4-flash', timeout: 20000 })
   const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
-  if (dashKey) engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 8000 })
+  if (dashKey) engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 20000 })
   const dsKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
-  if (dsKey) engines.push({ name: 'DeepSeek', apiKey: dsKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+  if (dsKey) engines.push({ name: 'DeepSeek', apiKey: dsKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 20000 })
 
   const bodyFor = (eng) => JSON.stringify({
     model: eng.model,
