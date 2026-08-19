@@ -788,10 +788,17 @@ async function runWorker(feed, now, ctx = {}) {
   const candidates = []
   let filtered = 0
   let invalid = 0
+  // 2026-08-19 复盘：新鲜度守卫——scrape 官网列表含历史全量（如 DeepSeek 动态列到 2025 年），
+  // 仅收近 10 天内容，旧闻不进处理层（省 LLM token，也不污染今日 brief）
+  const MAX_ITEM_AGE_MS = 10 * 24 * 3600 * 1000
   for (const raw of rawItems) {
     if (!passTitleFilter(raw.title, feed.blockTitleKeywords)) { filtered++; continue }
     if (!passRequireKeywords(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
     if (!passCategoryFilter(raw, feed.blockCategoryKeywords)) { filtered++; continue }
+    if (raw.pubDate) {
+      const t = new Date(raw.pubDate).getTime()
+      if (!Number.isNaN(t) && Date.now() - t > MAX_ITEM_AGE_MS) { filtered++; continue }
+    }
     // 2026-08-19 复盘：剥离聚合源标题前缀（AINews]），避免噪音直达前端
     raw.title = cleanItemTitle(raw.title)
     const vRes = validateIntelItem({ title: raw.title, url: raw.url, pubDate: raw.pubDate, desc: raw.desc, content: raw.content, guid: raw.guid }, meta)
@@ -817,7 +824,9 @@ async function runWorker(feed, now, ctx = {}) {
   // 5. 更新源状态：lastSuccessCursor 续传（§5.8 #3）+ 健康度
   const prevStreak = Number(feed.errorStreak) || 0
   const total = candidates.length
-  const newStreak = total === 0 ? prevStreak + 1 : 0
+  // 2026-08-19 复盘：仅「完全无产出」（抓取空/解析失败/全无效）才计失败连击；
+  // 条目被正常过滤（过旧/噪音/去重）不算失败——低频官方源（DeepSeek 月更）不会被误暂停
+  const newStreak = (total === 0 && filtered === 0 && invalid === 0) ? prevStreak + 1 : 0
   const cursor = computeCursor(fresh.length ? fresh : rawItems, now)
   const patch = {
     lastFetchTime: nowIso,

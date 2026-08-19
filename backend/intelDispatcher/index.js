@@ -280,10 +280,19 @@ function renderItemCard(d) {
   )
 }
 
+/** 2026-08-19 复盘：brief 只收录近 7 天内容——官方源（DeepSeek 等）历史全量不进今日关注 */
+function passFreshness(d) {
+  const raw = d.publishedAt || (d.sop && d.sop.source && d.sop.source.publishedAt) || ''
+  if (!raw) return true // 无日期不拦截（交由 relevance 把关）
+  const t = new Date(raw).getTime()
+  if (Number.isNaN(t)) return true
+  return Date.now() - t <= 7 * 24 * 3600 * 1000
+}
+
 /** 组装最终 Brief 的 items[]（今日关注）+ tryable[]（本周可试用） */
 function renderBrief(todayItems, weekTryable) {
   // 今日关注 = 今日全部高/中相关 items（05 初版+11 追加+18 汇总），合同置顶、按场景排序
-  const rank = rankItems(todayItems)
+  const rank = rankItems(todayItems.filter(passFreshness))
   const items = rank.map((d, i) => ({
     rank: i + 1,
     itemId: d.itemId,

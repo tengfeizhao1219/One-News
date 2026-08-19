@@ -345,24 +345,11 @@ const INTEL_SEED_SOURCES = [
     blockTitleKeywords: ['招聘'],
   },
   {
-    _id: 'infoq_cn',
-    key: 'infoq_cn',
-    name: 'InfoQ 中文（AI 相关）',
-    layer: 'F',
-    sourceType: 'rss',
-    baseUrl: 'https://www.infoq.cn/feed',
-    adapterConfig: { endpoint: 'https://www.infoq.cn/feed', timeoutMs: 10000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
-    // 全站 feed 无分类：正向关键词过滤，只收 AI 相关（省 LLM token）
-    requireTitleKeywords: ['AI', '人工智能', '智能', '大模型', '模型', 'Agent', '智能体', '机器人', '芯片', '算力', '算法', '开源', 'DeepSeek', 'OpenAI', 'GPT', 'LLM', '多模态', '推理', 'AGI', '英伟达', '自动驾驶'],
-    blockTitleKeywords: ['招聘', '广告'],
-  },
-  {
     _id: 'geekpark_ai',
     key: 'geekpark_ai',
     name: '极客公园（AI 相关）',
     layer: 'F',
-    sourceType: 'rss',
+    sourceType: 'rss', // 实测 feed 含完整正文（4-9KB/条），过 content 闸门 OK（InfoQ feed 仅 6 字符已弃用）
     baseUrl: 'https://www.geekpark.net/rss',
     adapterConfig: { endpoint: 'https://www.geekpark.net/rss', timeoutMs: 10000, rateLimit: 'none' },
     pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'zh'],
