@@ -149,29 +149,19 @@ Component({
      * 拉取当期情报 brief → 渲染卡片流 + 本周可试用 + 元信息。
      * owner 2026-08-18 19:45：后端未就绪/无当期 → 直接展示空态友好提示，不放 mock。
      */
-    /** 下拉刷新（owner 2026-08-20 策略）：手动触发完整管线（抓取→处理→立即发布），并拉取最新 brief。
-     *  节流：5 分钟内不重复全量（防止频繁下拉烧 LLM），只拉最新 brief。 */
-    async onRefresh() {
-      if (this.data.refreshing) return
-      this.setData({ refreshing: true })
-      try {
-        const g = (getApp() && getApp().globalData) || {}
-        const now = Date.now()
-        const last = g.intelManualRunAt || 0
-        if (now - last > 5 * 60 * 1000) {
-          g.intelManualRunAt = now
-          wx.cloud.callFunction({ name: 'intelManualRun', data: {} })
-            .then((r) => console.log('[%s] 手动管线已触发:', tag, (r.result || {}).stages || ''))
-            .catch((e) => console.warn('[%s] 手动管线触发失败:', tag, (e && e.message) || e))
-          wx.showToast({ title: '正在全量更新数据（约 2-3 分钟）', icon: 'none' })
-        }
-        await this._loadBrief()
-      } catch (e) {
-        console.warn('[%s] 下拉刷新失败:', tag, (e && e.message) || e)
-      } finally {
-        this.setData({ refreshing: false })
-      }
-    },
+  /** 下拉刷新：仅重新拉取最新 brief（手动全量管线只在 owner 明确说"手动刷新"时由外部触发 intelManualRun） */
+  async onRefresh() {
+    if (this.data.refreshing) return
+    this.setData({ refreshing: true })
+    try {
+      await this._loadBrief()
+    } catch (e) {
+      console.warn('[intel-stage] 下拉刷新失败:', tag, (e && e.message) || e)
+    } finally {
+      this.setData({ refreshing: false })
+    }
+  },
+
 
     async _loadBrief() {
       try {
