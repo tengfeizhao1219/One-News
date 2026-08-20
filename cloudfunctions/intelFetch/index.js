@@ -27,16 +27,16 @@ const INTEL_SOURCE_COLLECTION = 'intel_sources'
 const INTEL_HEALTH_COLLECTION = 'intel_health'
 
 // 按当前小时推断目标档位（配置的触发时刻 05:10/11:10/17:55 属于哪一档）
+const { beijingHour, beijingDateKey } = require('./common/beijingTime')
 function resolveTargetTime(now = new Date()) {
-  const h = now.getHours()
+  const h = beijingHour(now)
   if (h >= 15 || h < 5) return '18:00'   // 17:55 档 → 当日 18:00 汇总结案
   if (h >= 8) return '11:00'             // 11:10 档 → 11:00 增量
   return '05:00'                         // 05:10 档 → 05:00 增量
 }
 
 function todayStr(now = new Date()) {
-  const p = (n) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`
+  return beijingDateKey(now)
 }
 
 /** 读取启用中的情报源清单（enabled=true 且非 disabled） */

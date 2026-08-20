@@ -26,19 +26,7 @@
  */
 
 const { IntelChannel } = require('./base')
-
-/** 把 ISO 时间串格式化为「HH:MM」（本地时区） */
-function formatHHMM(iso) {
-  try {
-    const d = iso instanceof Date ? iso : new Date(iso)
-    if (isNaN(d.getTime())) return ''
-    const p = (n) => String(n).padStart(2, '0')
-    // 2026-08-20 修复：云函数环境时区为 UTC，getHours() 会显示成 UTC 时间（比北京时间慢 8h）。
-    // 产品面向北京时间用户，统一按东八区（UTC+8）显示。
-    const h = (d.getUTCHours() + 8) % 24
-    return `${p(h)}:${p(d.getUTCMinutes())}`
-  } catch (e) { return '' }
-}
+const { formatHHMM } = require('../beijingTime')
 
 /** 场景标签 → 小程序友好短标签 */
 const SCENE_LABEL = {

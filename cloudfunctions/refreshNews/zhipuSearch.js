@@ -90,10 +90,9 @@ function isFatalSearchError(err) {
  * 获取当日配额计数文档 ID
  * 格式：ratelimit:YYYY-MM-DD，每日自动切换
  */
+const { beijingDateKey } = require('./beijingTime')
 function getTodayKey() {
-  const d = new Date()
-  const pad = n => String(n).padStart(2, '0')
-  return `ratelimit:${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return `ratelimit:${beijingDateKey(new Date())}`
 }
 
 /**
