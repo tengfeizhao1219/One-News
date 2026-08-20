@@ -355,7 +355,7 @@ ReadingEngine.prototype.getProgress = function () {
 /**
  * DG-02（需求 R3 + owner 决策②③）：跨分类自动跳转
  * 当前分类已读到末条时，加载下一个有数据的分类首页并追加到 _mergedList。
- * - 顺序：READING_CATEGORIES 固定顺序（recommend→tech→international→sports→life）
+ * - 顺序：READING_CATEGORIES 固定顺序（recommend→tech→international→science→life）
  * - history/favorites 来源（_source 非空）→ 禁止跨分类（滑动范围=来源列表）
  * @returns {Promise<{hasNext:boolean, category:string, categoryName:string, added:number}>}
  */
@@ -663,7 +663,7 @@ ReadingEngine.prototype.getCategoryFlashColor = function (categoryId) {
   var colors = {
     tech:          '#007AFF',
     international: '#5856D6',
-    sports:        '#FF9500',
+    science:        '#FF9500',
     life:          '#34C759',
     // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
   }

@@ -6,7 +6,7 @@
  * 分类 → 天行接口映射（按用户 Key 可用接口配置）：
  *   recommend     → generalnews（综合新闻）
  *   tech          → it（IT 科技）
- *   sports        → sicprobe（科学探索）
+ *   science        → sicprobe（科学探索，内容归入「推荐」）
  *   international → world（国际）
  *   life          → social（社会）
  *
@@ -20,7 +20,7 @@ const config = require('../config')
 const CATEGORY_ENDPOINTS = {
   recommend: 'generalnews',
   tech: 'it',
-  sports: 'sicprobe',
+  science: 'sicprobe',
   international: 'world',
   life: 'social',
 }
@@ -28,7 +28,7 @@ const CATEGORY_ENDPOINTS = {
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '科学探索',
+  science: '科学探索',
   international: '国际',
   life: '社会',
 }
@@ -132,13 +132,15 @@ async function fetchTianNewsList(category, num = 10) {
  */
 function formatTianNewsItem(rawItem, category) {
   const { cleanSummary, cleanTitle } = require('../utils/newsCleaner')
+  // 2026-08-20：天行 sicprobe（科学探索频道）内容归入「推荐」综合流（owner 决策），不再进科学探索 tab
+  const outCat = category === 'science' ? 'recommend' : category
 
   return {
     id: `tian_${category}_${rawItem.uniq_id || rawItem.id || Date.now()}`,
     title: cleanTitle(rawItem.title || ''),
     summary: cleanSummary(rawItem.description || rawItem.ctime || '', 150),
-    category: category,
-    categoryName: CATEGORY_NAMES[category] || category,
+    category: outCat,
+    categoryName: CATEGORY_NAMES[outCat] || outCat,
     source: rawItem.source || rawItem.src || '天行数据',
     sourceUrl: rawItem.url || '',
     // FS-02（2026-08-07 owner 决策）：新闻中不含任何图片 → picUrl 置空

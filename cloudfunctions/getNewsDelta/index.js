@@ -21,7 +21,7 @@ const db = cloud.database()
 
 // 与 getNewsList 对齐的分类名称映射
 const CATEGORY_NAMES = {
-  recommend: '推荐', tech: '科技', sports: '科学探索',
+  recommend: '推荐', tech: '科技', science: '科学探索',
   international: '国际', life: '社会',
 }
 

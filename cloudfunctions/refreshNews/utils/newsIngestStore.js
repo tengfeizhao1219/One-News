@@ -65,7 +65,7 @@ async function ensureNewsIngest() {
 /**
  * 拉取指定前端分类的 pending 官方源条目（status=pending，category 已按前端 5 tab 映射）。
  * 字段已由 rssFetcher 写入端映射为前端分类（mapOfficialCategory），此处直接按 category 匹配。
- * @param {string} category - 前端分类 id（recommend/tech/international/sports/life）
+ * @param {string} category - 前端分类 id（recommend/tech/international/science/life）
  * @param {number} [limit=20] 单分类最多消费条数
  * @returns {Promise<Array<Object>>} news_ingest docs（含 _id）
  */

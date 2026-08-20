@@ -39,10 +39,10 @@ const PER_SOURCE_NUM = Math.max(5, Math.min(50, Number(process.env.FETCH_NUM || 
 
 // 聚合源分类（与 sources/*.js 的映射对齐；只取适配器已实现的分类）
 const JUHE_CATS = ['recommend', 'tech', 'international', 'life']
-const TIAN_CATS = ['recommend', 'tech', 'sports', 'international', 'life']
+const TIAN_CATS = ['recommend', 'tech', 'science', 'international', 'life']
 
 // owner 8/13：条目级栏目解析——IT之家等 RSS 条目自带 <category>（科学探索/科普…），
-// 命中科学别名则归入「科学探索」tab（前端 id=sports，显示名=科学探索），其余沿用 feed.category。
+// 命中科学别名则归入「科学探索」tab（前端 id=science，显示名=科学探索），其余沿用 feed.category。
 function isScienceAlias(c) {
   if (!c) return false
   const n = String(c).trim().toLowerCase()
@@ -50,8 +50,8 @@ function isScienceAlias(c) {
   return ['science', 'sci', 'sicprobe'].includes(n)
 }
 function resolveItemCategory(feedCategory, itemCategory) {
-  // P1-7 修复：科学别名归入「科学探索」tab（前端 id=sports），与 rssFetcher OFFICIAL_CATEGORY_MAP 口径一致
-  if (isScienceAlias(itemCategory)) return 'sports'
+  // P1-7 修复：科学别名归入「科学探索」tab（前端 id=science），与 rssFetcher OFFICIAL_CATEGORY_MAP 口径一致
+  if (isScienceAlias(itemCategory)) return 'science'
   return feedCategory || 'tech'
 }
 
@@ -59,8 +59,7 @@ function resolveItemCategory(feedCategory, itemCategory) {
 // 此前 newsFetcher 路径缺此映射，官方 RSS 以 science/finance/culture 等落库，前端 5 tab 全部查不到。
 const OFFICIAL_CATEGORY_MAP = {
   tech: 'tech', digital: 'tech', auto: 'tech', it: 'tech',
-  science: 'sports', sci: 'sports',
-  sports: 'sports',
+  science: 'science', sci: 'science', sports: 'science',
   life: 'life', edu: 'life', culture: 'life', health: 'life', book: 'life',
   house: 'life', society: 'life', finance: 'life', economy: 'life', money: 'life',
   world: 'international', international: 'international', global: 'international',
@@ -68,7 +67,7 @@ const OFFICIAL_CATEGORY_MAP = {
 }
 function mapOfficialCategory(srcCategory) {
   const c = String(srcCategory || '').trim().toLowerCase()
-  if (isScienceAlias(c)) return 'sports'
+  if (isScienceAlias(c)) return 'science'
   return OFFICIAL_CATEGORY_MAP[c] || 'life'
 }
 

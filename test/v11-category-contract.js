@@ -9,7 +9,7 @@
  *   3) refreshNews/zhipuSearch.js CATEGORY_PROMPTS（AI 生成源产出的分类键）
  *
  * 契约口径（owner 2026-08-03 裁定后）：
- *   - 前端内容分类 = CATEGORIES 中除 all 外的 id（现为 tech/international/sports/life）
+ *   - 前端内容分类 = CATEGORIES 中除 all 外的 id（现为 tech/international/science/life）
  *   - 每个前端内容分类 id 必须存在于 CATEGORY_NAMES 与 CATEGORY_PROMPTS（否则 tab 空白 = BUG-P1-011 复发）
  *   - 前端内容分类的中文名与 CATEGORY_NAMES 映射一致
  *
@@ -130,7 +130,7 @@ promptsKeys.forEach(function (key) {
 })
 
 // E. 关键内容分类必须存在（白名单，防整体误删）
-;['tech', 'international', 'sports', 'life'].forEach(function (id) {
+;['tech', 'international', 'science', 'life'].forEach(function (id) {
   check('E1 必需内容分类「' + id + '」存在', contentIds.indexOf(id) !== -1)
 })
 

@@ -7,7 +7,7 @@ const CATEGORIES = [
   { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
-  { id: 'sports', name: '科学探索' },
+  { id: 'science', name: '科学探索' },
   { id: 'life', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
 ]

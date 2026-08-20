@@ -195,6 +195,14 @@ async function stageProcess(deadline) {
       const urlTs = parseDateFromUrl(it.sourceUrl || it.url || '')
       if (urlTs != null && (nowGate - urlTs) > FRESH_MAX_AGE_MS) return false
       let t = parseTs(it.publishTime) || parseTs(it.pubDate)
+      // 2026-08-20 修复：上游 pubDate 仅日期无时分（如 "2026-08-20"）→ new Date 解析为 UTC 0 点
+      // → 北京 08:00，导致国际等分类时间全冻在 08:00。检测到日期型后回退用 fetchedAt（真实抓取时间），让时间散开。
+      const rawPub = it.pubDate != null ? it.pubDate : it.publishTime
+      const isDateOnly = typeof rawPub === 'string' && /^\d{4}-\d{2}-\d{2}([T ]00:00:00(\.\d+)?)?$/.test(String(rawPub).trim())
+      if (t != null && isDateOnly) {
+        const f = parseTs(it.fetchedAt)
+        if (f != null) t = f
+      }
       if (t == null && urlTs != null) t = urlTs
       if (t == null) t = parseTs(it.fetchedAt)
       if (t == null) t = nowGate

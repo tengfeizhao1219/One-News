@@ -37,7 +37,7 @@ var CATEGORIES = [
   { id: 'recommend', name: '推荐' },
   { id: 'tech', name: '科技' },
   { id: 'international', name: '国际' },
-  { id: 'sports', name: '科学探索' },
+  { id: 'science', name: '科学探索' },
   { id: 'life', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架
 ]
@@ -54,7 +54,7 @@ function makeNewsList(catId, count) {
       _id: catId + '-n' + (i + 1),
       title: catId + ' 标题' + (i + 1) + ' #' + apiSeq,  // 带批次号：不同请求内容不同
       summary: '摘要\n第二段\n第三段',
-      category: catId === 'all' ? (i % 2 === 0 ? 'tech' : 'sports') : catId,
+      category: catId === 'all' ? (i % 2 === 0 ? 'tech' : 'science') : catId,
       categoryName: catId,
       source: 'src',
       time: '10:00',
@@ -289,7 +289,7 @@ async function testSingleSource() {
 
   // --- 反复切换回来：不能命中「永不失效缓存」而拿到旧内容 ---
   var techBatch1 = page.data.filteredNewsList[0].title
-  await page.onCategoryChange({ currentTarget: { dataset: { cat: 'sports' } } })
+  await page.onCategoryChange({ currentTarget: { dataset: { cat: 'science' } } })
   await tick(5)
   await page.onCategoryChange({ currentTarget: { dataset: { cat: 'tech' } } })
   await tick(5)
@@ -355,7 +355,7 @@ async function testCategoryHint() {
   assertEqual('约 600ms 后提示自动消失（PD 已批准 600ms 定时器）', page.data.categoryHint, '')
 
   // 时序覆盖：加载流程中的 setData 不能把提示挤掉
-  page._showCategoryHint('sports')
+  page._showCategoryHint('science')
   assertEqual('提示已显示', page.data.categoryHint, '科学探索')
   await page.loadNews()      // 加载流程走完（含 pageState loading→ready + renderCards）
   check('加载/刷新流程走完后提示未被覆盖清空', page.data.categoryHint === '科学探索')

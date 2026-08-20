@@ -752,7 +752,7 @@ async function main() {
   await test('CATEGORY_PROMPTS 五个分类齐备', () => {
     const cats = Object.keys(zhipuSearch.CATEGORY_PROMPTS)
     assertEqual(cats.length, 5)
-    for (const c of ['recommend', 'tech', 'sports', 'international', 'life']) {
+    for (const c of ['recommend', 'tech', 'science', 'international', 'life']) {
       assert(cats.includes(c), `缺少分类 ${c}`)
     }
   })

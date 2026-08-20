@@ -345,7 +345,7 @@ Page({
     var map = {
       tech: 'var(--flash-tech)',
       international: 'var(--flash-world)',
-      sports: 'var(--flash-sports)',
+      science: 'var(--flash-science)',
       life: 'var(--flash-life)',
     }
     return map[categoryId] || ''

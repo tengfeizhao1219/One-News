@@ -401,7 +401,7 @@ function _makeEventId(norm) {
  */
 function topicHeat(item) {
   // category 基线：头条相关话题天然更高
-  const base = { recommend: 15, tech: 10, sports: 10, international: 10, life: 5 }[item.category]
+  const base = { recommend: 15, tech: 10, science: 10, international: 10, life: 5 }[item.category]
     || 8
   // 聚合到同 eventId 的事件在此处通过 _sourceCount 补强
   const sourceBoost = (item._sourceCount || 1) >= 2 ? 10 : 0

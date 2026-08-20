@@ -51,7 +51,7 @@ page {
   --chip-text: #FFFFFF;
   --flash-tech: #60A5FA;
   --flash-world: #818CF8;
-  --flash-sports: #FBBF24;
+  --flash-science: #FBBF24;
   --flash-life: #34D399;
   --flash-tech-bg: rgba(96, 165, 250, 0.12);
   --wheel-opacity-idle: 0.35;
@@ -125,7 +125,7 @@ page {
   --wheel-bg-selected: rgba(0, 122, 255, 0.06);
   --flash-tech: #007AFF;
   --flash-world: #5856D6;
-  --flash-sports: #FF9500;
+  --flash-science: #FF9500;
   --flash-life: #34C759;
   --flash-tech-bg: rgba(0, 122, 255, 0.08);
 }

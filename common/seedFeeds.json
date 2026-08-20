@@ -1247,7 +1247,7 @@
     "name": "央视网",
     "sourceName": "央视网",
     "baseUrl": "http://www.cctv.com/program/rss/02/03/index.xml",
-    "category": "sports",
+    "category": "science",
     "pollSeconds": 3600,
     "enabled": false,
     "errorStreak": 0,

@@ -64,7 +64,7 @@ console.log('── 跨源事件聚类 clusterEvent ──')
 const items = [
   { id: 'a1', title: '央行宣布全面降准0.5个百分点', source: '新华社', category: 'recommend', publishTime: Date.now() - 3600000, content: '。'.repeat(300) },
   { id: 'a2', title: '央行全面降准0.5个百分点 释放长期资金', source: '澎湃新闻', category: 'recommend', publishTime: Date.now() - 3600000, content: '。'.repeat(300) },
-  { id: 'b1', title: '国足备战世预赛名单公布', source: '新浪体育', category: 'sports', publishTime: Date.now() - 7200000, content: '。'.repeat(300) },
+  { id: 'b1', title: '国足备战世预赛名单公布', source: '新浪体育', category: 'science', publishTime: Date.now() - 7200000, content: '。'.repeat(300) },
 ]
 qs.clusterEvent(items, {})
 assert('两条降准归并同一eventId', items[0].eventId === items[1].eventId, `${items[0].eventId} vs ${items[1].eventId}`)

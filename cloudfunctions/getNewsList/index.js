@@ -34,7 +34,7 @@ function dedupItems(items) {
 // v7（TL-B11）：移除 v4.2 遗留的 finance/entertainment（前端无 tab、无数据源语义），
 // 与 frontend utils/constants.js CATEGORIES 对齐。
 const CATEGORY_NAMES = {
-  recommend: '推荐', tech: '科技', sports: '科学探索',
+  recommend: '推荐', tech: '科技', science: '科学探索',
   international: '国际', life: '社会',
 }
 
@@ -142,8 +142,8 @@ const BUILTIN_NEWS = {
   tech: [
     { id: 'builtin-tech-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'tech', categoryName: '科技', source: 'One-News', publishTime: Date.now() },
   ],
-  sports: [
-    { id: 'builtin-sports-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'sports', categoryName: '科学探索', source: 'One-News', publishTime: Date.now() },
+  science: [
+    { id: 'builtin-science-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'science', categoryName: '科学探索', source: 'One-News', publishTime: Date.now() },
   ],
   international: [
     { id: 'builtin-intl-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'international', categoryName: '国际', source: 'One-News', publishTime: Date.now() },

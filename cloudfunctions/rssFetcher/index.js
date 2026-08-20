@@ -33,7 +33,7 @@ const ERROR_STREAK_LIMIT = 3
 const MAX_BATCH_INSERT = 200
 
 // owner 8/13：条目级栏目解析——IT之家等 RSS 条目自带 <category>（科学探索/科学/科普…），
-// 命中科学别名则归入「科学探索」tab（前端 id=sports，显示名=科学探索），其余沿用 feed.category。
+// 命中科学别名则归入「科学探索」tab（前端 id=science，显示名=科学探索），其余沿用 feed.category。
 // 英文短别名用精确匹配（避免 musician 误中 sci），中文别名用包含匹配。
 function isScienceAlias(c) {
   if (!c) return false

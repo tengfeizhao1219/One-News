@@ -34,7 +34,7 @@ const APP_TO_JUHE_TYPE = {
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '科学探索',
+  science: '科学探索',
   international: '国际',
   life: '社会',
 }

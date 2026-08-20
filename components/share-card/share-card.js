@@ -9,7 +9,7 @@ var CATEGORY_MAP = {
   all:          { light: '#FF3B30', dark: '#FF453A', name: '全部' },
   tech:         { light: '#007AFF', dark: '#60A5FA', name: '科技' },
   international:{ light: '#5856D6', dark: '#818CF8', name: '国际' },
-  sports:       { light: '#FF9500', dark: '#F97316', name: '科学探索' },
+  science:       { light: '#FF9500', dark: '#F97316', name: '科学探索' },
   life:         { light: '#34C759', dark: '#34D399', name: '社会' },
   // agriculture/science 已于 2026-08-03 按产品 owner 裁定下架（BUG-P1-011 闭环）
 }

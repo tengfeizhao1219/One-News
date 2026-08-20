@@ -51,13 +51,13 @@ const qualityScorer = require('./utils/qualityScorer')
 
 // ─── 分类列表（聚合支持的分类）───
 // v7（TL-B11）：与 frontend utils/constants.js CATEGORIES 对齐（保留 recommend=头条，喂给 all 视图）。
-const CATEGORIES = ['recommend', 'tech', 'sports', 'international', 'life']
+const CATEGORIES = ['recommend', 'tech', 'science', 'international', 'life']
 
 // v8 路线1：分类中文名映射（官方源汇入 news_cache 时 categoryName 展示用，与前端 CATEGORY_MAP 一致）
 const CATEGORY_NAMES = {
   recommend: '推荐',
   tech: '科技',
-  sports: '科学探索',
+  science: '科学探索',
   international: '国际',
   life: '社会',
 }

@@ -18,7 +18,6 @@ const CATEGORY_ALIASES = {
   tech: ['tech', 'it', 'technology', '科技', '数码', '互联网'],
   finance: ['finance', 'fortune', 'economy', 'money', '财经', '金融', '经济'],
   edu: ['edu', 'education', 'school', '教育'],
-  sports: ['sports', 'sport', '体育'],
   health: ['health', 'healthy', '健康', '医药', '医疗'],
   culture: ['culture', '文化', '文艺'],
   society: ['society', 'social', '社会', '民生'],
@@ -26,7 +25,7 @@ const CATEGORY_ALIASES = {
   life: ['life', '生活', '时尚'],
   auto: ['auto', 'car', '汽车'],
   digital: ['digital', 'digitaltech', '互联网'],
-  science: ['science', 'sci', 'tech', '科学', '探索', '科技'],
+  science: ['science', 'sci', 'sport', '体育', 'tech', '科学', '探索', '科技'],
 }
 
 // 扁平化展开成别名列表，同时保留英文通名本身可命中的白名单
