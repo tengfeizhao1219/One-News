@@ -691,10 +691,20 @@ function extractListLinks(html, opts = {}) {
       let url = resolve(rawUrl)
       const title = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
       if (!title || title.length < 6) continue
+      // 2026-08-20：从链接上下文（锚文本后 300 字符）提取日期作为 pubDate（MiniMax 等列表页无标准日期标签）
+      let pubDate = ''
+      const ctx = html.slice(m.index, m.index + m[0].length + 300)
+      const dm = ctx.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/) || ctx.match(/(\d{1,2})[-/](\d{1,2})[-/](20\d{2})/)
+      if (dm) {
+        const y = dm[1].length === 4 ? dm[1] : dm[3]
+        const mo = dm[1].length === 4 ? dm[2] : dm[1]
+        const d = dm[1].length === 4 ? dm[3] : dm[2]
+        pubDate = `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}T00:00:00+08:00`
+      }
       const fp2 = sha256(url)
       if (seen.has(fp2)) continue
       seen.add(fp2)
-      items.push({ title, url, pubDate: '', guid: url, desc: '', content: '' })
+      items.push({ title, url, pubDate, guid: url, desc: '', content: '' })
       if (items.length >= maxItems) break
     }
   }
