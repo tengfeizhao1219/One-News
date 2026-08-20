@@ -17,16 +17,16 @@
 //   }
 
 /**
-// 2026-08-20 优化：brief 5 分钟内存缓存（首页多次进入/下拉不重复调云函数，省 Gateway 调用）
-let _briefCache = { ts: 0, data: null }
-const BRIEF_TTL = 5 * 60 * 1000
-
  * 拉取当期 AI 情报 Brief。
  * @param {Object} opts
  * @param {string} [opts.channel='oneNews']  渠道（本期仅 oneNews；预留 wechat/whatsapp）
  * @param {string} [opts.date]                可选：读历史某期；缺省读当期
  * @returns {Promise<Object>} 渲染后的 payload（未到发布时刻/空态时 hasContent=false）
  */
+// 2026-08-20 修复：brief 5 分钟内存缓存声明必须在注释块外（原误插进 JSDoc 内 → 变量未声明 → getIntelBrief 抛 ReferenceError → 前端显示"本期暂无内容"）
+let _briefCache = { ts: 0, data: null }
+const BRIEF_TTL = 5 * 60 * 1000
+
 function getIntelBrief({ channel = 'oneNews', date } = {}) {
   if (!date && _briefCache.data && Date.now() - _briefCache.ts < BRIEF_TTL) {
     return Promise.resolve(_briefCache.data)  // 缓存命中（仅当期）
