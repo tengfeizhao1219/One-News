@@ -88,7 +88,8 @@
 | ID | 任务 | 角色 | 状态 | 依赖 | 备注 |
 | T2.6 | 源扩展调研（中文源 + 主流 AI 厂商官方 + 博客/社区） | A/K | 🔄 | 信息源调研 | ① 中文：AI 厂商官方（阿里通义/字节豆包/百度文心/腾讯混元/智谱/MiniMax/Kimi/面壁/阶跃）+ 中文媒体/社区 ② 英文：xAI/Stability/Perplexity/Cursor 等官方 + 博客/社区；输出源清单（类型/URL/语言/频率/建议）待 owner 确认后接入 |
 | T2.7 | 源质量评分治理：一周抓取质量分驱动禁用不合格源（quality<6 自动停用已有，需输出周度评分报告供人工确认） | Q/I | 📋 | T2.6 | 现有 qualityScore 机制已运行，需形成「源健康周报」定期人工复核 |
-| T2.8 | 抓取非 token 化：抓取层保持零 LLM（RSS/API/scrape/工具链），仅 intelProcess 处理用 LLM（现状已满足，需审计确认无 LLM 抓取路径） | I | 📋 | — | 审计 backend 抓取代码确认无 LLM 调用 |
+| T2.8 | 抓取非 token 化：抓取层保持零 LLM（RSS/API/scrape/工具链），仅 intelProcess 处理用 LLM（现状已满足，需审计确认无 LLM 抓取路径） | I | ✅ | — | 审计通过：intelRssPoll/intelFetch/contentFetcher 零 LLM 调用 |
+| T2.9 | **源接入执行计划（12:00 后逐步接入，owner 2026-08-20）**：第一批中文官方 6 源（通义千问 qwenlm.github.io/blog、智谱 zhipuai.cn/zh/research、火山引擎 volcengine.com/news、腾讯混元 hunyuan.tencent.com、MiniMax minimaxi.com/blog、Kimi moonshotai.github.io——均已测 200 可抓，写 scrape adapter）；第二批英文（xAI/Mistral/Perplexity/Cursor/Ollama + 聚合 RSS alan-turing-institute/ai-rss-feeds 的 Ai2/Mistral/Cohere/Turing 等，RSS 优先）；恢复 VentureBeat。翻译：profile.langPref=zh 已生效（英文按中文为主），强化 prompt 全部译中 | A/I | 📋 | T2.6 ✅ | 页面可抓性已测全 200；聚合 RSS feeds.opml 200 可用；12 点后分批：注册源→部署→验证 |
 
 ---
 
