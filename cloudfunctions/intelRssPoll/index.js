@@ -922,7 +922,10 @@ async function runWorker(feed, now, ctx = {}) {
   // 1. 抓取（单源超时兜底：Promise.race 掐超时，硬约束 #5）
   //    增量游标续传（§5.8 #3）：lastSuccessCursor → sinceMs，api 类源（HN/arXiv）
   //    按时间窗拉增量；rss/scrape 类只露最新 N 条，靠 guid 去重不硬过滤。
-  const timeoutMs = (feed.adapterConfig && feed.adapterConfig.timeoutMs) || TIMEOUT_BY_TYPE[feed.sourceType] || 10000
+  // 2026-08-20 修复：per-source adapterConfig.timeoutMs（库内 rss 源配 8000/10000）会覆盖默认值导致 RSS 全超时跳过；
+  //   改为取「源配置」与「默认」的较大值（配置 <20s 一律提到 20s，特殊源配更高则尊重）
+  const defaultT = TIMEOUT_BY_TYPE[feed.sourceType] || 10000
+  const timeoutMs = Math.max(Number(feed.adapterConfig && feed.adapterConfig.timeoutMs) || 0, defaultT)
   // owner 2026-08-20：无游标（首次/丢失）回看窗口 = 源 freshnessDays（低频官方源配 7 天能抓到周更内容；
   //   新闻源默认 1 天；24h 对周更源太紧会空抓）
   const fd = Number(feed.freshnessDays) > 0 ? Number(feed.freshnessDays) : 1
