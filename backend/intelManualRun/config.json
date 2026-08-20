@@ -1,0 +1,7 @@
+{
+  "timeout": 300,
+  "envVariables": {},
+  "runtime": "Nodejs16.13",
+  "memorySize": 512,
+  "installDependency": true
+}

@@ -188,6 +188,16 @@
       "runtime": "Nodejs18.15",
       "handler": "index.main",
       "installDependency": true
+    },
+    {
+      "name": "intelManualRun",
+      "path": "intelManualRun",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "timeout": 300,
+      "memorySize": 512,
+      "installDependency": true,
+      "triggers": []
     }
   ]
 }
