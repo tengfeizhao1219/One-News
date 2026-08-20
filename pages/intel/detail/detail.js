@@ -48,6 +48,7 @@ Page({
     descText: '',          // 「发生了什么」一句话摘要（definition，兜底）
     whatHappenedText: '',  // 「发生了什么」科普向详细叙事（sop.whatHappened，多段）
     whatHappenedParagraphs: [], // 按换行分段，供多段渲染；有则优先展示，无则回退 descText
+    whatHappenedBlocks: [],  // 2026-08-20 v5：结构化块 [{type:'text'|'plain'|'predict'|'def', text}]（正文段/大白话/AI预测/定义）
     practiceText: '',      // 「可以怎么做」实操案例（sop.practice）
     minActionText: '',     // 「最小行动」（sop.minAction）
     relateItems: [],       // 「落到你这里」身份条目（who / txt）
@@ -167,20 +168,60 @@ function parseSceneMapping(txt) {
       title: cleanText(d.title) || this.data.title,
       descText: cleanText(d.definition) || this.data.descText,
       whatHappenedText: cleanText(d.whatHappened) || cleanText(d.definition) || '',
-      whatHappenedParagraphs: (() => {
-        // 2026-08-20：LLM 未分段时按句号兜底分段（避免"一大段话"）
+      whatHappenedBlocks: (() => {
+        // 2026-08-20 v5：结构化解析——正文自然段落（按换行分段）+ 大白话/AI 预测/定义用分隔标签区分
+        // 标记识别：**大白话** / **（AI 预测）** / **AI 预测** / **定义** / **一句话定义** 等（冒号可省）
         const raw = String(d.whatHappened || '').trim()
-        const byNewline = raw.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
-        if (byNewline.length >= 2) return byNewline
-        const parts = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
-        const merged = []
-        let cur = ''
-        for (const p of parts) {
-          cur = (cur ? cur + ' ' : '') + p
-          if (cur.length >= 40) { merged.push(cur); cur = '' }
+        if (!raw) return []
+        // ① 先按标记切分：separator 捕获标记词，内容块在奇偶位
+        const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*)*\s*\*\*?\s*[:：]?\s*/
+        const parts = raw.split(SEP_RE)
+        const blocks = []
+        const pushText = (txt) => {
+          const t = String(txt || '').replace(/\*\*/g, '').trim()
+          if (!t) return
+          blocks.push({ type: 'text', text: t })
         }
-        if (cur) merged.push(cur)
-        return merged.length >= 2 ? merged : [raw]
+        // ② 开头正文（parts[0]）：按换行拆成多个自然段落
+        const head = String(parts[0] || '').trim()
+        if (head) {
+          const paras = head.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
+          if (paras.length >= 2) paras.forEach(p => pushText(p))
+          else pushText(head)
+        }
+        // ③ 标记块：label → 类型，content → 整块（先截断后续标记，再清星号）
+        let idx = 1
+        while (idx < parts.length) {
+          const label = String(parts[idx] || '').trim()
+          let content = String(parts[idx + 1] || '').trim()
+          // 内容里若混入后续标记（**对老赵的意义** 等）→ 截断，只保留本块内容
+          const cut = content.search(/\*{1,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么)\s*\*{0,2}\s*[:：]?/)
+          if (cut >= 0) content = content.slice(0, cut).trim()
+          content = content.replace(/\*\*/g, '').trim()
+          if (content) {
+            let type = 'text'
+            if (/大白话|用大白话说/.test(label)) type = 'plain'
+            else if (/AI\s*预测|预测/.test(label)) type = 'predict'
+            else if (/定义/.test(label)) type = 'def'
+            blocks.push({ type, text: content })
+          }
+          idx += 2
+        }
+        // ④ 无任何标记 → 退回纯段落（按换行/句号兜底分段）
+        if (blocks.length <= 1) {
+          const byNewline = raw.split(/\n+\s*/).map(x => x.trim().replace(/\*\*/g, '')).filter(Boolean)
+          if (byNewline.length >= 2) return byNewline.map(t => ({ type: 'text', text: t }))
+          const parts2 = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
+          const merged = []
+          let cur = ''
+          for (const p of parts2) {
+            cur = (cur ? cur + ' ' : '') + p
+            if (cur.length >= 40) { merged.push(cur); cur = '' }
+          }
+          if (cur) merged.push(cur)
+          return (merged.length >= 2 ? merged : [raw]).map(t => ({ type: 'text', text: t }))
+        }
+        return blocks
       })(),
       srcName: d.srcName || d.sourceName || this.data.srcName,
       relateItems: relateItems,

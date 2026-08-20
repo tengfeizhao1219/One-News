@@ -93,6 +93,31 @@
 }
 .prose-2 { margin-top: 4rpx; }
 
+/* 2026-08-20 v5：发生了什么结构化——居中分隔标签（方案 A）*/
+.wh-sep {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin: 28rpx 0 12rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
+.wh-sep::before,
+.wh-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--divider);
+}
+.wh-sep-plain { color: var(--primary); }
+.wh-sep-predict { color: var(--text-tertiary); }
+.wh-sep-def { color: var(--warn, #d97706); }
+.prose-predict {
+  color: var(--text-secondary);
+  font-size: calc(26rpx * var(--font-scale));
+}
+
 /* 落到你这里：浅蓝底卡 */
 .for-card {
   background: var(--highlight-bg);

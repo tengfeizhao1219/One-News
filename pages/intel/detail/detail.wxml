@@ -37,9 +37,17 @@
         <text wx:if="{{pubTime}}">{{pubTime}}</text>
       </view>
 
-      <!-- 发生了什么 -->
+      <!-- 发生了什么（2026-08-20 v5：结构化块——正文自然段落 + 大白话/AI预测/定义居中分隔标签） -->
       <text class="block-label">发生了什么</text>
-      <block wx:if="{{whatHappenedParagraphs.length}}">
+      <block wx:if="{{whatHappenedBlocks.length}}">
+        <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
+          <!-- 分隔标签（大白话 / AI 预测 / 定义） -->
+          <view wx:if="{{blk.type !== 'text'}}" class="wh-sep wh-sep-{{blk.type}}">{{blk.type === 'plain' ? '大白话' : (blk.type === 'predict' ? 'AI 预测' : '定义')}}</view>
+          <!-- 正文段落 / 解读正文 -->
+          <view class="prose {{blk.type === 'predict' ? 'prose-predict' : ''}}" wx:if="{{blk.text}}">{{blk.text}}</view>
+        </block>
+      </block>
+      <block wx:elif="{{whatHappenedParagraphs.length}}">
         <view class="prose {{index ? 'prose-2' : ''}}" wx:for="{{whatHappenedParagraphs}}" wx:key="index">{{item}}</view>
       </block>
       <view class="prose" wx:else>{{descText}}</view>
