@@ -217,6 +217,21 @@ function _toArray(v) {
   return Array.isArray(v) ? v : [v]
 }
 
+/** 智谱富文本（draft-js 风格 root.children[]）递归提取纯文本 */
+function extractZhipuContent(contentZh) {
+  if (!contentZh || !contentZh.root || !Array.isArray(contentZh.root.children)) return ''
+  const out = []
+  const walk = (nodes) => {
+    for (const n of nodes || []) {
+      if (typeof n === 'string') { out.push(n); continue }
+      if (n && Array.isArray(n.children)) walk(n.children)
+      else if (n && typeof n.text === 'string') out.push(n.text)
+    }
+  }
+  walk(contentZh.root.children)
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 /** 解析 RSS/Atom XML → { items:[{title,url,pubDate,guid,category,desc,content}], channelTitle } */
 function intelParseXml(xmlText) {
   const out = { items: [], channelTitle: null }
@@ -550,6 +565,21 @@ async function fetchSource(feed, ctx = {}) {
           guid: _cleanStr(h.objectID) || _cleanStr(h.url),
           desc: _cleanStr(h.story_text || h.title),
           content: _cleanStr(h.story_text || ''),
+        }))
+      return { items, cursor: ctx.sinceMs || null }
+    }
+    // 智谱 AI 官方（2026-08-20 接入）：/api/articles → docs[]（title_zh/createAt/content_zh 富文本）
+    if (Array.isArray(json.docs) && feed.key === 'zhipu_ai') {
+      const items = json.docs
+        .filter((d) => d.title_zh || d.title_en)
+        .map((d) => ({
+          title: _cleanStr(d.title_zh || d.title_en),
+          url: `https://www.zhipuai.cn/zh/research/${d.id}`,
+          pubDate: _cleanStr(d.createAt) || '',
+          guid: `zhipu:${d.id}`,
+          desc: _cleanStr(d.resume_zh || d.title_zh || d.title_en),
+          content: extractZhipuContent(d.content_zh) || _cleanStr(d.resume_zh || ''),
+          category: _cleanStr(d.category || ''),
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
