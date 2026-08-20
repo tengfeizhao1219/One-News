@@ -11,10 +11,6 @@
        用 fixed 等高背景层覆盖状态栏区域，背景色与页面一致） -->
   <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
 
-  <!-- BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊 — 替换 wx.showToast，
-       定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出 -->
-  <view class="status-pill {{statusPillShow ? 'show' : ''}}">{{statusPillText}}</view>
-
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
     <!-- BUG-20260806-027: 第 3 层（detail）顶部按钮由「返回」改为「首页」。
          原因：详情页可从分享卡片冷启动进入（页面栈无上级），navigateBack 失效；

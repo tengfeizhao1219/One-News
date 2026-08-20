@@ -67,9 +67,6 @@ Page({
     source: '',
     // 底部滑动提示：3.5s 后自动淡出，首次有效滑动即消失（与首页一致）
     showSwipeHint: true,
-    // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
-    statusPillShow: false,
-    statusPillText: '',
     // PRD §2.4 S1：references 参考来源折叠状态
     referencesExpanded: false,
     // 一页说：关于一页说说明展开状态（owner 2026-08-12 拍板方案 C）
@@ -520,6 +517,7 @@ Page({
     // 避免高度实测失败时用估算值把原生事件已置位的触底状态又误清成 false
     if (scrollTop + clientHeight >= scrollHeight - 50) {
       this._isAtBottom = true
+      this._maybePrefetchNextCategory()
     } else if (this._bottomScrollTop == null || scrollTop < this._bottomScrollTop - 50) {
       this._isAtBottom = false
     }
@@ -537,6 +535,30 @@ Page({
     this._needsSecondSwipe = false  // 手动滚到底 = 已确认触底，无需二次滑动保护
     // 记录真实底部位置，供 onContentScroll 复位时校准
     this._bottomScrollTop = this._lastScrollTop || 0
+  },
+
+  /**
+   * owner 2026-08-20：当前分类接近末尾时提前预取下一分类列表（零等待跨分类）。
+   * 触发时机 = 当前分类内已滑到倒数第 2 条，预取下一分类并追加到 mergedList，
+   * 此后真正跨分类时 loadNextCategory() 已命中缓存/已追加 → _swipeToNext 无需等网络。
+   */
+  _maybePrefetchNextCategory: function () {
+    var that = this
+    if (!that._engine || that._destroyed || that._singleMode) return
+    if (that._source) return // 历史/收藏来源禁止跨分类
+    var cur = that._engine.getCurrent()
+    if (!cur) return
+    var progress = that._engine.getProgress()
+    var curCat = cur.category
+    if (!curCat || curCat === 'all') return
+    // 当前分类内剩余条数：该分类起点之后到当前游标的距离
+    var catStart = that._engine._categoryIndexes ? (that._engine._categoryIndexes[curCat] || 0) : 0
+    var remaining = progress.index - catStart  // 已在本分类读到的条数（从 0 起）
+    // 分类末尾通常 PAGE_SIZE=8 条；剩余 ≤1 时预取下一分类
+    var CAT_SIZE = 8
+    if (remaining >= CAT_SIZE - 2) {
+      that._engine.prefetchNextCategory()
+    }
   },
 
   // ============ 跨分类翻页 ============
@@ -607,6 +629,8 @@ Page({
             setTimeout(function () {
               that.setData({ animClass: '' })
               that._animating = false
+              // owner 2026-08-20：翻页完成后若已靠近当前分类末尾，预取下一分类（零等待跨分类）
+              that._maybePrefetchNextCategory()
             }, 30)
           }, 50)
         }, 30)
@@ -635,26 +659,11 @@ Page({
         that._showFinishToast()
         return
       }
-      // 跨分类跳转成功：小胶囊提示切换分类 + 更新总数 + 立即翻页
-      that._showStatusPill('正在阅读：' + res.categoryName)
+      // owner 2026-08-20：跨分类跳转不再弹顶部小胶囊（status-pill 已移除），
+      // 直接更新总数并立即翻页 → 丝滑滑入下一分类新闻
       that.setData({ total: that._engine.getProgress().total })
       that._swipeToNext()
     })
-  },
-
-  /**
-   * BUG-20260806-023 (FE): 状态栏小胶囊提示（跨分类切换「正在阅读：」提示）
-   * 定位在状态栏区域中央（status-bar-fill 之上），自动 1.5s 淡出。
-   * @param {string} text 显示文本
-   */
-  _showStatusPill: function (text) {
-    if (!text) return
-    clearTimeout(this._statusPillTimer)
-    this.setData({ statusPillShow: true, statusPillText: text })
-    var that = this
-    this._statusPillTimer = setTimeout(function () {
-      if (!that._destroyed) that.setData({ statusPillShow: false })
-    }, 1500)
   },
 
   /**

@@ -127,6 +127,8 @@ function ReadingEngine(options) {
   // DG-08：入口首次预取延迟（避免进入详情时当前条+预取 5 并发排队）
   this._prefetchDeferred = false
   this._prefetchTimer = null
+  // owner 2026-08-20：跨分类列表预取中标记（防并发重复拉取）
+  this._prefetchingNext = false
   this._initialized = false
   this._initializing = false
   // BUG-20260806-002：入口新闻未命中标记（收藏/历史旧新闻已失效时禁止回退展示他条）
@@ -437,6 +439,28 @@ ReadingEngine.prototype.loadNextCategory = function () {
     })
   }
   return tryFrom(curIdx)
+}
+
+/**
+ * 预取下一分类列表（owner 2026-08-20）：在当前分类接近末尾时提前调用，
+ * 让 loadNextCategory() 在跨分类那一刻能命中已追加的数据，实现零等待跨分类滑动。
+ * 幂等：下一分类已在 mergedList / 已在预取中 → 静默返回。
+ * @returns {Promise<void>}
+ */
+ReadingEngine.prototype.prefetchNextCategory = function () {
+  var that = this
+  if (that._source || that._prefetchingNext) return Promise.resolve()
+  var cur = that.getCurrent()
+  var curCat = cur ? cur.category : ''
+  if (!curCat || curCat === 'all') return Promise.resolve()
+  // 下一分类是否已追加（categoryIndexes 里已有 > 当前游标之后的分类起点）
+  that._prefetchingNext = true
+  return that.loadNextCategory().then(function (res) {
+    that._prefetchingNext = false
+    return res
+  }).catch(function () {
+    that._prefetchingNext = false
+  })
 }
 
 /**
