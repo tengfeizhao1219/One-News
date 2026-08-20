@@ -147,19 +147,9 @@ function hasBudget(deadline) {
 // 现改用 Intl.DateTimeFormat 解析北京时间，保持「北京凌晨 1-5 静默」原语义。
 const QUIET_START_HOUR = 1
 const QUIET_END_HOUR = 5 // 左闭右开：北京 01:00 ≤ h < 北京 05:00
-const _SHANGHAI_FMT = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'Asia/Shanghai',
-  hour: '2-digit',
-  hour12: false,
-})
-function beijingHour() {
-  for (const p of _SHANGHAI_FMT.formatToParts(new Date())) {
-    if (p.type === 'hour') return Number(p.value === '24' ? '00' : p.value)
-  }
-  return 0
-}
+const { beijingHour } = require('./beijingTime')
 function isQuietHours(now) {
-  const h = beijingHour()
+  const h = beijingHour(now || new Date())
   return h >= QUIET_START_HOUR && h < QUIET_END_HOUR
 }
 

@@ -6,6 +6,15 @@
 // 数据契约与 T5.2 后端对齐：getIntelProfile / saveIntelProfile。
 const app = getApp()
 const { getIntelProfile, saveIntelProfile } = require('../../../utils/intelRequest')
+
+/** 前端本地时区（北京时间）格式化 ISO → YYYY-MM-DD HH:MM */
+function formatLocalTime(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return String(iso).slice(0, 10)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
 const { getSafeBottom } = require('../../../utils/intelRender')
 
 Page({
@@ -90,7 +99,7 @@ Page({
       this.setData({
         profile: p,
         consentSigned: !!p.consentSigned,
-        consentAt: p.consentAt || '',
+        consentAt: p.consentAt ? formatLocalTime(p.consentAt) : '',
         identitiesSummary: idParts.join(' · '),
         focusTagsSummary: (p.focusTags || []).join(' / '),
         loadingProfile: false
