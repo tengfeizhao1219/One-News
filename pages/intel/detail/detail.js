@@ -11,21 +11,21 @@ function cleanText(v) {
   return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
 }
 
-/** 富文本解析：sceneMapping 按行分段 + **加粗** 标记 → rich-text nodes（落到你这里结构化展示） */
-function parseRichText(txt) {
+/** sceneMapping 结构化解析：按 \n 分行，每行拆 **加粗** 段 → {lines:[{segments:[{text,bold}]}]}
+ * （不用 rich-text：微信 rich-text 的 \n 换行渲染不可靠；view+text 完全可控） */
+function parseSceneMapping(txt) {
   const text = cleanText(txt)
-  const nodes = []
-  const lines = String(text).split('\n')
-  lines.forEach((line, li) => {
-    if (li > 0) nodes.push({ type: 'text', text: '\n' })
+  const lines = String(text).split('\n').map((line) => {
+    const segments = []
     const parts = line.split(/\*\*(.+?)\*\*/g)
     parts.forEach((p, i) => {
       if (!p) return
-      if (i % 2 === 1) nodes.push({ type: 'text', text: p, attrs: { style: 'font-weight:700;color:var(--text-primary)' } })
-      else nodes.push({ type: 'text', text: p })
+      if (i % 2 === 1) segments.push({ text: p, bold: true })
+      else segments.push({ text: p, bold: false })
     })
-  })
-  return nodes
+    return { segments }
+  }).filter((l) => l.segments.length)
+  return lines
 }
 const { getIntelDetail } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
@@ -137,21 +137,21 @@ function cleanText(v) {
   return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
 }
 
-/** 富文本解析：sceneMapping 按行分段 + **加粗** 标记 → rich-text nodes（落到你这里结构化展示） */
-function parseRichText(txt) {
+/** sceneMapping 结构化解析：按 \n 分行，每行拆 **加粗** 段 → {lines:[{segments:[{text,bold}]}]}
+ * （不用 rich-text：微信 rich-text 的 \n 换行渲染不可靠；view+text 完全可控） */
+function parseSceneMapping(txt) {
   const text = cleanText(txt)
-  const nodes = []
-  const lines = String(text).split('\n')
-  lines.forEach((line, li) => {
-    if (li > 0) nodes.push({ type: 'text', text: '\n' })
+  const lines = String(text).split('\n').map((line) => {
+    const segments = []
     const parts = line.split(/\*\*(.+?)\*\*/g)
     parts.forEach((p, i) => {
       if (!p) return
-      if (i % 2 === 1) nodes.push({ type: 'text', text: p, attrs: { style: 'font-weight:700;color:var(--text-primary)' } })
-      else nodes.push({ type: 'text', text: p })
+      if (i % 2 === 1) segments.push({ text: p, bold: true })
+      else segments.push({ text: p, bold: false })
     })
-  })
-  return nodes
+    return { segments }
+  }).filter((l) => l.segments.length)
+  return lines
 }
     if (!d || (!d.definitionParas && !d.definition && !d.sceneMapping && !d.title && !d.whatHappened)) {
       console.warn('[intel-detail] 进入空态: d 为空或全字段空')
@@ -161,7 +161,7 @@ function parseRichText(txt) {
     // definitionParas 是按换行拆好的段；单段 .prose 整文展示时拼回换行
     const definition = d.definition || (Array.isArray(d.definitionParas) ? d.definitionParas.join('\n\n') : '')
     const relateItems = d.sceneMapping
-      ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''), txt: d.sceneMapping, nodes: parseRichText(d.sceneMapping) }]
+      ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''), txt: d.sceneMapping, lines: parseSceneMapping(d.sceneMapping) }]
       : []
     this.setData({
       title: cleanText(d.title) || this.data.title,
