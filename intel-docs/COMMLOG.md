@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-20 | A/I | **源接入第一批结果**：✅ Simon Willison（原生 Atom RSS）接入成功（written 3，正文 3473/1497/529 字完整）；❌ alan-turing-institute 聚合 feed（mistral/ai2/claude/cohere 等 7 个）**内容滞后**（条目 pubDate 保留原日期：mistral 最新 2023-09、claude 2026-04），与「两次抓取间隔/24h 增量」策略冲突全被过滤 → 已停用待源方更新机制确认；🔧 中文官方 6 源（通义/智谱/火山/混元/MiniMax/Kimi）为 JS 渲染需专用解析（Next.js API 端点），列入第二批；r/LocalLLaMA（Reddit 反爬）V2EX（API 空）待调。**教训：聚合 RSS 需先验证内容时效性再接入** | ✅ 已推 |
 | 2026-08-20 | I/P | **medium 正文提级 + 重新处理（owner 反馈正文太短）**。① medium prompt：发生了什么 1-2 段 100 字 → **2-3 段 150-300 字** + maxTokens 400→520 + minAccept 15→60；② definition 解析失败时**用摘要/标题兜底**（不误拦截）；③ **重跑流程修正**：重置 ingest 不够——processOne 先查 staged 会 `already-staged` skip，必须**先删 today staged 再重置 ingest 再 process**；④ 已重新处理今天 5 条：正文 90→233 / 150→268 / 153→218 字，brief v3 已发布。**教训：重跑数据处理需清 staged**（记 LEARNINGS） | ✅ 已推 |
 | 2026-08-19 | O/owner | **记录待办：周报功能**（后续迭代）。目前只有每日 3 次巡检 + 「本周可试用清单」（周维度区块），无独立周报。设计需求：① 本周重点回顾（high 相关条目主题聚合）② 可试用清单复盘（勾选完成/效果）③ 趋势洞察（高频关键词/主题）④ 数据质量周报（抓取成功率/过滤统计，反哺源管理）。实现路径：intelWeekly 云函数 + 周一定时器 + brief 渠道扩展。已记 TASK_BOARD T8.1 | 📋 待办 |
 | 2026-08-19 | I | **增量抓取严格化完成（commit 增量修复 + 时区修正）**。intelRssPoll：① 无游标（首次/丢失）→ 用档位窗口起点兜底（05档=昨18点/11档=今5点/18档=今11点，北京时区），不再全量拉旧文；② pubDate 无效条目不放过（防 publishedAt=fetchedAt 绕过窗口过滤）。验证：techcrunch_ai empty（窗口内无新增）、geekpark_ai filtered 2 旧文/0 写入——**每次抓取只收两次抓取之间发布的**。部署注意：部署副本 require 全用 ./（common/ + seedSources.js） | ✅ 已推 |

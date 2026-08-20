@@ -261,6 +261,8 @@ function intelParseXml(xmlText) {
       }
       if (!url && links.length) url = (links[0]['@_href'] || links[0].href) || ''
       const atomContent = (it.content && (it.content['#text'] || it.content.__cdata || _cleanStr(it.content))) || ''
+      // 2026-08-20 修复：arXiv 等 Atom 源只有 <summary> 无 <content>——content 用摘要兜底（否则空壳闸门全拒）
+      const atomSummary = (it.summary && (it.summary['#text'] || it.summary.__cdata || _cleanStr(it.summary))) || ''
       return {
         title: _cleanStr((it.title && it.title['#text']) || it.title),
         url: _cleanStr(url),
@@ -268,8 +270,8 @@ function intelParseXml(xmlText) {
         guid: _cleanStr(it.id) || _cleanStr(url),
         category: _cleanStr((it.category && (it.category['@_term'] || it.category['#text'])) || it.category),
         categoryAll: _categoryList(it.category),
-        desc: _cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
-        content: _cleanContent(atomContent),
+        desc: _cleanSummary(atomSummary || atomContent),
+        content: _cleanContent(atomContent || atomSummary),
       }
     }).filter((it) => it.title && it.url)
     return out
@@ -844,8 +846,11 @@ async function runWorker(feed, now, ctx = {}) {
   //    增量游标续传（§5.8 #3）：lastSuccessCursor → sinceMs，api 类源（HN/arXiv）
   //    按时间窗拉增量；rss/scrape 类只露最新 N 条，靠 guid 去重不硬过滤。
   const timeoutMs = (feed.adapterConfig && feed.adapterConfig.timeoutMs) || TIMEOUT_BY_TYPE[feed.sourceType] || 10000
-  // owner 2026-08-19：无游标（首次/丢失）→ 用档位窗口起点兜底，不再全量拉旧文
-  const sinceMs = feed.lastSuccessCursor ? new Date(feed.lastSuccessCursor).getTime() : batchWindowStartMs()
+  // owner 2026-08-20：无游标（首次/丢失）统一用 24h 回看（档位窗口太紧会把合法新文滤掉；
+  //   首次抓取无"上次"概念，24h 窗口既能覆盖最近内容又不全量历史）
+  const sinceMs = feed.lastSuccessCursor
+    ? new Date(feed.lastSuccessCursor).getTime()
+    : Date.now() - 24 * 3600 * 1000
   let fetched
   try {
     fetched = await Promise.race([
