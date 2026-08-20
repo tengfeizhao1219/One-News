@@ -119,3 +119,9 @@
 - **改数据库源 enabled 必须同步 seedSources.js defaultOn**：intelRssPoll 每次启动自检会播种，若 seed 里 defaultOn=true 而库里手动禁用，重播种不覆盖（幂等跳过已存在），但新环境/重建集合时会复活——两处必须一致。
 - **mcporter cloudbase 有 writeNoSqlDatabaseContent**（action=insert/update/delete，update 用 $set + query），管理端改库不需要专门写云函数。
 - **.then 链内插缓存失败教训**：在 `return {...}` 对象后追加独立 `.then()` 会破坏 return 表达式（`})` 结束语句后再 `.then` 语法错误）。正确姿势：先 `const data = {...}`，写缓存，再 `return data`，全程在同一个 .then 回调内。
+
+## 2026-08-20 强制重抓（手机无变化排查）
+- **增量语义 = 手机无变化的主因**：游标续传 + guid 去重 + ETag 304，两次抓取间隔内无新内容 → brief 内容不变。手动触发数据链（intelFetch→intelProcess→intelDispatcher）在增量语义下不会产生可见变化。
+- **强制重抓流程**：① 清所有 active 源 lastSuccessCursor/lastModified/etag；② 删 freshnessDays 窗口内旧 ingest（guid 去重不拦；注意时间字段是 fetchedAt 非 createdAt）；③ 删已发布 staged（防 already-staged skip）；④ intelFetch 全量重抓 → intelProcess(force) → intelDispatcher。
+- **教训：重抓前别删 staged 历史**——窗口内无新条目的源（arxiv/techcrunch/theverge/hn）内容会从 brief 消失。重抓后应与归档版合并（按 itemId 去重）+ 重新应用 SOURCE_CAP，再写回 intel_current 升级版本。
+- **归档恢复**：intel_current_archive 按 date+version 存历史版，合并用 v17(21条)+v18(11条)→v19(24条)→cap 后 v20(22条)。
