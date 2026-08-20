@@ -123,7 +123,21 @@ Page({
       title: d.title || this.data.title,
       descText: d.definition || this.data.descText,
       whatHappenedText: d.whatHappened || d.definition || '',
-      whatHappenedParagraphs: String(d.whatHappened || '').split(/\n+\s*/).map(x => x.trim()).filter(Boolean),
+      whatHappenedParagraphs: (() => {
+        // 2026-08-20：LLM 未分段时按句号兜底分段（避免"一大段话"）
+        const raw = String(d.whatHappened || '').trim()
+        const byNewline = raw.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
+        if (byNewline.length >= 2) return byNewline
+        const parts = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
+        const merged = []
+        let cur = ''
+        for (const p of parts) {
+          cur = (cur ? cur + ' ' : '') + p
+          if (cur.length >= 40) { merged.push(cur); cur = '' }
+        }
+        if (cur) merged.push(cur)
+        return merged.length >= 2 ? merged : [raw]
+      })(),
       srcName: d.srcName || d.sourceName || this.data.srcName,
       relateItems: relateItems,
       relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
