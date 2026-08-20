@@ -125,3 +125,9 @@
 - **强制重抓流程**：① 清所有 active 源 lastSuccessCursor/lastModified/etag；② 删 freshnessDays 窗口内旧 ingest（guid 去重不拦；注意时间字段是 fetchedAt 非 createdAt）；③ 删已发布 staged（防 already-staged skip）；④ intelFetch 全量重抓 → intelProcess(force) → intelDispatcher。
 - **教训：重抓前别删 staged 历史**——窗口内无新条目的源（arxiv/techcrunch/theverge/hn）内容会从 brief 消失。重抓后应与归档版合并（按 itemId 去重）+ 重新应用 SOURCE_CAP，再写回 intel_current 升级版本。
 - **归档恢复**：intel_current_archive 按 date+version 存历史版，合并用 v17(21条)+v18(11条)→v19(24条)→cap 后 v20(22条)。
+
+## 2026-08-20 历史数据覆盖清理（用户反馈"数据包含历史数据"）
+- **问题确认**：手动合并 v17+v18 生成 v20 时绕过了 dispatcher 的 freshness 过滤，把 8/19 的 arxiv/techcrunch/theverge/hn（部分源已 retired/disabled）并进 brief。
+- **数据审计发现**：ingest 133 条中 112 条来自已删除/retired/disabled 源（infoq_cn 13、qbitai 22、hacker_news 30、techcrunch 12、theverge 4、arxiv 30、the_rundown 1）；staged 18 条全部为 8 个 active 源最新抓取。
+- **清理动作**：① 归档 v20 备份；② 删除 112+3 条停用源 ingest 残留；③ dispatcher 重跑生成干净 v21/v22（11 条，仅 active 源，SOURCE_CAP 生效）。
+- **经验**：手动合并/应急操作必须重新走 dispatcher 的 renderBrief（freshness + SOURCE_CAP），不能绕过；停用源的 ingest 残留应定期清理（可加定时任务）。
