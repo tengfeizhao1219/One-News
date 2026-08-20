@@ -327,7 +327,8 @@ function passFreshness(d) {
 function renderBrief(todayItems, weekTryable) {
   // 今日关注 = 今日全部高/中相关 items（05 初版+11 追加+18 汇总），合同置顶、按场景排序
   // 2026-08-20：arxiv 论文限流（每源最多 5 条，防论文淹没新闻；其余源不限）
-  const SOURCE_CAP = { arxiv_ai: 5 }
+  // 2026-08-20：lesswrong 学术/理性社区限流 3 条（内容深度高但单日 10 条太占 Brief）
+  const SOURCE_CAP = { arxiv_ai: 5, lesswrong: 3 }
   const capped = []
   const seen = {}
   for (const d of todayItems.filter(passFreshness)) {

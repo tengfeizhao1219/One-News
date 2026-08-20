@@ -102,3 +102,10 @@
 - **per-source freshnessDays 必须贯穿到 dispatcher**：intelProcess 用 freshnessDays=30 放行 8/3 的 MiniMax H3，但 intelDispatcher passFreshness 硬编码 7 天把它挡在 brief 外——低频官方源语义断链。修复：staged 透传 freshnessDays，passFreshness 优先 d.freshnessDays，默认仍 7 天。
 - **跨函数未定义变量**：processOne 引用 parsedTitleCn（parseSopOut 的局部变量）→ ReferenceError 崩溃。parseSopOut 需显式 return 该字段。
 - **旧 rejected ingest 挡新抓取**：guid 查重跳过，重抓前必须删旧 ingest + 清 lastSuccessCursor（或重置 pending）。
+
+## 2026-08-20 社区源接入（HN 恢复 + LessWrong）
+- **HN quality 0 根因**：Algolia 全量高赞故事（points>100）10 条全 low 与场景无关 → 自动退休。恢复：`query=AI&tags=story&numericFilters=points>50&hitsPerPage=12`，AI 命中率大幅提升（written 7）。HN 泛技术内容命中率仍低（1 medium/21），但比 0 好。
+- **LessWrong 接入**：`lesswrong.com/feed.xml` 原生 RSS，AI 安全/理性深度内容，10 条/次全 medium，质量高。但单日 10 条太占 Brief → SOURCE_CAP 限流 3 条（与 arxiv 5 条同机制）。
+- **Reddit 放弃**：SCF 数据中心 IP 被 Reddit 429（本地 200 云端 timeout）；r/LocalLLaMA、r/MachineLearning 均 429；redlib/RSSHub 公共实例全挂。V2EX API 已死。
+- **intel_sources 有 8 个空壳文档**（只有 _id 无 key）：之前 SDK 不带 {data:} 包装静默失败残留，已清理。
+- **doc(id).set 不能含 _id 字段**（INVALID_PARAM），注册新源用 key 作 doc id、文档内 key 字段。

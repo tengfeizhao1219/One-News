@@ -404,6 +404,7 @@ function validateIntelItem(raw, meta) {
     sourceType: meta.sourceType || '',
     targetTime: meta.targetTime || '',
     freshnessDays: meta.freshnessDays || undefined, // 2026-08-20：per-source 新鲜度（intelProcess 用）
+    minContent: meta.minContent || undefined, // 2026-08-20：per-source 空壳阈值（官方动态摘要短可放宽）
     title,
     url: rawUrl,
     urlFp: sha256(normalizeUrl(rawUrl)),
@@ -566,6 +567,21 @@ async function fetchSource(feed, ctx = {}) {
           guid: _cleanStr(h.objectID) || _cleanStr(h.url),
           desc: _cleanStr(h.story_text || h.title),
           content: _cleanStr(h.story_text || ''),
+        }))
+      return { items, cursor: ctx.sinceMs || null }
+    }
+    // MiniMax 官方（2026-08-20 接入）：/api/news → data[]（title/summary/publishDate ms/slug）
+    if (Array.isArray(json.data) && feed.key === 'minimax_ai') {
+      const items = json.data
+        .filter((d) => d.title)
+        .map((d) => ({
+          title: _cleanStr(d.title),
+          url: d.slug ? `https://www.minimaxi.com/blog/${d.slug}` : 'https://www.minimaxi.com/blog',
+          pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate))) ? new Date(Number(d.publishDate)).toISOString() : '',
+          guid: `minimax:${d.newsId || d.slug || d.title}`,
+          desc: _cleanStr(d.summary || d.title),
+          content: _cleanStr(d.summary || d.title),
+          category: _cleanStr((d.tags || []).join(',')) || '',
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
@@ -950,6 +966,7 @@ async function runWorker(feed, now, ctx = {}) {
     sourceType: feed.sourceType || '',
     targetTime: ctx.targetTime || '',
     freshnessDays: (Number(feed.freshnessDays) > 0 ? Number(feed.freshnessDays) : 1),
+    minContent: (Number(feed.minContent) > 0 ? Number(feed.minContent) : 60),
   }
   const candidates = []
   let filtered = 0

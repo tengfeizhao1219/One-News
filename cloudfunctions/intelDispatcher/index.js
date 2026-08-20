@@ -318,14 +318,17 @@ function passFreshness(d) {
   if (!raw) return true // 无日期不拦截（交由 relevance 把关）
   const t = new Date(raw).getTime()
   if (Number.isNaN(t)) return true
-  return Date.now() - t <= 7 * 24 * 3600 * 1000
+  // 2026-08-20: per-source freshnessDays 优先（低频官方源配 30 天不被 7 天默认误杀；如 MiniMax 8/3 H3）
+  const days = Number(d.freshnessDays) > 0 ? Number(d.freshnessDays) : 7
+  return Date.now() - t <= days * 24 * 3600 * 1000
 }
 
 /** 组装最终 Brief 的 items[]（今日关注）+ tryable[]（本周可试用） */
 function renderBrief(todayItems, weekTryable) {
   // 今日关注 = 今日全部高/中相关 items（05 初版+11 追加+18 汇总），合同置顶、按场景排序
   // 2026-08-20：arxiv 论文限流（每源最多 5 条，防论文淹没新闻；其余源不限）
-  const SOURCE_CAP = { arxiv_ai: 5 }
+  // 2026-08-20：lesswrong 学术/理性社区限流 3 条（内容深度高但单日 10 条太占 Brief）
+  const SOURCE_CAP = { arxiv_ai: 5, lesswrong: 3 }
   const capped = []
   const seen = {}
   for (const d of todayItems.filter(passFreshness)) {

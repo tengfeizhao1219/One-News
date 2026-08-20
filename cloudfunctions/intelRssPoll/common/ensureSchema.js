@@ -109,6 +109,8 @@ async function ensureIntelCurrent() {
     { key: { version: 1 }, name: 'intel_current_version', unique: false },
     { key: { itemId: 1 }, name: 'intel_current_itemId', unique: false },  // 2026-08-19 详情兜底查询防全表扫描
   ])
+  // 2026-08-19 复盘：brief 历史归档集合（persistBrief 覆盖前快照，可追溯/回滚）
+  await ensureCollection('intel_current_archive')
 }
 
 /**

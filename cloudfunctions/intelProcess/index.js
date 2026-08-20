@@ -85,8 +85,10 @@ async function processOne(item, profile) {
   // ①.5 数据质量闸门（2026-08-19 治理）：清洗 + 硬门槛，不合格直接丢弃
   //   raw 层空壳/陈旧/脏文本在这里被拦下，不进 LLM、不进 staged，只留痕。
   // 2026-08-20：per-source 新鲜度（官方低频源 freshnessDays=7，新闻源默认 1）
-  const gateCfg = Number(item.freshnessDays) > 0
-    ? Object.assign({}, GATE, { freshnessDays: Number(item.freshnessDays) })
+  const gateCfg = Number(item.freshnessDays) > 0 || Number(item.minContent) > 0
+    ? Object.assign({}, GATE,
+        Number(item.freshnessDays) > 0 ? { freshnessDays: Number(item.freshnessDays) } : {},
+        Number(item.minContent) > 0 ? { minContent: Number(item.minContent) } : {})
     : GATE
   const gate = qualify(item, gateCfg)
   if (!gate.pass) {
@@ -141,9 +143,10 @@ async function processOne(item, profile) {
   const staged = {
     itemId,
     sourceId: String(item.sourceId || ''),
-    title: String(parsedTitleCn || item.title || ''), // 2026-08-20: 英文源标题翻译为中文（titleCn），原文存 sop.source.titleEn
+    title: String((parsed && parsed.titleCn) || item.title || ''), // 2026-08-20: 英文源标题翻译为中文（titleCn），原文存 sop.source.titleEn
     url: String(item.url || ''),
     relevance: route.level,
+    freshnessDays: Number(item.freshnessDays) > 0 ? Number(item.freshnessDays) : undefined, // 2026-08-20: per-source 新鲜度透传（dispatcher passFreshness 覆盖 7 天默认，低频官方源 30 天不误杀）
     sceneTags: parsed.sceneTags,
     sceneHits: parsed.sceneHits,
     sop: {
@@ -416,6 +419,7 @@ function parseSopOut(text, item, profile, route) {
     sceneTags: sceneTags.length ? sceneTags : (route.level === 'low' ? [] : ['life']),
     sceneHits,
     tryable,
+    titleCn: parsedTitleCn, // 2026-08-20 修复：processOne 引用跨函数未定义变量 parsedTitleCn → 作为返回字段
     translated: true,
   }
 }
