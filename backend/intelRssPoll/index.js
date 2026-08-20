@@ -261,6 +261,8 @@ function intelParseXml(xmlText) {
       }
       if (!url && links.length) url = (links[0]['@_href'] || links[0].href) || ''
       const atomContent = (it.content && (it.content['#text'] || it.content.__cdata || _cleanStr(it.content))) || ''
+      // 2026-08-20 修复：arXiv 等 Atom 源只有 <summary> 无 <content>——content 用摘要兜底（否则空壳闸门全拒）
+      const atomSummary = (it.summary && (it.summary['#text'] || it.summary.__cdata || _cleanStr(it.summary))) || ''
       return {
         title: _cleanStr((it.title && it.title['#text']) || it.title),
         url: _cleanStr(url),
@@ -268,8 +270,8 @@ function intelParseXml(xmlText) {
         guid: _cleanStr(it.id) || _cleanStr(url),
         category: _cleanStr((it.category && (it.category['@_term'] || it.category['#text'])) || it.category),
         categoryAll: _categoryList(it.category),
-        desc: _cleanSummary((it.summary && it.summary['#text']) || it.summary || atomContent || ''),
-        content: _cleanContent(atomContent),
+        desc: _cleanSummary(atomSummary || atomContent),
+        content: _cleanContent(atomContent || atomSummary),
       }
     }).filter((it) => it.title && it.url)
     return out
