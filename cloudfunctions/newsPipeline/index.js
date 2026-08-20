@@ -53,6 +53,22 @@ function parseTs(v) {
   return Number.isFinite(t) ? t : null
 }
 
+// URL 路径日期（/20070426/、/2007/04/26/、/2007-04-26/）。源无 pubDate 时常把 2007 旧闻标成今天。
+function parseDateFromUrl(url) {
+  const s = String(url || '')
+  let m = s.match(/\/((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?:\/|$|[.?#])/)
+  if (m) {
+    const t = Date.UTC(+m[1], +m[2] - 1, +m[3])
+    return Number.isFinite(t) ? t : null
+  }
+  m = s.match(/\/((?:19|20)\d{2})[/\-](0?[1-9]|1[0-2])[/\-](0?[1-9]|[12]\d|3[01])(?:\/|$|[.?#])/)
+  if (m) {
+    const t = Date.UTC(+m[1], +m[2] - 1, +m[3])
+    return Number.isFinite(t) ? t : null
+  }
+  return null
+}
+
 function toTs(v) {
   const t = parseTs(v)
   return t == null ? 0 : t
@@ -181,15 +197,18 @@ async function stageProcess(deadline) {
       if (!it.id) it.id = `${it.sourceId || it.sourceType}_${(it.urlFp || '').slice(0, 16)}`
     }
 
-    // 0.5 新鲜度门禁（owner 2026-08-16）：publishTime 解析归一 + 时效过滤。
-    //     旧闻（>48h）/未来时间（>1h）/无法解析 的条目直接丢弃——不抓正文、不进 AI、不落库。
-    //     修复"几小时前的新闻一直滞留、部分分类不刷新"（实测有 2007 年文章入库）。
+    // 0.5 新鲜度门禁：日期归一 + 时效过滤。
+    //     newsFetcher 写入的是 pubDate（不是 publishTime）；必须两边都读。
+    //     URL 路径含明确年月日且已超 48h → 直接丢弃（防「无 pubDate 回填 fetchedAt=今天」的 2007 旧闻）。
     const nowGate = Date.now()
     const freshItems = items.filter((it) => {
-      let t = parseTs(it.publishTime)
-      if (t == null) t = parseTs(it.fetchedAt)   // 源无日期 → 回退抓取时刻（仍按新鲜处理）
+      const urlTs = parseDateFromUrl(it.sourceUrl || it.url || '')
+      if (urlTs != null && (nowGate - urlTs) > FRESH_MAX_AGE_MS) return false
+      let t = parseTs(it.publishTime) || parseTs(it.pubDate)
+      if (t == null && urlTs != null) t = urlTs
+      if (t == null) t = parseTs(it.fetchedAt)
       if (t == null) t = nowGate
-      it.publishTime = t                          // 归一为数字（下游排序一致）
+      it.publishTime = t
       const age = nowGate - t
       return age >= -FRESH_MAX_FUTURE_MS && age <= FRESH_MAX_AGE_MS
     })
@@ -395,29 +414,7 @@ async function stageAi(deadline) {
   while (hasBudget(deadline)) {
     const items = await stagingStore.claimPending(STAGE_BATCH.ai)
     if (!items.length) break
-
-    // C. 已解读即跳过重抓（2026-08-14）：cache 已有有效 ai_interpretation 的条目不再消耗混元配额做 AI 加工，
-    // 直接标 done（publish 时 batchInsert 的 A 保护会保留既有解读，不重抓、不覆盖）。
-    let needAi = items
-    const skipIds = []
-    try {
-      const ids = items.map((it) => it.id)
-      const res = await db.collection('news_cache').where({ id: db.command.in(ids) }).get()
-      const now = Date.now()
-      const interpreted = new Set()
-      for (const d of (res.data || [])) {
-        if (d.contentSource === 'ai_interpretation' && (d.cacheExpire || Infinity) > now) interpreted.add(d.id)
-      }
-      needAi = items.filter((it) => !interpreted.has(it.id))
-      for (const it of items) if (interpreted.has(it.id)) skipIds.push(it._id)
-    } catch (e) {
-      console.warn('[newsPipeline][ai] 查已解读缓存失败，全部走 AI:', e.message)
-    }
-    if (skipIds.length) {
-      await stagingStore.markDone(skipIds)
-      processed += skipIds.length
-    }
-    if (!needAi.length) continue
+    const needAi = items
 
     // 纯 AI：skipFetch=true → 直接用 item.content（Stage 1 已补全）跑摘要+解读
     // deadline 给 enrichNewsList 内部守卫留 5s 余量
@@ -449,11 +446,13 @@ async function stageAi(deadline) {
   // 不把正在被其他实例处理的 processing 误判为待办，避免空转触发
   // 优先级修正（2026-08-18）：本批刚标 done，若有 done 待落库，优先触发 publish「收割」，
   // 避免已完成 AI 的新数据被新一轮 ai 挤占 + 60s 冷却窗口而饿死、迟迟不落库。
-  const sd = await stagingStore.doneCount()
-  if (sd > 0) trigger('publish')
+  const sp = await stagingStore.claimablePendingCount()
+  if (sp > 0) trigger('ai')
   else {
-    const sp = await stagingStore.claimablePendingCount()
-    if (sp > 0) trigger('ai')
+    const inflight = await stagingStore.pendingCount()
+    const sd = await stagingStore.doneCount()
+    if (inflight === 0 && sd > 0) trigger('publish')
+    else if (inflight > 0) trigger('ai')
     else trigger('run')
   }
   return { stage: 'ai', processed }
@@ -527,15 +526,6 @@ async function batchInsert(newsList) {
         }
       }
 
-      let isRetained = false
-      let retainedAt = null
-      let cacheExpire = expireAt
-      if (existed && existed.isRetained === true) {
-        isRetained = true
-        retainedAt = existed.retainedAt || now
-        cacheExpire = retainedAt + ((config.cache && config.cache.retainedTTL) || 30 * 24 * 3600 * 1000)
-      }
-
       let finalContentSource = item.contentSource || ''
       if (finalContentSource === 'fetched' && summarySource === 'ai' && summary) {
         finalContentSource = 'ai_summary'
@@ -571,9 +561,7 @@ async function batchInsert(newsList) {
         publishTime: toTs(item.publishTime),
         picUrl: '',
         viewCount: 0,
-        isRetained,
-        retainedAt,
-        cacheExpire,
+        cacheExpire: expireAt,
         createdAt: now,
         finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
         qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
@@ -605,195 +593,78 @@ async function batchInsert(newsList) {
   return { inserted, failed }
 }
 
-// ====================================================================
-// 方案 A 兜底（2026-08-15）· publish 末端每类硬上限淘汰
-// --------------------------------------------------------------------
-// 背景：方案 A 的 staging 截断在「并行 AI 阶段」下存在竞态——多实例同时
-//       claimPending 把 pending→processing 后，只删 pending 的截断够不着已
-//       认领的超额条目，导致单轮 cache 仍可能 >47。
-// 做法：publish 全部完成后，对 news_cache 按 category 做全局硬上限，
-//       每类只保留最新 N 条（publishTime 倒序），超出的旧记录直接删除。
-//       这样无论上游 AI 阶段如何、是否多轮累积，cache 总量恒定 <=47。
-// 排序键 = publishTime 倒序（新优先，淘汰旧的）。
-// ====================================================================
-async function enforceCategoryCapOnCache() {
-  let all = []
-  let skip = 0
-  let rounds = 0
-  while (++rounds <= MAX_PAGE_ROUNDS) { // C-6：迭代上限兜底（最多 MAX_PAGE_ROUNDS 轮）
-    const res = await db.collection('news_cache').limit(1000).skip(skip).get()
-    const list = (res && res.data) || []
-    if (!list.length) break
-    all = all.concat(list)
-    if (list.length < 1000) break
-    skip += 1000
-  }
-  if (!all.length) return { trimmed: 0 }
-
+// 注入前分类上限：评分后仍超量才按「质量分+新鲜度衰减分」从低到高淘汰；低于上限有多少展示多少。
+function applyCategoryCaps(list) {
   const byCat = {}
-  for (const it of all) {
-    (byCat[it.category] = byCat[it.category] || []).push(it)
+  for (const it of (list || [])) {
+    const cat = it.category || ''
+    ;(byCat[cat] = byCat[cat] || []).push(it)
   }
-  const toRemove = []
+  const now = Date.now()
+  const out = []
   let trimmed = 0
   for (const cat of Object.keys(byCat)) {
     const items = byCat[cat]
     const cap = CATEGORY_CAP[cat] || DEFAULT_CAP
-    if (items.length <= cap) continue
-    // P0-3 修复：收藏（isRetained=true）条目豁免淘汰，只从普通条目中淘汰超出上限者
-    const _retained = items.filter(it => it.isRetained === true)
-    const normal = items.filter(it => it.isRetained !== true)
-    if (normal.length <= cap) continue
-    // owner 2026-08-16：淘汰用"新鲜度衰减分"= finalScore - 每老1h扣1分——
-    // 高分旧闻会随时间沉底，新进新闻（同分或略低）也能上位，解决"旧闻滞留不刷新"
-    const _now = Date.now()
-    normal.sort((a, b) => {
-      const ea = effCacheScore(a, _now)
-      const eb = effCacheScore(b, _now)
+    if (items.length <= cap) { out.push(...items); continue }
+    items.sort((a, b) => {
+      const ea = effCacheScore(a, now)
+      const eb = effCacheScore(b, now)
       if (eb !== ea) return eb - ea
-      const ta = parseTs(a.publishTime) || parseTs(a.createdAt) || 0
-      const tb = parseTs(b.publishTime) || parseTs(b.createdAt) || 0
-      return tb - ta // 新优先
-    })
-    const losers = normal.slice(cap) // 超出硬上限的旧记录（收藏豁免）
-    for (const l of losers) toRemove.push(l._id)
-    trimmed += losers.length
-  }
-  for (const id of toRemove) {
-    try { await db.collection('news_cache').doc(id).remove() } catch (e) { /* 忽略 */ }
-  }
-  console.log(`[newsPipeline][方案A兜底] cache 每类硬上限淘汰 ${trimmed} 条，cache 总量收敛到 ${all.length - trimmed}`)
-  return { trimmed }
-}
-
-// ====================================================================
-// TTL 物理清理（2026-08-15 补）· 删除 cacheExpire 已过期记录
-// --------------------------------------------------------------------
-// 背景：此前 TTL 物理删除只写在未部署的 refreshNews 里，线上无函数做过期
-//       清理 → 过期记录物理滞留库（虽被 getNewsList 的 cacheExpire>now 过滤
-//       隐藏，仍为垃圾堆积、且数量口径失真）。本函数在每次 publish / 调度 tick
-//       兜底清理，让 cache 真正自清、只保留近 7 天（保留项 30 天）数据。
-// 删除键 = cacheExpire < now；保留项(cacheExpire=retainedAt+30d)自然豁免。
-// ====================================================================
-async function cleanupExpiredCache() {
-  const now = Date.now()
-  let removed = 0
-  try {
-    const res = await db.collection('news_cache').where({ cacheExpire: _.lt(now) }).remove()
-    removed = (res && res.stats && (res.stats.removed || res.stats.removedCount)) || 0
-  } catch (e) {
-    console.warn('[newsPipeline][TTL清理] 过期记录删除异常（放行）:', e.message)
-  }
-  if (removed > 0) console.log(`[newsPipeline][TTL清理] 删除 ${removed} 条过期(cacheExpire<now)记录`)
-  return { removed }
-}
-
-// 质量评分（与 batchInsert 内 rankOf 同口径，module 级共享）：AI 解读 > AI 摘要 > 其它，
-// 叠加 aiOpinion 完整性、qualityScore。用于去重兜底时"每组只留最好那条"。
-function rankOfItem(it) {
-  let r = 0
-  if (it.contentSource === 'ai_interpretation') r = 3
-  else if (it.contentSource === 'ai_summary') r = 2
-  if (it.aiOpinion && String(it.aiOpinion).trim()) r += 0.5
-  r += (Number(it.qualityScore) || 0) / 100
-  return r
-}
-
-// ====================================================================
-// 去重兜底（2026-08-15 补）· 按 dedupKey 合并跨批次竞态副本
-// --------------------------------------------------------------------
-// 背景：batchInsert 已按 dedupKey upsert，但 CloudBase NoSQL 存在读写延迟，
-//       两轮独立 publish 时，后一轮的 existMap 查询可能漏判前一轮刚写入的记录
-//       → 同 dedupKey 被 add 成两份副本（实测 47 条里出现 6 对）。这类重复
-//       getNewsList 会原样返回给前端，用户仍看到重复。
-// 做法：publish / 调度 tick 末端再扫一遍，按 dedupKey 分组，每组只留
-//       rankOfItem 最高（同档留最新 publishTime）那条，其余物理删除。
-// ====================================================================
-async function dedupByDkSweep() {
-  let all = []
-  let skip = 0
-  let rounds = 0
-  while (++rounds <= MAX_PAGE_ROUNDS) { // C-6：迭代上限兜底（最多 MAX_PAGE_ROUNDS 轮）
-    const res = await db.collection('news_cache').limit(1000).skip(skip).get()
-    const list = (res && res.data) || []
-    if (!list.length) break
-    all = all.concat(list)
-    if (list.length < 1000) break
-    skip += 1000
-  }
-  if (!all.length) return { deduped: 0 }
-
-  const byDk = {}
-  for (const it of all) {
-    const dk = it.dedupKey || (it.sourceUrl || it.link || it.url) || ('T:' + (it.title || ''))
-    if (!dk) continue
-    ;(byDk[dk] = byDk[dk] || []).push(it)
-  }
-  const toRemove = []
-  let deduped = 0
-  for (const dk of Object.keys(byDk)) {
-    const items = byDk[dk]
-    if (items.length <= 1) continue
-    // P0-3 修复：收藏条目不参与去重淘汰（保留用户可见副本）
-    const _retained = items.filter(it => it.isRetained === true)
-    const normal = items.filter(it => it.isRetained !== true)
-    if (normal.length <= 1) continue
-    normal.sort((a, b) => {
-      const ra = rankOfItem(a)
-      const rb = rankOfItem(b)
-      if (rb !== ra) return rb - ra
-      const ta = new Date(a.publishTime || 0).getTime() || 0
-      const tb = new Date(b.publishTime || 0).getTime() || 0
+      const ta = parseTs(a.publishTime) || 0
+      const tb = parseTs(b.publishTime) || 0
       return tb - ta
     })
-    for (const loser of normal.slice(1)) toRemove.push(loser._id)
-    deduped += normal.length - 1
+    out.push(...items.slice(0, cap))
+    trimmed += items.length - cap
   }
-  for (const id of toRemove) {
-    try { await db.collection('news_cache').doc(id).remove() } catch (e) { /* 忽略 */ }
+  return { items: out, trimmed }
+}
+
+async function wipeNewsCache() {
+  let removed = 0
+  let rounds = 0
+  while (++rounds <= MAX_PAGE_ROUNDS) {
+    const res = await db.collection('news_cache').limit(100).get()
+    const list = (res && res.data) || []
+    if (!list.length) break
+    await Promise.all(list.map((d) => db.collection('news_cache').doc(d._id).remove().catch(() => {})))
+    removed += list.length
+    if (list.length < 100) break
   }
-  if (deduped > 0) console.log(`[newsPipeline][去重兜底] 按 dedupKey 合并 ${deduped} 条跨批次重复副本`)
-  return { deduped }
+  console.log(`[newsPipeline][publish] 注入前全量清理 news_cache ${removed} 条`)
+  return removed
 }
 
 async function stagePublish(deadline) {
-  let published = 0
-  while (hasBudget(deadline)) {
-    const items = await stagingStore.claimDone(STAGE_BATCH.publish)
-    if (!items.length) break
-    const r = await batchInsert(items)
-    await stagingStore.removeStaged(items.map((i) => i._id))
-    published += r.inserted || 0
+  // 本轮批次替换：staging 还有 pending/processing 时不得动 cache（半批次清空会冲掉刚写入的新数据）。
+  // 全部 done 且无在途 AI 时：先全量物理清理，再按分类上限注入。
+  const inflight = await stagingStore.pendingCount()
+  if (inflight > 0) {
+    console.log(`[newsPipeline][publish] 本轮仍有 ${inflight} 条 pending/processing，暂缓清 cache`)
+    trigger('ai')
+    return { stage: 'publish', deferred: true, reason: 'batch inflight', inflight }
   }
 
-  // 方案 A 兜底：publish 后强制每类硬上限，cache 总量恒定 <=47
-  let capRes = { trimmed: 0 }
+  const collected = await stagingStore.listDone()
+  if (!collected.length) {
+    trigger('run')
+    return { stage: 'publish', skipped: true, reason: 'no qualified data — keep cache' }
+  }
+
+  const capped = applyCategoryCaps(collected)
   try {
-    capRes = await enforceCategoryCapOnCache()
+    await wipeNewsCache()
   } catch (e) {
-    console.warn('[newsPipeline][publish] 每类硬上限兜底异常（放行）:', e.message)
+    console.warn('[newsPipeline][publish] 全量清理失败，暂缓注入以免新旧混写:', e.message)
+    trigger('publish')
+    return { stage: 'publish', deferred: true, reason: 'wipe failed' }
   }
-
-  // TTL 物理清理：删除 cacheExpire 已过期(>7天)记录，只保留近 7 天数据
-  let ttlRes = { removed: 0 }
-  try {
-    ttlRes = await cleanupExpiredCache()
-  } catch (e) {
-    console.warn('[newsPipeline][publish] TTL 清理异常（放行）:', e.message)
-  }
-
-  // 去重兜底：合并跨批次竞态产生的同 dedupKey 副本，避免前端看到重复
-  let dupRes = { deduped: 0 }
-  try {
-    dupRes = await dedupByDkSweep()
-  } catch (e) {
-    console.warn('[newsPipeline][publish] 去重兜底异常（放行）:', e.message)
-  }
-
-  const sd = await stagingStore.doneCount()
-  if (sd > 0) trigger('publish')
-  else trigger('run') // 全部完成 → 调度器回到空闲
-  return { stage: 'publish', published, ...capRes }
+  const r = await batchInsert(capped.items)
+  await stagingStore.removeStaged(collected.map((i) => i._id))
+  trigger('run')
+  console.log(`[newsPipeline][publish] 批次替换完成 inserted=${r.inserted} trimmed=${capped.trimmed} from=${collected.length}`)
+  return { stage: 'publish', published: r.inserted || 0, trimmed: capped.trimmed, from: collected.length }
 }
 
 // ====================================================================
@@ -819,22 +690,17 @@ async function hasDownstreamBacklog() {
 // 调度器 run()：幂等检查全局队列，触发下一个该跑的阶段
 // ====================================================================
 async function run() {
-  // TTL 物理清理：每次调度 tick 兜底，过期记录随时被清，防堆积
-  try { await cleanupExpiredCache() } catch (e) { /* 放行 */ }
-  // 去重兜底：调度 tick 也兜底合并跨批次重复副本
-  try { await dedupByDkSweep() } catch (e) { /* 放行 */ }
-  // 公平调度（2026-08-19）：done「收割」始终最高优先；ai「生产」仅在明显落后时
-  // 覆盖 process「进料」，避免双向饿死：
-  //   - 朱雀根因：news_raw 持续进料 → run() 总走 process，AI 被饿死 → 让 ai 在落后时优先
-  //   - 反向风险：若 ai 无条件优先，而 AI 引擎慢，process 会被饿死 → news_raw 堆积
-  //   故 AI 需超过落后阈值才让 ai 抢跑；轻微积压（<36 条）仍让 process 进料（AI 靠 stageAi 自接力慢慢消化）。
+  // 公平调度：批次替换要求 pending/processing 清空后才 publish。
+  //   done 且无在途 AI → 整批替换 cache
+  //   AI 落后 / 有 pending → 先消化 AI
+  //   有 raw → process
+  const inflight = await stagingStore.pendingCount()
   const sd = await stagingStore.doneCount()
-  if (sd > 0) { trigger('publish'); return { step: 'publish', reason: 'staging 有 done' } }
+  if (sd > 0 && inflight === 0) { trigger('publish'); return { step: 'publish', reason: '本轮 AI 完成，批次替换 cache' } }
   const sp = await stagingStore.claimablePendingCount()
-  if (sp >= AI_BACKLOG_LATE_THRESHOLD) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending(落后)', backlog: sp } }
+  if (sp > 0 || inflight > 0) { trigger('ai'); return { step: 'ai', reason: '先完成当前批次 AI', backlog: sp || inflight } }
   const rawP = await rawStore.pullPending({ limit: 1, cursorSkip: 0 })
   if (rawP.items.length > 0) { trigger('process'); return { step: 'process', reason: 'news_raw 有 pending' } }
-  if (sp > 0) { trigger('ai'); return { step: 'ai', reason: 'staging 有 pending', backlog: sp } }
   return { step: 'idle' }
 }
 

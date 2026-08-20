@@ -149,6 +149,20 @@ async function claimDone(limit) {
   return (res && res.data) || []
 }
 
+async function listDone() {
+  const all = []
+  let skip = 0
+  for (let i = 0; i < 50; i++) {
+    const res = await col().where({ aiStatus: 'done' }).orderBy('createdAt', 'asc').limit(100).skip(skip).get()
+    const list = (res && res.data) || []
+    if (!list.length) break
+    all.push(...list)
+    if (list.length < 100) break
+    skip += list.length
+  }
+  return all
+}
+
 async function removeStaged(ids) {
   for (const id of (ids || [])) {
     try { await col().doc(id).remove() } catch (e) { /* 忽略 */ }
@@ -173,6 +187,7 @@ module.exports = {
   markPendingKeepRetry,
   discardExhausted,
   claimDone,
+  listDone,
   removeStaged,
   pendingCount,
   claimablePendingCount,

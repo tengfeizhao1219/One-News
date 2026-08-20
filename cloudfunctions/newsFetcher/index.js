@@ -90,6 +90,7 @@ function normalizeOfficialItem(vItem, feed) {
     category: mapOfficialCategory(vItem.category || feed.category || 'tech'),
     categoryName: '',
     pubDate: vItem.pubDate || vItem.fetchedAt || new Date().toISOString(),
+    publishTime: vItem.pubDate || vItem.fetchedAt || new Date().toISOString(),
     fetchedAt: new Date().toISOString(),
   }
 }
@@ -122,6 +123,7 @@ function normalizeAggregateItem(raw, sourceType, category) {
     category,
     categoryName: raw.categoryName || '',
     pubDate: String(raw.publishTime || new Date().toISOString()),
+    publishTime: String(raw.publishTime || new Date().toISOString()),
     fetchedAt: new Date().toISOString(),
   }
 }
