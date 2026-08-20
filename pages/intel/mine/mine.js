@@ -6,6 +6,7 @@
 // 数据契约与 T5.2 后端对齐：getIntelProfile / saveIntelProfile。
 const app = getApp()
 const { getIntelProfile, saveIntelProfile } = require('../../../utils/intelRequest')
+const { getFavorites } = require('../../../utils/intelFavorites')
 
 /** 前端本地时区（北京时间）格式化 ISO → YYYY-MM-DD HH:MM */
 function formatLocalTime(iso) {
@@ -32,7 +33,9 @@ Page({
     consentAt: '',
     identitiesSummary: '',
     focusTagsSummary: '',
-    loadingProfile: false
+    loadingProfile: false,
+    // 2026-08-20：我的收藏（纯本地，半年 TTL）
+    favCount: 0
   },
 
   onLoad() {
@@ -73,6 +76,11 @@ Page({
     }
     // 从 onboard 编辑后返回时刷新画像概览
     this._refreshProfile()
+    // 刷新收藏数（详情页可能新增/取消收藏）
+    try {
+      const favs = getFavorites()
+      if (this.data.favCount !== favs.length) this.setData({ favCount: favs.length })
+    } catch (e) { /* 收藏读取失败忽略 */ }
   },
 
   async _refreshProfile() {
@@ -121,6 +129,11 @@ Page({
   // ===== T5.1 接入：编辑画像 =====
   goEditProfile() {
     wx.navigateTo({ url: '/pages/intel/onboard/onboard' })
+  },
+
+  // ===== 2026-08-20：我的收藏 =====
+  goFavorites() {
+    wx.navigateTo({ url: '/pages/intel/favorites/favorites' })
   },
 
   // ===== T5.1 接入：撤销授权 =====
