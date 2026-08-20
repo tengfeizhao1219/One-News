@@ -38,6 +38,8 @@
   margin-left: -8rpx;
   flex-shrink: 0;
   z-index: 20;
+  /* home.svg 是 currentColor 填充：显式指定跟随主题的文字色（亮色黑/暗色白），否则解析异常变白 */
+  color: var(--text-primary);
 }
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
