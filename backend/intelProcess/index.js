@@ -122,9 +122,16 @@ async function processOne(item, profile) {
   // ④.5 产出质量闸门（2026-08-19 治理）：一句话定义必填，为空判定低质产出 → 不进今日关注，只留痕可复盘
   //   空 definition 会让调度侧落入「（定义待补充）」占位文案污染展示，这里源头拦截。
   if (!parsed.definition || !String(parsed.definition).trim()) {
-    await markIngest(itemId, 'rejected', { reason: 'definition-empty', gateLevel: route.level })
-    console.log('[intelProcess] 定义缺失拦截 ' + itemId + ' (' + route.level + ') — parsed.definition 为空，不进 staged')
-    return { itemId, status: 'rejected', relevance: route.level, reason: 'definition-empty' }
+    // 2026-08-20 修复：LLM 输出格式漂移时用摘要/标题兜底，不误拦截合法条目（原直接 rejected）
+    const fb = String(item.summary || item.content || '').trim().replace(/\s+/g, ' ').slice(0, 100)
+    if (fb) {
+      parsed.definition = fb
+      console.log('[intelProcess] definition 兜底 ' + itemId + ' (' + route.level + ') 用摘要')
+    } else {
+      await markIngest(itemId, 'rejected', { reason: 'definition-empty', gateLevel: route.level })
+      console.log('[intelProcess] 定义缺失拦截 ' + itemId + ' (' + route.level + ') — 无摘要可兜底，不进 staged')
+      return { itemId, status: 'rejected', relevance: route.level, reason: 'definition-empty' }
+    }
   }
 
   const staged = {
