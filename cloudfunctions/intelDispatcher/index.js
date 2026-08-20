@@ -453,7 +453,7 @@ async function runIncremental(dayKey) {
 
   const merged = [...priorItemsMapped(prior), ...newItems]
   const todayReleased = await fetchTodayReleasedItems(dayKey)
-  const allRank = rankItems(filterByBatchWindow(mergeByItemId(todayReleased, merged), dayKey, batchFetchedAt))
+  const allRank = rankItems(mergeByItemId(todayReleased, merged))
   const weekTryable = await fetchWeekTryable()
   const sourceHealth = await snapshotSourceHealth(dayKey)
   const health = healthSummary(sourceHealth)
@@ -542,7 +542,7 @@ async function runSummary(dayKey) {
   const prior = await findTodayBrief(dayKey)
   const priorVersion = (prior && prior.version) || 0
   // 汇总结案须纳入：当日已发布 items + 最新窗口尚未纳入 brief 的未发布 items（含 05/11 no-op 情形）
-  const allToday = filterByBatchWindow(mergeByItemId(todayItems, todayNew), dayKey, batchFetchedAt)
+  const allToday = mergeByItemId(todayItems, todayNew)
   const rendered = renderBrief(allToday, weekTryable)
 
   // ④ 空批次守卫：渲染后无有效内容（items 与 tryable 皆空），不发布空 Brief，

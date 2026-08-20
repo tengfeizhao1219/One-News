@@ -15,6 +15,14 @@
 
 ## 教训条目（倒序，最新在上）
 
+### [2026-08-20] 重跑数据处理必须先清 staged（否则 already-staged 跳过）（流程）
+
+- **症状**：重置 ingest 为 pending 后触发 intelProcess，条目不重新生成（staged 内容不变）。
+- **根因**：processOne 开头 `findStaged(itemId)`——条目已在 intel_staged 则直接 `skip: already-staged`，不重跑 SOP。重置 ingest 状态无效。
+- **正确做法**：重跑某批数据 = ① 删对应 intel_staged（where publishDay/title）→ ② 重置 ingest → pending → ③ 触发 intelProcess（会重新生成）→ ④ 触发 intelDispatcher 重组装。
+- **涉及角色**：I / P
+
+
 ### [2026-08-19] 三元表达式空指针：`profile && a ? b : (profile.c ? …)`（代码）
 
 - **症状**：intelDispatcher 发布崩溃 `Cannot read properties of null (reading 'depth')`，今日 18:00 批次卡在 staged 未发布。

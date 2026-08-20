@@ -100,8 +100,8 @@ async function processOne(item, profile) {
   // P1 优化：medium 轻量路径 maxTokens 400（只需简短摘要），high 完整 SOP 900
   const out = await intelChat({
     systemPrompt: system, user,
-    minAccept: 15,
-    maxTokens: route.level === 'medium' ? 400 : 900,
+    minAccept: 60,
+    maxTokens: route.level === 'medium' ? 520 : 900,
     tag: 'intelProcess/sop',
   })
   if (!out || !out.text) {
@@ -122,9 +122,16 @@ async function processOne(item, profile) {
   // ④.5 产出质量闸门（2026-08-19 治理）：一句话定义必填，为空判定低质产出 → 不进今日关注，只留痕可复盘
   //   空 definition 会让调度侧落入「（定义待补充）」占位文案污染展示，这里源头拦截。
   if (!parsed.definition || !String(parsed.definition).trim()) {
-    await markIngest(itemId, 'rejected', { reason: 'definition-empty', gateLevel: route.level })
-    console.log('[intelProcess] 定义缺失拦截 ' + itemId + ' (' + route.level + ') — parsed.definition 为空，不进 staged')
-    return { itemId, status: 'rejected', relevance: route.level, reason: 'definition-empty' }
+    // 2026-08-20 修复：LLM 输出格式漂移时用摘要/标题兜底，不误拦截合法条目（原直接 rejected）
+    const fb = String(item.summary || item.content || '').trim().replace(/\s+/g, ' ').slice(0, 100)
+    if (fb) {
+      parsed.definition = fb
+      console.log('[intelProcess] definition 兜底 ' + itemId + ' (' + route.level + ') 用摘要')
+    } else {
+      await markIngest(itemId, 'rejected', { reason: 'definition-empty', gateLevel: route.level })
+      console.log('[intelProcess] 定义缺失拦截 ' + itemId + ' (' + route.level + ') — 无摘要可兜底，不进 staged')
+      return { itemId, status: 'rejected', relevance: route.level, reason: 'definition-empty' }
+    }
   }
 
   const staged = {
@@ -275,7 +282,7 @@ function buildPrompts(item, profile, level) {
   if (level === 'medium') {
     return {
       system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
-先输出「发生了什么」：用大白话分 1-2 段（不少于 100 字）讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注、背后怎么回事，术语首现用括号一句话解释，让行外人也看得懂。
+先输出「发生了什么」：用大白话分 **2-3 段（150-300 字）** 讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注、背后怎么回事，术语首现用括号一句话解释，让行外人也看得懂。**禁止只写一句话。**
 再输出一句话定义（含能力边界）。
 最后输出「对老赵的意义」：仅当本条与老赵初始化的行业/职位特征**强相关且能具体点出关联点**时才写（1-2 句，落到具体工作/产品/生活场景）；弱相关或无法具体关联时输出「无」，禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}`,
       user: `情报原文：\n${text}`,
