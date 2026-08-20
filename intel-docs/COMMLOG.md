@@ -32,6 +32,15 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-20 · 全系统时间统一北京时间（UTC+8）治理
+
+- **背景**：owner 反馈首页"数据截至 01:36"但新闻已 2 点后——经云端数据库实测，真实抓取是北京时间 09:36，显示成 UTC 01:36（慢 8h）。不是数据问题，是**时区显示 bug**。
+- **根因**：云函数（SCF/CloudBase）运行环境时区为 UTC，`getHours()`/`getFullYear()` 等本地读取拿到 UTC 值；此前"数据截至"在云函数端格式化（慢 8h），而新闻卡片时间在前端本地化（正确），造成观感矛盾。
+- **治理（统一管理）**：新增 `backend/common/beijingTime.js` 为唯一权威北京时间工具（beijingNow/beijingDateKey/beijingHour/formatHHMM），**存储一律 UTC、显示与北京时间判断一律走 beijingTime**；前端（手机本地=北京）无需转换。
+- **修复清单**：① oneNewsChannel dataAsOf 显示（formatHHMM → beijingTime）；② intelFetch 调度档位判断 + 批次日期键（原来错 8h 会误判档位）；③ zhipuSearch 配额日切键（北京 00-08 点配额归错天）；④ newsFetcher/newsPipeline 静默时段（原 Intl 内联实现 → 统一 beijingTime）；⑤ mine 页 consentAt 授权时间（原直接显示 UTC 原始串 → 北京时间格式化）。intelDispatcher 的简报日期归组原本已用北京日期（确认无误）。
+- **部署**：intelBrief / intelFetch / refreshNews / newsFetcher / newsPipeline / intelDispatcher（后三者含建索引 intel_current.itemId，顺带落地"详情页慢"治理）。
+- **下游**：此后新增时间处理一律走 beijingTime（见 LEARNINGS）。
+
 ## 2026-08-19 · intel UI 微调 4 项（owner 反馈）
 
 - **① 返回按钮与胶囊垂直居中对齐**：三页 nav 改为 top=menu-top、height=menu-height、flex 居中（对齐 One News panel-header 做法），不再顶到胶囊下方。

@@ -6,6 +6,13 @@
 
 ---
 
+### [2026-08-20] 云函数时区坑：SCF 环境是 UTC，本地时间读取错 8 小时（时间/时区）
+
+- **症状**：首页"数据截至 01:36"但新闻已 2 点后——数据其实最新（北京 09:36 抓取），纯显示错位。
+- **根因**：云函数（腾讯 SCF/CloudBase）运行环境时区 = **UTC**。`new Date().getHours()`、`getFullYear()`/`getMonth()`/`getDate()` 返回的是 **UTC 值**（比北京时间慢 8h）。在云函数里做时间"显示"或"判断"（调度档位、配额日切、日期归组）都会错 8 小时。
+- **正确做法**：① **存储一律 UTC**（`toISOString()`/epoch ms）；② **显示与北京时间判断一律用 `backend/common/beijingTime.js`**（beijingNow/beijingDateKey/beijingHour/formatHHMM，内部按东八区投影）；③ 前端小程序运行时区=用户手机（中国 +8），本地即北京，前端 `new Date(iso).getHours()` 正确；④ 新写云函数代码一律 `require('./beijingTime')`，禁止裸用 getHours/getFullYear。
+- **涉及角色**：I / P / Q
+
 ## 教训条目（倒序，最新在上）
 
 ### [2026-08-19] 三元表达式空指针：`profile && a ? b : (profile.c ? …)`（代码）
