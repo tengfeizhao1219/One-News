@@ -49,7 +49,9 @@ const MAX_SERIAL_SOURCES = 3   // 无参编排下串行上限，超过则自我�
 // 2026-08-19 复盘：arXiv api 类 10s 实测超时（export.arxiv.org 慢），api 预算放宽到 15s
 // 2026-08-20 修复：rss/news 超时 8s→20s（RSS 源下载+解析 8s 完不成被 Promise.race 掐断 → 全部超时跳过、批次 0 新增；
 //   api/scrape 15s→20s 同理）。云函数 60s 预算内单个 worker 处理 1 源，20s 安全。
-const TIMEOUT_BY_TYPE = { rss: 20000, news: 20000, api: 20000, scrape: 20000, wechat: 5000 }
+// 2026-08-20 二次修复：20s 仍超时（RSS 源站网络响应慢，Duration 21s 全超）——放宽到 40s；
+//   云函数超时同步提到 120s（config.json），保证 40s 抓取 + 处理在预算内。
+const TIMEOUT_BY_TYPE = { rss: 40000, news: 40000, api: 40000, scrape: 40000, wechat: 5000 }
 
 // ───────────────────────────
 // 复用 One News rssFetcher/utils/apiFetch.js（非其业务）：HTTP 抓取 + 重试 + GBK 解码
