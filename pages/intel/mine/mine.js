@@ -27,6 +27,12 @@ Page({
   },
 
   onLoad() {
+
+    // 状态栏文字颜色跟随主题：亮色黑/暗色白（One News 页面 onLoad 同款，intel 页此前缺失导致亮色下状态栏白字）
+    const _app = getApp()
+    if (_app && _app.setNavBarColor) {
+      _app.setNavBarColor((_app.globalData && _app.globalData.effectiveTheme) || 'light')
+    }
     let statusBarHeight = 20
     let menuTop = 44
     let menuHeight = 32

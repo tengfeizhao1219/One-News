@@ -52,11 +52,16 @@ Component({
   lifetimes: {
     attached() {
       this._applyTheme()
+      this._syncNavBarColor()
       this._loadBrief()
     }
   },
 
   observers: {
+    // 面板滑入/滑出时同步状态栏文字颜色（亮色黑/暗色白，跟随主题）
+    'active': function (v) {
+      this._syncNavBarColor()
+    },
     // 父页注入 pageH 后同步到 stageH；仅接受正值，避免初始 0 覆盖组件兜底值
     'pageH': function (v) {
       if (typeof v === 'number' && v > 0) this.setData({ stageH: v })
@@ -81,6 +86,13 @@ Component({
   },
 
   methods: {
+    /** 状态栏文字颜色跟随主题：亮色黑/暗色白（复用 One News app.setNavBarColor） */
+    _syncNavBarColor() {
+      const g = app.globalData || {}
+      if (app && app.setNavBarColor) {
+        app.setNavBarColor(g.effectiveTheme || 'light')
+      }
+    },
     _applyTheme() {
       let statusBarHeight = 20
       let menuHeight = 32
