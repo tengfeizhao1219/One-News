@@ -85,7 +85,8 @@
 
 /* 正文（发生了什么 / 可以怎么做 / 最小行动）*/
 .prose {
-  font-size: calc(26rpx * var(--font-scale));
+  /* 2026-08-20: 各模块正文字号统一为 28rpx（以"试试看"正文为准） */
+  font-size: calc(28rpx * var(--font-scale));
   color: var(--text-body);
   line-height: 1.75;
   margin-bottom: 8rpx;
@@ -107,7 +108,7 @@
   margin-bottom: 8rpx;
 }
 .for-body {
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale));
   color: var(--text-body);
   line-height: 1.7;
 }
@@ -181,3 +182,5 @@
   border-radius: 16rpx;
   padding: 24rpx 28rpx;
 }
+
+.content::-webkit-scrollbar { display: none; width: 0; height: 0; } /* 隐藏滚动条（owner 2026-08-20） */

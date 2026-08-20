@@ -50,7 +50,7 @@
         <text class="block-label">落到你这里</text>
         <view class="for-card" wx:for="{{relateItems}}" wx:key="who">
           <text class="for-k">{{item.who}}</text>
-          <view class="for-body">{{item.txt}}</view>
+          <rich-text class="for-body" nodes="{{item.nodes}}"></rich-text>
         </view>
         <view class="relate-skip" wx:if="{{relateSkip}}">{{relateSkip}}</view>
       </block>

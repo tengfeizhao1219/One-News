@@ -73,25 +73,27 @@ function formatIntelItem(item) {
 
 /** 详情格式化：正文按换行拆段（detail.wxml wx:for 渲染），时间相对化 */
 function formatIntelDetail(d) {
-  const toParas = (text) => String(text || '')
+  // 乱码清洗（2026-08-20）：清除 U+FFFD 替换符（黑菱形块/问号块）——源头抓取内容编码坏，LLM 照抄进输出
+  const clean = (v) => String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+  const toParas = (text) => String(clean(text))
     .split(/\n+/)
     .map(s => s.trim())
     .filter(Boolean)
 
   return {
     id: d.id,
-    title: d.title || '',
-    url: d.url || '',
-    srcName: d.srcName || '',
-    sourceUrl: d.sourceUrl || '',
-    publishedAt: d.publishedAt || '',
+    title: clean(d.title),
+    url: clean(d.url),
+    srcName: clean(d.srcName),
+    sourceUrl: clean(d.sourceUrl),
+    publishedAt: clean(d.publishedAt),
     definitionParas: toParas(d.definition),
-    whatHappened: d.whatHappened || '',          // 2026-08-20 修复：详情页"发生了什么"多段正文（此前未透传导致前端只显示一句话定义）
+    whatHappened: clean(d.whatHappened),          // 2026-08-20 修复：详情页"发生了什么"多段正文（此前未透传导致前端只显示一句话定义）
     whatHappenedParagraphs: toParas(d.whatHappened),
-    sceneMapping: d.sceneMapping || '',
+    sceneMapping: clean(d.sceneMapping),
     sceneTags: Array.isArray(d.sceneTags) ? d.sceneTags : [],
     relevance: d.relevance || '',
-    minAction: d.minAction || '',
+    minAction: clean(d.minAction),
     practiceParas: toParas(d.practice),
     tryable: d.tryable === true,
     researchStatus: (d.research && d.research.status) || 'todo',

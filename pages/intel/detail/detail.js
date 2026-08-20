@@ -5,6 +5,28 @@
 // 融合说明：以 Desktop(intel-officer) 的空态/安全区/真实数据流为骨架，融入 main 的
 //           whatHappened 科普多段叙事 + 可以怎么做 + 最小行动 渲染。
 const app = getApp()
+
+/** 乱码过滤：清除 U+FFFD（替换符，黑菱形块/问号块）与孤立控制字符 */
+function cleanText(v) {
+  return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+}
+
+/** 富文本解析：sceneMapping 按行分段 + **加粗** 标记 → rich-text nodes（落到你这里结构化展示） */
+function parseRichText(txt) {
+  const text = cleanText(txt)
+  const nodes = []
+  const lines = String(text).split('\n')
+  lines.forEach((line, li) => {
+    if (li > 0) nodes.push({ type: 'text', text: '\n' })
+    const parts = line.split(/\*\*(.+?)\*\*/g)
+    parts.forEach((p, i) => {
+      if (!p) return
+      if (i % 2 === 1) nodes.push({ type: 'text', text: p, attrs: { style: 'font-weight:700;color:var(--text-primary)' } })
+      else nodes.push({ type: 'text', text: p })
+    })
+  })
+  return nodes
+}
 const { getIntelDetail } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
 
@@ -109,6 +131,28 @@ Page({
   /** 应用详情数据（全量渲染 + 写入内存缓存，同一 id 重复进入秒开） */
   applyDetail(d) {
     const app = getApp()
+
+/** 乱码过滤：清除 U+FFFD（替换符，黑菱形块/问号块）与孤立控制字符 */
+function cleanText(v) {
+  return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+}
+
+/** 富文本解析：sceneMapping 按行分段 + **加粗** 标记 → rich-text nodes（落到你这里结构化展示） */
+function parseRichText(txt) {
+  const text = cleanText(txt)
+  const nodes = []
+  const lines = String(text).split('\n')
+  lines.forEach((line, li) => {
+    if (li > 0) nodes.push({ type: 'text', text: '\n' })
+    const parts = line.split(/\*\*(.+?)\*\*/g)
+    parts.forEach((p, i) => {
+      if (!p) return
+      if (i % 2 === 1) nodes.push({ type: 'text', text: p, attrs: { style: 'font-weight:700;color:var(--text-primary)' } })
+      else nodes.push({ type: 'text', text: p })
+    })
+  })
+  return nodes
+}
     if (!d || (!d.definitionParas && !d.definition && !d.sceneMapping && !d.title && !d.whatHappened)) {
       console.warn('[intel-detail] 进入空态: d 为空或全字段空')
       this.setData({ loading: false, empty: true })
@@ -117,12 +161,12 @@ Page({
     // definitionParas 是按换行拆好的段；单段 .prose 整文展示时拼回换行
     const definition = d.definition || (Array.isArray(d.definitionParas) ? d.definitionParas.join('\n\n') : '')
     const relateItems = d.sceneMapping
-      ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''), txt: d.sceneMapping }]
+      ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''), txt: d.sceneMapping, nodes: parseRichText(d.sceneMapping) }]
       : []
     this.setData({
-      title: d.title || this.data.title,
-      descText: d.definition || this.data.descText,
-      whatHappenedText: d.whatHappened || d.definition || '',
+      title: cleanText(d.title) || this.data.title,
+      descText: cleanText(d.definition) || this.data.descText,
+      whatHappenedText: cleanText(d.whatHappened) || cleanText(d.definition) || '',
       whatHappenedParagraphs: (() => {
         // 2026-08-20：LLM 未分段时按句号兜底分段（避免"一大段话"）
         const raw = String(d.whatHappened || '').trim()
@@ -143,8 +187,8 @@ Page({
       relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
       hasMore: !!(d.sourceUrl || (d.references && d.references.length)),
       sourceUrl: d.sourceUrl || '',
-      practiceText: d.practice || '',
-      minActionText: d.minAction || '',
+      practiceText: cleanText(d.practice) || '',
+      minActionText: cleanText(d.minAction) || '',
       loading: false,
       empty: false,
     })
