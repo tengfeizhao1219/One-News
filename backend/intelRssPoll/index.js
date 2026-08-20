@@ -576,7 +576,7 @@ async function fetchSource(feed, ctx = {}) {
         .map((d) => ({
           title: _cleanStr(d.title),
           url: d.slug ? `https://www.minimaxi.com/blog/${d.slug}` : 'https://www.minimaxi.com/blog',
-          pubDate: d.publishDate ? new Date(Number(d.publishDate)).toISOString() : '',
+          pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate))) ? new Date(Number(d.publishDate)).toISOString() : '',
           guid: `minimax:${d.newsId || d.slug || d.title}`,
           desc: _cleanStr(d.summary || d.title),
           content: _cleanStr(d.summary || d.title),
