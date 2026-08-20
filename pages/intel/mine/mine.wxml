@@ -7,7 +7,6 @@
     <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
-    <text class="nav-title">我的</text>
   </view>
 
   <scroll-view class="content" scroll-y show-scrollbar="{{false}}">

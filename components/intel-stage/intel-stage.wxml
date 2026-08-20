@@ -16,7 +16,6 @@
     <view class="nav-home" bindtap="reqBack" hover-class="nav-home--hover">
       <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
     </view>
-    <text class="nav-title">AI 情报</text>
   </view>
 
   <!-- 摘要：单行（今日条数靠左 · 数据截至靠右） -->
