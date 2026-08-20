@@ -48,6 +48,9 @@ const { qualify } = require('./common/intelClean')
 const INTEL_INGEST = 'intel_ingest'
 const INTEL_STAGED = 'intel_staged'
 const INTEL_PROFILE = 'intel_profile'
+// ③ 修复：scoreSourceQuality 用到的源集合常量此前未声明（跑第 180/198 行抛 ReferenceError 被外层吞掉，
+//    源质量打分整体失效）。真实集合名见 backend/seedSources.js: INTEL_SOURCE_COLLECTION='intel_sources'。
+const INTEL_SOURCES = 'intel_sources'
 
 // ─── 阈值（对齐 intelRssPoll 分批范式）───
 const BATCH_LIMIT = 10        // 单批处理条目数（防单实例串行超 60s）

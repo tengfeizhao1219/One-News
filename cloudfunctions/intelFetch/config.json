@@ -3,19 +3,19 @@
   "memorySize": 256,
   "triggers": [
     {
-      "name": "intelFetch0500",
+      "name": "intelFetch0510",
       "type": "timer",
       "config": "0 10 5 * * * *"
     },
     {
-      "name": "intelFetch1100",
+      "name": "intelFetch1110",
       "type": "timer",
       "config": "0 10 11 * * * *"
     },
     {
       "name": "intelFetch1800",
       "type": "timer",
-      "config": "0 55 17 * * * *"
+      "config": "0 40 17 * * * *"
     }
   ]
 }

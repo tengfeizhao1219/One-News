@@ -3,19 +3,19 @@
   "memorySize": 256,
   "triggers": [
     {
-      "name": "intelDispatcher0530",
+      "name": "intelDispatcher0540",
       "type": "timer",
-      "config": "0 30 5 * * * *"
+      "config": "0 40 5 * * * *"
     },
     {
-      "name": "intelDispatcher1130",
+      "name": "intelDispatcher1140",
       "type": "timer",
-      "config": "0 30 11 * * * *"
+      "config": "0 40 11 * * * *"
     },
     {
-      "name": "intelDispatcher1830",
+      "name": "intelDispatcher1800",
       "type": "timer",
-      "config": "0 30 18 * * * *"
+      "config": "0 0 18 * * * *"
     }
   ]
 }

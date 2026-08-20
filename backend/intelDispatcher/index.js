@@ -450,6 +450,13 @@ async function runIncremental(dayKey) {
   const health = healthSummary(sourceHealth)
 
   const rendered = renderBrief(allRank, weekTryable)
+  // ④ 空批次守卫：渲染后无有效内容（items 与 tryable 皆空），不发布空 Brief，
+  //    避免用空版顶掉上一版有内容的 Brief（2026-08 复盘 v13→v16 空转即此场景）
+  const hasContent = rendered.items.length > 0 || rendered.tryable.length > 0
+  if (!hasContent) {
+    console.log(`[intelDispatcher] ${dayKey} 增量渲染后无有效内容(items=${rendered.items.length},tryable=${rendered.tryable.length})，本轮不发布、保留上一版`)
+    return { ok: true, published: false, note: 'empty-after-render', dayKey }
+  }
   const version = priorVersion + 1
   // owner 2026-08-19：数据截至展示「批次抓取时间」——从 intel_health 最新 inspection 记录读
   let batchFetchedAt = new Date().toISOString()
@@ -534,6 +541,14 @@ async function runSummary(dayKey) {
   // 汇总结案须纳入：当日已发布 items + 最新窗口尚未纳入 brief 的未发布 items（含 05/11 no-op 情形）
   const allToday = filterByBatchWindow(mergeByItemId(todayItems, todayNew), dayKey, batchFetchedAt)
   const rendered = renderBrief(allToday, weekTryable)
+
+  // ④ 空批次守卫：渲染后无有效内容（items 与 tryable 皆空），不发布空 Brief，
+  //    保留上一版（含 prior 当日 brief）不被空版顶掉
+  const hasContent = rendered.items.length > 0 || rendered.tryable.length > 0
+  if (!hasContent) {
+    console.log(`[intelDispatcher] ${dayKey} 汇总渲染后无有效内容(items=${rendered.items.length},tryable=${rendered.tryable.length})，本轮不发布、保留上一版`)
+    return { ok: true, published: false, note: 'empty-after-render', dayKey }
+  }
 
   // 汇总结案 = 当日终版（version 递增，mode=summary）
   const version = priorVersion + 1

@@ -3,19 +3,19 @@
   "memorySize": 256,
   "triggers": [
     {
-      "name": "intelProcess0500",
+      "name": "intelProcess0525",
       "type": "timer",
-      "config": "0 20 5 * * * *"
+      "config": "0 25 5 * * * *"
     },
     {
-      "name": "intelProcess1100",
+      "name": "intelProcess1125",
       "type": "timer",
-      "config": "0 20 11 * * * *"
+      "config": "0 25 11 * * * *"
     },
     {
       "name": "intelProcess1800",
       "type": "timer",
-      "config": "0 10 18 * * * *"
+      "config": "0 50 17 * * * *"
     }
   ]
 }
