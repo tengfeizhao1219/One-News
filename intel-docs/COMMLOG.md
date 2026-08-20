@@ -37,6 +37,14 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-20 · 历史数据滚动清理策略落地（owner 拍板）
+
+- **策略**：intel_ingest（fetchedAt）/ intel_staged（processedAt）/ intel_current_archive（archivedAt）三个集合**统一保留近 7 天，滚动物理清除**（按 _id remove 物理删除，非软删）。
+- **实现**：新增云函数 `intelCleanup`——每天 03:00 定时触发（触发器 intelCleanupDaily，7 段 cron `0 0 3 * * * *`），分页取「时间字段 < 7天前」的文档（每批 100，循环至清空）逐条物理删除，幂等可重复执行。
+- **边界**：intel_current（当前 brief）不在清理范围（同一天覆盖更新 + 旧版归档）；intel_current_archive 也在清理范围（保留 7 天历史归档）。
+- **验证**：函数已创建（Active）、触发器已建、invoke 执行成功；当前模块数据均在 7 天内（8-17 启动），无过期数据可删（removed=0 属正常）。
+- **部署**：cloudbaserc.json 已注册；intelCleanup 已创建+触发器已配。
+
 ## 2026-08-20 · 「发生了什么」内容少 + 英文标题翻译（owner 反馈）
 
 - **问题①「发生了什么」内容少**：根因=`parseSopOut.secBlock` 把段落分隔 `\n{2,}` 压平成单 `\n`，且部分 LLM 输出本就单行——数据库 25 条全部 whatHappened 无换行（1 段），前端按段渲染只有 1 段，观感"非常少"。修复：① secBlock 改为 `\n{3,}→\n\n` 保留段落分隔；② 前端 detail.js 新增 `smartSplitParagraphs` 智能分段兜底（无换行长文按句号断句，每 2 句一段），历史数据立即多段展示。

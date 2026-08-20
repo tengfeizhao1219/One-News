@@ -198,6 +198,22 @@
       "memorySize": 512,
       "installDependency": true,
       "triggers": []
+    },
+    {
+      "name": "intelCleanup",
+      "path": "intelCleanup",
+      "runtime": "Nodejs16.13",
+      "handler": "index.main",
+      "timeout": 60,
+      "memorySize": 256,
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "intelCleanupDaily",
+          "type": "timer",
+          "config": "0 0 3 * * * *"
+        }
+      ]
     }
   ]
 }
