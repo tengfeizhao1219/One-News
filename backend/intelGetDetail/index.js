@@ -30,6 +30,8 @@ function toDetail(doc) {
     definition: sop.definition || '',
     // 发生了什么（科普向详细叙事，多段；无则前端回退 definition）
     whatHappened: sop.whatHappened || '',
+    // 2026-08-20 v5：结构化块（后端解析产物 [{type,text}]；旧数据无则前端兜底解析）
+    whatHappenedBlocks: Array.isArray(sop.whatHappenedBlocks) ? sop.whatHappenedBlocks : [],
     // 落到你这里（场景映射散文 + 命中场景标签）
     sceneMapping: sop.sceneMapping || '',
     sceneTags: Array.isArray(doc.sceneTags) ? doc.sceneTags : [],

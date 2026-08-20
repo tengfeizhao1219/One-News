@@ -13,6 +13,12 @@
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
       <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
     </view>
+    <!-- 收藏（2026-08-20：纯本地，对齐 One News ♡/♥ 双态；空态/加载态隐藏） -->
+    <view wx:if="{{!loading && !empty}}" class="nav-fav {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite" hover-class="nav-fav--hover">
+      <image wx:if="{{!isFavorited}}" class="nav-fav-icon-img nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+      <image wx:if="{{!isFavorited}}" class="nav-fav-icon-img nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
+      <image wx:if="{{isFavorited}}" class="nav-fav-icon-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
+    </view>
   </view>
 
   <!-- 2026-08-20: scroll-view 改普通 view 滚动（隐藏滚动条最可靠；show-scrollbar=false 在部分基础库仍显示） -->
@@ -37,14 +43,18 @@
         <text wx:if="{{pubTime}}">{{pubTime}}</text>
       </view>
 
-      <!-- 发生了什么（2026-08-20 v5：结构化块——正文自然段落 + 大白话/AI预测/定义居中分隔标签） -->
+      <!-- 发生了什么（2026-08-20 v5.1：结构化块——正文自然段落 + 大白话/AI预测/定义整段浅灰底；AI 预测标识放段尾） -->
       <text class="block-label">发生了什么</text>
       <block wx:if="{{whatHappenedBlocks.length}}">
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
-          <!-- 分隔标签（大白话 / AI 预测 / 定义） -->
-          <view wx:if="{{blk.type !== 'text'}}" class="wh-sep wh-sep-{{blk.type}}">{{blk.type === 'plain' ? '大白话' : (blk.type === 'predict' ? 'AI 预测' : '定义')}}</view>
-          <!-- 正文段落 / 解读正文 -->
-          <view class="prose {{blk.type === 'predict' ? 'prose-predict' : ''}}" wx:if="{{blk.text}}">{{blk.text}}</view>
+          <!-- 正文段落（默认） -->
+          <view wx:if="{{blk.type === 'text'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
+          <!-- 解读/预测/定义：整段浅灰底圆角块 -->
+          <view wx:elif="{{blk.text}}" class="wh-panel wh-panel-{{blk.type}}">
+            <text class="wh-panel-body">{{blk.text}}</text>
+            <!-- AI 预测标识：段尾小字（不明显） -->
+            <text wx:if="{{blk.type === 'predict'}}" class="wh-panel-tag">AI 预测</text>
+          </view>
         </block>
       </block>
       <block wx:elif="{{whatHappenedParagraphs.length}}">

@@ -43,10 +43,37 @@
 }
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
+
+/* 收藏按钮（2026-08-20：导航栏右侧，♡/♥ 双态；favorite-fill 固定红心不走主题色） */
+.nav-fav {
+  margin-left: auto;
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  z-index: 20;
+  color: var(--text-primary);
+}
+.nav-fav--hover { background-color: var(--bg-subtle); }
+.nav-fav-icon-img { width: 44rpx; height: 44rpx; }
+.nav-fav.heart-anim .nav-fav-icon-img {
+  animation: heartBeat 0.3s ease-out;
+}
+
 .nav-dark { display: none; }
 .page--dark .nav-light { display: none; }
 .page--dark .nav-dark { display: block; }
 .nav-title { font-size: calc(32rpx * var(--font-scale)); font-weight: 600; color: var(--text-primary); }
+
+@keyframes heartBeat {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.25); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
 
 .content {
   background-color: #F5F3F0;
@@ -93,30 +120,30 @@
 }
 .prose-2 { margin-top: 4rpx; }
 
-/* 2026-08-20 v5：发生了什么结构化——居中分隔标签（方案 A）*/
-.wh-sep {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  margin: 28rpx 0 12rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  font-weight: 600;
+/* 2026-08-20 v5.1：发生了什么结构化——整段浅灰底圆角块（方案 B）
+   大白话/定义：浅灰底无标签；AI 预测：浅灰底 + 段尾小字标识 */
+.wh-panel {
+  background: var(--bg-page);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 16rpx 0;
+}
+.wh-panel-body {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.75;
+  display: block;
+}
+/* AI 预测标识：段尾小字，弱存在感 */
+.wh-panel-tag {
+  display: block;
+  margin-top: 10rpx;
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
+  text-align: right;
 }
-.wh-sep::before,
-.wh-sep::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--divider);
-}
-.wh-sep-plain { color: var(--primary); }
-.wh-sep-predict { color: var(--text-tertiary); }
-.wh-sep-def { color: var(--warn, #d97706); }
-.prose-predict {
-  color: var(--text-secondary);
-  font-size: calc(26rpx * var(--font-scale));
-}
+/* 预测正文整体次级色 */
+.wh-panel-predict .wh-panel-body { color: var(--text-secondary); }
 
 /* 落到你这里：浅蓝底卡 */
 .for-card {

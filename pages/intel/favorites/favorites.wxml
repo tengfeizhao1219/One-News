@@ -1,0 +1,49 @@
+<!-- INTEL-MODULE: AI 情报官 · 我的收藏（2026-08-20：纯本地列表，半年 TTL 滚动清除） -->
+<view class="page {{themeClass}} intel-favorites" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+  <!-- 状态栏背景层 -->
+  <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
+
+  <!-- 导航：‹ 返回 / 标题 -->
+  <view class="nav">
+    <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
+      <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
+    </view>
+    <text class="nav-title">我的收藏</text>
+  </view>
+
+  <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
+    <!-- 加载态 -->
+    <block wx:if="{{loading}}">
+      <view class="state-hint"><text class="state-t">正在读取收藏…</text></view>
+    </block>
+
+    <!-- 空态 -->
+    <block wx:elif="{{empty}}">
+      <view class="state-hint">
+        <text class="state-t">还没有收藏</text>
+        <text class="state-s">在情报详情页点 ♡ 收藏，重要情报随手留住</text>
+      </view>
+    </block>
+
+    <!-- 收藏卡片 -->
+    <block wx:else>
+      <view class="card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
+        <view class="card-main">
+          <text class="card-title">{{item.title}}</text>
+          <view class="card-meta" wx:if="{{item.src || item.time}}">
+            <text class="meta-src" wx:if="{{item.src}}">{{item.src}}</text>
+            <text class="meta-time" wx:if="{{item.time}}">{{item.time}}</text>
+          </view>
+          <text class="card-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
+        </view>
+        <!-- 红心取消收藏 -->
+        <view class="card-fav" catchtap="onUnfavorite" data-id="{{item.id}}" hover-class="card-fav--hover">
+          <image class="card-fav-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
+        </view>
+      </view>
+    </block>
+
+    <view class="foot-note">收藏保存在本机 · 半年内自动保留</view>
+  </scroll-view>
+</view>

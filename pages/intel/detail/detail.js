@@ -29,6 +29,7 @@ function parseSceneMapping(txt) {
 }
 const { getIntelDetail } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
+const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 
 Page({
   data: {
@@ -58,6 +59,10 @@ Page({
     safeBottom: 0,         // 底部安全区（px）：JS 注入 --safe-bottom，规避 env() 真机失效
     loading: true,         // 加载态
     empty: false,          // 空态
+    // 收藏（2026-08-20：对齐 One News B-04 纯本地，TTL 半年）
+    itemId: '',
+    isFavorited: false,
+    heartAnim: false,
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -106,7 +111,9 @@ Page({
       _metaScaleValue: (app.globalData && typeof app.globalData._metaScaleValue === 'number') ? app.globalData._metaScaleValue : 1,
       title: (card && card.title) || '',
       descText: (card && card.desc) || '',
+      itemId: id,
     })
+    if (id) this._checkFavorite(id)
 
     // 详情加载优化（2026-08-19）：不等待全量——有 card 基础数据立即渲染（秒开），全量异步补充；缓存命中直接展示
     if (id) {
@@ -169,8 +176,15 @@ function parseSceneMapping(txt) {
       descText: cleanText(d.definition) || this.data.descText,
       whatHappenedText: cleanText(d.whatHappened) || cleanText(d.definition) || '',
       whatHappenedBlocks: (() => {
-        // 2026-08-20 v5：结构化解析——正文自然段落（按换行分段）+ 大白话/AI 预测/定义用分隔标签区分
-        // 标记识别：**大白话** / **（AI 预测）** / **AI 预测** / **定义** / **一句话定义** 等（冒号可省）
+        // 2026-08-20 v5：优先用后端结构化结果（intelProcess 已解析 whatHappenedBlocks 存 sop）；
+        // 旧数据（后端未解析）才走本地兜底解析
+        if (Array.isArray(d.whatHappenedBlocks) && d.whatHappenedBlocks.length) {
+          return d.whatHappenedBlocks.map(b => ({
+            type: (b.type === 'plain' || b.type === 'predict' || b.type === 'def') ? b.type : 'text',
+            text: String(b.text || '').replace(/\*\*/g, '').trim(),
+          })).filter(b => b.text)
+        }
+        // 本地兜底解析（对齐后端 structureWhatHappened 逻辑）——2026-08-20 v5
         const raw = String(d.whatHappened || '').trim()
         if (!raw) return []
         // ① 先按标记切分：separator 捕获标记词，内容块在奇偶位
