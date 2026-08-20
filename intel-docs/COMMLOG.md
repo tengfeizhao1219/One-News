@@ -178,3 +178,14 @@
 - **④ 前端 brief 缓存**：utils/intelRequest.js getIntelBrief 加 5 分钟内存缓存 `_briefCache`（仅当期 date 缺省时命中；下拉刷新不破缓存，TTL 过期自动失效），省重复 Gateway 调用。首次注入破坏 .then 链（SyntaxError），重构为 const data 后写缓存再 return 修复。
 - 产物：intelRssPoll 已重部署（含 seedSources 优化）；前端需微信开发者工具重编译。
 - 下游：下一轮定时器（05:30/11:30/18:00）只抓 11 个启用源；海外源内容由国内/官网源 + 保留海外源覆盖。
+## 2026-08-20 · 情报收藏功能（owner 拍板：对齐 One News 纯本地逻辑，半年滚动清除）
+
+- **需求**：用户在情报详情页对感兴趣文章加入收藏夹；采用 One News 一样的逻辑——收藏到手机本地缓存（wx Storage），按半年区间滚动清除。
+- **落地**：
+  ① `utils/intelFavorites.js`（新增）：localCache 单例存储（key=intelFavorites，与 One News 的 favorites 隔离），数组 + 条目级 expireAt=半年（180 天），读取时惰性剔除过期并回写（滚动清除），容量上限 200（对齐 One News），API：getFavorites/isFavorited/toggleFavorite/removeFavorite。
+  ② 详情页：导航栏右侧收藏按钮（♡/♥ 双态，favorite-fill 固定红心；空态/加载态隐藏），heartAnim 心跳动画复用 One News keyframes。
+  ③ mine 页：新增「我的收藏」入口卡片（收藏数 + 半年保留说明）→ 收藏列表页。
+  ④ `pages/intel/favorites/`（新增）：收藏列表（标题/来源/时间/摘要），点击进详情（复用 intelDetailCard 透传），红心取消收藏，空态引导。
+  ⑤ app.json 注册新页面。
+- **验证**：node 冒烟测试 7 项全过（空态/收藏/取消/倒序/半年过期滚动清除+回写/移除/容量满）。
+- **注意**：并行会话 v5.1 提交（6efb6c2）把 detail 三件套 + intelFavorites.js + favorites 页 js/json/wxml 一并带入；本提交（8991706）补齐 mine 入口 + 列表页 wxss + app.json。前端需微信开发者工具重编译。

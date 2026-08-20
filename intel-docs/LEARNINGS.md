@@ -131,3 +131,9 @@
 - **数据审计发现**：ingest 133 条中 112 条来自已删除/retired/disabled 源（infoq_cn 13、qbitai 22、hacker_news 30、techcrunch 12、theverge 4、arxiv 30、the_rundown 1）；staged 18 条全部为 8 个 active 源最新抓取。
 - **清理动作**：① 归档 v20 备份；② 删除 112+3 条停用源 ingest 残留；③ dispatcher 重跑生成干净 v21/v22（11 条，仅 active 源，SOURCE_CAP 生效）。
 - **经验**：手动合并/应急操作必须重新走 dispatcher 的 renderBrief（freshness + SOURCE_CAP），不能绕过；停用源的 ingest 残留应定期清理（可加定时任务）。
+
+## 2026-08-20 情报收藏（纯本地）
+- **收藏纯本地 vs 云端的取舍**：One News 在 DG-01 已定「历史/收藏纯本地化」——wx.Storage 无后端成本、无隐私争议、天然离线。情报收藏沿用此约定，不新增云函数。
+- **半年滚动清除的实现**：localCache 条目级 TTL（expireAt=addedAt+180 天），getFavorites 每次读取过滤过期并回写（惰性滚动清除），不依赖定时器。
+- **与 One News 收藏隔离**：key 用 intelFavorites（lc: 前缀），避免与 One News favorites（newsId 结构）混存导致详情页错配。
+- **并行会话提交风险**：编辑中途另一会话 git add -A 提交会把未完成文件卷入（本次 6efb6c2 带入收藏 detail 部分）。应对：提交前 git status 甄别自己的文件集合，只 add 自己的，并行会话改动留工作树。
