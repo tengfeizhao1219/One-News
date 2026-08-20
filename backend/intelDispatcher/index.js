@@ -301,15 +301,19 @@ function renderItemCard(d) {
   const sceneMapping = s.sceneMapping ? String(s.sceneMapping).trim() : ''
   const practice = s.practice ? String(s.practice).trim() : ''
   const minAction = s.minAction ? String(s.minAction).trim() : ''
+  const wh = s.whatHappened ? String(s.whatHappened).trim() : ''
+  // 2026-08-21 优化：card 加「发生了什么」精简段（取前 2 段，每段截 160 字），首页即可见详情解读
+  const whShort = wh ? wh.split(/\n+/).filter(Boolean).slice(0, 2).map((p) => p.trim().slice(0, 160)).join(' ') : ''
   const pinned = Boolean(d.contract) ? '\n> ⭐ 合同 / 接口变更 · 需重点关注' : ''
-  return (
-`### ${d.title || '（无标题）'}${pinned}
-- **溯源**：${src.name || d.sourceId || '未知来源'} · ${src.publishedAt || d.publishedAt || ''} · ${linkText}
-- **一句话**：${definition}
-- **对老赵的意义**：${sceneMapping}
-- **可以怎么做**：${practice}
-- **最小行动**：${minAction}`
-  )
+  // 2026-08-21 优化：空字段不渲染空标题行（medium 轻量路径 practice/minAction 为空时不再显示空项）
+  const lines = [`### ${d.title || '（无标题）'}${pinned}`]
+  lines.push(`- **溯源**：${src.name || d.sourceId || '未知来源'} · ${src.publishedAt || d.publishedAt || ''} · ${linkText}`)
+  if (whShort) lines.push(`- **发生了什么**：${whShort}`)
+  if (definition) lines.push(`- **一句话**：${definition}`)
+  if (sceneMapping) lines.push(`- **对老赵的意义**：${sceneMapping}`)
+  if (practice) lines.push(`- **可以怎么做**：${practice}`)
+  if (minAction) lines.push(`- **最小行动**：${minAction}`)
+  return lines.join('\n')
 }
 
 /** 2026-08-19 复盘：brief 只收录近 7 天内容——官方源（DeepSeek 等）历史全量不进今日关注 */

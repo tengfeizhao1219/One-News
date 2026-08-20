@@ -140,6 +140,17 @@ async function processOne(item, profile) {
     }
   }
 
+  // ④.6 中文化兜底（2026-08-21 优化）：一句话定义/标题为英文时补一次轻量翻译
+  //   glm-4-flash 对英文源常直接输出英文句子——prompt 已强制中文，这里兜底存量/漏网
+  if (isMostlyEnglish(parsed.definition)) {
+    const tz = await translateZh(parsed.definition)
+    if (tz) { parsed.definition = tz; console.log('[intelProcess] definition 英文→中文兜底 ' + itemId) }
+  }
+  if (!parsed.titleCn && isMostlyEnglish(String(item.title || ''))) {
+    const tz = await translateZh(String(item.title))
+    if (tz) { parsed.titleCn = tz; console.log('[intelProcess] 标题英文→中文兜底 ' + itemId) }
+  }
+
   const staged = {
     itemId,
     sourceId: String(item.sourceId || ''),
@@ -153,6 +164,7 @@ async function processOne(item, profile) {
       source: { name: String(item.sourceName || ''), layer: String(item.layer || ''), publishedAt: String(item.publishedAt || ''), url: String(item.url || ''), titleEn: String(item.title || '') },
       definition: parsed.definition,
       whatHappened: parsed.whatHappened,
+      whatHappenedBlocks: structureWhatHappened(parsed.whatHappened), // 2026-08-20 v5：结构化块（后端解析，前端不依赖文本分节）
       sceneMapping: parsed.sceneMapping,
       practice: parsed.practice,
       minAction: parsed.minAction,
@@ -290,7 +302,7 @@ function buildPrompts(item, profile, level) {
     return {
       system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
 先输出「发生了什么」（**段落间用空行分隔**，总 180-320 字）：①第一段用**专业语气**解释核心事实；②第二段用**大白话**再说一遍"到底是个什么、有什么影响"；③（可选）第三段开头标注「（AI 预测）」给一句未来影响的推测。**语言风格贴合内容**（技术→冷静专业/社区→轻松），句式多样化，避免八股腔。**禁止只写一句话、禁止写成一整段不换行。**
-再输出一句话定义（含能力边界）。
+再输出一句话定义（含能力边界）。**必须用自然通顺的中文**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格。
 最后输出「对老赵的意义」：**先判断关联性**——仅当与老赵初始化的行业/职位/关注议题**强相关且能具体点出关联点**时才写，结构清晰（第一行点明相关性，后续每行一个使用场景，关键处加粗）；弱相关输出「无」（前端隐藏），禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}
 最后单独一行输出 JSON 供程序解析：{"titleCn":"中文标题（把本条标题翻译成自然通顺的中文）","sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`,
       user: `情报原文：\n${String(text || '').replace(/\uFFFD/g, '')}`,
@@ -306,7 +318,7 @@ function buildPrompts(item, profile, level) {
    - 第三段·未来影响（AI 预测）：站在 AI 从业者视角预测这条进展未来可能的影响（对行业/产品/普通用户），段落开头必须明显标注「（AI 预测）」字样，用推测性措辞（"可能会…""有望…"），不要写成既成事实。
    - **语言风格**：避免千篇一律的八股腔，根据内容性质选择贴合的语气，句式多样化（不要每段都以"该模型/这家公司/本文"开头），脱离模板感。
 1. 信息溯源：来源、发布时间、原文链接；来源存疑标「待验证」
-2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）
+2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）。**必须用自然通顺的中文输出**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格
 3. 场景映射（落到你这里）：**先判断关联性**——仅当本条与老赵初始化的行业/职位/关注议题**强相关且能具体点出关联点**时才写；弱相关或无法具体关联时输出「无」（前端自动隐藏该区块），禁止强行关联凑数。**结构清晰**：第一行「相关性」用一句话点明关联点（关键概念用 **加粗** 强调）；接下来每行一条「使用场景/可以做的事」，用换行分隔，关键动作加粗。不要几句话揉成一团、不要无换行。
 4. 可落地实操案例：工具 + 步骤 + 收益 + 坑点，老赵明天就能用
 5. 想试试（**轻松引导语气，owner 2026-08-19 拍板**）：仅当本条存在一个老赵**现在就能上手尝试**的具体功能/产品/新特性（如新发布模型可直接调用、新工具可注册体验、新功能可在产品里打开）时，给 1 条可落地案例，用**朋友推荐般的轻松引导口吻**（如「想体验的话，可以试试…」「上手很顺手」「会更省事」），具体到「打开哪里 → 做什么 → 得到什么」；**禁止命令式措辞**——不得出现「本周X前」「必须」「请尽快」等催促/命令语气；若本条是行业动态/收购/融资/观点类新闻，或无明显可试点 → 输出「无」，禁止硬造尝试建议。
@@ -341,6 +353,27 @@ function describeIdentities(profile) {
  * 解析 LLM 输出为结构化 ProcessedItem 字段。
  * 用最稳的正则切出五步字段；JSON 内嵌行提取 sceneTags/tryable。
  */
+/** 判断文本是否主要为英文（无中文字符且含英文单词 → 需翻译） */
+function isMostlyEnglish(s) {
+  const t = String(s || '').trim()
+  if (!t) return false
+  if (/[\u4e00-\u9fa5]/.test(t)) return false
+  return /[A-Za-z]{4,}/.test(t)
+}
+
+/** 轻量翻译（中文化兜底，2026-08-21）：失败返回 null 保留原文 */
+async function translateZh(text) {
+  if (!text) return null
+  const out = await intelChat({
+    systemPrompt: '你是翻译助手。把用户给的英文翻译成自然通顺的中文：专有术语/产品名保留原文，首次出现时用括号注中文；不要加任何解释或引号，只输出译文。',
+    user: String(text),
+    minAccept: 30,
+    maxTokens: 200,
+    tag: 'intelProcess/translate',
+  })
+  return (out && out.text && String(out.text).trim()) ? String(out.text).trim() : null
+}
+
 function parseSopOut(text, item, profile, route) {
   const t = String(text || '')
   let parsedTitleCn = ''
@@ -374,7 +407,11 @@ function parseSopOut(text, item, profile, route) {
 
   // 提取 JSON 内嵌行（规则：单独一行以 { 开头、含 "tryable" 或 "sceneTags"）
   let tryable = false
-  const jsonMatch = t.match(/^\s*\{[\s\S]*?\}\s*$/m)
+  const jsonMatch = t.match(/^\s*\{[\s\S]*?\}\s*$/m) || (() => {
+    // 容错（2026-08-21）：LLM 常把 JSON 混在正文里，搜全文含 titleCn 的最后一个 JSON 块
+    const all = [...t.matchAll(/\{[\s\S]*?"titleCn"[\s\S]*?\}/g)]
+    return all.length ? all[all.length - 1] : null
+  })()
   if (jsonMatch) {
     try {
       const j = JSON.parse(jsonMatch[0])
@@ -426,6 +463,64 @@ function parseSopOut(text, item, profile, route) {
     titleCn: parsedTitleCn, // 2026-08-20 修复：processOne 引用跨函数未定义变量 parsedTitleCn → 作为返回字段
     translated: true,
   }
+}
+
+/**
+ * 2026-08-20 v5：whatHappened 结构化解析（后端侧，前端不依赖文本解析）。
+ * 把「发生了什么」拆成结构化块：正文自然段落 + 大白话/AI 预测/定义（用标记段识别），
+ * 避免 LLM 章节识别漂移导致前端拿不到分节。返回 [{ type:'text'|'plain'|'predict'|'def', text }]。
+ */
+function structureWhatHappened(raw) {
+  raw = String(raw || '').trim()
+  if (!raw) return []
+  // 标记段识别（**大白话** / **（AI 预测）** / **AI 预测** / **定义** / **一句话定义**，冒号可省）
+  const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*)*\s*\*\*?\s*[:：]?\s*/
+  const parts = raw.split(SEP_RE)
+  const blocks = []
+  const pushText = (txt) => {
+    const t = String(txt || '').replace(/\*\*/g, '').trim()
+    if (!t) return
+    blocks.push({ type: 'text', text: t })
+  }
+  // 开头正文：按换行拆自然段落（≥2 段才拆，单段直接保留）
+  const head = String(parts[0] || '').trim()
+  if (head) {
+    const paras = head.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
+    if (paras.length >= 2) paras.forEach(p => pushText(p))
+    else pushText(head)
+  }
+  // 标记块：先截断后续标记（**对老赵的意义** 等），再清星号
+  let idx = 1
+  while (idx < parts.length) {
+    const label = String(parts[idx] || '').trim()
+    let content = String(parts[idx + 1] || '').trim()
+    const cut = content.search(/\*{1,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么)\s*\*{0,2}\s*[:：]?/)
+    if (cut >= 0) content = content.slice(0, cut).trim()
+    content = content.replace(/\*\*/g, '').trim()
+    if (content) {
+      let type = 'text'
+      if (/大白话|用大白话说/.test(label)) type = 'plain'
+      else if (/AI\s*预测|预测/.test(label)) type = 'predict'
+      else if (/定义/.test(label)) type = 'def'
+      blocks.push({ type, text: content })
+    }
+    idx += 2
+  }
+  // 无任何标记 → 退回纯段落（按换行/句号兜底分段）
+  if (blocks.length <= 1) {
+    const byNewline = raw.split(/\n+\s*/).map(x => x.trim().replace(/\*\*/g, '')).filter(Boolean)
+    if (byNewline.length >= 2) return byNewline.map(t => ({ type: 'text', text: t }))
+    const parts2 = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
+    const merged = []
+    let cur = ''
+    for (const p of parts2) {
+      cur = (cur ? cur + ' ' : '') + p
+      if (cur.length >= 40) { merged.push(cur); cur = '' }
+    }
+    if (cur) merged.push(cur)
+    return (merged.length >= 2 ? merged : [raw]).map(t => ({ type: 'text', text: t }))
+  }
+  return blocks
 }
 
 /**
