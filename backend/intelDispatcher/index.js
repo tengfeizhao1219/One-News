@@ -324,7 +324,18 @@ function passFreshness(d) {
 /** 组装最终 Brief 的 items[]（今日关注）+ tryable[]（本周可试用） */
 function renderBrief(todayItems, weekTryable) {
   // 今日关注 = 今日全部高/中相关 items（05 初版+11 追加+18 汇总），合同置顶、按场景排序
-  const rank = rankItems(todayItems.filter(passFreshness))
+  // 2026-08-20：arxiv 论文限流（每源最多 5 条，防论文淹没新闻；其余源不限）
+  const SOURCE_CAP = { arxiv_ai: 5 }
+  const capped = []
+  const seen = {}
+  for (const d of todayItems.filter(passFreshness)) {
+    const src = d.sourceId || '?'
+    const cap = SOURCE_CAP[src]
+    if (cap && (seen[src] || 0) >= cap) continue
+    seen[src] = (seen[src] || 0) + 1
+    capped.push(d)
+  }
+  const rank = rankItems(capped)
   const items = rank.map((d, i) => ({
     rank: i + 1,
     itemId: d.itemId,
