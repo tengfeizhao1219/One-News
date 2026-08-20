@@ -366,7 +366,14 @@ function parseSopOut(text, item, profile, route) {
     tryable = /tryable"?\s*:\s*true/i.test(t)
   }
 
-  const sec = (re) => { const m = t.match(new RegExp(re + '[:：](.{0,600})', 'i')); return m ? m[1].replace(/\n+/g, ' ').trim() : '' }
+  // 2026-08-20 修复：LLM（智谱 glm-4-flash）medium 路径常输出「一句话定义：\n正文」——旧正则 .{0,600}
+  //   不跨行，冒号后紧跟 \n → 捕获空串 → definition-empty 误杀全部 medium 条目。改为跨行捕获，
+  //   在「空行 或 下一个章节标签行（对老赵的意义/可以怎么做/想试试/最小行动/场景映射/溯源等）」处截断，
+  //   避免吞掉后续章节内容（单行无空行场景同样安全）。
+  const sec = (re) => {
+    const m = t.match(new RegExp(re + '[:：]([\\s\\S]{0,600}?)(?=\\n\\s*\\n|(?:\\n|^)\\s*(?:[-*]?\\s*\\*{0,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么|一句话|定义)\\*{0,2})\\s*[:：]|$)', 'i'))
+    return m ? m[1].replace(/\n+/g, ' ').trim() : ''
+  }
   // 块级提取：取 startRe 匹配后的多段正文，直到遇到 endRe 为止（用于「发生了什么」多段科普叙事）
   const secBlock = (startRe, endRe) => {
     const t2 = String(t)
@@ -387,7 +394,7 @@ function parseSopOut(text, item, profile, route) {
     ''
   return {
     whatHappened,
-    definition: sec('-?\\*\\*一句话\\*\\*') || sec('一句话') || sec('2\\)?[．.、]?\\s*一句话') || sec('定义'),
+    definition: sec('-?\\*\\*一句话定义\\*\\*') || sec('一句话定义') || sec('-?\\*\\*一句话\\*\\*') || sec('一句话') || sec('2\\)?[．.、]?\\s*一句话') || sec('定义'),
     // 「落到你这里」/「想试试」：仅强相关才产出；「无」归一为空（前端按空值隐藏区块，不强行关联）
     sceneMapping: normNone(sec('-?\\*\\*对老赵的意义\\*\\*') || sec('对老赵的意义') || sec('3\\)?[．.、]?\\s*场景映射')),
     practice: sec('-?\\*\\*可以怎么做\\*\\*') || sec('可以怎么做') || sec('4\\)?[．.、]?\\s*可落地实操'),

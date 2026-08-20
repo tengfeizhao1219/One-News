@@ -442,6 +442,15 @@ async function runIncremental(dayKey) {
   const priorVersion = (prior && prior.version) || 0
 
   // 新增 items 组装进当日 brief（今日关注 = 老 items + 新 items 重排）
+  // 2026-08-20 修复：batchFetchedAt 声明必须在使用（filterByBatchWindow）之前——
+  //   此前声明在渲染后，447 行引用时 TDZ 报错 ReferenceError: Cannot access 'batchFetchedAt' before initialization
+  // owner 2026-08-19：数据截至展示「批次抓取时间」——从 intel_health 最新 inspection 记录读
+  let batchFetchedAt = new Date().toISOString()
+  try {
+    const hq = await db.collection('intel_health').where({ kind: 'inspection' }).orderBy('createdAt', 'desc').limit(1).get()
+    if (hq.data && hq.data[0] && hq.data[0].createdAt) batchFetchedAt = hq.data[0].createdAt
+  } catch (e) { console.warn('[intelDispatcher] 读批次抓取时间失败，回退 now:', e.message) }
+
   const merged = [...priorItemsMapped(prior), ...newItems]
   const todayReleased = await fetchTodayReleasedItems(dayKey)
   const allRank = rankItems(filterByBatchWindow(mergeByItemId(todayReleased, merged), dayKey, batchFetchedAt))
@@ -458,12 +467,6 @@ async function runIncremental(dayKey) {
     return { ok: true, published: false, note: 'empty-after-render', dayKey }
   }
   const version = priorVersion + 1
-  // owner 2026-08-19：数据截至展示「批次抓取时间」——从 intel_health 最新 inspection 记录读
-  let batchFetchedAt = new Date().toISOString()
-  try {
-    const hq = await db.collection('intel_health').where({ kind: 'inspection' }).orderBy('createdAt', 'desc').limit(1).get()
-    if (hq.data && hq.data[0] && hq.data[0].createdAt) batchFetchedAt = hq.data[0].createdAt
-  } catch (e) { console.warn('[intelDispatcher] 读批次抓取时间失败，回退 now:', e.message) }
   const brief = {
     date: dayKey,
     version,
