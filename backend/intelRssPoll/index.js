@@ -569,6 +569,21 @@ async function fetchSource(feed, ctx = {}) {
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
+    // MiniMax 官方（2026-08-20 接入）：/api/news → data[]（title/summary/publishDate ms/slug）
+    if (Array.isArray(json.data) && feed.key === 'minimax_ai') {
+      const items = json.data
+        .filter((d) => d.title)
+        .map((d) => ({
+          title: _cleanStr(d.title),
+          url: d.slug ? `https://www.minimaxi.com/blog/${d.slug}` : 'https://www.minimaxi.com/blog',
+          pubDate: d.publishDate ? new Date(Number(d.publishDate)).toISOString() : '',
+          guid: `minimax:${d.newsId || d.slug || d.title}`,
+          desc: _cleanStr(d.summary || d.title),
+          content: _cleanStr(d.summary || d.title),
+          category: _cleanStr((d.tags || []).join(',')) || '',
+        }))
+      return { items, cursor: ctx.sinceMs || null }
+    }
     // 智谱 AI 官方（2026-08-20 接入）：/api/articles → docs[]（title_zh/createAt/content_zh 富文本）
     if (Array.isArray(json.docs) && feed.key === 'zhipu_ai') {
       const items = json.docs
