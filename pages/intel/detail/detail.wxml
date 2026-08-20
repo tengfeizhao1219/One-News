@@ -10,7 +10,8 @@
   <!-- 导航 -->
   <view class="nav">
     <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+      <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
+      <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
     </view>
   </view>
 

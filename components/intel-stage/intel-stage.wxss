@@ -61,6 +61,9 @@
 }
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
+.nav-dark { display: none; }
+.page--dark .nav-light { display: none; }
+.page--dark .nav-dark { display: block; }
 .nav-title { font-size: calc(36rpx * var(--font-scale)); font-weight: 700; color: var(--text-primary); }
 
 /* 摘要：单行（今日条数靠左 · 数据截至靠右） */
