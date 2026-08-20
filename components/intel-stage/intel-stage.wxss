@@ -55,6 +55,7 @@
   border-radius: 50%;
   margin-left: -8rpx;
   flex-shrink: 0;
+  z-index: 20;
 }
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
