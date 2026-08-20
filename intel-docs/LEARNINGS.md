@@ -113,3 +113,9 @@
 ## 2026-08-20 手动全链路验证 + marktechpost 403 修复
 - **手动数据链**：intelFetch(17 源分片, runId 2026-08-20_18:00) → intelProcess(无待处理=增量语义正确) → intelDispatcher(summary v17, 21 条/3 tryable)。19:26 手动跑按北京时间落 summary 档（MODE_HOURS 5/11=increment, 18=summary, 其余兜底 summary）。
 - **marktechpost 403 根因**：Cloudflare 拦截自定义 UA `IntelOfficer/1.0`（浏览器 UA 200 / 自定义 UA 403）。修复：intelRssPoll RSS 分支支持 `adapterConfig.headers` 透传 + 源配浏览器 UA 覆盖。验证：403 → not_modified → 清缓存后 status ok。
+
+## 2026-08-20 四项优化实施
+- **海外源停用决策依据**：intel_sources 文档含 health/status/errorStreak/lastFetchStatus，停用前先读库甄别——timeout 类（bens_bites/google_news_ai/huggingface_blog/import_ai/reddit_singularity）与 disabled 类（errorStreak 连击触发自动暂停）是云端不可达；status=retired 是质量分<6 自动退休（非网络问题）；marktechpost/the_batch/simon_willison 云端 lastFetchStatus=ok/not_modified 说明可达，保留。
+- **改数据库源 enabled 必须同步 seedSources.js defaultOn**：intelRssPoll 每次启动自检会播种，若 seed 里 defaultOn=true 而库里手动禁用，重播种不覆盖（幂等跳过已存在），但新环境/重建集合时会复活——两处必须一致。
+- **mcporter cloudbase 有 writeNoSqlDatabaseContent**（action=insert/update/delete，update 用 $set + query），管理端改库不需要专门写云函数。
+- **.then 链内插缓存失败教训**：在 `return {...}` 对象后追加独立 `.then()` 会破坏 return 表达式（`})` 结束语句后再 `.then` 语法错误）。正确姿势：先 `const data = {...}`，写缓存，再 `return data`，全程在同一个 .then 回调内。

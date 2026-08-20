@@ -43,7 +43,7 @@ function getIntelBrief({ channel = 'oneNews', date } = {}) {
     }
     const payload = result.data || {}
     // 防御性兜底：云函数字段缺失时仍返回可控结构，避免上层解构崩
-    return {
+    const data = {
       ok: payload.ok !== false,
       channel: payload.channel || channel,
       date: payload.date || '',
@@ -57,11 +57,10 @@ function getIntelBrief({ channel = 'oneNews', date } = {}) {
       empty: payload.empty || null,
       placeholder: !!payload.placeholder,
       banner: payload.banner || '',
-    })
-    .then((data) => {
-      if (!date) { _briefCache = { ts: Date.now(), data } }  // 仅缓存当期
-      return data
-    })
+    }
+    if (!date) { _briefCache = { ts: Date.now(), data } }  // 仅缓存当期（省 Gateway 调用）
+    return data
+  })
 }
 
 /** 今日关注卡片：适配 Pages 用字段（OneNewsChannel 渲染输出） */

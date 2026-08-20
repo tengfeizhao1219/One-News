@@ -31,7 +31,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://rss.beehiiv.com/feeds/2R3C6Bt5wj.xml',
     adapterConfig: { endpoint: 'https://rss.beehiiv.com/feeds/2R3C6Bt5wj.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告', '招聘'],
   },
   {
@@ -42,7 +42,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://tldr.tech/api/rss/ai',
     adapterConfig: { endpoint: 'https://tldr.tech/api/rss/ai', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告', '招聘'],
   },
   {
@@ -64,7 +64,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://bensbites.substack.com/feed',
     adapterConfig: { endpoint: 'https://bensbites.substack.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
   {
@@ -75,7 +75,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://techcrunch.com/category/artificial-intelligence/feed/',
     adapterConfig: { endpoint: 'https://techcrunch.com/category/artificial-intelligence/feed/', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告', '招聘'],
   },
   {
@@ -86,7 +86,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://venturebeat.com/category/ai/feed/',
     adapterConfig: { endpoint: 'https://venturebeat.com/category/ai/feed/', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
   {
@@ -97,7 +97,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml',
     adapterConfig: { endpoint: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
   {
@@ -123,7 +123,7 @@ const INTEL_SEED_SOURCES = [
       params: { q: 'AI model release OR LLM agent', hl: 'en-US', gl: 'US', ceid: 'US:en' },
       timeoutMs: 8000, rateLimit: 'none',
     },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: [],
   },
 
@@ -147,7 +147,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://jackclark.substack.com/feed',
     adapterConfig: { endpoint: 'https://jackclark.substack.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'research', 'policy'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'research', 'policy'],
     blockTitleKeywords: [],
   },
   {
@@ -158,7 +158,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://magazine.sebastianraschka.com/feed',
     adapterConfig: { endpoint: 'https://magazine.sebastianraschka.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'research'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'research'],
     blockTitleKeywords: [],
   },
   {
@@ -203,7 +203,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss', // RSS + 官方页（端点待验证）
     baseUrl: 'https://deepmind.google/blog/rss.xml',
     adapterConfig: { endpoint: 'https://deepmind.google/blog/rss.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'official', 'research'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'official', 'research'],
     blockTitleKeywords: [],
   },
   {
@@ -225,7 +225,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://huggingface.co/blog/feed.xml',
     adapterConfig: { endpoint: 'https://huggingface.co/blog/feed.xml', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 86400, defaultOn: true, allowCategories: ['ai', 'open_source'],
+    pollSeconds: 86400, defaultOn: false, allowCategories: ['ai', 'open_source'],
     blockTitleKeywords: [],
   },
   {
@@ -240,7 +240,7 @@ const INTEL_SEED_SOURCES = [
       params: { search_query: 'cat:cs.AI OR cat:cs.CL OR cat:cs.CV', sortBy: 'submittedDate', sortOrder: 'descending', max_results: 30 },
       timeoutMs: 15000, rateLimit: '3s', // 2026-08-19 复盘：export.arxiv.org 慢，10s 实测超时 → 15s
     },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'research', 'paper'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'research', 'paper'],
     blockTitleKeywords: [],
   },
 
@@ -257,7 +257,7 @@ const INTEL_SEED_SOURCES = [
       params: { tags: 'story', numericFilters: 'points>100' },
       timeoutMs: 10000, rateLimit: 'none',
     },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'community'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'community'],
     blockTitleKeywords: [],
   },
   {
@@ -268,7 +268,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss', // 免密钥 .rss 直连（无评分/评论）；OAuth 商用需审批
     baseUrl: 'https://www.reddit.com/r/singularity/.rss',
     adapterConfig: { endpoint: 'https://www.reddit.com/r/singularity/.rss', timeoutMs: 10000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'community'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'community'],
     blockTitleKeywords: [],
   },
 
@@ -281,7 +281,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss', // RSS / API（新 AI 产品首发）
     baseUrl: 'https://www.producthunt.com/feed',
     adapterConfig: { endpoint: 'https://www.producthunt.com/feed', timeoutMs: 8000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tools', 'product'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tools', 'product'],
     blockTitleKeywords: ['sponsored', 'advertorial', '广告'],
   },
 

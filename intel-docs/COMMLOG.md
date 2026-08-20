@@ -170,3 +170,11 @@
   ④ 中文源接入：deepseek_news（官方动态 scrape，卡片提取验证 5 条）、deepseek_changelog（API 更新日志 scrape，19 版本块）、geekpark_ai（RSS 完整正文+AI 过滤，20 条）；InfoQ 弃用（feed 内容仅 6 字符）；机器之心确认付费墙不可修（保持禁用）
 - 产物：提交 b9d03c2 + 318097d（main 已 push）；三云函数已部署；v8 brief = 12 条（EN 官方 9 + 中文 3）
 - 下游：后续每日定时任务将自动抓取中文源（量子位/极客公园/DeepSeek）；注意相关性规则是「老赵三重身份个性化」打分，通用 AI 内容依赖补强关键词，后续可再调
+## 2026-08-20 · 四项成本/稳定性优化（owner 拍板执行）
+
+- **① 停用海外受限源**（云环境国际出口慢/超时）：数据库 11 个源 enabled=false + retireReason 留痕（ahead_of_ai/bens_bites/google_deepmind/google_news_ai/huggingface_blog/import_ai/product_hunt/reddit_singularity/the_rundown_ai/tldr_ai/venturebeat_ai）；seedSources.js 两副本同步 15 个海外源 defaultOn=false（含此前已 retired 的 techcrunch/theverge/arxiv/hacker_news），防重播种复活。保留云端可达的海外源（marktechpost/the_batch/simon_willison/openai_blog/latent_space/lesswrong）。启用源从 22 → 11。
+- **② seedSources 播种只读**：seed() 开头 `col.count()` 非空即跳过（return { inserted: 0, skipped: cnt.total }），省每 worker 28 次读（种子已存在时零成本）。
+- **③ health 记录**：确认本就「仅异常写」（errorStreak 达标/高重复/批量/高过滤四类才写），无需改动。
+- **④ 前端 brief 缓存**：utils/intelRequest.js getIntelBrief 加 5 分钟内存缓存 `_briefCache`（仅当期 date 缺省时命中；下拉刷新不破缓存，TTL 过期自动失效），省重复 Gateway 调用。首次注入破坏 .then 链（SyntaxError），重构为 const data 后写缓存再 return 修复。
+- 产物：intelRssPoll 已重部署（含 seedSources 优化）；前端需微信开发者工具重编译。
+- 下游：下一轮定时器（05:30/11:30/18:00）只抓 11 个启用源；海外源内容由国内/官网源 + 保留海外源覆盖。
