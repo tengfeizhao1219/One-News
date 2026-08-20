@@ -403,6 +403,7 @@ function validateIntelItem(raw, meta) {
     layer: meta.layer || '',
     sourceType: meta.sourceType || '',
     targetTime: meta.targetTime || '',
+    freshnessDays: meta.freshnessDays || undefined, // 2026-08-20：per-source 新鲜度（intelProcess 用）
     title,
     url: rawUrl,
     urlFp: sha256(normalizeUrl(rawUrl)),
