@@ -318,7 +318,9 @@ function passFreshness(d) {
   if (!raw) return true // 无日期不拦截（交由 relevance 把关）
   const t = new Date(raw).getTime()
   if (Number.isNaN(t)) return true
-  return Date.now() - t <= 7 * 24 * 3600 * 1000
+  // 2026-08-20: per-source freshnessDays 优先（低频官方源配 30 天不被 7 天默认误杀；如 MiniMax 8/3 H3）
+  const days = Number(d.freshnessDays) > 0 ? Number(d.freshnessDays) : 7
+  return Date.now() - t <= days * 24 * 3600 * 1000
 }
 
 /** 组装最终 Brief 的 items[]（今日关注）+ tryable[]（本周可试用） */
