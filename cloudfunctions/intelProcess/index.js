@@ -141,13 +141,13 @@ async function processOne(item, profile) {
   const staged = {
     itemId,
     sourceId: String(item.sourceId || ''),
-    title: String(item.title || ''),
+    title: String(parsedTitleCn || item.title || ''), // 2026-08-20: 英文源标题翻译为中文（titleCn），原文存 sop.source.titleEn
     url: String(item.url || ''),
     relevance: route.level,
     sceneTags: parsed.sceneTags,
     sceneHits: parsed.sceneHits,
     sop: {
-      source: { name: String(item.sourceName || ''), layer: String(item.layer || ''), publishedAt: String(item.publishedAt || ''), url: String(item.url || '') },
+      source: { name: String(item.sourceName || ''), layer: String(item.layer || ''), publishedAt: String(item.publishedAt || ''), url: String(item.url || ''), titleEn: String(item.title || '') },
       definition: parsed.definition,
       whatHappened: parsed.whatHappened,
       sceneMapping: parsed.sceneMapping,
@@ -288,7 +288,8 @@ function buildPrompts(item, profile, level) {
       system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
 先输出「发生了什么」：用大白话分 **2-3 段（150-300 字，段与段之间用空行分隔，每段独立成段）** 讲清楚这条情报/产品/事件是什么、发生了什么、为什么值得关注、背后怎么回事，术语首现用括号一句话解释，让行外人也看得懂。**禁止只写一句话、禁止写成一整段不换行。**
 再输出一句话定义（含能力边界）。
-最后输出「对老赵的意义」：仅当本条与老赵初始化的行业/职位特征**强相关且能具体点出关联点**时才写（1-2 句，落到具体工作/产品/生活场景）；弱相关或无法具体关联时输出「无」，禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}`,
+最后输出「对老赵的意义」：仅当本条与老赵初始化的行业/职位特征**强相关且能具体点出关联点**时才写（1-2 句，落到具体工作/产品/生活场景）；弱相关或无法具体关联时输出「无」，禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}
+最后单独一行输出 JSON 供程序解析：{"titleCn":"中文标题（把本条标题翻译成自然通顺的中文）","sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`,
       user: `情报原文：\n${text}`,
     }
   }
@@ -312,7 +313,7 @@ function buildPrompts(item, profile, level) {
 - **可以怎么做**：[工具 + 步骤 + 收益 + 坑点]
 - **想试试**：[仅存在可立即上手的案例时写，否则「无」]
 最后单独一行输出 JSON 供程序解析（务必严格 JSON）：
-{"sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`
+{"titleCn":"中文标题（把本条标题翻译成自然通顺的中文）","sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`
   return { system, user: `情报原文：\n${text}` }
 }
 
@@ -335,6 +336,7 @@ function describeIdentities(profile) {
  */
 function parseSopOut(text, item, profile, route) {
   const t = String(text || '')
+  let parsedTitleCn = ''
 
   /** 「无」/「无（…）」/空 → 归一为空串（弱相关不强行关联；想试试不可落地则留空） */
   function normNone(v) {
@@ -371,6 +373,7 @@ function parseSopOut(text, item, profile, route) {
       const j = JSON.parse(jsonMatch[0])
       if (j && Array.isArray(j.sceneTags)) sceneTags.length = 0, sceneTags.push(...j.sceneTags.filter(Boolean))
       if (typeof j.tryable === 'boolean') tryable = j.tryable
+      if (j && typeof j.titleCn === 'string' && j.titleCn.trim()) parsedTitleCn = j.titleCn.trim()
     } catch (e) { /* 解析失败则用正则兜底 */ }
   }
   if (!jsonMatch) {
@@ -396,7 +399,7 @@ function parseSopOut(text, item, profile, route) {
       const ei = t2.search(endRe)
       if (ei >= start) end = ei
     }
-    return t2.slice(start, end).replace(/^[\s\n*-]+|[\s\n]+$/g, '').replace(/\n{2,}/g, '\n').trim()
+    return t2.slice(start, end).replace(/^[\s\n*-]+|[\s\n]+$/g, '').replace(/\n{3,}/g, '\n\n').trim() // 2026-08-20: 保留段落分隔(双换行)，不再压平成单段
   }
   // 发生了什么：优先取模板块（标题下第一块，至溯源前）；否则取「发生了什么:」到「对老赵的意义」/「定义」之前的文本
   const whatHappened =

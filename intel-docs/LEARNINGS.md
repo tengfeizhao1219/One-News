@@ -13,6 +13,13 @@
 - **正确做法**：① **存储一律 UTC**（`toISOString()`/epoch ms）；② **显示与北京时间判断一律用 `backend/common/beijingTime.js`**（beijingNow/beijingDateKey/beijingHour/formatHHMM，内部按东八区投影）；③ 前端小程序运行时区=用户手机（中国 +8），本地即北京，前端 `new Date(iso).getHours()` 正确；④ 新写云函数代码一律 `require('./beijingTime')`，禁止裸用 getHours/getFullYear。
 - **涉及角色**：I / P / Q
 
+### [2026-08-20] LLM 输出分段被解析压平 + 英文标题未翻译（数据处理/解析）
+
+- **症状**：详情页「发生了什么」只有一段（观感少）；英文源标题未翻译。
+- **根因**：① SOP 解析 secBlock 用 `replace(/\n{2,}/g,'\n')` 把 LLM 输出的段落分隔（空行）压成单换行，前端按空行分段只剩 1 段；② LLM prompt 未要求输出中文标题，`title` 保持英文原文。
+- **正确做法**：① 解析保留段落分隔（`\n{3,}→\n\n`），前端对无换行长文做智能分段兜底（按句号断句每 2 句一段）；② 处理层（intelProcess）prompt 要求 LLM 输出 `titleCn`（中文标题）存为主标题、原文存 `sop.source.titleEn`，展示层零改动。
+- **涉及角色**：P / D / Q
+
 ## 教训条目（倒序，最新在上）
 
 ### [2026-08-20] 重跑数据处理必须先清 staged（否则 already-staged 跳过）（流程）
