@@ -254,7 +254,20 @@ function _fingerprintOf(v, map) {
  * 软信号（版权搬运/纯导流）命中 → 返回 { soft }（进入评分降权，不丢弃）。
  * 无命中返回 null。
  */
+function urlYearHardKill(item) {
+  const s = String((item && (item.sourceUrl || item.url)) || '')
+  let m = s.match(/\/((?:19|20)\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?:\/|$|[.?#])/)
+  if (!m) m = s.match(/\/((?:19|20)\d{2})[/\-](0?[1-9]|1[0-2])[/\-](0?[1-9]|[12]\d|3[01])(?:\/|$|[.?#])/)
+  if (!m) return null
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3])
+  if (!Number.isFinite(t)) return null
+  if (Date.now() - t > 48 * 3600 * 1000) return { hard: `URL 路径日期超 48h: ${m[1]}${m[2]}${m[3]}` }
+  return null
+}
+
 function complianceGate(item) {
+  const yearHit = urlYearHardKill(item)
+  if (yearHit) return yearHit
   const hay = `${item.title || ''} ${item.summary || ''} ${item.content || ''}`
   // 硬黑名单优先：命中即弃
   for (const kw of COMPLIANCE_HARD_BLACKLIST) {
