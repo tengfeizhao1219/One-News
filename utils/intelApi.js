@@ -86,6 +86,8 @@ function formatIntelDetail(d) {
     sourceUrl: d.sourceUrl || '',
     publishedAt: d.publishedAt || '',
     definitionParas: toParas(d.definition),
+    whatHappened: d.whatHappened || '',          // 2026-08-20 修复：详情页"发生了什么"多段正文（此前未透传导致前端只显示一句话定义）
+    whatHappenedParagraphs: toParas(d.whatHappened),
     sceneMapping: d.sceneMapping || '',
     sceneTags: Array.isArray(d.sceneTags) ? d.sceneTags : [],
     relevance: d.relevance || '',

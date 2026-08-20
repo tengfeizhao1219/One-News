@@ -37,6 +37,13 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-20 · 详情页「发生了什么」为空修复（根因：前端字段未透传）
+
+- **症状**：owner 反馈详情页介绍基本都没有（只显示一句话定义）。
+- **根因**：`utils/intelApi.js` 的 `formatIntelDetail` 未透传 `whatHappened`（多段正文）——detail.js 新版读取 `d.whatHappened` 恒为 undefined → 前端回退显示 definition（一句话），多段详细叙事丢失。
+- **修复**：formatIntelDetail 增加 `whatHappened` + `whatHappenedParagraphs` 透传。
+- **附注（数据语义澄清）**：① "数据截至 HH:MM" = 抓取批次时间；条目 publishedAt 凌晨 1:53 = 内容发布时间（源凌晨发布、上午批次抓到），二者不矛盾；② MiniMax 08-03 数据是 per-source freshnessDays=30 故意放行（低频官方源），若需收紧可调。
+
 ## 2026-08-20 · 历史数据滚动清理策略落地（owner 拍板）
 
 - **策略**：intel_ingest（fetchedAt）/ intel_staged（processedAt）/ intel_current_archive（archivedAt）三个集合**统一保留近 7 天，滚动物理清除**（按 _id remove 物理删除，非软删）。
