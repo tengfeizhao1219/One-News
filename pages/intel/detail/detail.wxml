@@ -9,7 +9,9 @@
 
   <!-- 导航 -->
   <view class="nav">
-    <text class="nav-back" bindtap="goBack">‹</text>
+    <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    </view>
     <text class="nav-title">情报详情</text>
   </view>
 

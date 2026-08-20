@@ -9,7 +9,9 @@
 
   <!-- 自定义导航：‹ 返回 / 标题 -->
   <view class="nav">
-    <text class="nav-back" bindtap="goBack">‹</text>
+    <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    </view>
     <text class="nav-title">AI 情报</text>
   </view>
 

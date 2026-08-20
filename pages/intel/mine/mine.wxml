@@ -4,7 +4,9 @@
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
   <view class="nav">
-    <text class="nav-back" bindtap="goBack">‹</text>
+    <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
+      <image class="nav-home-icon-img" src="/assets/icons/home{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
+    </view>
     <text class="nav-title">我的</text>
   </view>
 
