@@ -36,10 +36,13 @@ function requestOpenAI(eng, body) {
       },
       timeout: eng.timeout,
     }, (res) => {
-      let data = ''
-      res.on('data', (c) => { data += c })
+      // 2026-08-20 修复：chunk 边界切断多字节 UTF-8 → 逐 chunk toString 产生 U+FFFD 乱码。
+      // 改用 Buffer 收集，end 时统一 Buffer.concat 解码。
+      const chunks = []
+      res.on('data', (c) => { chunks.push(c) })
       res.on('end', () => {
         try {
+          const data = Buffer.concat(chunks).toString('utf8')
           const resp = JSON.parse(data)
           const txt = resp.choices && resp.choices[0] && resp.choices[0].message
             ? String(resp.choices[0].message.content || '').trim() : null

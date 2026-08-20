@@ -137,3 +137,10 @@
 - **半年滚动清除的实现**：localCache 条目级 TTL（expireAt=addedAt+180 天），getFavorites 每次读取过滤过期并回写（惰性滚动清除），不依赖定时器。
 - **与 One News 收藏隔离**：key 用 intelFavorites（lc: 前缀），避免与 One News favorites（newsId 结构）混存导致详情页错配。
 - **并行会话提交风险**：编辑中途另一会话 git add -A 提交会把未完成文件卷入（本次 6efb6c2 带入收藏 detail 部分）。应对：提交前 git status 甄别自己的文件集合，只 add 自己的，并行会话改动留工作树。
+
+## 2026-08-21 正文乱码（U+FFFD）根因与修复
+- **现象**：部分详情正文出现「深度」→「���」（3 个 U+FFFD），如 OpenAI AI 未来专栏。
+- **根因**：intelLLM.js HTTP 响应用 `data += c` 逐 chunk 字符串拼接——当多字节 UTF-8 字符（如中文）恰好被 TCP 分包切在中间，逐 chunk toString() 把半截字节解成 U+FFFD。偶发（只有字符跨包时才发生），与源无关（ingest 原文干净英文）。
+- **修复**：改用 `chunks.push(c)` + `Buffer.concat(chunks).toString('utf8')` 统一解码。同类问题 wechatAdapter.js:176 一并修复。
+- **存量修复**：staged 6 条乱码（全在 whatHappened 字段）→ 删 staged + 重置 ingest pending → 重跑 intelProcess 重新生成（乱码不可逆，只能重跑）。
+- **教训**：Node 里收集 HTTP body 永远用 Buffer 数组，不要 `+=`；部署副本（cloudfunctions/intelProcess/common/intelLLM.js）需同步。

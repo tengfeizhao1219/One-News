@@ -172,10 +172,12 @@ async function fetch(source, opts = {}) {
         res.resume()
         return resolve({ items: [], degraded: true, reason: `local API HTTP ${res.statusCode}` })
       }
-      let body = ''
-      res.on('data', (d) => { body += d })
+      // 2026-08-20 修复：Buffer 收集避免 chunk 边界切断 UTF-8 产生乱码
+      const chunks = []
+      res.on('data', (d) => { chunks.push(d) })
       res.on('end', () => {
         try {
+          const body = Buffer.concat(chunks).toString('utf8')
           const data = JSON.parse(body)
           const list = Array.isArray(data) ? data : (data.items || [])
           resolve({ items: list.map((r) => toItem(r, sourceId)) })
