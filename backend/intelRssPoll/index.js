@@ -404,6 +404,7 @@ function validateIntelItem(raw, meta) {
     sourceType: meta.sourceType || '',
     targetTime: meta.targetTime || '',
     freshnessDays: meta.freshnessDays || undefined, // 2026-08-20：per-source 新鲜度（intelProcess 用）
+    minContent: meta.minContent || undefined, // 2026-08-20：per-source 空壳阈值（官方动态摘要短可放宽）
     title,
     url: rawUrl,
     urlFp: sha256(normalizeUrl(rawUrl)),
@@ -965,6 +966,7 @@ async function runWorker(feed, now, ctx = {}) {
     sourceType: feed.sourceType || '',
     targetTime: ctx.targetTime || '',
     freshnessDays: (Number(feed.freshnessDays) > 0 ? Number(feed.freshnessDays) : 1),
+    minContent: (Number(feed.minContent) > 0 ? Number(feed.minContent) : 60),
   }
   const candidates = []
   let filtered = 0

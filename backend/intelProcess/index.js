@@ -85,8 +85,10 @@ async function processOne(item, profile) {
   // ①.5 数据质量闸门（2026-08-19 治理）：清洗 + 硬门槛，不合格直接丢弃
   //   raw 层空壳/陈旧/脏文本在这里被拦下，不进 LLM、不进 staged，只留痕。
   // 2026-08-20：per-source 新鲜度（官方低频源 freshnessDays=7，新闻源默认 1）
-  const gateCfg = Number(item.freshnessDays) > 0
-    ? Object.assign({}, GATE, { freshnessDays: Number(item.freshnessDays) })
+  const gateCfg = Number(item.freshnessDays) > 0 || Number(item.minContent) > 0
+    ? Object.assign({}, GATE,
+        Number(item.freshnessDays) > 0 ? { freshnessDays: Number(item.freshnessDays) } : {},
+        Number(item.minContent) > 0 ? { minContent: Number(item.minContent) } : {})
     : GATE
   const gate = qualify(item, gateCfg)
   if (!gate.pass) {
