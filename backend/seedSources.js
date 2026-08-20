@@ -385,6 +385,18 @@ async function seed(db) {
   let inserted = 0
   let skipped = 0
 
+  // 2026-08-20 优化：集合已有源则跳过逐源检查（每 worker 28 次读 → 1 次 count，省数据库读大头）
+  //   源清单固定（INTEL_SEED_SOURCES），已入库后无需每 worker 全量核对；新增源时清空集合或手动补种
+  try {
+    const cnt = await col.count()
+    if (cnt && cnt.total > 0) {
+      console.log(`[seedSources] 集合已有 ${cnt.total} 个源，跳过播种（省逐源读）`)
+      return { inserted: 0, skipped: cnt.total }
+    }
+  } catch (e) {
+    console.warn('[seedSources] count 失败，回退逐源检查:', e.message)
+  }
+
   for (const src of INTEL_SEED_SOURCES) {
     const srcId = src._id || src.key
     if (!srcId) continue

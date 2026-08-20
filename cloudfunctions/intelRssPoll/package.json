@@ -1,7 +1,7 @@
 {
   "name": "intelRssPoll",
   "version": "1.0.0",
-  "description": "AI 情报官 · intelRssPoll（自包含部署副本，勿手改；源码见 backend/）",
+  "description": "AI 情报官 · intelRssPoll",
   "main": "index.js",
   "dependencies": {
     "fast-xml-parser": "latest",

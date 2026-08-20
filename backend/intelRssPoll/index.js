@@ -501,7 +501,11 @@ async function fetchSource(feed, ctx = {}) {
 
   if (type === 'rss' || type === 'news') {
     // RSS / Google News RSS：直接解析 XML（apiFetch 内建重试 + 304 缓存语义靠 etag/lastModified）
-    const res = await intelHttpGet(endpoint, { prev: { lastModified: feed.lastModified, etag: feed.etag } })
+    // 2026-08-20: per-source headers 支持（Cloudflare 拦截自定义 UA 的源可配浏览器 UA 覆盖，如 marktechpost）
+    const res = await intelHttpGet(endpoint, {
+      prev: { lastModified: feed.lastModified, etag: feed.etag },
+      headers: (cfg.headers || {}),
+    })
     if (res.notModified) return { items: [], cursor: ctx.sinceMs || null, notModified: true }
     if (!res.ok || !res.text) throw new Error(`RSS 抓取失败 status=${res.status}`)
     const parsed = intelParseXml(res.text)

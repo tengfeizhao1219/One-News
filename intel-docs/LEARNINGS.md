@@ -109,3 +109,7 @@
 - **Reddit 放弃**：SCF 数据中心 IP 被 Reddit 429（本地 200 云端 timeout）；r/LocalLLaMA、r/MachineLearning 均 429；redlib/RSSHub 公共实例全挂。V2EX API 已死。
 - **intel_sources 有 8 个空壳文档**（只有 _id 无 key）：之前 SDK 不带 {data:} 包装静默失败残留，已清理。
 - **doc(id).set 不能含 _id 字段**（INVALID_PARAM），注册新源用 key 作 doc id、文档内 key 字段。
+
+## 2026-08-20 手动全链路验证 + marktechpost 403 修复
+- **手动数据链**：intelFetch(17 源分片, runId 2026-08-20_18:00) → intelProcess(无待处理=增量语义正确) → intelDispatcher(summary v17, 21 条/3 tryable)。19:26 手动跑按北京时间落 summary 档（MODE_HOURS 5/11=increment, 18=summary, 其余兜底 summary）。
+- **marktechpost 403 根因**：Cloudflare 拦截自定义 UA `IntelOfficer/1.0`（浏览器 UA 200 / 自定义 UA 403）。修复：intelRssPoll RSS 分支支持 `adapterConfig.headers` 透传 + 源配浏览器 UA 覆盖。验证：403 → not_modified → 清缓存后 status ok。
