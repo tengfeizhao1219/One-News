@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-20 | A/I | **中文官方源接入：MiniMax 尝试**。注册 minimax_ai（scrape，urlPattern=/blog/），extractListLinks 加遍3（任意链接+锚文本）+ 上下文日期提取；仍有 filtered（日期提取未完全生效/实例缓存），待续调。**已建立的通用机制**：per-source freshnessDays、JSON API adapter（智谱模式）、富文本提取、列表提取遍3、arxiv 限流 5 条 | 🔄 |
 | 2026-08-20 | I | **中文官方源首个打通 + 首页数据健康化**。① 智谱 GLM-5.3 全链路进 brief（JSON API + 富文本提取 + per-source freshnessDays=7，high 路由 747 字正文）；② arxiv 修复（Atom content 摘要兜底）+ brief 组装限流 5 条（论文不淹没新闻）；③ Simon Willison 接入（written 3）；④ brief v5 = 15 条：zhipu 1/arxiv 5/simon 3/techcrunch 3/theverge 2/openai 1——来源均衡 | ✅ 已推 |
 | 2026-08-20 | A/I | **中文官方源接入进展**：✅ 智谱AI（zhipu_ai）打通全链路——JSON API（/api/articles → title_zh/createAt/content_zh 富文本提取），per-source freshnessDays=7 生效（周更源不被 1 天拒），抓取 written ✓ 处理 okCount ✓（GLM-5.3，7026 字正文）；⚠️ staged 写入静默失败待查（upsertStaged add 可能字段/大小问题）。✅ Simon Willison 已接入（written 3）。❌ 聚合 feed 内容滞后停用。待办：智谱 staged 写入修复、其余中文官方源（通义/火山/混元/MiniMax/Kimi JS 渲染 API 探测）、r/LocalLLaMA/V2EX 反爬 | 🔄 继续 |
 | 2026-08-20 | A/I | **源接入第一批结果**：✅ Simon Willison（原生 Atom RSS）接入成功（written 3，正文 3473/1497/529 字完整）；❌ alan-turing-institute 聚合 feed（mistral/ai2/claude/cohere 等 7 个）**内容滞后**（条目 pubDate 保留原日期：mistral 最新 2023-09、claude 2026-04），与「两次抓取间隔/24h 增量」策略冲突全被过滤 → 已停用待源方更新机制确认；🔧 中文官方 6 源（通义/智谱/火山/混元/MiniMax/Kimi）为 JS 渲染需专用解析（Next.js API 端点），列入第二批；r/LocalLLaMA（Reddit 反爬）V2EX（API 空）待调。**教训：聚合 RSS 需先验证内容时效性再接入** | ✅ 已推 |

@@ -681,6 +681,34 @@ function extractListLinks(html, opts = {}) {
   }
   if (items.length >= maxItems) return items
 
+  // 遍 3（2026-08-20）：urlPattern 匹配的任意 <a href><文本>（覆盖 MiniMax 等非 h/a 结构列表）
+  if (opts.urlPattern && items.length < maxItems) {
+    const anyRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]{2,300}?)<\/a>/gi
+    while ((m = anyRe.exec(html)) !== null) {
+      const rawUrl = m[1].trim()
+      if (rawUrl.startsWith('#') || rawUrl.startsWith('javascript:') || rawUrl.startsWith('mailto:')) continue
+      if (!new RegExp(opts.urlPattern, 'i').test(rawUrl)) continue
+      let url = resolve(rawUrl)
+      const title = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      if (!title || title.length < 6) continue
+      // 2026-08-20：从链接上下文（锚文本后 300 字符）提取日期作为 pubDate（MiniMax 等列表页无标准日期标签）
+      let pubDate = ''
+      const ctx = html.slice(m.index, m.index + m[0].length + 300)
+      const dm = ctx.match(/(20\d{2})[-/](\d{1,2})[-/](\d{1,2})/) || ctx.match(/(\d{1,2})[-/](\d{1,2})[-/](20\d{2})/)
+      if (dm) {
+        const y = dm[1].length === 4 ? dm[1] : dm[3]
+        const mo = dm[1].length === 4 ? dm[2] : dm[1]
+        const d = dm[1].length === 4 ? dm[3] : dm[2]
+        pubDate = `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}T00:00:00+08:00`
+      }
+      const fp2 = sha256(url)
+      if (seen.has(fp2)) continue
+      seen.add(fp2)
+      items.push({ title, url, pubDate, guid: url, desc: '', content: '' })
+      if (items.length >= maxItems) break
+    }
+  }
+
   // 遍 2：卡片式 <a href><h2-6>标题…</h2-6>…</a>（仅 urlPattern 源启用，避免影响既有源）
   if (opts.urlPattern) {
     const anchorRe = /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]{0,6000}?)<\/a>/gi
