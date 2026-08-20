@@ -84,7 +84,11 @@ async function processOne(item, profile) {
 
   // ①.5 数据质量闸门（2026-08-19 治理）：清洗 + 硬门槛，不合格直接丢弃
   //   raw 层空壳/陈旧/脏文本在这里被拦下，不进 LLM、不进 staged，只留痕。
-  const gate = qualify(item, GATE)
+  // 2026-08-20：per-source 新鲜度（官方低频源 freshnessDays=7，新闻源默认 1）
+  const gateCfg = Number(item.freshnessDays) > 0
+    ? Object.assign({}, GATE, { freshnessDays: Number(item.freshnessDays) })
+    : GATE
+  const gate = qualify(item, gateCfg)
   if (!gate.pass) {
     await markIngest(itemId, 'rejected', { reason: gate.reasons.join('/'), gateLevel: route.level }) // 留痕不再重试，reason 落库可复盘
     console.log(`[intelProcess] 质量闸门拦截 ${itemId} (${route.level}) reason=${gate.reasons.join('/')}`)

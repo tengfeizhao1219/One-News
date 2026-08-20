@@ -217,6 +217,21 @@ function _toArray(v) {
   return Array.isArray(v) ? v : [v]
 }
 
+/** 智谱富文本（draft-js 风格 root.children[]）递归提取纯文本 */
+function extractZhipuContent(contentZh) {
+  if (!contentZh || !contentZh.root || !Array.isArray(contentZh.root.children)) return ''
+  const out = []
+  const walk = (nodes) => {
+    for (const n of nodes || []) {
+      if (typeof n === 'string') { out.push(n); continue }
+      if (n && Array.isArray(n.children)) walk(n.children)
+      else if (n && typeof n.text === 'string') out.push(n.text)
+    }
+  }
+  walk(contentZh.root.children)
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 /** 解析 RSS/Atom XML → { items:[{title,url,pubDate,guid,category,desc,content}], channelTitle } */
 function intelParseXml(xmlText) {
   const out = { items: [], channelTitle: null }
@@ -388,6 +403,7 @@ function validateIntelItem(raw, meta) {
     layer: meta.layer || '',
     sourceType: meta.sourceType || '',
     targetTime: meta.targetTime || '',
+    freshnessDays: meta.freshnessDays || undefined, // 2026-08-20：per-source 新鲜度（intelProcess 用）
     title,
     url: rawUrl,
     urlFp: sha256(normalizeUrl(rawUrl)),
@@ -550,6 +566,21 @@ async function fetchSource(feed, ctx = {}) {
           guid: _cleanStr(h.objectID) || _cleanStr(h.url),
           desc: _cleanStr(h.story_text || h.title),
           content: _cleanStr(h.story_text || ''),
+        }))
+      return { items, cursor: ctx.sinceMs || null }
+    }
+    // 智谱 AI 官方（2026-08-20 接入）：/api/articles → docs[]（title_zh/createAt/content_zh 富文本）
+    if (Array.isArray(json.docs) && feed.key === 'zhipu_ai') {
+      const items = json.docs
+        .filter((d) => d.title_zh || d.title_en)
+        .map((d) => ({
+          title: _cleanStr(d.title_zh || d.title_en),
+          url: `https://www.zhipuai.cn/zh/research/${d.id}`,
+          pubDate: _cleanStr(d.createAt) || '',
+          guid: `zhipu:${d.id}`,
+          desc: _cleanStr(d.resume_zh || d.title_zh || d.title_en),
+          content: extractZhipuContent(d.content_zh) || _cleanStr(d.resume_zh || ''),
+          category: _cleanStr(d.category || ''),
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
@@ -846,11 +877,12 @@ async function runWorker(feed, now, ctx = {}) {
   //    增量游标续传（§5.8 #3）：lastSuccessCursor → sinceMs，api 类源（HN/arXiv）
   //    按时间窗拉增量；rss/scrape 类只露最新 N 条，靠 guid 去重不硬过滤。
   const timeoutMs = (feed.adapterConfig && feed.adapterConfig.timeoutMs) || TIMEOUT_BY_TYPE[feed.sourceType] || 10000
-  // owner 2026-08-20：无游标（首次/丢失）统一用 24h 回看（档位窗口太紧会把合法新文滤掉；
-  //   首次抓取无"上次"概念，24h 窗口既能覆盖最近内容又不全量历史）
+  // owner 2026-08-20：无游标（首次/丢失）回看窗口 = 源 freshnessDays（低频官方源配 7 天能抓到周更内容；
+  //   新闻源默认 1 天；24h 对周更源太紧会空抓）
+  const fd = Number(feed.freshnessDays) > 0 ? Number(feed.freshnessDays) : 1
   const sinceMs = feed.lastSuccessCursor
     ? new Date(feed.lastSuccessCursor).getTime()
-    : Date.now() - 24 * 3600 * 1000
+    : Date.now() - fd * 24 * 3600 * 1000
   let fetched
   try {
     fetched = await Promise.race([
@@ -889,6 +921,7 @@ async function runWorker(feed, now, ctx = {}) {
     layer: feed.layer || '',
     sourceType: feed.sourceType || '',
     targetTime: ctx.targetTime || '',
+    freshnessDays: (Number(feed.freshnessDays) > 0 ? Number(feed.freshnessDays) : 1),
   }
   const candidates = []
   let filtered = 0
