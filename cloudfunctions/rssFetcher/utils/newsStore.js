@@ -164,6 +164,9 @@ async function batchInsertToIngest(items) {
   const ingestItems = items.map((it) => ({
     sourceType: 'official_rss',
     sourceName: it.sourceName || '官方源',
+    // 同步写 source 字段——newsPipeline qualityScorer.sourceAuthority 读 item.source
+    // 命中 SOURCE_AUTHORITY 中文名精确表（少数派/量子位/爱范儿/Solidot/IT之家/极客公园 等 → 80）
+    source: it.sourceName || '官方源',
     title: it.title,
     summary: it.summary || '',
     url: it.url || '',
