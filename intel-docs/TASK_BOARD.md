@@ -22,11 +22,8 @@
 | T1.1 | `intel_*` 集合 + 自愈建表 | I | ✅ | 复用审计 | 仿 `ensureSchema`，`intel_ingest/intel_staged/intel_current/intel_sources/intel_health/intel_profile` 六集合 + 唯一索引 |
 | T1.2 | `seedSources.js` 25 源注册 + 幂等播种 | I | ✅ | 信息源调研 §4 | 仿 `seedFeeds`，25 源取调研映射总表（A9/B6/C6/D2/E1/F1，四类 adapter） |
 | T1.3 | `contentFetcher.js` → `backend/common/` | I | ✅ | 复用审计 🟢直接 | 复制零依赖部分（fetchWebPage/extractContentFromHtml/isInvalidDesc）+ `intel_` 注释 |
-<<<<<<< Updated upstream
 | T1.4 | `intelFetch` self-fan-out + `intelRssPoll` 按源 worker + 3 定时器 | I | ✅ | T1.1–1.3 | 含 §5.8 超时防护 + lastSuccessCursor 续传；定时器 05:10/11:10/17:40 与 05:15/11:15/17:45 错峰；Dispatcher 18:00 准时发布（ADR-10）。**2026-08-19 owner 拍板**：定时档固定节点无条件抓全部启用源，移除 `listDueFeeds` pollSeconds 间隔判定 → `listEnabledFeeds`（提交 `d85ae00`，见设计 §5.8）|
-=======
-| T1.4 | `intelFetch` self-fan-out + `intelRssPoll` 按源 worker + 3 定时器 | I | ✅ | T1.1–1.3 | 含 §5.8 超时防护 + lastSuccessCursor 续传；定时器 05:10/11:10/17:55 与 05:15/11:15/18:00 错峰。**2026-08-19 owner 拍板**：定时档固定节点无条件抓全部启用源，移除 `listDueFeeds` pollSeconds 间隔判定 → `listEnabledFeeds`（提交 `d85ae00`，见设计 §5.8）|
->>>>>>> Stashed changes
+
 
 ## Phase 2 · 抓取层（适配器）
 
