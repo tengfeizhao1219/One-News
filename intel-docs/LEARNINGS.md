@@ -96,3 +96,9 @@
 - **根因**：组件 `isolated` 隔离下父级 `--font-scale` 变量穿透不进来。
 - **正确做法**：组件加 properties（fontScaleValue/metaScaleValue）+ observer 显式传值，不依赖 CSS 变量穿透。
 - **涉及角色**：D
+
+## 2026-08-20 MiniMax 接入收官
+- **per-source minContent**：官方动态（MiniMax 官方 blog）summary 仅 30 字，被空壳闸门（minContent 60）拒。官方一手信息价值 > 空壳风险，源级配 minContent 20 放行。实现：intelRssPoll 抓取时 meta 带 minContent → ingest 写 minContent；intelProcess gateCfg 优先 item.minContent。
+- **per-source freshnessDays 必须贯穿到 dispatcher**：intelProcess 用 freshnessDays=30 放行 8/3 的 MiniMax H3，但 intelDispatcher passFreshness 硬编码 7 天把它挡在 brief 外——低频官方源语义断链。修复：staged 透传 freshnessDays，passFreshness 优先 d.freshnessDays，默认仍 7 天。
+- **跨函数未定义变量**：processOne 引用 parsedTitleCn（parseSopOut 的局部变量）→ ReferenceError 崩溃。parseSopOut 需显式 return 该字段。
+- **旧 rejected ingest 挡新抓取**：guid 查重跳过，重抓前必须删旧 ingest + 清 lastSuccessCursor（或重置 pending）。
