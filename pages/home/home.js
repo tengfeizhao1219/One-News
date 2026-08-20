@@ -1,7 +1,7 @@
 // 首页 - 卡片流主视图逻辑
 
 const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, RECOMMEND_PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
-const { getNewsList, getNewsDelta, handleApiError } = require('../../utils/request')
+const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
 const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
@@ -153,8 +153,9 @@ Page({
   // P2-8 修复：此前页面无 onUnload/onHide，_destroyed 从未置 true，16 处守卫全部失效；
   // 下拉刷新轮询与提示定时器在页面离开后仍继续执行（浪费云函数调用 + 销毁后 setData 告警）。
   onHide() {
-    // 隐藏（如进入详情页）时停止增量轮询，避免后台持续调用 getNewsDelta
-    if (this._refreshPollTimer) { this._stopRefreshPolling(false) }
+    // 读库刷新已无后台轮询；此处仅作防御性清理（轮询定时器不再被设置，清除为无害 no-op）
+    if (this._refreshPollTimer) { clearTimeout(this._refreshPollTimer); this._refreshPollTimer = null }
+    if (this._reloadTimer) { clearTimeout(this._reloadTimer); this._reloadTimer = null }
   },
 
   onUnload() {
@@ -467,14 +468,15 @@ Page({
   },
 
   // 下拉刷新（S4 owner 2026-08-02 决策：取消 R 按钮，刷新入口统一为下拉刷新）
-  // FS-CF3（2026-08-10 方案A）：改为增量刷新（快速返回 + 分批逐条增加），刷新当前分类
+  // 2026-08-20 owner 决策：下拉刷新 = 从数据库（news_cache，即已展示给前端的数据）重新读取并渲染，
+  // 不触发 newsFetcher 抓取新数据、不轮询 getNewsDelta 增量。
   onPullDownRefresh() {
     if (this.data.isRefreshing) {
       wx.stopPullDownRefresh()
       return
     }
-    // 触发增量刷新（内部置 isRefreshing，轮询后台执行；下拉指示器可先收起，轮询结束后统一复位）
-    this._refreshWithIncrement(this.data.currentCategory)
+    // 读库刷新（内部置 isRefreshing 锁；下拉指示器可先收起，读库结束后统一复位）
+    this._refreshFromDb(this.data.currentCategory)
     wx.stopPullDownRefresh()
   },
 
@@ -484,169 +486,44 @@ Page({
   },
 
   /**
-   * FS-CF3（2026-08-10 owner 确认方案A「先快返回+分批增量」）：
-   * 下拉刷新核心。改为「先快返回 + 分批增量」——
-   *   1. 触发 newsFetcher(orchestrate) 统一抓取所有源（Stage 0），但不 await 完成（fire-and-forget 快速返回），
-   *      worker 后台 30-50s 逐条写库），UI 立即可交互，toast「正在抓取」；
-   *   2. 启动短轮询（每 3s）调 getNewsDelta 按 createdAt >= since 读回逐条写库的新记录，
-   *      去重后整体 prepend 到列表头部，实现「列表逐条增加」；
-   *   3. 连续空轮或达 45s 上限 → 停止轮询 → 整页重拉第 1 页保证列表完整有序 → 诚实提示。
-   * 兜底：currentCategory === 'all' 时仍退回编排模式（_refreshNewsCloudOrchestrator）统一触发 newsFetcher(orchestrate)。
-   * @param {string} refreshTarget 刷新抓取的分类（顶部下拉=当前分类固定 recommend 由调用方传入）
+   * 下拉/到顶下滑刷新（2026-08-20 owner 决策，取代 2026-08-10 FS-CF3 增量抓取）：
+   * 仅从数据库（news_cache，即已展示给前端的数据）重新读取并渲染当前分类，
+   * 不触发 newsFetcher 抓取新数据、不轮询 getNewsDelta 增量。
+   * 数据源由整点定时 newsFetcher 自动入库，前端下拉只需拉取已入库数据。
+   * @param {string} refreshTarget 要刷新的分类
    */
-  async _refreshWithIncrement(refreshTarget) {
+  async _refreshFromDb(refreshTarget) {
     // isRefreshing 作为唯一重入锁（含下拉 + 到达开头下滑两个入口）
     if (this.data.isRefreshing) return
     const target = refreshTarget || this.data.currentCategory
-    if (target === 'all') {
-      return this._refreshNewsCloudOrchestrator()
-    }
 
     this.setData({ isRefreshing: true })
-    const since = Date.now() // 本轮增量基准（createdAt >= since 视为本轮新增）
-    this._refreshSessionSince = since
-
     try {
-      // ① 触发 worker：fire-and-forget，不阻塞 UI（RPC 超时/db 异常由轮询兜底）
-      wx.cloud.callFunction({ name: 'newsFetcher', data: {} }).catch(() => {})
-      wx.showToast({ title: '正在抓取最新新闻…', icon: 'loading', duration: 1500 })
-      this._startRefreshPolling(since, target)
-    } catch (err) {
-      console.error('触发刷新失败:', err)
-      this.setData({ isRefreshing: false })
-      wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
-    }
-  },
-
-  /**
-   * FS-CF3：短轮询增量。每 3s 调 getNewsDelta 读回本轮新写库记录，去重后 prepend 列表头部。
-   * 收尾条件：连续 2 轮无新增（判断增量已到尽头）或达 15 轮（45s 上限）→ 停止并整页重拉兜底。
-   */
-  _startRefreshPolling(since, category) {
-    this._stopRefreshPolling(true) // 清掉上一次轮询（含旧整页重拉 timer），防堆叠
-    const PAGE = 0
-    this._pollRound = 0
-    this._pollSince = since
-    this._pollCategory = category
-    this._pollEmptyStreak = 0
-    this._pollTotalAdded = 0
-
-    const that = this
-    const step = () => {
-      if (that._destroyed) { that._stopRefreshPolling(true); return }
-      if (that._pollRound >= 15) { that._finishPullDown(since, category); return } // 45s 上限
-      that._pollRound++
-      getNewsDelta({ category, since, max: 10 }).then(delta => {
-        if (that._destroyed) { that._stopRefreshPolling(true); return }
-        const old = that.data.newsList || []
-        const oldIds = {}
-        old.forEach(function (it) { if (it && it.id) oldIds[it.id] = true })
-        // 仅保留本轮确实新增（不在旧列表）的记录，按 createdAt asc（先写库的在前）
-        const fresh = (delta.list || []).filter(function (it) {
-          return it && it.id && !oldIds[it.id]
-        })
-        if (fresh.length > 0) {
-          that._pollEmptyStreak = 0
-          that._pollTotalAdded += fresh.length
-          // 整体 prepend 到头部：fresh 按 createdAt asc，先抓到的排最前，符合"逐条增加"观感
-          const merged = fresh.concat(old)
-          that.setData({ newsList: merged, currentPage: 1, loadMoreCount: 0 })
-          // P1-12 修复：prepend 后用户正在阅读的卡片位置需随新增条数后移，
-          // 否则 merged[当前 index] 变成全新新闻，正在阅读的卡片被静默替换
-          const shiftedIndex = Math.min(that.data.currentIndex + fresh.length, Math.max(0, merged.length - 1))
-          that.renderCards(merged, shiftedIndex)
-          that._syncPanelList(merged, shiftedIndex)
-        } else {
-          that._pollEmptyStreak++
-        }
-        // 连续 2 轮空 → 增量已到尽头，提前收尾（不必等满 45s）
-        if (that._pollEmptyStreak >= 2) {
-          that._finishPullDown(since, category)
-        } else {
-          that._refreshPollTimer = setTimeout(step, 3000)
-        }
-      }).catch(() => {
-        if (that._destroyed) { that._stopRefreshPolling(true); return }
-        that._pollEmptyStreak++
-        if (that._pollEmptyStreak >= 2) {
-          that._finishPullDown(since, category)
-        } else {
-          that._refreshPollTimer = setTimeout(step, 3000)
-        }
-      })
-    }
-    this._refreshPollTimer = setTimeout(step, 3000)
-  },
-
-  /** 停止轮询（即将整页重拉或页面已销毁） */
-  _stopRefreshPolling(clearReload) {
-    clearTimeout(this._refreshPollTimer)
-    if (clearReload && this._reloadTimer) { clearTimeout(this._reloadTimer); this._reloadTimer = null }
-  },
-
-  /**
-   * FS-CF3：轮询收尾。停止增量轮询 → 整页重拉第 1 页（保证列表完整有序，覆盖轮询竞态/漏读）→ 诚实提示。
-   */
-  async _finishPullDown(since, category) {
-    if (this._destroyed) return
-    this._stopRefreshPolling(true)
-    const totalAdded = this._pollTotalAdded || 0
-    try {
-      // 整页重拉兜底：保证与数据库一致（增量轮询可能因 createdAt 批次/排序漏掉 publishTime 更前的）
-      const list = category === 'all'
+      wx.showToast({ title: '正在刷新…', icon: 'loading', duration: 800 })
+      // 读库：与 loadNews 同一路径，拉取已在 DB 中、展示给前端的数据
+      const list = target === 'all'
         ? await this._loadAllAggregated()
-        : (await getNewsList({ category, pageNum: 1, pageSize: firstPageSize(category) })).list || []
-      if (list.length > 0) {
-        this.setData({ newsList: list, currentPage: 1, currentIndex: 0, loadMoreCount: 0 })
+        : (await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target) })).list || []
+      if (this._destroyed) return
+      if (list.length === 0) {
+        this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
+        this._syncPanelList([], 0)
+      } else {
+        this.setData({ newsList: list, pageState: 'ready', currentPage: 1, currentIndex: 0, loadingMore: false, loadMoreCount: 0 })
         this.renderCards(list, 0)
         this._syncPanelList(list, 0)
       }
+      wx.showToast({ title: '已刷新', icon: 'none', duration: 1000 })
+    } catch (err) {
+      console.error('下拉刷新(读库)失败:', err)
+      const msg = handleApiError(err.errorCode, err.message)
+      this.setData({ pageState: 'error', errorMessage: msg })
+      wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
     } finally {
       this.setData({ isRefreshing: false })
     }
-    // 诚实提示：基于增量实际写入数，绝不虚报
-    const that = this
-    const msg = totalAdded > 0 ? '已更新 ' + totalAdded + ' 条' : '暂无新增'
-    this._statusPillTimer && clearTimeout(this._statusPillTimer)
-    setTimeout(function () { if (!that._destroyed) wx.showToast({ title: msg, icon: 'none' }) }, 300)
   },
 
-  /**
-   * FS-CF3：编排模式异步刷新（旧版逻辑，供 currentCategory === 'all' 时兜底）。
-   * all 分类无法走单分类 worker 增量，退回编排器异步全分类刷新 + 错峰重拉。
-   */
-  async _refreshNewsCloudOrchestrator() {
-    if (this.data.isRefreshing) return
-    this.setData({ isRefreshing: true })
-    try {
-      const res = await wx.cloud.callFunction({ name: 'newsFetcher', data: {} })
-      if (res.result && res.result.ok) {
-        wx.showToast({ title: '已触发后台刷新', icon: 'success', duration: 2000 })
-        this._schedulePostRefreshReload()
-      } else {
-        wx.showToast({ title: (res.result && res.result.message) || '刷新失败', icon: 'none' })
-      }
-    } catch (err) {
-      console.error('下拉刷新失败:', err)
-      wx.showToast({ title: '刷新失败，请稍后重试', icon: 'none' })
-    }
-    await this.loadNews()
-    this.setData({ isRefreshing: false })
-  },
-
-  /**
-   * DG-12：异步刷新后错峰重拉列表（后台 worker 完成写库后能看到新数据）
-   * 清掉上一次的定时器，避免连续下拉导致堆叠
-   */
-  _schedulePostRefreshReload() {
-    (this._refreshReloadTimers || []).forEach(t => clearTimeout(t))
-    const delays = [8000, 20000, 40000]
-    this._refreshReloadTimers = delays.map(ms =>
-      setTimeout(() => {
-        if (!this.data.isRefreshing) this.loadNews()
-      }, ms)
-    )
-  },
 
   // ============ 卡片渲染 ============
 
@@ -1137,19 +1014,17 @@ Page({
   },
 
   /**
-   * DG-03（方案 5 改动 C）+ FS-CF2（2026-08-10）：到达列表开头继续下滑 -> 刷新
-   * 修复「假刷新」bug：旧实现只是重读数据库并谎报“已更新 X 条”。
-   * FS-CF3（2026-08-10 方案A）：改为增量刷新——真调 newsFetcher(orchestrate)（fire-and-forget 快速返回），
-   * 短轮询 getNewsDelta 按 createdAt 增量逐条插入当前浏览分类列表头部，实现「列表逐条增加」。
-   * 保持 FS-CF2 的「真刷不假报」：最终按增量实际写入数诚实提示，绝不虚报条数。
+   * DG-03（方案 5 改动 C）：到达列表开头继续下滑 -> 刷新
+   * 2026-08-20 owner 决策：到达开头下滑 = 读库刷新（与下拉刷新一致），
+   * 仅从数据库（news_cache，即已展示给前端的数据）重新读取并渲染，不抓取新数据、不轮询增量。
+   * 历史：2026-08-10 FS-CF3 曾改为「真刷（newsFetcher + getNewsDelta 增量）」以修复「假刷新」；
+   * 本次 owner 决策明确回退为「读库刷新」——数据源由整点定时 newsFetcher 自动入库，前端下拉只需拉取已入库数据。
    */
   async refreshCurrentCategory() {
     if (this.data.loadingMore || this.data.isRefreshing) return
-    // FS-CF3：到达开头下滑 → 增量刷新（fire-and-forget 快速返回 + 短轮询逐条增加）。
-    // 不预置 loadingMore，交由 _refreshWithIncrement 内部 isRefreshing 锁统一管理（防重入短路）。
-    wx.showToast({ title: '抓取更多新闻中', icon: 'loading', duration: 800 })
+    // 2026-08-20 owner 决策：到达开头下滑 = 读库刷新（不抓取新数据），toast 由 _refreshFromDb 统一处理
     try {
-      await this._refreshWithIncrement(this.data.currentCategory)
+      await this._refreshFromDb(this.data.currentCategory)
     } finally {
       this.setData({ loadingMore: false })
     }
