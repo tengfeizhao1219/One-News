@@ -18,7 +18,9 @@ Component({
     fontScaleValue: { type: Number, value: 1 },
     metaScaleValue: { type: Number, value: 1 },
     // 页面可视高度（windowHeight px）：父页注入，用于锚定覆盖层高度，规避 100vh 在部分 Webview 下高于可视窗口
-    pageH: { type: Number, value: 0 }
+    pageH: { type: Number, value: 0 },
+    // 主题跟随：One News 首页 applyTheme 更新后经 wxml 绑定传入，组件实时切换深浅色
+    themeClass: { type: String, value: '' }
   },
 
   data: {
@@ -65,6 +67,16 @@ Component({
         _fontScaleValue: (typeof v === 'number' && v > 0) ? v : 1,
         _metaScaleValue: (typeof m === 'number' && m > 0) ? m : 1
       })
+    },
+    // 主题切换：One News 首页切深浅色 → themeClass property 更新 → 同步 data（组件根 class 实时切换）
+    'themeClass': function (v) {
+      if (v && this.data.themeClass !== v) {
+        const g = app.globalData || {}
+        this.setData({
+          themeClass: v,
+          isDark: (g.effectiveTheme === 'dark') || (v === 'page--dark')
+        })
+      }
     }
   },
 

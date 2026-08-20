@@ -51,6 +51,11 @@ Page({
   },
 
   onShow() {
+    // 主题跟随兜底：重新显示时同步 One News 设置的深浅色
+    const g = app.globalData || {}
+    if (g.themeClass && this.data.themeClass !== g.themeClass) {
+      this.setData({ themeClass: g.themeClass, isDark: g.effectiveTheme === 'dark' })
+    }
     // 从 onboard 编辑后返回时刷新画像概览
     this._refreshProfile()
   },

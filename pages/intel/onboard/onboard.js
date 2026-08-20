@@ -66,6 +66,17 @@ Page({
     }
   },
 
+  /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
+  onShow() {
+    const g = app.globalData || {}
+    if (g.themeClass && this.data.themeClass !== g.themeClass) {
+      this.setData({
+        themeClass: g.themeClass,
+        isDark: g.effectiveTheme === 'dark'
+      })
+    }
+  },
+
   onLoad() {
     let statusBarHeight = 20
     let menuTop = 44

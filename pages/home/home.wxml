@@ -213,6 +213,7 @@
     page-h="{{pageH}}"
     font-scale-value="{{_fontScaleValue}}"
     meta-scale-value="{{_metaScaleValue}}"
+    theme-class="{{themeClass}}"
     bind:reqback="onIntelReqBack">
   </intel-stage>
   <!-- ========== INTEL-BRIDGE (END) ========== -->
