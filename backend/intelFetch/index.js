@@ -114,22 +114,37 @@ exports.main = async (event = {}) => {
   await recordInspection(targetTime, sources.length, runId)
 
   // 异步自扇出：每个源一个独立 worker 实例（fire-and-forget，互不阻塞）
-  console.log(`[intelFetch] 异步触发 ${sources.length} 个源（各自独立 60s 预算，后台执行），targetTime=${targetTime}`)
-  for (const src of sources) {
-    const sourceId = src._id || src.key
-    cloud.callFunction({
-      name: 'intelFetch',
-      data: { sourceId, targetTime, shard: true },
+  // 2026-08-20 修复：改为「分批触发（每批 5 个）+ 失败重试 1 次」——此前一次性 fire 全部源，
+  //   大量并发 RPC 导致部分分片未触发（17 源只跑 7 个，RSS 大源全丢、批次 0 新增）。
+  console.log(`[intelFetch] 分批触发 ${sources.length} 个源（每批 5，失败重试 1 次），targetTime=${targetTime}`)
+  const BATCH = 5
+  const trigger = (sourceId) => cloud.callFunction({
+    name: 'intelFetch',
+    data: { sourceId, targetTime, shard: true },
+  })
+    .then((res) => {
+      const r = res.result || {}
+      console.log(`[intelFetch][${sourceId}] 分片已触发: ${r.message || ''}`)
     })
-      .then((res) => {
-        const r = res.result || {}
-        console.log(`[intelFetch][${sourceId}] 分片已触发: ${r.message || ''}`)
+    .catch((err) => {
+      console.warn(`[intelFetch][${sourceId}] 分片 RPC 失败（第 1 次）: ${err.message}，重试中…`)
+      return cloud.callFunction({
+        name: 'intelFetch',
+        data: { sourceId, targetTime, shard: true },
       })
-      .catch((err) => {
-        // worker 实例会继续跑完并写库，这里仅记录 RPC 层超时，不影响数据
-        console.warn(`[intelFetch][${sourceId}] 分片 RPC 超时（实例仍在后台运行）: ${err.message}`)
-      })
+        .then((res) => { const r = res.result || {}; console.log(`[intelFetch][${sourceId}] 重试成功: ${r.message || ''}`) })
+        .catch((err2) => console.warn(`[intelFetch][${sourceId}] 分片重试仍失败（实例可能未启动）: ${err2.message}`))
+    })
+
+  const triggerAll = async (list) => {
+    for (let i = 0; i < list.length; i += BATCH) {
+      const batch = list.slice(i, i + BATCH)
+      await Promise.all(batch.map((src) => trigger(src._id || src.key)))
+      // 每批间留 1s，避免瞬时并发打满（worker 各自 60s 预算）
+      if (i + BATCH < list.length) await new Promise((r) => setTimeout(r, 1000))
+    }
   }
+  await triggerAll(sources)
 
   const elapsed = Date.now() - startTime
   console.log(`[intelFetch] ========== 巡检已触发（编排/异步）: 后台更新中, 编排耗时 ${elapsed}ms ==========`)
