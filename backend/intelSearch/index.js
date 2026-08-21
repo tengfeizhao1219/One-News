@@ -20,7 +20,12 @@ const https = require('https')
 const { intelChat } = require('../common/intelLLM')
 const { ensureSchema } = require('../common/ensureSchema')
 
-// ─── 智谱 web_search 配置（复用 refreshNews/zhipuSearch 范式）────────
+// ─── Tavily 搜索（2026-08-21 主搜索通道：1-3s，专为 LLM 设计）───
+const TAVILY_API_KEY = process.env.TAVILY_API_KEY || ''
+const TAVILY_BASE = 'api.tavily.com'
+const TAVILY_TIMEOUT = 10000
+
+// ─── 智谱 web_search 配置（兜底，复用 refreshNews/zhipuSearch 范式）────────
 const ZHIPU_API_KEY = process.env.ZHIPU_API_KEY || ''
 const ZHIPU_BASE = 'open.bigmodel.cn'
 const ZHIPU_PATH = '/api/paas/v4/chat/completions'
@@ -100,7 +105,52 @@ async function judgeRelevance(query, ctx) {
   }
 }
 
-// ─── ② 智谱 web_search 联网搜索 ────────
+// ─── ② Tavily 联网搜索（主通道，2026-08-21）────────
+function tavilySearch(query) {
+  return new Promise((resolve) => {
+    if (!TAVILY_API_KEY) return resolve({ ok: false, reason: 'no-tavily-key' })
+    const body = JSON.stringify({
+      api_key: TAVILY_API_KEY,
+      query: String(query || '').slice(0, 200),
+      max_results: 5,
+      search_depth: 'basic',
+      include_answer: false,
+    })
+    const req = https.request({
+      hostname: TAVILY_BASE,
+      path: '/search',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+      timeout: TAVILY_TIMEOUT,
+    }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+          const results = Array.isArray(data.results) ? data.results : []
+          if (!results.length) return resolve({ ok: false, reason: 'tavily-empty:' + (data.error || 'no-results') })
+          const sources = results.filter(x => x && x.url).map(x => ({
+            title: String(x.title || '').slice(0, 120),
+            url: String(x.url || ''),
+            source: '',
+            snippet: String(x.content || '').replace(/\s+/g, ' ').slice(0, 300),
+          }))
+          resolve({ ok: true, answer: '', sources })
+        } catch (e) {
+          resolve({ ok: false, reason: 'tavily-parse:' + e.message })
+        }
+      })
+      res.on('error', () => resolve({ ok: false, reason: 'tavily-net' }))
+    })
+    req.on('error', () => resolve({ ok: false, reason: 'tavily-req' }))
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, reason: 'tavily-timeout' }) })
+    req.write(body)
+    req.end()
+  })
+}
+
+// ─── ②b 智谱 web_search 联网搜索（兜底）────────
 function zhipuWebSearch(query) {
   return new Promise((resolve) => {
     if (!ZHIPU_API_KEY) return resolve({ ok: false, reason: 'no-zhipu-key' })
@@ -177,7 +227,7 @@ function zhipuWebSearch(query) {
 // ─── ③ 总结回答（混元为主，智谱备选）───
 async function summarize(query, ctx, search) {
   const searchText = (search.sources || [])
-    .map((s, i) => `${i + 1}. ${s.title} ${s.url}`).join('\n')
+    .map((s, i) => `${i + 1}. ${s.title} ${s.url}${s.snippet ? '\n   ' + s.snippet : ''}`).join('\n')
   const system = `你是 AI 情报官，基于联网搜索结果回答用户关于「${query}」的进一步了解需求。
 要求：
 - 客观、基于搜索结果与当前新闻，不编造事实
@@ -226,10 +276,14 @@ exports.main = async (event = {}) => {
     }
   }
 
-  // ② 联网搜索（智谱 web_search）
-  const search = await zhipuWebSearch(query)
+  // ② 联网搜索（主 Tavily 1-3s → 兜底智谱 web_search）
+  let search = await tavilySearch(query)
   if (!search.ok) {
-    console.warn('[intelSearch] web_search 失败:', search.reason)
+    console.warn('[intelSearch] tavily 失败:', search.reason, '→ 兜底智谱 web_search')
+    search = await zhipuWebSearch(query)
+  }
+  if (!search.ok) {
+    console.warn('[intelSearch] web_search 全部失败:', search.reason)
     return {
       code: 0,
       data: { relevant: true, answer: null, error: 'search_unavailable', hint: '这个话题联网搜索暂时没找到结果，可以换个更具体的说法再试试～' },
@@ -241,16 +295,22 @@ exports.main = async (event = {}) => {
   try {
     sum = await Promise.race([
       summarize(query, ctx, search),
-      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
+      new Promise((resolve) => setTimeout(() => resolve(null), 3000)),
     ])
   } catch (e) { sum = null }
+  // 总结失败 → 用 Tavily 结果摘要拼一个简答（保证有内容返回，不空转）
+  let fallbackAnswer = ''
+  if (!(sum && sum.text) && search.sources && search.sources.length) {
+    fallbackAnswer = '关于「' + query + '」为你找到以下信息：\n' +
+      search.sources.map((s, i) => `${i + 1}. ${s.title}：${s.snippet || ''}`).join('\n')
+  }
   return {
     code: 0,
     data: {
       relevant: true,
-      answer: (sum && sum.text) || search.answer || '',
+      answer: (sum && sum.text) || fallbackAnswer || search.answer || '',
       sources: search.sources || [],
-      engine: (sum && sum.engine) || 'zhipu-search',
+      engine: (sum && sum.engine) || 'tavily',
       query,
     },
   }
