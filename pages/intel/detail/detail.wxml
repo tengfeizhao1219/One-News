@@ -31,11 +31,7 @@
 
     <!-- 真实数据 -->
     <block wx:else>
-      <!-- 状态条：🟢 情报官已完成梳理（浅灰底，不抢眼） -->
-      <view class="status-strip">
-        <view class="dot-g"></view>
-        <text class="status-txt">情报官已完成梳理{{processedTime ? ' · ' + processedTime : ''}}</text>
-      </view>
+      <!-- 2026-08-21 问题②：状态条已按要求去掉（用户明确不需要「情报官已完成梳理」提示条） -->
 
       <!-- 结论式标题 + 来源/时间 -->
       <text class="detail-title">{{title}}</text>
@@ -51,14 +47,17 @@
         </view>
       </view>
 
-      <!-- 发生了什么（结构化块：正文自然段落 + 大白话/AI预测/定义浅灰底） -->
+      <!-- 发生了什么（2026-08-21 问题③⑥：正文自然段落；仅 AI 预测用浅灰底块+段尾 UI 提示，
+           大白话/定义归为普通正文段（不显示标签文字）） -->
       <text class="block-label">发生了什么</text>
       <block wx:if="{{whatHappenedBlocks.length}}">
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
-          <view wx:if="{{blk.type === 'text'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
-          <view wx:elif="{{blk.text}}" class="wh-panel wh-panel-{{blk.type}}">
+          <!-- 普通正文段（text / plain / def 都按自然段落渲染，不显示标记文字） -->
+          <view wx:if="{{blk.type !== 'predict'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
+          <!-- AI 预测：浅灰底块 + 段尾小字「AI 预测」（UI 提示，非正文文字） -->
+          <view wx:elif="{{blk.text}}" class="wh-panel">
             <text class="wh-panel-body">{{blk.text}}</text>
-            <text wx:if="{{blk.type === 'predict'}}" class="wh-panel-tag">AI 预测</text>
+            <text class="wh-panel-tag">AI 预测</text>
           </view>
         </block>
       </block>

@@ -117,15 +117,12 @@ Page({
     })
     if (id) this._checkFavorite(id)
 
-    // 详情加载优化（2026-08-19）：不等待全量——有 card 基础数据立即渲染（秒开），全量异步补充；缓存命中直接展示
+    // 2026-08-21 修复（问题④）：去掉「先卡片摘要后全量覆盖」两段式——
+    //   统一等云函数返回完整详情再渲染（期间 loading），避免用户先看到一句话摘要再闪成完整内容。
     if (id) {
       const cached = (app.globalData && app.globalData.intelDetailCache && app.globalData.intelDetailCache[id]) || null
       if (cached) {
         this.applyDetail(cached)
-      } else if (card && (card.title || card.desc)) {
-        // 先用卡片基础数据渲染（标题/来源/一句定义），云函数全量到达后覆盖
-        this.setData({ loading: false, empty: false })
-        this.loadRealDetail(id)
       } else {
         this.loadRealDetail(id)
       }

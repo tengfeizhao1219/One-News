@@ -146,8 +146,6 @@
   color: var(--text-tertiary);
   text-align: right;
 }
-/* 预测正文整体次级色 */
-.wh-panel-predict .wh-panel-body { color: var(--text-secondary); }
 
 /* 落到你这里：浅蓝底卡 */
 .for-card {
@@ -238,27 +236,6 @@
 
 /* 分隔线 */
 .divider { height: 1rpx; background: var(--divider); margin: 32rpx 4rpx; }
-
-/* 状态条（2026-08-21 恢复 demo）：🟢 情报官已完成梳理 —— 浅灰底，不抢眼 */
-.status-strip {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--text-secondary);
-  background: var(--bg-subtle);
-  border-radius: 14rpx;
-  padding: 14rpx 20rpx;
-  margin-bottom: 24rpx;
-}
-.dot-g {
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 50%;
-  background: #34C759; /* 绿色完成点（demo 同款） */
-  flex-shrink: 0;
-}
-.status-txt { flex: 1; }
 
 /* 状态占位 */
 .state-hint {
