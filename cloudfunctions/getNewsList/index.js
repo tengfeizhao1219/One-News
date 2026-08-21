@@ -153,35 +153,30 @@ const BUILTIN_INTRO_BODY = [
   '一页说',
   '有些事值得多想一步。我们挑出有态度的新闻，额外写一段独立观点，带你看见流水账之外的那一层。',
   '怎么用',
-  '左右滑切换分类 · 右滑进入 AI 情报 · 顶部下滑刷新 · 点卡片看详情',
+  '上下滑动浏览新闻 · 左滑切换分类 · 右滑进入 AI 情报 · 顶部下滑刷新 · 点卡片看详情',
   '你的数据',
   '收藏和浏览历史都安静地存在你这台设备里，只属于你。但请记得：卸载或清除小程序缓存，它们会一起消失，且无法找回。',
 ].join('\n')
 
-// 近 1 个月版本更新（手工维护；getRecentVersionUpdates 仅取 30 天内条目，过期自动消失）
+// 近期更新：仅展示与系统版本日志（RELEASE_NOTE_*.md）一致的版本，不在日志中的不展示。
+// VERSION_UPDATES 须随版本发布手动与版本日志保持同步（新增/移除版本都改这里）。
 const VERSION_UPDATES = [
-  { version: 'v1.0.2', date: '2026-08-16', items: ['接入官方媒体直连，重要事件站内读完', '每条新闻新增 AI 摘要与 AI 解读，"一页说"独立观点上线', '修复同一篇新闻在列表里反复出现'] },
-  { version: 'v1.2.0', date: '2026-08-09', items: ['AI 摘要升级（混元大模型，优先免费额度）', '摘要来源角标（AI/来源/正文/标题）', '品牌 Logo 全站落地', '分享增强（发送给朋友 + 朋友圈）'] },
-  { version: 'v1.2.1', date: '2026-08-10', items: ['修复关于页/设置页空白、首页卡片布局与浅色模式 Logo', '工程化拆分私有配置，解决部署 JSON 冲突'] },
+  { version: 'v1.0.2', date: '2026-08-16', items: ['官方媒体直接接入，重要事件在站内读完，不用跳来跳去', '每条新闻新增 AI 摘要与 AI 解读，"一页说"独立观点上线', '修复同一篇新闻在列表里反复出现'] },
+  { version: 'v1.2.0', date: '2026-08-09', items: ['AI 摘要升级（接入混元大模型，优先免费额度，失败自动降级）', '摘要来源角标（AI / 来源 / 正文 / 标题）', '品牌 Logo 全站落地（首页 / 详情页 / 关于页 / 启动页 / 头像）', '分享增强（发送给朋友 + 朋友圈）', '修复首页"假摘要"顶掉正文首段的问题'] },
+  { version: 'v1.2.1', date: '2026-08-10', items: ['修复关于页 / 设置页空白、首页卡片布局与浅色模式 Logo', '工程化拆分私有配置，解决部署 JSON 冲突'] },
 ]
 
 /**
- * 取近 30 天内的版本更新文本块（无则空串）
+ * 取版本更新文本块（仅含 VERSION_UPDATES 内、与系统版本日志一致的版本；无则空串）
  */
 function getRecentVersionUpdates() {
-  const now = Date.now()
-  const monthAgo = now - 30 * 24 * 3600 * 1000
-  const recent = VERSION_UPDATES.filter((u) => {
-    const t = new Date(u.date + 'T00:00:00').getTime()
-    return Number.isFinite(t) && t >= monthAgo && t <= now
-  })
-  if (!recent.length) return ''
-  const lines = recent.map((u) => `· ${u.version}（${u.date}）：${(u.items || []).join('；')}`)
+  if (!VERSION_UPDATES.length) return ''
+  const lines = VERSION_UPDATES.map((u) => `· ${u.version}（${u.date}）：${(u.items || []).join('；')}`)
   return '近期更新\n' + lines.join('\n')
 }
 
 /**
- * 拼装占位新闻详情正文（功能介绍 + 近 1 个月版本更新）
+ * 拼装占位新闻详情正文（功能介绍 + 近期版本更新）
  */
 function getBuiltinContent() {
   const updates = getRecentVersionUpdates()

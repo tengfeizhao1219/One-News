@@ -499,7 +499,7 @@
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
-/* ============ app_intro 占位欢迎介绍：品牌绿 hero + 分段标题卡片 ============ */
+/* ============ app_intro 占位欢迎介绍：系统蓝 hero + 分段标题卡片 ============ */
 .app-intro-hero {
   display: flex;
   align-items: center;
@@ -507,7 +507,7 @@
   padding: 32rpx 32rpx;
   margin-bottom: 36rpx;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, var(--brand-green-subtle), rgba(255, 255, 255, 0) 72%);
+  background: linear-gradient(135deg, var(--primary-subtle), rgba(255, 255, 255, 0) 72%);
   border: 1rpx solid var(--divider);
 }
 .app-intro-logo {
@@ -519,7 +519,7 @@
   align-items: center;
   justify-content: center;
   background-color: var(--bg-card);
-  box-shadow: 0 6rpx 18rpx rgba(79, 173, 91, 0.22);
+  box-shadow: 0 6rpx 18rpx var(--primary-subtle);
   overflow: hidden;
 }
 .app-intro-hero-text {
@@ -537,14 +537,14 @@
 .app-intro-tagline {
   font-size: 24rpx;
   line-height: 1.4;
-  color: var(--brand-green);
+  color: var(--primary);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 .app-intro-h {
   margin-top: 40rpx;
   margin-bottom: 14rpx;
   padding-left: 20rpx;
-  border-left: 6rpx solid var(--brand-green);
+  border-left: 6rpx solid var(--primary);
   font-size: 30rpx;
   font-weight: 600;
   line-height: 1.4;
