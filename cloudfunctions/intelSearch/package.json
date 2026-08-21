@@ -1,0 +1,9 @@
+{
+  "name": "intelSearch",
+  "version": "1.0.0",
+  "description": "AI 情报官 · intelSearch",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "intelSearch",
+  "version": "1.0.0",
+  "description": "AI 情报官 · 详情页话题搜索（相关性判断 + 智谱 web_search 联网搜索 + 总结回答）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}
