@@ -72,8 +72,7 @@ Page({
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关 / 搜索失败 hint（当次提示，不累积）
-    searchResults: [],          // 查询结果累积（作为详情页一部分整体保留，不覆盖）
-                                // 每条: {query, summary, items:[{title,body}], sources:[{title,url,source}], sourcesExpanded, isFallback}
+    digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries:[{time, sections, sources}]}]
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -125,6 +124,8 @@ Page({
       itemId: id,
     })
     if (id) this._checkFavorite(id)
+    // 深挖历史：退出再进保留（本地持久化，按 itemId 隔离）
+    this.setData({ digGroups: this._loadDig() })
 
     // 2026-08-21 修复（问题④）：去掉「先卡片摘要后全量覆盖」两段式——
     //   统一等云函数返回完整详情再渲染（期间 loading），避免用户先看到一句话摘要再闪成完整内容。
@@ -214,11 +215,13 @@ function parseSceneMapping(txt) {
             type: (b.type === 'plain' || b.type === 'predict' || b.type === 'def') ? b.type : 'text',
             text: String(b.text || '').replace(/\*\*/g, '').trim(),
           })).filter(b => b.text)
-          // 2026-08-21 兜底修复：LLM 常把「（AI 预测）」标在正文第一段开头，
-          // 导致整段正文被误标 predict。规则：AI 预测块必须位于**最后一段**才保留预测样式，
-          // 否则降级为普通正文（text）——只有结尾的预测段才符合 UI 设计。
-          const lastIdx = blocks.length - 1
-          return blocks.map((b, i) => (b.type === 'predict' && i !== lastIdx) ? { type: 'text', text: b.text } : b)
+          // 2026-08-21 兜底修复 v2：仅当「AI 预测」误标在**第一段**时降级为正文
+          //（LLM 曾把标记放正文开头 → 整段正文被误判）。正常结构「正文+预测(+定义)」中
+          // 预测在后面，必须保留预测样式（之前「非最后一段即降级」误伤正常数据）。
+          if (blocks.length > 1 && blocks[0].type === 'predict') {
+            blocks[0] = { type: 'text', text: blocks[0].text }
+          }
+          return blocks
         }
         // 本地兜底解析（对齐后端 structureWhatHappened 逻辑）——2026-08-20 v5
         const raw = String(d.whatHappened || '').trim()
@@ -324,7 +327,7 @@ function parseSceneMapping(txt) {
   },
 
   // ============ 话题搜索（intelSearch） ============
-  /** 点击搜索悬浮按钮：滚动到搜索区（详情页一部分，自然滚动浏览） */
+  /** 点击搜索悬浮按钮：展开搜索入口并滚动到它（入口不常驻，历史在正文流深挖历史区） */
   onToggleSearch() {
     this.setData({ searchIntoView: 'search-area', searchOpen: true })
   },
@@ -337,6 +340,7 @@ function parseSceneMapping(txt) {
       return
     }
     this._runSearch(query)
+    this._collapseSearch()
   },
 
   onSearchInput(e) {
@@ -351,6 +355,7 @@ function parseSceneMapping(txt) {
       return
     }
     this._runSearch(query.slice(0, 60))
+    this._collapseSearch()
   },
 
   /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示 */
@@ -389,7 +394,7 @@ function parseSceneMapping(txt) {
             sourcesExpanded: false,
             isFallback: isFallback,
           }
-          this.setData({ searchResults: this.data.searchResults.concat([entry]) })
+          this._pushDigEntry(query, entry.sections, sources)
           return
         }
         // ③ 相关但失败（当次提示条）
@@ -437,6 +442,50 @@ function parseSceneMapping(txt) {
       }
     }
     return { summary, items }
+  },
+
+  // ============ 深挖历史（同话题折叠 + 本地持久化） ============
+  /** 深挖历史存储 key（按 itemId 隔离） */
+  _digKey() { return 'intel_dig_history_' + (this.data.itemId || '') },
+  _loadDig() {
+    try {
+      const k = this._digKey()
+      const v = wx.getStorageSync(k)
+      return Array.isArray(v) ? v : []
+    } catch (e) { return [] }
+  },
+  _saveDig(groups) {
+    try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
+  },
+  /** 新深挖结果入历史：同话题合并 entries（最新在前），并持久化 */
+  _pushDigEntry(query, sections, sources) {
+    const now = new Date()
+    const time = (now.getHours() < 10 ? '0' + now.getHours() : now.getHours()) + ':' +
+      (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes())
+    const groups = this._loadDig()
+    const g = groups.find(x => x.query === query)
+    const entry = { time: time, sections: sections, sources: sources }
+    if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
+    // 上限保护：最多 10 个话题、每话题 10 次
+    while (groups.length > 10) groups.pop()
+    groups.forEach(x => { while (x.entries.length > 10) x.entries.pop() })
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
+  },
+  /** 收起搜索入口：隐藏面板，滚动到深挖历史区（历史在正文流可见） */
+  _collapseSearch() {
+    this.setData({ searchOpen: false, searchIntoView: 'dig-history' })
+    // 收起后立即复位锚点，避免下次点击不触发
+    setTimeout(() => this.setData({ searchIntoView: '' }), 600)
+  },
+  /** 展开/收起某个话题的深挖历史 */
+  onToggleDigGroup(e) {
+    const gi = Number(e.currentTarget.dataset.gi)
+    const groups = this._loadDig()
+    if (!groups[gi]) return
+    groups[gi].open = !groups[gi].open
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
   },
 
   /** 折叠/展开参考来源（按结果条目 index） */

@@ -294,10 +294,14 @@
 
 /* 搜索面板：从底部升起（top 由 JS 注入，钉在标题下方 + 呼吸间距） */
 .search-panel {
-  /* 详情页一部分：随页面滚动流，无定位/无覆盖/无收起手势 */
+  /* 搜索入口：默认隐藏（display:none），点 FAB 展开；搜索完成自动收起 */
+  display: none;
   margin-top: 40rpx;
   padding-top: 28rpx;
   border-top: 1rpx solid var(--divider);
+}
+.search-panel.open {
+  display: block;
 }
 
 /* 搜索入口（deep-quick + 搜索框）整组：结果滚动时常驻顶部，便于连续查询 */
@@ -581,4 +585,96 @@
 @keyframes floatY {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }
+}
+
+
+/* ============ 深挖历史区（正文流内，同话题折叠，退出再进保留） ============ */
+.dig-history {
+  margin-top: 40rpx;
+  padding-top: 28rpx;
+  border-top: 1rpx solid var(--divider);
+}
+.dig-title {
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 16rpx;
+}
+.dig-empty {
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  padding: 8rpx 4rpx;
+}
+.dig-group {
+  background-color: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 24rpx;
+  margin-bottom: 20rpx;
+  overflow: hidden;
+}
+.dig-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
+}
+.dig-group-head--hover { background-color: var(--bg-subtle); }
+.dig-group-info { flex: 1; min-width: 0; }
+.dig-group-q {
+  display: block;
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.dig-group-meta {
+  display: block;
+  margin-top: 6rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+}
+.dig-group-arrow {
+  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin-left: 20rpx;
+  transition: transform 0.2s;
+}
+.dig-group.open .dig-group-arrow { transform: rotate(90deg); }
+.dig-group-body {
+  border-top: 1rpx solid var(--divider);
+  padding: 8rpx 28rpx 24rpx;
+}
+.dig-entry {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--divider);
+}
+.dig-entry:last-child { border-bottom: none; }
+.dig-entry-time {
+  display: block;
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin-bottom: 10rpx;
+}
+.dig-sources {
+  margin-top: 12rpx;
+  border-top: 1rpx solid var(--divider);
+  padding-top: 14rpx;
+}
+.dig-src {
+  padding: 10rpx 0;
+}
+.dig-src--hover { opacity: 0.7; }
+.dig-src-title {
+  display: block;
+  font-size: calc(26rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-link);
+  line-height: 1.5;
+}
+.dig-src-url {
+  display: block;
+  margin-top: 4rpx;
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  word-break: break-all;
 }

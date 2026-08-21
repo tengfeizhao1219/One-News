@@ -116,6 +116,42 @@
           </view>
         </view>
       </block>
+
+      <!-- 深挖历史区（正文流内随内容滚动：同话题折叠，点击展开各次结果；退出再进保留） -->
+      <view class="dig-history" id="dig-history">
+        <view class="dig-title">深挖历史</view>
+        <view class="dig-empty" wx:if="{{!digGroups.length}}">还没有深挖记录，点右下角搜索按钮开始了解</view>
+        <block wx:for="{{digGroups}}" wx:key="query" wx:for-item="g" wx:for-index="gi">
+          <view class="dig-group {{g.open ? 'open' : ''}}">
+            <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
+              <view class="dig-group-info">
+                <text class="dig-group-q">「{{g.query}}」</text>
+                <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+              </view>
+              <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
+            </view>
+            <view class="dig-group-body" wx:if="{{g.open}}">
+              <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
+                <text class="dig-entry-time">{{en.time}}</text>
+                <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
+                  <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
+                  <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
+                    <view class="search-sec-bdot"></view>
+                    <text class="search-sec-btext">{{sec.text}}</text>
+                  </view>
+                  <view class="search-sec-para" wx:else>{{sec.text}}</view>
+                </block>
+                <view class="dig-sources" wx:if="{{en.sources.length}}">
+                  <view class="dig-src" wx:for="{{en.sources}}" wx:key="url" bindtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
+                    <text class="dig-src-title">{{item.title}}</text>
+                    <text class="dig-src-url">{{item.url}}</text>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
       </view>
       <!-- 话题搜索区（详情页一部分：搜索框 + 累积结果，随页面自然滚动，不上推/不覆盖） -->
       <view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area">
@@ -130,53 +166,9 @@
       </view>
     </view>
 
-    <!-- 结果区：loading / 当次 hint / 累积查询结果（作为详情页一部分整体保留） -->
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:if="{{searchHint}}">{{searchHint}}</view>
-    <block wx:for="{{searchResults}}" wx:key="index" wx:for-item="r">
-      <view class="search-result">
-        <!-- 查询词标签 -->
-        <view class="search-result-head">
-          <text class="search-result-q">「{{r.query}}」</text>
-          <text class="search-result-arrow" wx:if="{{r.sources.length}}">{{r.sourcesExpanded ? '收起来源' : '展开来源'}} ›</text>
-        </view>
-        <!-- 结构化层级排版（后端 sections：小标题/段落/列表） -->
-        <block wx:if="{{r.sections.length}}">
-          <block wx:for="{{r.sections}}" wx:for-item="sec" wx:key="index">
-            <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
-            <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
-              <view class="search-sec-bdot"></view>
-              <text class="search-sec-btext">{{sec.text}}</text>
-            </view>
-            <view class="search-sec-para" wx:else>{{sec.text}}</view>
-          </block>
-        </block>
-        <!-- 回退：段落式结果（标题行 + 正文段落） -->
-        <block wx:elif="{{r.items.length}}">
-          <view class="search-summary" wx:if="{{r.summary}}">{{r.summary}}</view>
-          <view class="search-item" wx:for="{{r.items}}" wx:for-item="it" wx:key="index">
-            <text class="search-item-title" wx:if="{{it.title}}">{{it.title}}</text>
-            <text class="search-item-desc" wx:if="{{it.body}}">{{it.body}}</text>
-          </view>
-        </block>
-        <!-- 来源拼接 fallback：不显示正文，仅折叠来源 -->
-        <view class="search-fallback-tip" wx:elif="{{r.isFallback}}">已找到相关来源，展开下方链接查看详情。</view>
-        <!-- 参考来源：折叠卡，点击展开 -->
-        <view class="search-sources" wx:if="{{r.sources.length}}" bindtap="onToggleSources" data-idx="{{index}}" hover-class="search-sources-head--hover">
-          <view class="search-sources-head">
-            <text class="search-sources-title">参考来源（{{r.sources.length}}）</text>
-            <text class="search-sources-arrow">{{r.sourcesExpanded ? '收起' : '展开'}} ›</text>
-          </view>
-          <block wx:if="{{r.sourcesExpanded}}">
-            <view class="search-src" wx:for="{{r.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
-              <text class="search-src-title">{{item.title}}</text>
-              <text class="search-src-source" wx:if="{{item.source}}">{{item.source}}</text>
-              <text class="search-src-url">{{item.url}}</text>
-            </view>
-          </block>
-        </view>
-      </view>
-      </block>
+
       <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
       </view>
     </block>
