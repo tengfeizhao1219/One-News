@@ -84,7 +84,8 @@
   flex: 1;
   height: 0;
   /* owner 2026-08-19：标题与顶部导航保留呼吸空间（16rpx → 44rpx） */
-  padding: 44rpx 32rpx calc(16rpx + var(--safe-bottom, 0px));
+  /* 底部 padding 仅保留安全区（safe-bottom），内容底部留白由 foot-note 自身 padding 控制 */
+  padding: 44rpx 32rpx var(--safe-bottom, 0px);
   box-sizing: border-box;
   overflow-y: auto;
 }
@@ -272,7 +273,7 @@
   text-align: center;
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  padding: 32rpx 0 calc(16rpx + var(--safe-bottom, 0px));
+  padding: 32rpx 0 8rpx;
 }
 
 .content::-webkit-scrollbar { display: none; width: 0; height: 0; } /* 隐藏滚动条（owner 2026-08-20） */
