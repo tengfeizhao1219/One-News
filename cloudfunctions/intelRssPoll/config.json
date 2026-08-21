@@ -15,7 +15,7 @@
     {
       "name": "intelPoll1800",
       "type": "timer",
-      "config": "0 0 18 * * * *"
+      "config": "0 45 17 * * * *"
     }
   ]
 }

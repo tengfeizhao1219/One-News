@@ -15,7 +15,7 @@
     {
       "name": "intelProcess1800",
       "type": "timer",
-      "config": "0 10 18 * * * *"
+      "config": "0 50 17 * * * *"
     }
   ]
 }
