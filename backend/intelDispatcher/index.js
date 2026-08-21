@@ -393,7 +393,7 @@ async function persistBrief(dayKey, brief) {
     try {
       await db.collection(INTEL_CURRENT).doc(found._id).update({ data: brief })
       console.log(`[intelDispatcher] 更新当日 brief v${brief.version} (${dayKey})`)
-      return docId
+      return await purgeOldBriefs(docId)
     } catch (e) {
       console.warn('[intelDispatcher] 更新当日 brief 失败，改为新增:', e.message)
     }
@@ -402,7 +402,32 @@ async function persistBrief(dayKey, brief) {
   const add = await db.collection(INTEL_CURRENT).add({ data: brief })
   docId = add._id || ''
   console.log(`[intelDispatcher] 新建当日 brief v${brief.version} (${dayKey})`)
-  return docId
+  return await purgeOldBriefs(docId)
+}
+
+/**
+ * 逐批只留一版（owner 2026-08-19 拍板，2026-08-21 恢复）：发布成功后删除非本版旧 brief（含历史版本）。
+ * @param {string} keepId 当前版 _id（保留）
+ */
+async function purgeOldBriefs(keepId) {
+  if (!keepId) return keepId
+  try {
+    let removed = 0
+    while (true) {
+      const old = await db.collection(INTEL_CURRENT).limit(100).get()
+      if (!old.data || !old.data.length) break
+      let hit = 0
+      for (const d of old.data) {
+        if (d._id === keepId) continue
+        try { await db.collection(INTEL_CURRENT).doc(d._id).remove(); removed++; hit++ } catch (e) { /* 忽略 */ }
+      }
+      if (old.data.length < 100) break
+    }
+    console.log(`[intelDispatcher] 发布成功，清除旧 brief ${removed} 份（逐批只留一版）`)
+  } catch (e) {
+    console.warn('[intelDispatcher] 清旧 brief 失败（非阻塞）:', e.message)
+  }
+  return keepId
 }
 
 /** 查找当日 Brief（用于 05→11→18 同一份的追加升级） */

@@ -38,6 +38,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const { ensureSchema } = require('./common/ensureSchema')
 const { intelChat } = require('./common/intelLLM')
@@ -565,6 +566,30 @@ exports.main = async (event = {}) => {
 
   if (!todo.length) {
     return { ok: true, processed: 0, note: '无待处理条目' }
+  }
+
+  // ── 逐批只留本批（owner 2026-08-19 拍板，2026-08-21 恢复）：本批确有数据 → 先清非本批历史，再写本批 ──
+  //   仅首个实例清理；self-fan-out 续跑（event.purgeDone=true）跳过，避免误清本轮刚写的 staged。
+  if (event.purgeDone !== true) {
+    let purgeStaged = 0, purgeIngest = 0
+    try {
+      while (true) {
+        const s = await db.collection(INTEL_STAGED).limit(100).get()
+        if (!s.data || !s.data.length) break
+        for (const d of s.data) { try { await db.collection(INTEL_STAGED).doc(d._id).remove(); purgeStaged++ } catch (e) { /* 单条失败忽略 */ } }
+        if (s.data.length < 100) break
+      }
+    } catch (e) { console.warn('[intelProcess] 清空旧 staged 失败（非阻塞）:', e.message) }
+    try {
+      // 清非本批历史 ingest（done/low/rejected 等），保留本批 pending 载体
+      while (true) {
+        const old = await db.collection(INTEL_INGEST).where({ status: _.neq('pending') }).limit(100).get()
+        if (!old.data || !old.data.length) break
+        for (const d of old.data) { try { await db.collection(INTEL_INGEST).doc(d._id).remove(); purgeIngest++ } catch (e) { /* 忽略 */ } }
+        if (old.data.length < 100) break
+      }
+    } catch (e) { console.warn('[intelProcess] 清非本批 ingest 失败（非阻塞）:', e.message) }
+    console.log(`[intelProcess] 逐批清理完成：旧 staged ${purgeStaged} / 非本批 ingest ${purgeIngest}`)
   }
 
   // 本批处理（P1 优化：>48h 的旧 pending 直接拒绝不进 LLM，防积压旧条白烧 token；
