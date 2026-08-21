@@ -68,6 +68,11 @@ const AI_KEYWORDS = [
   '神经网络', '算法', '算力', 'GPU', '数据', '训练', '推理', 'Agent', '智能体', 'RAG', 'Prompt', '提示词',
   '开源', '编程', '代码', '软件', '开发者', '工具', '应用', '行业', '技术', '芯片', '语义', '生成', '多模态',
   '大模型', '聊天机器人', 'Copilot', 'AI编程', '自动化', '机器学习',
+  // 2026-08-21：技术/编程/开发类也判相关（与 AI 新闻主题强关联：Bun/Node/框架/API 等）
+  '编程语言', '运行时', '框架', '开发', '前端', '后端', 'API', 'SDK', '开源项目', '程序员',
+  'Bun', 'Node', 'Python', 'JavaScript', 'TypeScript', 'Java', 'Go', 'Rust', '数据库',
+  '编译器', '测试', '部署', '云服务', '产品', '发布', '更新', '版本', '教程', '指南',
+  'Web', '应用', '平台', '工具链', '性能', '安全', '隐私', '芯片', '硬件', '机器人',
 ]
 function quickRelevance(query) {
   const q = String(query || '').toLowerCase()
@@ -247,6 +252,7 @@ ${searchText || '（无结构化结果，基于回答内容）'}
 
 // ─── 主入口 ─────────────────────────────
 exports.main = async (event = {}) => {
+  const startMs = Date.now()
   try { await ensureSchema() } catch (e) { /* 自愈建表非阻塞 */ }
 
   const itemId = String((event && event.itemId) || '').trim()
@@ -264,7 +270,9 @@ exports.main = async (event = {}) => {
   const ctx = newsContext(news)
 
   // ① 相关性判断（宽泛）
+  const tJudge = Date.now()
   const judge = await judgeRelevance(query, ctx)
+  console.log('[intelSearch] judge 耗时:', Date.now() - tJudge + 'ms', '| relevant:', judge.relevant)
   if (!judge.relevant) {
     return {
       code: 0,
@@ -277,7 +285,9 @@ exports.main = async (event = {}) => {
   }
 
   // ② 联网搜索（主 Tavily 1-3s → 兜底智谱 web_search）
+  const tSearch = Date.now()
   let search = await tavilySearch(query)
+  console.log('[intelSearch] 搜索耗时:', Date.now() - tSearch + 'ms | ok:', search.ok, '| sources:', (search.sources||[]).length)
   if (!search.ok) {
     console.warn('[intelSearch] tavily 失败:', search.reason, '→ 兜底智谱 web_search')
     search = await zhipuWebSearch(query)
@@ -292,19 +302,21 @@ exports.main = async (event = {}) => {
 
   // ③ 总结回答（混元为主，智谱备选）；8s 超时兜底直接用搜索回答，避免整函数超时
   let sum = null
+  const tSum = Date.now()
   try {
     sum = await Promise.race([
       summarize(query, ctx, search),
-      new Promise((resolve) => setTimeout(() => resolve(null), 3000)),
+      new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
     ])
   } catch (e) { sum = null }
+  console.log('[intelSearch] summarize 耗时:', Date.now() - tSum + 'ms', '| sum:', sum ? '成功' : 'null(兜底)')
   // 总结失败 → 用 Tavily 结果摘要拼一个简答（保证有内容返回，不空转）
   let fallbackAnswer = ''
   if (!(sum && sum.text) && search.sources && search.sources.length) {
     fallbackAnswer = '关于「' + query + '」为你找到以下信息：\n' +
       search.sources.map((s, i) => `${i + 1}. ${s.title}：${s.snippet || ''}`).join('\n')
   }
-  return {
+  const result = {
     code: 0,
     data: {
       relevant: true,
@@ -314,4 +326,6 @@ exports.main = async (event = {}) => {
       query,
     },
   }
+
+  return result
 }
