@@ -93,23 +93,23 @@
     box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:50;
   }
   body.note-mode [data-note].lit{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary-subtle);}
-  /* 手机框 + 说明卡 并排；点击元素后手机左移、说明卡从手机右侧滑出 */
-  .page-wrap.active{transition:transform .32s cubic-bezier(.32,.72,0,1);gap:0;}
-  .page-wrap.active.pushed{transform:translateX(calc(-1 * min(190px, 18vw)));}
-  .page-wrap.active .phone{transition:box-shadow .32s;flex-shrink:0;}
+  /* 手机框 + 说明卡 并排；点击元素后手机缓慢左移、说明卡从手机右侧平滑滑出 */
+  .PHONE_W:root{--pw:390px;--pw-gap:28px;}
+  .page-wrap.active{transition:transform .55s cubic-bezier(.22,.61,.36,1);gap:0;}
+  .page-wrap.active.pushed{transform:translateX(calc(-1 * (390px + 28px + 24px)));}
+  .page-wrap.active .phone{transition:box-shadow .55s;flex-shrink:0;}
   .page-wrap.active.pushed .phone{box-shadow:-6px 20px 50px rgba(0,0,0,.25);}
-  /* 说明卡：手机形态（圆角+深色边框），默认收在手机右侧（负 margin 贴紧），展开滑出 */
+  /* 说明卡：与手机同尺寸（390px）的手机形态，默认叠在手机右侧后，展开时向右滑出并留出间距 */
   .note-card{
-    width:340px;border-radius:26px;border:6px solid #2c2c2e;background:var(--bg-card);
+    width:390px;min-height:844px;border-radius:26px;border:6px solid #2c2c2e;background:var(--bg-card);
     box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden;flex-shrink:0;
-    margin-left:-170px;opacity:0;pointer-events:none;
-    transform:translateX(60px) scale(.96);transform-origin:left center;
-    transition:transform .32s cubic-bezier(.32,.72,0,1),opacity .28s,margin-left .32s;
-    display:flex;flex-direction:column;max-height:844px;align-self:stretch;
+    margin-left:calc(-1 * (390px + 28px));opacity:0;pointer-events:none;
+    transform:scale(.98);transform-origin:left center;
+    transition:margin-left .55s cubic-bezier(.22,.61,.36,1),opacity .45s ease,transform .55s cubic-bezier(.22,.61,.36,1);
+    display:flex;flex-direction:column;align-self:stretch;
   }
   .note-card.open{
-    margin-left:0;opacity:1;pointer-events:auto;
-    transform:translateX(0) scale(1);
+    margin-left:28px;opacity:1;pointer-events:auto;transform:scale(1);
   }
   body.dark .note-card{background:#161618;}
   .note-card .nc-status{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:var(--text-tertiary);font-size:12px;flex-shrink:0;border-bottom:1px solid var(--divider);}
