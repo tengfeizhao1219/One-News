@@ -307,32 +307,22 @@ function buildPrompts(item, profile, level) {
 
   if (level === 'medium') {
     return {
-      system: baseSystem + `\n对下面单条情报做「轻量摘要」，**只输出一个 JSON 对象**（不要 markdown 代码块、不要任何解释文字、不要输出 JSON 以外的内容）：
+      system: baseSystem + `\n对下面单条情报做「轻量摘要」，**只输出一个 JSON 对象**（不要 markdown 代码块、不要任何解释文字、不要输出 JSON 以外的内容）。字段全部使用字符串/布尔/数组，结构扁平：
 {
   "titleCn": "中文标题（把本条标题翻译成自然通顺的中文）",
-  "whatHappened": [
-    {"type": "text", "text": "第一段正文：**严格基于情报原文客观转述发生了什么**，把核心事实、关键数字、机制讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司/我们」「专业解读」「大白话」等字样）。总 180-320 字，按逻辑分 2-3 段（每个对象一段），语言风格贴合内容（技术→冷静专业/社区→轻松），句式多样化"},
-    {"type": "text", "text": "第二段正文……"},
-    {"type": "predict", "text": "结尾若确有未来影响才加这一段：推测性措辞（可能会…），不要写成既成事实；没有未来影响就不要这个对象"}
-  ],
+  "whatHappened": "发生了什么正文：**严格基于情报原文客观转述**，把核心事实、关键数字、机制讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司/我们」「专业解读」「大白话」等字样）。总 180-320 字，按逻辑分 2-3 段，段与段之间用【换行+空行】分隔；语言风格贴合内容（技术→冷静专业/社区→轻松），句式多样化",
+  "aiPrediction": "结尾若确有未来影响才写这一段（推测性措辞，可能会…，不要写成既成事实；没有未来影响则为空字符串）。**这一段不要写进 whatHappened**",
   "definition": "一句话定义（是什么 + 能做什么 + 能力边界，不夸大不堆参数，供列表摘要用）。**必须用自然通顺的中文**：英文源先翻译成中文，专有术语保留原文首次出现括号注中文；输出英文视为不合格",
-  "sceneMapping": {
-    "relevant": true,
-    "lines": [
-      {"segments": [{"text": "相关性：", "bold": false}, {"text": "强相关概念", "bold": true}]},
-      {"segments": [{"text": "使用场景一（关键动作加粗）", "bold": false}]}
-    ]
-  },
+  "sceneMapping": "落到你这里（场景映射）：**先判断关联性**——仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才写；第一行点明相关性（关键概念用 **加粗** 强调），后续每行一个使用场景（关键动作加粗），用换行分隔；弱相关/无法关联 → 空字符串，禁止强行关联凑数",
   "practice": "可以怎么做：1-2 句能落地的做法（工具/动作/收益），无则空字符串",
   "minAction": "想试试：轻松引导口吻（想体验的话，可以试试…），给 1 条最轻步骤，无则空字符串",
   "tryable": true,
   "sceneTags": ["work_rcbc"]
 }
 约束：
-- whatHappened 的正文段 type 必须是 "text"；未来影响段 type 必须是 "predict"（有才加）；严禁把 predict 放第一段
-- sceneMapping：仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才 relevant=true 并给 lines（第一行点明相关性、关键概念 bold=true，后续每行一个使用场景）；弱相关/无法关联 → relevant=false、lines 空数组，禁止强行关联凑数
-- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集，按命中填充
-- 严格 JSON：字段名、类型、缩进无关紧要，但必须可被 JSON.parse 解析；不要省略字段`,
+- 所有字段都要输出，值不确定时用空字符串，不要省略字段
+- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集
+- 严格 JSON：必须可被 JSON.parse 解析；缩进无关紧要；不要输出 JSON 以外的任何文字`,
       user: `情报原文：\n${String(text || '').replace(/\uFFFD/g, '')}`,
     }
   }
@@ -447,30 +437,63 @@ function parseSopOut(text, item, profile, route) {
   }
   const clean = (v) => String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').trim()
 
-  // 2) whatHappened：数组 → 文本（join 双换行，兼容旧字段）/ blocks（结构化，供前端渲染）
-  const whRaw = Array.isArray(j.whatHappened) ? j.whatHappened : []
-  const blocks = whRaw
-    .map((b) => ({
-      type: b && (b.type === 'predict' || b.type === 'def' || b.type === 'plain') ? b.type : 'text',
-      text: clean(b && b.text),
-    }))
-    .filter((b) => b.text)
-  // 兜底（2026-08-21）：LLM 可能仍输出 predict 在第一段 → 降级为 text（仅第一段）
+  // 2) whatHappened：字符串正文 + aiPrediction 独立字段 → blocks（结构化，供前端渲染）
+  //    兼容旧数组形态（LLM 过渡期可能仍输出 [{type,text}]）
+  let blocks = []
+  if (Array.isArray(j.whatHappened)) {
+    blocks = j.whatHappened
+      .map((b) => ({
+        type: b && (b.type === 'predict' || b.type === 'def' || b.type === 'plain') ? b.type : 'text',
+        text: clean(b && b.text),
+      }))
+      .filter((b) => b.text)
+  } else {
+    const whStr = clean(j.whatHappened)
+    if (whStr) {
+      const paras = whStr.split(/\n{2,}/).map((x) => x.trim()).filter(Boolean)
+      blocks = (paras.length ? paras : [whStr]).map((p) => ({ type: 'text', text: p }))
+    }
+  }
+  // aiPrediction：独立字段 → 追加为最后一个 predict 块（仅当有内容且不是首段）
+  const pred = clean(j.aiPrediction)
+  if (pred) {
+    if (blocks.length === 0) blocks = [{ type: 'predict', text: pred }]
+    else blocks.push({ type: 'predict', text: pred })
+  }
+  // 兜底：predict 在第一段 → 降级为 text（LLM 误标）
   if (blocks.length > 1 && blocks[0].type === 'predict') blocks[0].type = 'text'
   const whatHappened = blocks.map((b) => b.text).join('\n\n')
 
-  // 3) sceneMapping：结构化 lines（前端直接渲染 segments） + 兼容字符串
-  const sm = (j.sceneMapping && typeof j.sceneMapping === 'object') ? j.sceneMapping : {}
-  const smRelevant = sm.relevant !== false
-  const smLines = (Array.isArray(sm.lines) ? sm.lines : [])
-    .map((ln) => ({
-      segments: (Array.isArray(ln && ln.segments) ? ln.segments : [{ text: clean(ln && ln.text), bold: false }])
-        .map((sg) => ({ text: clean(sg && sg.text), bold: sg && sg.bold === true }))
-        .filter((sg) => sg.text),
-    }))
-    .filter((ln) => ln.segments.length)
-  const sceneMapping = smRelevant ? (smLines.map((ln) => ln.segments.map((sg) => sg.text).join('')).join('\n') || clean(j.sceneMapping)) : ''
-  const sceneMappingLines = smRelevant ? smLines : []
+  // 3) sceneMapping：字符串（LLM 输出）→ 按行 + **加粗** 拆结构化 lines（前端直接渲染）
+  //    兼容旧对象形态 {relevant, lines:[{segments}]}（过渡期）
+  let sceneMapping = ''
+  let sceneMappingLines = []
+  if (j.sceneMapping && typeof j.sceneMapping === 'object') {
+    const sm = j.sceneMapping
+    const smRelevant = sm.relevant !== false
+    const smLines = (Array.isArray(sm.lines) ? sm.lines : [])
+      .map((ln) => ({
+        segments: (Array.isArray(ln && ln.segments) ? ln.segments : [{ text: clean(ln && ln.text), bold: false }])
+          .map((sg) => ({ text: clean(sg && sg.text), bold: sg && sg.bold === true }))
+          .filter((sg) => sg.text),
+      }))
+      .filter((ln) => ln.segments.length)
+    sceneMapping = smRelevant ? (smLines.map((ln) => ln.segments.map((sg) => sg.text).join('')).join('\n')) : ''
+    sceneMappingLines = smRelevant ? smLines : []
+  } else {
+    const smStr = String(j.sceneMapping || '').trim()
+    // 「无」→ 空（弱相关不强行关联）
+    const normed = /^无[。）)]?$/.test(smStr) || /^（?无关联）?$/.test(smStr) ? '' : smStr
+    if (normed) {
+      sceneMapping = normed
+      sceneMappingLines = normed.split('\n').map((line) => {
+        const segments = []
+        const parts = line.split(/\*\*(.+?)\*\*/g)
+        parts.forEach((p, i) => { if (p) segments.push({ text: p.trim(), bold: i % 2 === 1 }) })
+        return { segments: segments.filter((sg) => sg.text) }
+      }).filter((ln) => ln.segments.length)
+    }
+  }
 
   // 4) 场景标签 + 命中强度（rank 用，纯文本统计）
   const sceneTags = Array.isArray(j.sceneTags)
