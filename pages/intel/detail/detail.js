@@ -132,6 +132,29 @@ Page({
     }
   },
 
+  // 2026-08-20 修复：收藏方法缺失（wxml 已引用 bindtap / onLoad 已调用 _checkFavorite，
+  // 但方法定义遗漏 → onLoad 抛 TypeError → 详情页永远卡在"情报官正在梳理详情"）
+  _checkFavorite(id) {
+    this.setData({ isFavorited: isFavorited(id) })
+  },
+
+  onToggleFavorite() {
+    const item = {
+      id: this.data.itemId || this.data.id || '',
+      title: this.data.title || '',
+      src: this.data.srcName || '',
+      time: this.data.pubTime || '',
+      desc: this.data.descText || '',
+    }
+    const r = toggleFavorite(item)
+    this.setData({ isFavorited: r.favorited })
+    wx.showToast({
+      title: r.favorited ? '已收藏' : '已取消收藏',
+      icon: 'none',
+      duration: 1200,
+    })
+  },
+
   /** 拉取真实详情（云函数 intelGetDetail）；无数据/失败时展示空态友好提示
    *  重要：utils/intelApi.getIntelDetail 已走 formatIntelDetail 格式化，
    *        d.definition → d.definitionParas(Array)，d.sceneMapping 保持原字段。
