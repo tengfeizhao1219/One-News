@@ -316,8 +316,8 @@ async function summarize(query, ctx, search) {
 - 组织清晰：先直接回答核心，再补充关键细节/影响
 - 200-450 字
 - 结尾另起一行输出「参考来源：」并列出引用序号
-- 输出纯文本：禁止任何 markdown 标记（禁止 **、*、#、-、\`、[链接](url)），
-  段落间用空行分隔，小标题直接写文字不加符号`
+- 格式：段落间用空行分隔；小标题独立成行，用 **小标题** 包裹（如 **核心变化**）；
+  不要使用其它 markdown 标记（禁 #、-、反引号、[链接](url)、*斜体*）`
   const user = `当前新闻：${ctx.title}
 新闻摘要：${ctx.what}
 联网搜索结果：
@@ -327,19 +327,37 @@ ${searchText || '（无结构化结果，基于回答内容）'}
 请基于以上信息回答用户话题「${query}」。`
   const r = await deepseekChat(system, user, { maxTokens: 900, temperature: 0.4 })
   if (!r || !r.text) return r ? { text: null, engine: r.engine } : { text: null, engine: '' }
-  // 清洗兜底：即使模型未遵守 prompt，也剥离 markdown 标记，前端零二次处理
-  const text = String(r.text)
+  // 结构解析：**小标题** 独立行 → heading；其余按空行分段 → para；- 列表项 → bullet。
+  // 保留层级结构（前端按类型排版），同时输出纯文本 answer（无任何标记）
+  const cleanMd = (v) => String(v || '')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
     .replace(/\*([^*]+)\*/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^[-*]\s+/gm, '')
     .replace(/^>\s?/gm, '')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
     .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
-    .replace(/\n{3,}/g, '\n\n')
     .trim()
-  return { text, engine: r.engine }
+  const sections = []
+  const pushSection = (type, txt) => {
+    const t = cleanMd(txt)
+    if (!t) return
+    const last = sections[sections.length - 1]
+    if (last && last.type === type && (type === 'bullet' || type === 'para')) {
+      last.text += '\n' + t  // 相邻同类型合并（bullet 列表 / 段落续行）
+    } else {
+      sections.push({ type, text: t })
+    }
+  }
+  const rawLines = String(r.text).split(/\n+/).map(x => x.trim()).filter(Boolean)
+  for (const ln of rawLines) {
+    if (/^\*\*[^*]+\*\*$/.test(ln)) pushSection('heading', ln)                    // **小标题**
+    else if (/^#{1,6}\s+/.test(ln)) pushSection('heading', ln.replace(/^#{1,6}\s+/, '')) // # 小标题（兜底）
+    else if (/^[-*]\s+/.test(ln)) pushSection('bullet', ln.replace(/^[-*]\s+/, '')) // - 列表项
+    else pushSection('para', ln)
+  }
+  const text = sections.map(x => x.text).join('\n')
+  return { text, sections, engine: r.engine }
 }
 
 // ─── 主入口 ─────────────────────────────
@@ -411,6 +429,7 @@ exports.main = async (event = {}) => {
     data: {
       relevant: true,
       answer: (sum && sum.text) || '',
+      sections: (sum && sum.sections) || [],
       sources: search.sources || [],
       engine: (sum && sum.engine) || 'tavily',
       query,

@@ -408,20 +408,27 @@ function parseSceneMapping(txt) {
           this.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
           return
         }
-        // ② 相关+成功：answer 解析为段落；来源拼接(fallback)不显示正文，只保留折叠来源
+        // ② 相关+成功：优先后端 sections（层级排版），回退前端段落解析；来源折叠展示
         if (d && d.relevant) {
-          const parsed = this._parseSearchAnswer(d.answer || '')
           const sources = Array.isArray(d.sources) ? d.sources.map(x => ({
             title: x.title || x.url || '',
             url: x.url || '',
             source: x.source || '',
           })).filter(x => x.url) : []
-          // fallback 识别：后端总结失败时拼的「为你找到以下信息：1. 标题：snippet…」
-          const isFallback = !parsed.summary && parsed.items.every(it => /^(?:https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(it.title || '')) || /为你找到以下信息/.test(d.answer || '')
+          // 后端已结构化：sections [{type:'heading'|'para'|'bullet', text}]
+          const hasSections = Array.isArray(d.sections) && d.sections.some(x => x && x.text)
+          const sections = hasSections ? d.sections.map(x => ({
+            type: (x.type === 'heading' || x.type === 'bullet') ? x.type : 'para',
+            text: String(x.text || '').trim(),
+          })).filter(x => x.text) : []
+          // 无 sections → 前端解析 answer（兼容旧数据 / 非 DeepSeek 路径）
+          const parsed = sections.length ? { summary: '', items: [] } : this._parseSearchAnswer(d.answer || '')
+          const isFallback = sections.length ? false : (/为你找到以下信息/.test(d.answer || ''))
           const entry = {
             query: query,
-            summary: parsed.summary,
-            items: isFallback ? [] : parsed.items,
+            summary: sections.length ? '' : parsed.summary,
+            sections: sections,
+            items: sections.length ? [] : (isFallback ? [] : parsed.items),
             sources: sources,
             sourcesExpanded: false,
             isFallback: isFallback,

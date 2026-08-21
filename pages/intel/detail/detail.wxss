@@ -421,6 +421,45 @@
   padding: 8rpx 0 4rpx;
 }
 
+/* 结构化层级排版（后端 sections） */
+.search-sec-head {
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin: 24rpx 0 10rpx;
+}
+.search-sec-head:first-child { margin-top: 4rpx; }
+.search-sec-para {
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.75;
+  text-align: justify;
+  margin-bottom: 14rpx;
+  word-break: break-word;
+}
+.search-sec-bullet {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-bottom: 10rpx;
+}
+.search-sec-bdot {
+  flex-shrink: 0;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background-color: var(--text-tertiary);
+  margin-top: 16rpx;
+}
+.search-sec-btext {
+  flex: 1;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.7;
+  word-break: break-word;
+}
+
 /* 段落式结果排版：引导头（弱化小字）+ 标题行 + 正文段落，分隔线划分 */
 .search-summary {
   font-size: calc(24rpx * var(--font-scale-meta, 1));

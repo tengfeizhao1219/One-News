@@ -143,8 +143,19 @@
           <text class="search-result-q">「{{r.query}}」</text>
           <text class="search-result-arrow" wx:if="{{r.sources.length}}">{{r.sourcesExpanded ? '收起来源' : '展开来源'}} ›</text>
         </view>
-        <!-- 段落式结果（标题行 + 正文段落） -->
-        <block wx:if="{{r.items.length}}">
+        <!-- 结构化层级排版（后端 sections：小标题/段落/列表） -->
+        <block wx:if="{{r.sections.length}}">
+          <block wx:for="{{r.sections}}" wx:for-item="sec" wx:key="index">
+            <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
+            <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
+              <view class="search-sec-bdot"></view>
+              <text class="search-sec-btext">{{sec.text}}</text>
+            </view>
+            <view class="search-sec-para" wx:else>{{sec.text}}</view>
+          </block>
+        </block>
+        <!-- 回退：段落式结果（标题行 + 正文段落） -->
+        <block wx:elif="{{r.items.length}}">
           <view class="search-summary" wx:if="{{r.summary}}">{{r.summary}}</view>
           <view class="search-item" wx:for="{{r.items}}" wx:for-item="it" wx:key="index">
             <text class="search-item-title" wx:if="{{it.title}}">{{it.title}}</text>
