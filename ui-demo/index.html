@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI 情报官 · UI 设计基准页（唯一确认源）</title>
+<title>UI 设计基准页（多项目可扩展）</title>
 <style>
-  /* ===== 主题令牌（theme.json，零新增 hex）===== */
   :root {
     --bg-page:#F5F3F0; --bg-card:#FAF9F7; --bg-subtle:#F0EEEA;
     --text-primary:#1C1C1E; --text-secondary:#6B6B70; --text-body:#5E5E60; --text-tertiary:#8A8A8E;
@@ -21,21 +20,19 @@
     --warning:#FBBF24;
   }
   *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
-  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC",sans-serif;background:#d9d4cc;min-height:100vh;padding:24px;color:var(--text-primary);}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC",sans-serif;background:#d9d4cc;min-height:100vh;color:var(--text-primary);}
   body.dark{background:#1a1a1a;}
-  /* ===== 顶部控制栏 ===== */
-  .toolbar{position:sticky;top:0;z-index:100;background:rgba(217,212,204,.95);backdrop-filter:blur(8px);padding:12px 16px;border-radius:12px;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .toolbar{position:sticky;top:0;z-index:100;background:rgba(217,212,204,.95);backdrop-filter:blur(8px);padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
   body.dark .toolbar{background:rgba(26,26,26,.95);}
   .toolbar .title{font-weight:700;font-size:14px;margin-right:8px;}
+  .sep{width:1px;height:24px;background:var(--divider);margin:0 6px;}
   .btn{border:1px solid #ccc;background:#fff;color:#333;padding:7px 14px;border-radius:10px;font-size:13px;cursor:pointer;}
   body.dark .btn{background:#2c2c2e;color:#eee;border-color:#3a3a3c;}
   .btn.on{background:var(--primary);border-color:var(--primary);color:#fff;}
   .btn.note-on{background:var(--warning);border-color:var(--warning);color:#fff;}
   .hint{font-size:12px;color:var(--text-tertiary);margin-left:8px;}
-  /* ===== 页面区 ===== */
-  .pages{display:flex;gap:32px;align-items:flex-start;justify-content:center;flex-wrap:wrap;}
-  .page-wrap{display:none;}
-  .page-wrap.active{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;}
+  .pages{display:flex;gap:32px;align-items:flex-start;justify-content:center;padding:20px;flex-wrap:wrap;}
+  .page-wrap{display:none;} .page-wrap.active{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;}
   .phone{width:390px;min-height:844px;border-radius:44px;background:var(--bg-page);overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.28);border:8px solid #2c2c2e;flex-shrink:0;display:flex;flex-direction:column;}
   .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;color:var(--text-primary);font-size:15px;font-weight:600;flex-shrink:0;}
   .capsule{width:92px;height:28px;background:#000;border-radius:18px;opacity:.9;}
@@ -43,17 +40,13 @@
   .nav-home{width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin-left:-8px;color:var(--text-primary);flex-shrink:0;}
   .nav-home svg{width:24px;height:24px;}
   .nav-dark{display:none;} body.dark .nav-light{display:none;} body.dark .nav-dark{display:block;}
-  .nav-title{font-size:16px;font-weight:600;color:var(--text-primary);}
   .scroll{flex:1;overflow-y:auto;padding:0 24px 24px;}
   .hero{display:flex;align-items:baseline;justify-content:space-between;padding:22px 0 4px;}
-  .hero-count{font-size:20px;font-weight:800;color:var(--text-primary);}
-  .hero-count b{color:var(--primary);}
-  .hero-sub{font-size:12px;color:var(--text-tertiary);text-align:right;}
-  .hero-sub .warn{color:var(--warning);}
-  .sect{padding:18px 0 0;}
+  .hero-count{font-size:20px;font-weight:800;} .hero-count b{color:var(--primary);}
+  .hero-sub{font-size:12px;color:var(--text-tertiary);text-align:right;} .hero-sub .warn{color:var(--warning);}
   .sect-head{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
   .card{background:var(--bg-card);border:1px solid var(--divider);border-radius:16px;padding:16px;margin-bottom:14px;}
-  .card-title{display:block;font-size:15px;font-weight:700;color:var(--text-primary);line-height:1.45;}
+  .card-title{display:block;font-size:15px;font-weight:700;line-height:1.45;}
   .focus-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-subtle);padding:3px 9px;border-radius:7px;margin-bottom:8px;}
   .card-for{margin-top:9px;background:var(--highlight-bg);border-radius:10px;padding:9px 11px;font-size:13px;color:var(--text-body);line-height:1.6;}
   .card-for .k{color:var(--primary);font-weight:600;}
@@ -61,232 +54,260 @@
   .try{display:flex;align-items:flex-start;gap:11px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:12px;}
   .try-check{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--divider);margin-top:2px;flex-shrink:0;}
   .try-check.on{border-color:var(--primary);background:var(--primary);}
-  .try-t{font-size:13.5px;color:var(--text-primary);}
-  .try-s{font-size:12px;color:var(--text-secondary);margin-top:2px;}
-  /* 详情页 */
-  .detail-title{font-size:19px;font-weight:800;color:var(--text-primary);line-height:1.5;}
-  .meta{margin-top:8px;font-size:12px;color:var(--text-tertiary);display:flex;gap:12px;}
-  .meta .src{color:var(--text-link);}
+  .try-t{font-size:13.5px;} .try-s{font-size:12px;color:var(--text-secondary);margin-top:2px;}
+  .detail-title{font-size:19px;font-weight:800;line-height:1.5;}
+  .meta{margin-top:8px;font-size:12px;color:var(--text-tertiary);display:flex;gap:12px;} .meta .src{color:var(--text-link);}
   .block-label{display:block;font-size:13px;font-weight:700;color:var(--primary);margin:22px 0 10px;}
   .prose{font-size:13.5px;color:var(--text-body);line-height:1.75;}
   .for-card{background:var(--highlight-bg);border-radius:12px;padding:13px 15px;margin-bottom:10px;}
   .for-k{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;}
   .for-body{font-size:13px;color:var(--text-body);line-height:1.7;}
   .fold{background:var(--bg-card);border:1px solid var(--divider);border-radius:12px;margin-top:12px;overflow:hidden;}
-  .fold-head{display:flex;justify-content:space-between;padding:13px 15px;font-size:13.5px;font-weight:600;color:var(--text-primary);}
-  /* 深入了解 */
+  .fold-head{display:flex;justify-content:space-between;padding:13px 15px;font-size:13.5px;font-weight:600;}
   .deep{margin-top:24px;border-top:1px solid var(--divider);padding-top:16px;}
   .deep-head{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;}
   .deep-sub{font-size:12px;color:var(--text-tertiary);margin-bottom:12px;}
-  .deep-quick{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:12px;display:flex;align-items:center;gap:12px;}
-  .quick-t{font-size:13.5px;font-weight:600;color:var(--text-primary);}
-  .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
+  .deep-quick{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:12px;}
+  .quick-t{font-size:13.5px;font-weight:600;} .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
   .search-box{display:flex;gap:10px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:11px 13px;margin-bottom:12px;}
-  .search-input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;color:var(--text-primary);}
+  .search-input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;}
   .search-btn{background:var(--primary);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:600;flex-shrink:0;}
   .result{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:10px;}
-  .result-t{font-size:13.5px;font-weight:600;color:var(--text-primary);}
-  .result-meta{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
+  .result-t{font-size:13.5px;font-weight:600;} .result-meta{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
   .result-desc{font-size:12px;color:var(--text-body);margin-top:5px;line-height:1.5;}
   .llm{border-radius:12px;background:var(--highlight-bg);padding:13px 15px;margin-bottom:12px;}
   .llm-head{font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:7px;}
   .llm-body{font-size:12.5px;color:var(--text-body);line-height:1.7;}
-  /* 我的页 */
   .card-action{display:flex;align-items:center;gap:12px;}
-  .card-body{flex:1;}
-  .card-t{font-size:14.5px;font-weight:700;color:var(--text-primary);}
-  .card-d{font-size:12.5px;color:var(--text-secondary);margin-top:5px;}
-  .card-s{font-size:11px;color:var(--text-tertiary);margin-top:5px;}
-  .card-chev{color:var(--text-tertiary);font-size:15px;}
+  .card-body{flex:1;} .card-t{font-size:14.5px;font-weight:700;} .card-d{font-size:12.5px;color:var(--text-secondary);margin-top:5px;}
+  .card-s{font-size:11px;color:var(--text-tertiary);margin-top:5px;} .card-chev{color:var(--text-tertiary);font-size:15px;}
   .revoke{font-size:11.5px;color:#FF3B30;border:1px solid #FF3B30;border-radius:14px;padding:6px 12px;flex-shrink:0;}
   .foot{text-align:center;font-size:11px;color:var(--text-tertiary);padding:18px 0 6px;}
-  /* ===== 设计标注层 ===== */
-  [data-note]{cursor:help;}
+  /* 标注模式 */
+  [data-note]{cursor:pointer;}
   body.note-mode [data-note]:hover{outline:2px dashed var(--primary);outline-offset:2px;}
-  .note-pop{position:fixed;z-index:999;background:#fff;border:1px solid var(--divider);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:14px 16px;max-width:320px;display:none;font-size:12.5px;color:#333;}
-  body.dark .note-pop{background:#2c2c2e;color:#eee;border-color:#3a3a3c;}
-  .note-pop .n-intent{font-weight:600;margin-bottom:4px;color:var(--primary);}
-  .note-pop .n-code{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--text-secondary);word-break:break-all;}
-  .legend{font-size:12px;color:var(--text-tertiary);padding:0 4px;}
+  body.note-mode [data-note].lit{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary-subtle);}
+  /* 侧边抽屉 */
+  .drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--bg-card);border-left:1px solid var(--divider);box-shadow:-12px 0 40px rgba(0,0,0,.2);transform:translateX(105%);transition:transform .28s cubic-bezier(.32,.72,0,1);z-index:200;display:flex;flex-direction:column;}
+  body.dark .drawer{background:#161618;}
+  .drawer.open{transform:translateX(0);}
+  .drawer-head{padding:16px 18px;border-bottom:1px solid var(--divider);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .drawer-title{font-size:15px;font-weight:700;}
+  .drawer-close{background:none;border:none;font-size:20px;color:var(--text-tertiary);cursor:pointer;padding:4px 8px;}
+  .drawer-body{flex:1;overflow-y:auto;padding:16px 18px;}
+  .d-sec{font-size:11px;font-weight:700;color:var(--text-tertiary);letter-spacing:.4px;margin:14px 0 6px;text-transform:uppercase;}
+  .d-sec:first-child{margin-top:0;}
+  .d-intent{font-size:13.5px;line-height:1.7;color:var(--text-body);}
+  .d-param{background:var(--bg-subtle);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:12.5px;display:flex;justify-content:space-between;gap:12px;}
+  .d-param .k{color:var(--text-secondary);flex-shrink:0;}
+  .d-param .v{color:var(--text-primary);text-align:right;word-break:break-all;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;}
+  .d-code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--text-link);background:var(--bg-subtle);border-radius:6px;padding:7px 9px;word-break:break-all;line-height:1.5;}
+  .d-guideline{font-size:12px;color:var(--text-secondary);padding-left:10px;border-left:2px solid var(--primary);margin-top:4px;}
+  .d-copy{margin-top:14px;background:var(--bg-subtle);border:1px solid var(--divider);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-primary);cursor:pointer;width:100%;text-align:left;}
+  .d-json{display:none;}
 </style>
 </head>
 <body>
 <div class="toolbar">
-  <span class="title">AI 情报官 · UI 基准</span>
-  <button class="btn on" id="pg-home" onclick="showPage('home')">首页</button>
-  <button class="btn" id="pg-detail" onclick="showPage('detail')">详情</button>
-  <button class="btn" id="pg-mine" onclick="showPage('mine')">我的</button>
-  <button class="btn" id="pg-onboard" onclick="showPage('onboard')">初始化</button>
-  <button class="btn" id="pg-deep" onclick="showPage('deep')">深入了解</button>
-  <button class="btn" onclick="toggleTheme()">🌗 深浅色</button>
-  <button class="btn" id="noteBtn" onclick="toggleNote()">📐 设计标注</button>
-  <span class="hint" id="hintText">标注模式：点击页面元素查看设计意图与代码位置</span>
+  <span class="title">UI 设计基准</span>
+  <span class="sep"></span>
+  <select id="projectSel" class="btn" onchange="switchProject(this.value)"></select>
+  <span class="sep"></span>
+  <span id="pageBtns"></span>
+  <span class="sep"></span>
+  <button class="btn" onclick="toggleTheme()">深浅色</button>
+  <button class="btn" id="noteBtn" onclick="toggleNote()">设计标注</button>
+  <span class="hint" id="hintText">标注模式：点击元素 → 侧边滑出详细说明与参数</span>
+</div>
+<div class="pages" id="pages"></div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-head"><span class="drawer-title" id="drawerTitle">元素说明</span><button class="drawer-close" onclick="closeDrawer()">×</button></div>
+  <div class="drawer-body" id="drawerBody"></div>
 </div>
 
-<div class="pages">
-<!-- ============ 首页 ============ -->
-<div class="page-wrap active" id="wrap-home">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
-    <div class="nav" data-note="返回主页：复用 One News home.svg/home-dark.svg，CSS 双图标跟随主题；与右上角原生胶囊垂直居中对齐" data-code="nav-home / .page--dark .nav-light">
-      <span class="nav-home nav-light" data-note="Home 图标（亮色黑/暗色白）"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-      <span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-    </div>
+<script>
+/* =====================================================================
+ * 设计标注数据（AI 可读性第一：结构化、字段化、可导出 JSON）
+ * 扩展新项目：PROJECTS 加一项 { name, pages: { 页面key: { name, notes: [...] } } }
+ * note: { selector, name, intent, params[], code, guideline }
+ * ===================================================================*/
+const PROJECTS = {
+  'ai-intel': {
+    name: 'AI 情报官',
+    pages: {
+      home: {
+        name: '首页',
+        notes: [
+          { selector: '.hero', name: '摘要区', intent: '重点前置：今日条数 + 数据截至单行两端对齐；删除「情报官已完成梳理」类无意义状态条（准则1）', params: [{k:'布局',v:'flex space-between, baseline'},{k:'标题',v:'20px/800'},{k:'副文',v:'12px text-tertiary'}], code: 'hero-count / hero-sub / .hero', guideline: '准则1 简洁形态引导' },
+          { selector: '.card:nth-of-type(1)', name: '重点卡（对你最重要）', intent: '仅画像 focusTags 命中（sceneTags∩focusTags）才标记；浅蓝底展示与你画像的关联（focusFor）；不默认第一条', params: [{k:'卡片',v:'bg-card, 1px divider, 16px 圆角'},{k:'间距',v:'卡片间 48rpx'},{k:'tag',v:'primary 文字 + primary-subtle 底, 7px 圆角'}], code: 'card-focus / focus-tag / card-for', guideline: '准则5 风格一致' },
+          { selector: '.card-desc', name: '次级卡摘要', intent: '单行摘要；来源/时间不在首页（挪详情页，减少噪音）', params: [{k:'字号',v:'12.5px text-tertiary'},{k:'行距',v:'1.5'}], code: 'card-desc', guideline: '准则1 简洁' },
+          { selector: '.try', name: '可试用清单项', intent: '细线勾选圆 + 标题 + 最小行动；完成态划线弱化；仅此区块保留标题避免重复', params: [{k:'勾选',v:'19px 圆, 1.5px divider, 选中 primary'},{k:'卡片',v:'14px 圆角'}], code: 'try / try-check', guideline: '准则3 交互可点感' },
+          { selector: '.nav', name: '顶部导航', intent: 'Home 图标（复用 One News home.svg/home-dark.svg）+ 无标题；与右上角原生胶囊垂直居中对齐（menu-top/menu-height）', params: [{k:'图标',v:'44px 容器, 24px 图标, 亮黑/暗白'},{k:'对齐',v:'top=menu-top, height=menu-height, flex center'}], code: 'nav-home / .page--dark .nav-light', guideline: '准则4 原生胶囊' },
+        ]
+      },
+      detail: {
+        name: '详情页',
+        notes: [
+          { selector: '.detail-title', name: '结论式标题', intent: '一句话说出「对你意味着什么」，而非中性主题（SOP 结论前置）', params: [{k:'字号',v:'19px/800'},{k:'行距',v:'1.5'}], code: 'detail-title', guideline: '准则5 一致性' },
+          { selector: '.meta', name: '来源/时间', intent: '来源和时间在详情页展示（首页卡片不展示）；时间经 intelDetailCard 透传', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
+          { selector: '.block-label', name: '区块标题', intent: '系统蓝；SOP 五步呈现顺序：发生了什么→落到你这里→了解更多/想试试', params: [{k:'字号',v:'13px/700 primary'},{k:'间距',v:'22px 上边距'}], code: 'block-label', guideline: '准则5 风格一致' },
+          { selector: '.for-card', name: '落到你这里', intent: '浅蓝底卡，按身份（工作/产品/家庭）呈现与画像关联；命中才显示，弱相关隐藏', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'13px/1.7'}], code: 'for-card', guideline: '准则5 轻高亮' },
+          { selector: '.fold', name: '了解更多/想试试', intent: '可展开；想试试仅存在可落地案例时显示，无则隐藏（禁硬造）', params: [{k:'卡片',v:'bg-card, 12px 圆角'},{k:'触发',v:'点击展开 + chevron'}], code: 'fold / expand-head', guideline: '准则3 交互' },
+        ]
+      },
+      mine: {
+        name: '我的页',
+        notes: [
+          { selector: '.card-action', name: '身份画像（可编辑）', intent: '已初始化显示摘要（identitiesSummary），点击进入 onboard 自动回填；信息源/推送暂不支持已移除', params: [{k:'卡片',v:'16px 圆角, flex 两端'},{k:'chevron',v:'提示可点'}], code: 'card-action / prefillExistingProfile', guideline: '准则3 可点感' },
+          { selector: '.revoke', name: '撤销授权', intent: '合规：授权状态 + 撤销按钮；数据仅用于相关性匹配', params: [{k:'按钮',v:'#FF3B30 边框文字, 14px 圆角'},{k:'禁用',v:'disabled 灰'}], code: 'revoke-btn / consentSigned', guideline: '准则5 一致性' },
+        ]
+      },
+      onboard: {
+        name: '初始化',
+        notes: [
+          { selector: '.scroll', name: '引导流程', intent: '4 步 stepper（身份/关注领域/深度语言/合规）；独立流程无返回按钮；已初始化自动回填', params: [{k:'进度',v:'步骤标题 + step-bar/dots'},{k:'回填',v:'prefillExistingProfile() 读 getIntelProfile'}], code: 'onboard / step-bar', guideline: '准则4 流程清晰' },
+        ]
+      },
+      deep: {
+        name: '深入了解',
+        notes: [
+          { selector: '.deep-quick', name: '一键深挖', intent: '用当前事件标题/关键词自动触发 LLM 联网搜索 → 生成详细解读 + 资料列表', params: [{k:'卡片',v:'bg-card, 14px 圆角'},{k:'文案',v:'「围绕「xx」继续深挖」+ 说明'}], code: 'deep-quick', guideline: '准则2 禁系统表情（emoji 需替换）' },
+          { selector: '.search-box', name: '自定义话题搜索', intent: '用户输入任意话题 → 搜索相关介绍/文档；支持自定义深挖方向', params: [{k:'输入框',v:'14px 圆角, placeholder 引导'},{k:'按钮',v:'primary 实心'}], code: 'search-box / search-btn', guideline: '准则3 大众输入习惯' },
+          { selector: '.llm', name: 'AI 综合解读', intent: '联网检索后生成的多段详细介绍；浅蓝底区分于普通搜索结果，置顶', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'12.5px/1.7'}], code: 'llm / llm-body', guideline: '准则5 轻高亮' },
+          { selector: '.result', name: '搜索结果卡片', intent: '标题 + 来源 + 摘要 + 链接；点击进入原文', params: [{k:'卡片',v:'bg-card, 14px 圆角'},{k:'链接',v:'text-link'}], code: 'result', guideline: '准则3 可点感' },
+        ]
+      },
+    }
+  }
+  /* ===== 未来新项目在此扩展：'my-project': { name, pages: {...} } ===== */
+};
+
+const PAGE_HTML = {
+  home: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    <div class="nav" data-note=".nav"><span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
-      <div class="hero" data-note="重点前置：今日条数 + 数据截至单行两端对齐（去胶囊、去无意义状态条）" data-code="hero-count / hero-sub">
-        <div class="hero-count">今日 <b>8</b> 条值得关注</div>
-        <div class="hero-sub">数据截至 18:00<span class="warn"> · 2 源待验证</span></div>
-      </div>
-      <div class="card" data-note="重点卡：画像 focusTags 命中才标记「对你最重要」，浅蓝底展示与你画像的关联" data-code="card-focus / focus-tag / card-for">
-        <span class="focus-tag">对你最重要</span>
-        <span class="card-title">GLM-5.3：前沿编程能力与网络安全能力升级</span>
-        <div class="card-for"><span class="k">对你：</span>你的 One News 代码审查管线可直接接入评估，提升安全扫描效率。</div>
-      </div>
-      <div class="card" data-note="次级卡：标题 + 单行摘要，无来源时间（挪详情页）；卡片间距 48rpx" data-code="card / card-desc">
-        <span class="card-title">MiniMax H3 正式开源</span>
-        <span class="card-desc">新一代通用视频模型，参数与基准已公开</span>
-      </div>
-      <div class="sect-head" data-note="区块标题：仅「本周可试用清单」保留（首页卡片区无标题，避免重复）" data-code="sect-head">本周可试用清单</div>
-      <div class="try" data-note="可试用：细线勾选圆 + 标题 + 最小行动（完成态划线弱化）" data-code="try / try-check">
-        <div class="try-check on"></div>
-        <div><div class="try-t">GLM-5.3 编程能力实测</div><div class="try-s">官方 API 注册即可体验</div></div>
-      </div>
+      <div class="hero"><div class="hero-count">今日 <b>8</b> 条值得关注</div><div class="hero-sub">数据截至 18:00<span class="warn"> · 2 源待验证</span></div></div>
+      <div class="card"><span class="focus-tag">对你最重要</span><span class="card-title">GLM-5.3：前沿编程能力与网络安全能力升级</span><div class="card-for"><span class="k">对你：</span>你的 One News 代码审查管线可直接接入评估，提升安全扫描效率。</div></div>
+      <div class="card"><span class="card-title">MiniMax H3 正式开源</span><span class="card-desc">新一代通用视频模型，参数与基准已公开</span></div>
+      <div class="sect-head">本周可试用清单</div>
+      <div class="try"><div class="try-check on"></div><div><div class="try-t">GLM-5.3 编程能力实测</div><div class="try-s">官方 API 注册即可体验</div></div></div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ 详情页 ============ -->
-<div class="page-wrap" id="wrap-detail">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
-    <div class="nav" data-note="导航与首页一致（Home 图标 + 无标题，对齐胶囊）" data-code="nav">
-      <span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-      <span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-    </div>
+    </div>`,
+  detail: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    <div class="nav"><span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
-      <div class="detail-title" data-note="结论式标题：一句话说出「对你意味着什么」，而非中性主题" data-code="detail-title">GLM-5.3：你的代码审查管线可以直接接入这个模型</div>
-      <div class="meta" data-note="来源/时间在详情页展示（首页卡片不展示）" data-code="meta / meta-src"><span class="src">智谱AI 官方</span><span>今天 18:00</span></div>
-      <span class="block-label" data-note="区块标题：系统蓝，SOP 五步的呈现顺序" data-code="block-label">发生了什么</span>
-      <div class="prose" data-note="三段式叙事：专业解读 / 大白话 / AI 预测（段落间空行）" data-code="prose">智谱发布 GLM-5.3，聚焦编程与网络安全。官方评测显示其在 SWE-bench 领先，并涌现漏洞定位能力。用大白话说：这个模型写代码强，还能帮你找代码里的安全漏洞。</div>
+      <div class="detail-title">GLM-5.3：你的代码审查管线可以直接接入这个模型</div>
+      <div class="meta"><span class="src">智谱AI 官方</span><span>今天 18:00</span></div>
+      <span class="block-label">发生了什么</span><div class="prose">智谱发布 GLM-5.3，聚焦编程与网络安全。官方评测显示其在 SWE-bench 领先，并涌现漏洞定位能力。</div>
       <span class="block-label">落到你这里</span>
-      <div class="for-card" data-note="浅蓝底卡：按身份呈现与你画像的关联（命中才显示）" data-code="for-card / highlight-bg">
-        <span class="for-k">工作 · One News</span>
-        <div class="for-body">可将 GLM-5.3 接入代码审查管线，评估其安全扫描效率。</div>
-      </div>
-      <div class="fold" data-note="可展开：了解更多（真实来源链接）/ 想试试（可落地案例，无则隐藏）" data-code="fold / expand">
-        <div class="fold-head"><span>了解更多</span><span>▸</span></div>
-      </div>
+      <div class="for-card"><span class="for-k">工作 · One News</span><div class="for-body">可将 GLM-5.3 接入代码审查管线，评估其安全扫描效率。</div></div>
+      <div class="fold"><div class="fold-head"><span>了解更多</span><span>▸</span></div></div>
       <div class="fold"><div class="fold-head"><span>想试试</span><span>▸</span></div></div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ 我的页 ============ -->
-<div class="page-wrap" id="wrap-mine">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
-    <div class="nav" data-note="FAB 入口落地页：返回回上一级，Home 图标" data-code="nav">
-      <span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-      <span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span>
-    </div>
+    </div>`,
+  mine: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    <div class="nav"><span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
-      <div class="sect-head" data-note="区块：你的身份画像（信息源/推送暂不支持已移除）" data-code="sect-head">你的身份画像</div>
-      <div class="card card-action" data-note="可点编辑：已初始化则显示摘要，点击进入 onboard 自动回填" data-code="card-action / goEditProfile">
-        <div class="card-body"><div class="card-t">我的身份画像</div><div class="card-d">工作：RCBC 合规 PM · 产品：One News</div><div class="card-s">情报按相关性排序，命中越多越靠前</div></div>
-        <span class="card-chev">›</span>
-      </div>
+      <div class="sect-head">你的身份画像</div>
+      <div class="card card-action"><div class="card-body"><div class="card-t">我的身份画像</div><div class="card-d">工作：RCBC 合规 PM · 产品：One News</div><div class="card-s">情报按相关性排序，命中越多越靠前</div></div><span class="card-chev">›</span></div>
       <div class="sect-head">合规</div>
-      <div class="card card-action" data-note="合规：授权状态 + 撤销按钮（数据仅用于相关性匹配）" data-code="revoke-btn / consentSigned">
-        <div class="card-body"><div class="card-t">风险告知与授权</div><div class="card-d">已授权 · 2026-08-18</div></div>
-        <span class="revoke">撤销授权</span>
-      </div>
+      <div class="card card-action"><div class="card-body"><div class="card-t">风险告知与授权</div><div class="card-d">已授权 · 2026-08-18</div></div><span class="revoke">撤销授权</span></div>
       <div class="foot">由 AI 情报官生成 · 更多功能开发中</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ 初始化 ============ -->
-<div class="page-wrap" id="wrap-onboard">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    </div>`,
+  onboard: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
     <div class="scroll">
-      <div class="sect-head" data-note="引导页：标题 + 步骤进度（4 步 stepper，独立流程无返回按钮）" data-code="onboard / step-bar / step-dots">初始化情报画像 · 第 1/4 步 身份</div>
-      <div class="card" data-note="身份填写：三个身份输入（工作/产品/家庭），已初始化自动回填" data-code="identities / prefillExistingProfile">
-        <div class="card-t">工作身份</div>
-        <div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">RCBC 合规 PM + TrustDecision 供应商对接</div>
-        <div class="card-t" style="margin-top:14px;">产品身份</div>
-        <div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">One News 小程序 PD+FE + AI 阅读引擎</div>
-      </div>
-      <div class="card" data-note="合规勾选：提交前必须同意（前置闸门）" data-code="consentSigned">风险告知与版权声明（勾选后进入下一步）</div>
+      <div class="sect-head">初始化情报画像 · 第 1/4 步 身份</div>
+      <div class="card"><div class="card-t">工作身份</div><div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">RCBC 合规 PM + TrustDecision 供应商对接</div><div class="card-t" style="margin-top:14px;">产品身份</div><div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">One News 小程序 PD+FE + AI 阅读引擎</div></div>
+      <div class="card">风险告知与版权声明（勾选后进入下一步）</div>
       <div class="foot">由 AI 情报官生成</div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ 深入了解 ============ -->
-<div class="page-wrap" id="wrap-deep">
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    </div>`,
+  deep: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
     <div class="nav"><span class="nav-home nav-light"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
       <div class="detail-title">GLM-5.3：前沿编程能力与网络安全能力升级</div>
       <div class="meta"><span class="src">智谱AI 官方</span><span>今天 18:00</span></div>
-      <span class="block-label">发生了什么</span>
-      <div class="prose">智谱发布 GLM-5.3，聚焦编程与网络安全能力，官方同时开源部分权重与评测基准。</div>
-      <div class="deep" data-note="深入了解入口：一键深挖（当前事件驱动）+ 自定义话题搜索" data-code="deep / deep-quick / search-box">
-        <div class="deep-head">深入了解</div>
-        <div class="deep-sub">对这条情报感兴趣？一键深挖，或输入你关心的话题。</div>
-        <div class="deep-quick" data-note="一键搜索：用当前事件标题/关键词自动触发 LLM 联网搜索" data-code="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
-        <div class="search-box" data-note="自定义话题：输入任意话题搜索相关介绍与文档" data-code="search-box / search-input"><input class="search-input" placeholder="如：GLM 安全评测方法…"><span class="search-btn">搜索</span></div>
-        <div class="llm" data-note="AI 综合解读：联网检索后生成的多段详细介绍（浅蓝底，区别于普通结果）" data-code="llm">
-          <div class="llm-head">AI 综合解读</div>
-          <div class="llm-body">GLM-5.3 的网络安全能力集中在"代码理解→漏洞定位"链路上…整体适合作为代码审查辅助。</div>
-        </div>
-        <div class="result" data-note="结果卡片：标题 + 来源 + 摘要 + 链接" data-code="result"><div class="result-t">智谱官方：GLM-5.3 技术报告</div><div class="result-meta">智谱AI 官网 · 昨天</div><div class="result-desc">模型架构、安全后训练细节与全部评测基准。</div></div>
+      <span class="block-label">发生了什么</span><div class="prose">智谱发布 GLM-5.3，聚焦编程与网络安全能力。</div>
+      <div class="deep">
+        <div class="deep-head">深入了解</div><div class="deep-sub">对这条情报感兴趣？一键深挖，或输入你关心的话题。</div>
+        <div class="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
+        <div class="search-box"><input class="search-input" placeholder="如：GLM 安全评测方法…"><span class="search-btn">搜索</span></div>
+        <div class="llm"><div class="llm-head">AI 综合解读</div><div class="llm-body">GLM-5.3 的网络安全能力集中在"代码理解→漏洞定位"链路上…整体适合作为代码审查辅助。</div></div>
+        <div class="result"><div class="result-t">智谱官方：GLM-5.3 技术报告</div><div class="result-meta">智谱AI 官网 · 昨天</div><div class="result-desc">模型架构、安全后训练细节与全部评测基准。</div></div>
       </div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>
-  </div>
-</div>
-</div>
+    </div>`,
+};
 
-<div class="note-pop" id="notePop"><div class="n-intent" id="nIntent"></div><div class="n-code" id="nCode"></div></div>
+let curProject = 'ai-intel';
+let curPage = 'home';
+let noteMode = false;
 
-<script>
-  function showPage(name){
-    ['home','detail','mine','onboard','deep'].forEach(n=>{
-      document.getElementById('wrap-'+n).classList.toggle('active', n===name);
-      document.getElementById('pg-'+n).classList.toggle('on', n===name);
-    });
-    document.getElementById('hintText').textContent = '标注模式：点击页面元素查看设计意图与代码位置';
-  }
-  function toggleTheme(){ document.body.classList.toggle('dark'); }
-  let noteMode = false;
-  function toggleNote(){
-    noteMode = !noteMode;
-    document.body.classList.toggle('note-mode', noteMode);
-    document.getElementById('noteBtn').classList.toggle('note-on', noteMode);
-    document.getElementById('hintText').textContent = noteMode ? '📐 标注模式开启：点击元素查看设计意图' : '标注模式：点击页面元素查看设计意图与代码位置';
-  }
-  // 标注点击
-  document.addEventListener('click', function(e){
-    if(!noteMode) return;
-    const el = e.target.closest('[data-note]');
-    const pop = document.getElementById('notePop');
-    if(el){
-      document.getElementById('nIntent').textContent = el.getAttribute('data-note');
-      document.getElementById('nCode').textContent = '代码: ' + (el.getAttribute('data-code') || '（见小程序对应样式类）');
-      const r = el.getBoundingClientRect();
-      pop.style.left = Math.min(r.left, window.innerWidth - 340) + 'px';
-      pop.style.top = (r.bottom + 8) + 'px';
-      pop.style.display = 'block';
-    } else {
-      pop.style.display = 'none';
-    }
+function switchProject(pid){ curProject = pid; curPage = 'home'; renderToolbar(); renderPages(); showPage('home'); }
+function renderToolbar(){
+  const sel = document.getElementById('projectSel');
+  sel.innerHTML = Object.keys(PROJECTS).map(k => `<option value="${k}" ${k===curProject?'selected':''}>${PROJECTS[k].name}</option>`).join('');
+  document.getElementById('pageBtns').innerHTML = Object.keys(PROJECTS[curProject].pages).map(k =>
+    `<button class="btn" id="pg-${k}" onclick="showPage('${k}')">${PROJECTS[curProject].pages[k].name}</button>`).join('');
+}
+function renderPages(){
+  const holder = document.getElementById('pages');
+  holder.innerHTML = Object.keys(PROJECTS[curProject].pages).map(k =>
+    `<div class="page-wrap" id="wrap-${k}"><div class="phone">${PAGE_HTML[k]}</div></div>`).join('');
+}
+function showPage(name){
+  curPage = name;
+  Object.keys(PROJECTS[curProject].pages).forEach(k=>{
+    document.getElementById('wrap-'+k).classList.toggle('active', k===name);
+    const b = document.getElementById('pg-'+k); if(b) b.classList.toggle('on', k===name);
   });
-  if(location.search.includes('dark=1')) document.body.classList.add('dark');
+}
+function toggleTheme(){ document.body.classList.toggle('dark'); }
+function toggleNote(){
+  noteMode = !noteMode;
+  document.body.classList.toggle('note-mode', noteMode);
+  document.getElementById('noteBtn').classList.toggle('note-on', noteMode);
+  document.getElementById('hintText').textContent = noteMode ? '标注模式：点击元素 → 侧边滑出详细说明' : '标注模式：点击元素查看设计意图与代码位置';
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  document.querySelectorAll('[data-note].lit').forEach(e=>e.classList.remove('lit'));
+}
+document.addEventListener('click', function(e){
+  if(!noteMode) return;
+  const el = e.target.closest('[data-note]');
+  document.querySelectorAll('[data-note].lit').forEach(x=>x.classList.remove('lit'));
+  if(el){
+    el.classList.add('lit');
+    const notes = (PROJECTS[curProject].pages[curPage] || {}).notes || [];
+    const cls = (el.className.baseVal !== undefined ? el.className.baseVal : el.className) || '';
+    let note = notes.find(n => cls.split(' ').some(c => n.selector.replace('.','').split(' ')[0] === c));
+    if(!note && el.parentElement) note = notes.find(n => n.selector.includes('.card'));
+    if(!note) note = notes[0];
+    openDrawer(note || { name:'元素', intent:'（暂无标注，请在 PROJECTS 数据中补充）', params:[], code:'—', guideline:'—' });
+  } else { closeDrawer(); }
+});
+function openDrawer(note){
+  const d = document.getElementById('drawer');
+  document.getElementById('drawerTitle').textContent = note.name || '元素说明';
+  document.getElementById('drawerBody').innerHTML = `
+    <div class="d-sec">设计意图</div><div class="d-intent">${note.intent}</div>
+    <div class="d-sec">关键参数</div>
+    ${(note.params||[]).map(p=>`<div class="d-param"><span class="k">${p.k}</span><span class="v">${p.v}</span></div>`).join('')}
+    <div class="d-sec">小程序代码位置</div><div class="d-code">${note.code}</div>
+    <div class="d-sec">设计准则</div><div class="d-guideline">${note.guideline}</div>
+    <div class="d-sec">标注数据（AI 可读）</div>
+    <button class="d-copy" onclick="copyNote()">复制标注 JSON（可直接粘贴给 AI）</button>
+    <pre class="d-json" id="noteJson">${escapeHtml(JSON.stringify({project:curProject,page:curPage,...note},null,1))}</pre>`;
+  d.classList.add('open');
+}
+function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function copyNote(){
+  const pre = document.getElementById('noteJson');
+  if(navigator.clipboard && pre){ navigator.clipboard.writeText(pre.textContent).then(()=>{ alert('已复制标注 JSON'); }); }
+}
+renderToolbar(); renderPages(); showPage('home');
+if(location.search.includes('dark=1')) document.body.classList.add('dark');
 </script>
 </body>
 </html>
