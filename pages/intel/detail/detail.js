@@ -348,6 +348,11 @@ function parseSceneMapping(txt) {
       this._collapseSearch()
       return
     }
+    // 展开面板时深挖历史一律默认折叠（用户明确要求）
+    const _g = this._loadDig()
+    let _folded = false
+    _g.forEach(x => { if (x.open) { x.open = false; _folded = true } })
+    if (_folded) { this._saveDig(_g); this.setData({ digGroups: _g }) }
     this.setData({ searchRestUp: true })
     // 面板 top = 标题底部 + 呼吸间距（18px）
     setTimeout(() => {
@@ -531,6 +536,8 @@ function parseSceneMapping(txt) {
     const g = groups.find(x => x.query === query)
     const entry = { time: time, sections: sections, sources: sources }
     if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
+    // 所有情况下默认折叠（含已展开过的历史话题）
+    groups.forEach(x => { x.open = false })
     // 上限保护：最多 10 个话题、每话题 10 次
     while (groups.length > 10) groups.pop()
     groups.forEach(x => { while (x.entries.length > 10) x.entries.pop() })
