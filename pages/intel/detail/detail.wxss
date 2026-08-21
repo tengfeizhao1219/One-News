@@ -370,6 +370,10 @@
   padding: 8rpx 0;
 }
 .search-placeholder { color: var(--text-tertiary); }
+/* 已搜索过：搜索词以提示词样式（灰色）显示，聚焦即清空可输入新词 */
+.search-input--done {
+  color: var(--text-tertiary);
+}
 /* 横线：静态基线（divider）+ 进度条（系统蓝，从左侧加载出来） */
 .search-line {
   position: relative;

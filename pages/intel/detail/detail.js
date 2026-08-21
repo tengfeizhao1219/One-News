@@ -70,6 +70,7 @@ Page({
     searchOpen: false,          // 搜索面板展开态
     searchPanelTop: '100%',     // 面板 top（展开时注入 px：标题下+呼吸间距）
     searchProgress: false,      // 横线进度条（面板顶上来时从左侧系统蓝加载）
+    searchQueried: false,       // 已搜索过：搜索词以提示词灰显示，聚焦时清空可直接输入新词
     searchRestUp: false,        // 其余内容推起（面板展开时）
     searchIntoView: '',         // scroll-into-view 锚点（收起时滚到深挖历史）
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
@@ -410,20 +411,29 @@ function parseSceneMapping(txt) {
       wx.showToast({ title: '暂无可搜索话题', icon: 'none' })
       return
     }
+    this.setData({ searchQueried: true, searchQuery: query })
     this._runSearch(query)
+  },
+
+  /** 聚焦：清空已搜索过的词，可直接输入新词（无须先删除） */
+  onSearchFocus() {
+    if (this.data.searchQueried) {
+      this.setData({ searchQueried: false, searchQuery: '' })
+    }
   },
 
   onSearchInput(e) {
     this.setData({ searchQuery: (e.detail && e.detail.value) || '' })
   },
 
-  /** 提交搜索（输入框 confirm / 按钮） */
+  /** 提交搜索（输入框 confirm / 按钮）：提交后搜索词以提示词灰显示 */
   onSearchSubmit() {
     const query = String(this.data.searchQuery || '').trim()
     if (!query) {
       wx.showToast({ title: '先输入一个话题吧', icon: 'none' })
       return
     }
+    this.setData({ searchQueried: true })
     this._runSearch(query.slice(0, 60))
   },
 
