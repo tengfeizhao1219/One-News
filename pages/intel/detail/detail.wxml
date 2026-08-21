@@ -1,13 +1,15 @@
 <!--
-  INTEL-MODULE: AI 情报官模块 · 情报详情（UI 重构 v6 落地）
-  变更要点：去顶部状态条；来源在标题下方展示；"落到你这里"浅蓝底卡；了解更多保持可展开。
-  数据结构不变（title/srcName/whatHappenedParagraphs/descText/relateItems/practiceText/minActionText/hasMore/sourceUrl）；标签"最小行动"→"想试试"→"试试看"（owner 2026-08-19 拍板：轻松引导语气，非命令式）。
+  INTEL-MODULE: AI 情报官模块 · 情报详情（2026-08-21 恢复 v0.4.3 demo 叙事结构）
+  结构（对齐 AI情报官_UI规范_v1.md §3）：
+    状态条(🟢 已完成梳理) → 结论式标题+来源 → 发生了什么 → 落到你这里 → 了解更多▸(fold) → 试试看▸(fold)
+  注：2026-08-21 移除「可以怎么做」独立区块（demo 无此区块；实操并入试试看 fold）；
+      状态条 8-21 恢复（v6 重构时删过，owner 拍板完整对齐 demo）。
 -->
 <view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
   <!-- 顶部条带（对齐原生胶囊） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
-  <!-- 导航（收藏入口不在导航栏：右上角是原生胶囊，会冲突；改放详情 meta 行时间后） -->
+  <!-- 导航 -->
   <view class="nav">
     <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
@@ -15,7 +17,6 @@
     </view>
   </view>
 
-  <!-- 2026-08-20: scroll-view 改普通 view 滚动（隐藏滚动条最可靠；show-scrollbar=false 在部分基础库仍显示） -->
   <view class="content">
 
     <!-- 加载态 -->
@@ -30,12 +31,18 @@
 
     <!-- 真实数据 -->
     <block wx:else>
-      <!-- 结论式标题 + 来源（时间字段后端补上后自动展示） -->
+      <!-- 状态条：🟢 情报官已完成梳理（浅灰底，不抢眼） -->
+      <view class="status-strip">
+        <view class="dot-g"></view>
+        <text class="status-txt">情报官已完成梳理{{processedTime ? ' · ' + processedTime : ''}}</text>
+      </view>
+
+      <!-- 结论式标题 + 来源/时间 -->
       <text class="detail-title">{{title}}</text>
       <view class="meta">
         <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
         <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
-        <!-- 收藏入口（2026-08-20 v2：右上角撞原生胶囊 → 移入时间后；样式对齐 One News：小图标+文字，不鲜艳） -->
+        <!-- 收藏入口 -->
         <view class="meta-fav {{heartAnim ? 'heart-anim' : ''}}" catchtap="onToggleFavorite" hover-class="meta-fav--hover">
           <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
           <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
@@ -44,16 +51,13 @@
         </view>
       </view>
 
-      <!-- 发生了什么（2026-08-20 v5.1：结构化块——正文自然段落 + 大白话/AI预测/定义整段浅灰底；AI 预测标识放段尾） -->
+      <!-- 发生了什么（结构化块：正文自然段落 + 大白话/AI预测/定义浅灰底） -->
       <text class="block-label">发生了什么</text>
       <block wx:if="{{whatHappenedBlocks.length}}">
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
-          <!-- 正文段落（默认） -->
           <view wx:if="{{blk.type === 'text'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
-          <!-- 解读/预测/定义：整段浅灰底圆角块 -->
           <view wx:elif="{{blk.text}}" class="wh-panel wh-panel-{{blk.type}}">
             <text class="wh-panel-body">{{blk.text}}</text>
-            <!-- AI 预测标识：段尾小字（不明显） -->
             <text wx:if="{{blk.type === 'predict'}}" class="wh-panel-tag">AI 预测</text>
           </view>
         </block>
@@ -63,10 +67,9 @@
       </block>
       <view class="prose" wx:else>{{descText}}</view>
 
-      <view class="divider" wx:if="{{relateItems.length}}"></view>
-
-      <!-- 落到你这里（浅蓝底卡） -->
+      <!-- 落到你这里（浅蓝底卡，命中身份才显示） -->
       <block wx:if="{{relateItems.length}}">
+        <view class="divider"></view>
         <text class="block-label">落到你这里</text>
         <view class="for-card" wx:for="{{relateItems}}" wx:key="who">
           <text class="for-k">{{item.who}}</text>
@@ -79,28 +82,35 @@
         <view class="relate-skip" wx:if="{{relateSkip}}">{{relateSkip}}</view>
       </block>
 
-      <!-- 可以怎么做 -->
-      <view class="divider" wx:if="{{practiceText}}"></view>
-      <block wx:if="{{practiceText}}">
-        <text class="block-label">可以怎么做</text>
-        <view class="prose">{{practiceText}}</view>
-      </block>
-
-      <!-- 试试看（owner 2026-08-19：最小行动 → 试试看，轻松引导语气推荐；文案引导风格由后端 SOP 生成，见 COMMLOG） -->
-      <block wx:if="{{minActionText}}">
-        <view class="divider"></view>
-        <text class="block-label">试试看</text>
-        <view class="try-guide">{{minActionText}}</view>
-      </block>
-
-      <!-- 了解更多 ▸（有真实来源时才展示） -->
+      <!-- 了解更多 ▸（可展开：真实来源链接） -->
       <block wx:if="{{hasMore}}">
-        <view class="expand {{showMore ? 'open' : ''}}">
-          <view class="expand-head" bindtap="toggleMore"><text>了解更多</text><text class="chev">{{showMore ? '▾' : '▸'}}</text></view>
-          <view class="expand-body" wx:if="{{showMore}}">
-            <view class="src-link" wx:if="{{sourceUrl}}" bindtap="copyLink" data-url="{{sourceUrl}}">
-              <text class="src-txt">{{sourceUrl}}</text>
+        <view class="divider"></view>
+        <view class="fold {{showMore ? 'open' : ''}}">
+          <view class="fold-head" bindtap="toggleMore"><text>了解更多</text><text class="fold-arrow">{{showMore ? '▾' : '▸'}}</text></view>
+          <view class="fold-body" wx:if="{{showMore}}">
+            <view class="step" wx:if="{{sourceUrl}}" bindtap="copyLink" data-url="{{sourceUrl}}">
+              <view class="step-n">1</view>
+              <view class="step-txt"><text class="link">{{sourceUrl}}</text></view>
             </view>
+            <view class="step" wx:for="{{references}}" wx:key="url" wx:for-item="ref" bindtap="copyLink" data-url="{{ref.url || ref}}">
+              <view class="step-n">{{index + 2}}</view>
+              <view class="step-txt"><text class="link">{{ref.url || ref}}</text></view>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 试试看 ▸（可展开：轻松引导 + 参考链接 + 风险提示） -->
+      <block wx:if="{{minActionText || practiceText}}">
+        <view class="fold {{showTry ? 'open' : ''}}">
+          <view class="fold-head" bindtap="toggleTry"><text>试试看</text><text class="fold-arrow">{{showTry ? '▾' : '▸'}}</text></view>
+          <view class="fold-body" wx:if="{{showTry}}">
+            <view class="body" wx:if="{{minActionText}}">{{minActionText}}</view>
+            <view class="step" wx:for="{{references}}" wx:key="url" wx:for-item="ref" bindtap="copyLink" data-url="{{ref.url || ref}}">
+              <view class="step-n">→</view>
+              <view class="step-txt"><text class="link">{{ref.url || ref}}</text></view>
+            </view>
+            <view class="risk">小提示：先按最轻量的一步试试最顺手；涉及敏感数据记得先脱敏。</view>
           </view>
         </view>
       </block>

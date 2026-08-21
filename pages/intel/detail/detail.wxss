@@ -174,15 +174,15 @@
   margin: 8rpx 4rpx;
 }
 
-/* 了解更多 */
-.expand {
+/* 了解更多 / 试试看：可展开折叠（对齐 demo v0.4.3） */
+.fold {
   background: var(--bg-card);
   border: 1rpx solid var(--divider);
   border-radius: 24rpx;
-  margin-top: 24rpx;
+  margin-top: 20rpx;
   overflow: hidden;
 }
-.expand-head {
+.fold-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -191,18 +191,74 @@
   font-weight: 600;
   color: var(--text-primary);
 }
-.chev { color: var(--text-tertiary); font-size: calc(24rpx * var(--font-scale-meta, 1)); }
-.expand-body { padding: 0 28rpx 24rpx; }
-.src-link { padding: 8rpx 0; }
-.src-txt {
+.fold-arrow {
+  color: var(--text-tertiary);
   font-size: calc(24rpx * var(--font-scale-meta, 1));
-  color: var(--text-link);
-  word-break: break-all;
+  transition: transform .2s;
+}
+.fold.open .fold-arrow { transform: rotate(180deg); }
+.fold-body { padding: 0 28rpx 24rpx; }
+.fold-body .body {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.8;
+  margin-bottom: 8rpx;
+}
+.step {
+  display: flex;
+  gap: 14rpx;
+  padding: 10rpx 0;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-body);
   line-height: 1.6;
+}
+.step-n {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 4rpx;
+}
+.step-txt { flex: 1; min-width: 0; }
+.link { color: var(--text-link); word-break: break-all; }
+.risk {
+  margin-top: 14rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  border-top: 1rpx solid var(--divider);
+  padding-top: 14rpx;
 }
 
 /* 分隔线 */
 .divider { height: 1rpx; background: var(--divider); margin: 32rpx 4rpx; }
+
+/* 状态条（2026-08-21 恢复 demo）：🟢 情报官已完成梳理 —— 浅灰底，不抢眼 */
+.status-strip {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+  border-radius: 14rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 24rpx;
+}
+.dot-g {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #34C759; /* 绿色完成点（demo 同款） */
+  flex-shrink: 0;
+}
+.status-txt { flex: 1; }
 
 /* 状态占位 */
 .state-hint {
@@ -227,16 +283,6 @@
   font-size: calc(22rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
   margin: 32rpx 0 calc(16rpx + var(--safe-bottom, 0px));
-}
-
-/* UI 重构：试试看 —— 引导式语气容器（owner 2026-08-19：轻松推荐，非命令式步骤） */
-.try-guide {
-  font-size: calc(28rpx * var(--font-scale));
-  color: var(--text-body);
-  line-height: 1.8;
-  background: var(--bg-subtle);
-  border-radius: 16rpx;
-  padding: 24rpx 28rpx;
 }
 
 .content::-webkit-scrollbar { display: none; width: 0; height: 0; } /* 隐藏滚动条（owner 2026-08-20） */

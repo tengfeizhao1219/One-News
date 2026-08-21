@@ -56,6 +56,8 @@ Page({
     relateSkip: '',        // 未命中身份时先跳过的提示
     hasMore: false,        // 是否有真实验证来源
     sourceUrl: '',         // 真实来源链接
+    references: [],        // 参考链接列表（了解更多/试试看 fold）
+    processedTime: '',     // 状态条「已完成梳理 · X分钟前」
     safeBottom: 0,         // 底部安全区（px）：JS 注入 --safe-bottom，规避 env() 真机失效
     loading: true,         // 加载态
     empty: false,          // 空态
@@ -265,7 +267,10 @@ function parseSceneMapping(txt) {
       relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
       hasMore: !!(d.sourceUrl || (d.references && d.references.length)),
       sourceUrl: d.sourceUrl || '',
-      practiceText: cleanText(d.practice) || '',
+      references: Array.isArray(d.references) ? d.references : [],
+      processedTime: d.processedTime || '',
+      // 2026-08-21 修复：formatIntelDetail 输出 practiceParas（数组）非 practice；minAction 同名
+      practiceText: cleanText(d.practice) || (Array.isArray(d.practiceParas) ? cleanText(d.practiceParas.join('\n')) : ''),
       minActionText: cleanText(d.minAction) || '',
       loading: false,
       empty: false,
