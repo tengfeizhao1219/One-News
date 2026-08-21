@@ -211,3 +211,10 @@
 - **修复**：删除漂移触发器（intelProcess0525/1125、intelDispatcher0540/1140），按权威 cron 重建。**踩坑**：mcporter `createFunctionTrigger` 是整体替换语义（传列表会清掉该函数其它触发器），首两次单档重建导致晚间档 1800 丢失，最终一次性传全部 3 档（早/午/晚）重建成功。
 - **线上最终（北京时间）**：intelProcess 05:20/11:20/17:50；intelDispatcher 05:30/11:30/18:00——与 cloudbaserc/config.json 一致。
 - **未动**：newsFetcher/rssFetcher/newsPipeline 触发器（owner：其它展示不管）；intelFetch/intelRssPoll/intelCleanup 本已一致。
+## 2026-08-21 · newsFetcher/rssFetcher 夜间停跑 cron 修复（owner 拍板：按北京时间）
+
+- **背景**：并行会话 5561cd2 将主链路 cron 改为 `0 0 0-14,22-23` 意图"北京 23:00-05:00 夜间停跑"，但该 cron 是**按 UTC 换算**的；SCF 定时触发器实际**按北京时间解析**（依据：intelDispatcher MODE_HOURS={5,11,18} 与触发器小时位吻合 + COMMLOG 权威时间表 + intelCleanup 03:00 语义），导致实际停跑时段 = **北京 15:00-21:00（下午黄金时段断更）**，与意图相反。
+- **修复**：cron 改为 `0 0 6-22 * * * *`（北京时间 06:00-22:00 每小时触发，23:00-05:00 夜间停跑）。
+- **同步**：线上触发器已重建（newsFetcher hourlyFetch / rssFetcher rssPoll，09:29 生效）；cloudbaserc.json + cloudfunctions/rssFetcher/config.json 已同步；newsFetcher config.json 触发器本就为空（由 cloudbaserc 部署），无需改。
+- **注意**：newsFetcher 代码内还有北京 01:00-05:00 静默时段兜底（QUIET），夜间停跑双保险。
+- 下游：06:00 起恢复每小时抓取；23:00-05:00 完全停跑省资源。

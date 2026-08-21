@@ -153,3 +153,10 @@
 - **createFunctionTrigger 传 triggers 列表 = 全量覆盖**：该函数已有的其它触发器会被清空，只剩本次传入的。必须一次传该函数**全部**触发器（早/午/晚 3 档一起），不能逐档创建。
 - **修复漂移触发器流程**：deleteFunctionTrigger 需 confirm=true（危险操作确认）；删旧 → createFunctionTrigger 一次性全量重建 → queryFunctions 验证 3 档齐全。
 - **线上触发器可能被并行会话直接改**（不经 git）：定时器漂移排查以 mcporter 实查为准，别信 cloudbaserc 或本地 config.json 一定是线上值；改动线上后应同步 cloudbaserc/config.json 并提交。
+
+## 2026-08-21 SCF 定时触发器 cron 时区 = 北京时间（定论）
+- **判定依据**（官方文档未直接写明时区，用项目内证据定论）：
+  ① intelDispatcher `MODE_HOURS={5:increment,11:increment,18:summary}` + 触发器 05:30/11:30/18:00 的小时位（5/11/18）与北京小时完全吻合——若 cron 按 UTC，早间档 resolveMode 全落 summary，与设计矛盾。
+  ② COMMLOG 权威时间表"早间 05:10/05:15/05:20/05:30" = cron `0 10 5`/`0 15 5`/`0 20 5`/`0 30 5` 直接对应北京时间。
+  ③ intelCleanup "每日 03:00 清理" = cron `0 0 3`，凌晨清理是北京语义。
+- **踩坑**：5561cd2 把 `0-14,22-23` 当 UTC 写（以为停北京 23:00-05:00），实际按北京时间解析 = 停北京 15:00-21:00，完全相反。**写 cron 前先确认时区语义**；改后必须用 queryFunctions 核验线上 cron，并对照"意图时段 vs 实际时段"自查。
