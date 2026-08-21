@@ -397,36 +397,42 @@
 .search-panel.open .search-line-progress.on {
   width: 100%;
 }
-/* 放大镜搜索按钮（icon，无文字；搜索中动画） */
+/* 放大镜搜索按钮：纯 icon 无圆形边框，点击搜索时变系统蓝 + 搜索中动画 */
 .search-btn {
   flex-shrink: 0;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 50%;
+  width: 56rpx;
+  height: 56rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-card);
-  border: 1rpx solid var(--divider);
+  color: var(--text-secondary);
 }
-.search-btn--hover { background-color: var(--bg-subtle); }
-.search-btn-icon { width: 40rpx; height: 40rpx; }
-.search-btn.is-loading .search-btn-icon.nav-light {
-  animation: searchSweep 1.1s ease-in-out infinite;
+.search-btn-icon {
+  width: 48rpx;
+  height: 48rpx;
 }
-.search-btn.is-loading .search-btn-icon.nav-dark {
-  animation: searchSweep 1.1s ease-in-out infinite;
+/* 默认跟随主题色（search.svg currentColor / search-dark.svg 白） */
+.search-btn .nav-light { color: var(--text-secondary); }
+/* 点击搜索：放大镜变系统蓝（用 currentColor 的亮色版继承蓝，暗色版隐藏） */
+.search-btn.is-loading .nav-light {
+  display: block !important;
+  color: var(--primary);
 }
-/* 搜索中动画：放大镜轻微摆动 + 光晕（像在"扫动查找"） */
+.search-btn.is-loading .nav-dark {
+  display: none !important;
+}
+/* 搜索中动画：放大镜轻微摆动 + 缩放（像在"扫动查找"） */
 @keyframes searchSweep {
   0%, 100% { transform: rotate(0deg) scale(1); }
   25% { transform: rotate(-18deg) scale(1.08); }
   50% { transform: rotate(0deg) scale(1); }
   75% { transform: rotate(18deg) scale(1.08); }
 }
-.search-btn.is-loading {
-  background-color: var(--primary-subtle);
-  border-color: var(--primary);
+.search-btn.is-loading .search-btn-icon.nav-light {
+  animation: searchSweep 1.1s ease-in-out infinite;
+}
+.search-btn.is-loading .search-btn-icon.nav-dark {
+  animation: searchSweep 1.1s ease-in-out infinite;
 }
 
 /* 结果区 */
