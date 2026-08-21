@@ -527,6 +527,8 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   // ① 立即用本地数据渲染（本地缓存 > 列表条目摘要），Promise 立即 resolve，翻页零等待；
   // ② 后台拉取 getNewsDetail 刷新合规字段/全文（写缓存 + 回写 mergedList，
   //    仍在当前页则通过 onDetailRefresh 升级渲染）。
+  // 2026-08-21 方案A：getNewsList 已透传完整 AI 解读正文 content——
+  // 列表数据直接含全文，首帧即完整解读；aiOpinion 一并带入（详情页观点卡可用）。
   var local = null
   if (that._cache) {
     try { local = that._cache.get('newsDetail:' + cur.id) } catch (e) { local = null }
@@ -537,6 +539,7 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     title: cur.title,
     summary: cur.summary,
     content: cur.content || cur.summary,
+    aiOpinion: cur.aiOpinion || '',
     contentSource: cur.contentSource || 'ai_interpretation',
     category: cur.category,
     categoryName: cur.categoryName,

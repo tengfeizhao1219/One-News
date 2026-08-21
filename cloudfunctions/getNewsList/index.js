@@ -109,6 +109,10 @@ async function queryCache(where, pageNum, pageSize) {
         list: listData.map(item => ({
           id: item.id, _id: item._id,
           title: cleanTitle(item.title || ''), summary: item.summary,
+          // 2026-08-21 方案A：透传完整 AI 解读正文 + 独立观点，
+          // 详情页首帧即可用完整解读渲染（不再"先摘要 0.5s 再刷新"）。
+          content: item.content || '',
+          aiOpinion: item.aiOpinion || '',
           summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
           category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,

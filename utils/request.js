@@ -30,7 +30,9 @@ function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
     }
     const data = res.result.data
     return {
-      list: (data.list || []).map(formatNewsItem),
+      // 2026-08-21 方案A：列表透传完整 AI 解读正文 content（详情页首帧完整渲染，
+      // 不再"先摘要 0.5s 再刷新"）。列表量 42 条 × ~500 字 ≈ 20KB，可接受。
+      list: (data.list || []).map(item => formatNewsItem(item, true)),
       total: data.total,
       hasMore: data.hasMore,
       meta: res.result.meta,  // 透传 source 信息

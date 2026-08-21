@@ -246,3 +246,13 @@
 - **原因（owner 复核）**：截断仍需在 AI 加工前进行，控制进入 AI 与落库的量；549e713 的"改由 publish applyCategoryCaps 软截断"方案被否。
 - **代码**：stageAi 恢复调用（含 try-catch 放行）；newsPipeline 已部署。
 - **状态**：publish 的 applyCategoryCaps 仍保留（注入 cache 前二次软截断，双保险），但 AI 前截断为主机制。
+## 2026-08-21 · 详情页首帧完整解读（方案A：列表透传全文）
+
+- **问题**：进详情页先显示 AI 摘要，~0.5s 后刷新为 AI 解读——因为列表只带 summary，reading-engine 先用摘要秒开渲染，后台 getNewsDetail 返回完整 content 后 onDetailRefresh 覆盖。
+- **方案 A（owner 拍板）**：getNewsList 透传完整 AI 解读正文 content + aiOpinion，reading-engine base.content 优先用列表全文 → 首帧即完整解读，无加载过程。
+- **改动**：
+  ① cloudfunctions/getNewsList：返回 content + aiOpinion（已部署）；
+  ② utils/request.js：getNewsList 调 formatNewsItem(item, true)（列表带全文）；
+  ③ pages/detail/reading-engine.js：base.content 用 cur.content（列表全文），aiOpinion 一并带入。
+- **验证**：news_cache content 已是完整解读正文（如候鸟 399 字 vs summary 145 字）；resolveContentText 对 ai_interpretation 返回 content。
+- 下游：前端需重编译；后台 getNewsDetail 刷新仍保留（补 references/合规字段增量）。
