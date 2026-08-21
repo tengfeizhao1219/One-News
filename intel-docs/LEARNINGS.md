@@ -210,3 +210,9 @@
   - simon_willison：8/20 brief 出现 48 条（archive 证据），被停前两轮 rejected 是重抓副作用 → 误伤
 - **旧机制缺陷**：单轮分<6直接停、不看历史均分、不识别重抓/重复轮。新机制（42次平均+≥5次才判）下三者均不会被误停。
 - **已恢复**：三者 status=active enabled=true，分数清空重新积累。
+
+## 2026-08-21 intelSearch 依赖保护（并行 agent 覆盖教训）
+- **现象**：并行 agent 部署 intelSearch 不带 InstallDependency: TRUE → 云端无 wx-server-sdk → 线上搜索 `Cannot find module` 全挂（当天 4 次）。
+- **自我保护**：scripts/fix-intel-search-dep.js——校验 InstallDependency/CodeSize，异常自动重部署（installDependency=TRUE）。实测：检测 FALSE → 自动修复 → 7.0MB 正常。
+- **提醒**：AI情报官_协作机制.md 新增"部署 intelSearch 必须带依赖安装"章节（含标准部署流程 + 排查清单）。
+- **教训**：任何部署类操作必须校验依赖安装状态，不能只信部署 API 返回成功。

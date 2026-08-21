@@ -161,3 +161,31 @@ docs/
 - 通用经验 → 沉淀回 ai-collab 插件模板（升级插件版本，新项目直接受益）
 
 **现状**：Phase 0–2 首份复盘已写入 REVIEW.md（含 4 条待办优化行动），由 O 追踪。
+
+## ⚠️ 部署 intelSearch 必须带依赖安装（2026-08-21 多次线上故障教训）
+
+**所有 agent 注意**：部署/更新 `intelSearch` 云函数时，**必须**：
+1. 打包 zip 前先同步 backend → cloudfunctions 副本，并改写 require 路径（`../common/` → `./common/`）
+2. 调用 `updateFunctionCode` 时**必须传 `installDependency: 'TRUE'`**
+3. 部署后**必须校验** `getFunctionDetail('intelSearch')` 的 `InstallDependency === "TRUE"` 且 `CodeSize > 1MB`（约 7.4MB 含 wx-server-sdk）
+
+**为什么**：intelSearch 依赖 wx-server-sdk（读数据库 + 混元）。如果 `InstallDependency: FALSE`，云端不装依赖，函数一启动就 `Cannot find module 'wx-server-sdk'`，**线上搜索立即全挂**。已发生 3 次（21:15/21:23/21:40 附近，均为部署不带依赖安装导致）。
+
+**标准部署流程**：
+```bash
+# 1. 同步副本（必须）
+cp backend/intelSearch/index.js cloudfunctions/intelSearch/index.js
+# 2. 改写 require（必须）
+sed -i '' "s#require('../common/#require('./common/#g" cloudfunctions/intelSearch/index.js
+# 3. 打包 + 部署（installDependency 必须 TRUE）
+zip -qr intelSearch.zip .   # 在 cloudfunctions/intelSearch 目录
+# updateFunctionCode 时传 installDependency: 'TRUE'
+# 4. 校验（必须）
+# getFunctionDetail 确认 InstallDependency=TRUE 且 CodeSize>1MB
+```
+
+**排查清单**（线上搜索报 `Cannot find module` 时）：
+1. 查 `getFunctionDetail('intelSearch')` → 若 `InstallDependency: FALSE` → 立即按上述标准流程重新部署
+2. 不要只改代码不装依赖——改了也白改，启动即崩
+
+**自动化保护**：scripts/fix-intel-search-dep.js（部署后自动校验+修复，可手动跑或挂 CI）

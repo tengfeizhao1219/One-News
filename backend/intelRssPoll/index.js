@@ -21,7 +21,7 @@
 //   apiFetch 内建 2 次重试，scrape 包一层 1 次重试，外层 Promise.race 掐超时；
 //   所有路径不 await 出界 → 适配 60s 硬超时。
 //
-// 部署注意：本函数 require('../common/ensureSchema') 与 require('../seedSources')，
+// 部署注意：本函数 require('./common/ensureSchema') 与 require('./seedSources')，
 //   部署云函数时需将 backend/common/ 与 backend/seedSources.js 一并上传。
 // ============================================================
 
@@ -31,9 +31,9 @@ const db = cloud.database()
 
 const crypto = require('crypto')
 const { XMLParser } = require('fast-xml-parser')
-const { ensureSchema } = require('../common/ensureSchema')
-const { seed } = require('../seedSources')
-const { fetchWebPage, extractContentFromHtml } = require('../common/contentFetcher')
+const { ensureSchema } = require('./common/ensureSchema')
+const { seed } = require('./seedSources')
+const { fetchWebPage, extractContentFromHtml } = require('./common/contentFetcher')
 
 // ─── 集合名（intel_* 命名空间）───
 const INTEL_INGEST = 'intel_ingest'
@@ -1135,6 +1135,50 @@ exports.main = async (event = {}) => {
     }
     const r = await runWorker(feed, now, ctx)
     return { ok: true, sourceId: event.sourceId, targetTime: ctx.targetTime, ...r }
+  }
+
+  // ── 管理 action：resetCursor（运维用）──
+  // 清空全部启用源的增量游标（lastSuccessCursor/lastFetchedAt/etag），
+  // 使下一次抓取全量拉取（用于 prompt/解析逻辑升级后全量重抓）；
+  // 同时修复历史嵌套源（{_id, data:{...}} → 平铺），保证 enabled 字段可读。
+  if (event.action === 'resetCursor') {
+    let updated = 0, flattened = 0
+    try {
+      const res = await db.collection(INTEL_SOURCES).limit(1000).get()
+      for (const f of (res.data || [])) {
+        // 修复嵌套源：{_id, data:{...}} → 平铺（SDK 直连 set 曾误包一层 data）
+        if (f.data && typeof f.data === 'object' && f.data.key) {
+          const inner = f.data
+          const flat = {}
+          for (const k of Object.keys(inner)) {
+            if (k === '_id') continue
+            flat[k] = inner[k]
+          }
+          flat._id = f._id
+          try {
+            // 云函数内 wx-server-sdk 的 doc().set 保留 _id 且平铺（与 SDK 直连行为不同）
+            await db.collection(INTEL_SOURCES).doc(f._id).set({ data: flat })
+            flattened++
+          } catch (e) { console.warn('[resetCursor] 修复嵌套源失败:', f._id, e.message || e) }
+          continue
+        }
+        // 清游标（update 移字段）
+        try {
+          await db.collection(INTEL_SOURCES).doc(f._id).update({
+            data: {
+              lastSuccessCursor: db.command.remove(),
+              lastFetchedAt: db.command.remove(),
+              etag: db.command.remove(),
+            },
+          })
+          updated++
+        } catch (e) { console.warn('[resetCursor] 清游标失败:', f._id, e.message || e) }
+      }
+    } catch (e) {
+      console.error('[resetCursor] 遍历失败:', e.message || e)
+      return { ok: false, reason: 'scan-fail:' + (e.message || e) }
+    }
+    return { ok: true, action: 'resetCursor', updated, flattened }
   }
 
   // ── 编排模式（intelRssPoll 定时器 05:15/11:15/18:00 兜底触发，与 intelFetch 错峰）──
