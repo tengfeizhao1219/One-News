@@ -376,6 +376,11 @@ function parseSceneMapping(txt) {
       this._collapseSearch()
       return
     }
+    // 详情未就绪（loading/empty）时标题未渲染，无法定位面板——先提示等待（bug：首次进入顶到屏幕最上方）
+    if (this.data.loading || this.data.empty) {
+      wx.showToast({ title: '详情加载中，请稍后再试', icon: 'none' })
+      return
+    }
     // 展开面板时深挖历史一律默认折叠（用户明确要求）
     const _g = this._loadDig()
     let _folded = false
@@ -386,10 +391,16 @@ function parseSceneMapping(txt) {
     setTimeout(() => {
       const q = wx.createSelectorQuery().in(this)
       q.select('.detail-title').boundingClientRect()
+      q.select('.nav').boundingClientRect()
       q.exec(res => {
-        const r = res && res[0]
-        const titleBottom = (r && r.top + r.height) || 0
-        this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
+        const rTitle = res && res[0]
+        const rNav = res && res[1]
+        // 兜底：标题量不到（未渲染/动画中）时用 nav 底部 + 标题估算高度（44rpx padding + 40rpx 标题 ×2 行）
+        const navBottom = (rNav && rNav.top + rNav.height) || 0
+        const titleBottom = (rTitle && rTitle.top + rTitle.height) ||
+          (navBottom + Math.round(84 * (this.data._fontScaleValue || 1)))
+        const top = Math.max(titleBottom, navBottom) + 18
+        this.setData({ searchOpen: true, searchPanelTop: top + 'px' })
         // 与面板 top 0.65s 过渡同步触发进度条
         this.setData({ searchProgress: true })
         this._measureSearchPanel()
