@@ -240,3 +240,9 @@
   ② utils/request.js `time` 字段：`formatRelativeTime(item.createdAt || ...)`（相对时间，优先 createdAt 落库时刻）→ `formatAbsoluteTime(item.publishTime || item.createdAt || item.time)`（绝对时间，优先新闻源 publishTime）。
 - **说明**：publishTime 在 newsPipeline Stage 1 已归一化为毫秒时间戳（优先源 pubDate，缺失回退抓取时间），前端按设备本地时区渲染（中国用户=北京时间）。
 - 下游：微信开发者工具重编译后生效（纯前端改动，无需部署云函数）。
+## 2026-08-21 · 恢复 AI 前分类 Top N 截断（owner 复核决策）
+
+- **决策**：撤销 549e713 的移除，恢复 `truncateStagingByCategory` 在 stageAi 前执行（AI 前按分类 finalScore 降序截断：recommend≤15/其余≤8，超限物理删除 staging pending，收敛 ≤47）。
+- **原因（owner 复核）**：截断仍需在 AI 加工前进行，控制进入 AI 与落库的量；549e713 的"改由 publish applyCategoryCaps 软截断"方案被否。
+- **代码**：stageAi 恢复调用（含 try-catch 放行）；newsPipeline 已部署。
+- **状态**：publish 的 applyCategoryCaps 仍保留（注入 cache 前二次软截断，双保险），但 AI 前截断为主机制。
