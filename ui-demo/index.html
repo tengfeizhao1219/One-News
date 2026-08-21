@@ -392,7 +392,8 @@ document.addEventListener('click', function(e){
           if(panel && pin) panel.style.top = (96 + pin.offsetHeight) + 'px';
           if(panel) panel.classList.add('open');
           actEl.classList.add('on');
-          if(sc && panel) setTimeout(()=>{ sc.scrollTo({top: panel.offsetHeight, behavior:'smooth'}); }, 60);
+          // 正文整体上滚「标题高+面板高」：正文顶部被推到标题+面板的正下方，下滑即可滚出正文
+          if(sc && pin && panel) setTimeout(()=>{ sc.scrollTo({top: pin.offsetHeight + panel.offsetHeight, behavior:'smooth'}); }, 60);
         } else {
           phone.classList.remove('search-on');
           if(panel) panel.classList.remove('open');
@@ -445,6 +446,7 @@ function copyNote(){
 }
 renderToolbar(); renderPages(); showPage('home');
 if(location.search.includes('dark=1')) document.body.classList.add('dark');
+
 </script>
 </body>
 </html>
