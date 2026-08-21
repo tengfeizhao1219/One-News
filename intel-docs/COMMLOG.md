@@ -298,3 +298,7 @@
 - **兼容**：旧数据无 disabledAt 回退 lastFetchTime；两者皆无视为暂停已久直接探测。
 - **验证**：5 个边界用例全过（刚暂停不恢复/超冷却恢复/旧数据兼容/无时间直接探测）。
 - **部署**：newsFetcher 已更新。
+## 2026-08-22 · 【自主迭代 R2】停用 36氪 死源（RSS 反爬不可恢复）
+
+- **问题**：36氪 RSS 全端点被 JS challenge 反爬（返回 17KB HTML 壳），每轮仍被抓取白耗资源。
+- **处理**：seedFeeds.json kr36_tech enabled=false + retireReason 留痕；线上 feed_meta 同步停用。虎扑加注释（第三方代理间歇可用，靠 R1 自动恢复机制兜底）。

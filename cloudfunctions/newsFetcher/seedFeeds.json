@@ -2387,7 +2387,7 @@
     "baseUrl": "https://36kr.com/feed",
     "category": "tech",
     "pollSeconds": 1800,
-    "enabled": true,
+    "enabled": false,
     "errorStreak": 0,
     "status": "active",
     "blockTitleKeywords": [
@@ -2457,7 +2457,8 @@
       "一带一路",
       "脱钩",
       "供应链安全"
-    ]
+    ],
+    "retireReason": "2026-08-22: 36kr.com/feed 全端点被 JS challenge 反爬（返回 HTML 壳），RSS 已死，停用避免每轮白抓"
   },
   {
     "_id": "ithome_tech",
@@ -2615,7 +2616,8 @@
       "一带一路",
       "脱钩",
       "供应链安全"
-    ]
+    ],
+    "note": "2026-08-22: 依赖第三方代理 decemberpei.cyou，间歇可用（曾挂/恢复），自动恢复机制兜底"
   },
   {
     "_id": "zhihu_life",
