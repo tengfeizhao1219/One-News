@@ -274,3 +274,14 @@
 - **修复**：数据库恢复 6 源 active + errorStreak=0（中新网 finance/edu/sports/culture/society + 虎扑）；手动触发 newsFetcher（42 源）→ 中新网全部正常（finance 30/edu 14/sports 30/culture 30/society 29）；推进 newsPipeline → publish 完成。
 - **验证**：news_cache 47 条满配（recommend 15 / 其余各 8），第一条「美国政府紧急下场救市难解美债危局」，来源多样（中新网 15/IT之家 16/新华 4 等），staging 清空 idle。
 - **遗留**：36氪 建议从源列表移除或标记永久停用；虎扑第三方代理不稳定需留意；"errorStreak 达上限即永久停用"的机制可考虑改为定时自动重试。
+## 2026-08-22 · 话题搜索深挖功能平移至 One News 详情页
+
+- **需求**：把 intel（AI 情报官）详情页的「联网搜索深挖」功能原模原样平移到 One News 详情页。
+- **改动**：
+  ① intelSearch 云函数：支持 `event.context`（{title, what, srcName}）——One News 新闻不在 intel_staged/intel_current，前端直接传新闻标题+摘要跳过查库；intel 场景无 context 回退原 itemId 查库（已部署）。
+  ② pages/detail/detail.js：搜索方法全量平移（onToggleSearch/搜索面板手势/onDeepQuick/onSearchSubmit/_runSearch/_parseSearchAnswer/深挖历史 _loadDig/_saveDig/_pushDigEntry/onToggleDigGroup/onToggleEntrySources/onOpenSource）；_renderDetail 设 searchQuickTitle（一键深挖标题）；onTouchEnd 面板展开时只收起不翻页。
+  ③ pages/detail/detail.wxml：搜索面板（一键深挖+搜索框+进度线+深挖历史分组+参考来源）+ FAB 悬浮搜索按钮。
+  ④ pages/detail/detail.wxss：64 行搜索样式平移（含 nav-light/dark 双主题图标）。
+- **适配点**：One News 无 itemId → context 传参；selector 用 .nav-bar 替代 .panel-header；深挖历史 key 用 news_dig_history_<id> 隔离。
+- **依赖**：intelSearch 已部署且 env 齐全（Tavily/DeepSeek/智谱/DashScope）。
+- 下游：微信开发者工具重编译验证。

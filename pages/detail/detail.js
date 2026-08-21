@@ -16,6 +16,8 @@ var ReadingEngine = require('./reading-engine')
 var localCache = require('../../utils/localCache').localCache
 var cloud = require('../../utils/cloud')
 var app = getApp()
+// 2026-08-22：话题搜索深挖（intelSearch 云函数，从 intel 详情页平移）
+var searchIntelTopic = require('../../utils/intelApi').searchIntelTopic
 
 // 全局缓存单例（引擎内部复用，favorites / browseHistory 同源存储为数组）
 var _cache = localCache
@@ -71,6 +73,21 @@ Page({
     referencesExpanded: false,
     // 一页说：关于一页说说明展开状态（owner 2026-08-12 拍板方案 C）
     opinionInfoExpanded: false,
+    // ===== 话题搜索深挖（2026-08-22 从 intel 详情页平移）=====
+    searchOpen: false,          // 搜索面板展开态
+    searchQueried: false,       // 已搜索过：搜索词以提示词灰显示
+    searchQuery: '',
+    searchLoading: false,       // 搜索中（60s 超时）
+    searchHint: '',             // 不相关/失败 hint（当次提示）
+    searchRestUp: false,        // 内容推上去（面板展开时）
+    searchPanelTop: '100%',     // 面板 top
+    searchProgress: false,      // 横线进度条动画
+    searchIntoView: '',         // scroll-into-view 锚点
+    digScrollTo: '',
+    searchPanelClientHeight: 0,
+    searchPanelContentHeight: 0,
+    searchQuickTitle: '',       // 一键深挖：当前新闻标题（截断 60 字）
+    digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries}]
   },
 
   // 引擎实例
@@ -364,6 +381,8 @@ Page({
       pageState: 'ready',
       progressPercent: 0,
       flashColor: that._getCategoryColorVar(news && news.category),
+      // 一键深挖标题：当前新闻标题截断 60 字（intel 版同款）
+      searchQuickTitle: String((news && news.title) || '').slice(0, 60),
     }, function () {
       // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
       that._measureScroll()
@@ -440,6 +459,11 @@ Page({
 
   onTouchEnd: function (e) {
     var that = this
+    // 2026-08-22：搜索面板展开时，滑动只收起面板，不触发翻页（面板内滚动事件已独立处理）
+    if (this.data.searchOpen) {
+      this._collapseSearch()
+      return
+    }
     if (this._animating || !this._engine) return
     var dy = e.changedTouches[0].clientY - this._touchStartY
     var dt = Date.now() - this._touchStartT
@@ -1145,5 +1169,318 @@ Page({
     } catch (e) {
       // 本地写入异常不阻断阅读
     }
+  },
+
+  // ============ 话题搜索深挖（2026-08-22 从 intel 详情页平移） ============
+
+  /** 点击搜索悬浮按钮：展开覆盖面板（其余内容推上去），再点收起 */
+  onToggleSearch: function () {
+    var that = this
+    if (this.data.searchOpen) {
+      this._collapseSearch()
+      return
+    }
+    if (this.data.pageState !== 'ready') {
+      wx.showToast({ title: '详情加载中，请稍后再试', icon: 'none' })
+      return
+    }
+    // 展开面板时深挖历史一律默认折叠
+    var _g = this._loadDig()
+    var _folded = false
+    _g.forEach(function (x) { if (x.open) { x.open = false; _folded = true } })
+    if (_folded) { this._saveDig(_g); this.setData({ digGroups: _g }) }
+    this.setData({ searchRestUp: true })
+    setTimeout(function () {
+      var q = wx.createSelectorQuery().in(that)
+      q.select('.detail-title').boundingClientRect()
+      q.select('.nav-bar').boundingClientRect()
+      q.exec(function (res) {
+        var rTitle = res && res[0]
+        var rNav = res && res[1]
+        var navBottom = (rNav && rNav.top + rNav.height) || 0
+        var titleBottom = (rTitle && rTitle.top + rTitle.height) ||
+          (navBottom + Math.round(84 * (that.data._fontScaleValue || 1)))
+        var top = Math.max(titleBottom, navBottom) + 18
+        that.setData({ searchOpen: true, searchPanelTop: top + 'px' })
+        that.setData({ searchProgress: true })
+        that._measureSearchPanel()
+      })
+    }, 60)
+  },
+
+  /** 测量面板可视高/内容高（内容不足一屏时禁止滑动收起） */
+  _measureSearchPanel: function () {
+    var that = this
+    setTimeout(function () {
+      var q = wx.createSelectorQuery().in(that)
+      q.select('#search-area').boundingClientRect()
+      q.select('.search-panel-inner').boundingClientRect()
+      q.exec(function (res) {
+        var area = res && res[0]
+        var inner = res && res[1]
+        if (area && inner) {
+          that.setData({
+            searchPanelClientHeight: area.height || 0,
+            searchPanelContentHeight: inner.height || 0,
+          })
+        }
+      })
+    }, 100)
+  },
+
+  /** 面板内部滚动：滚到顶部且内容超出时折叠历史 */
+  onSearchScroll: function (e) {
+    var st = (e.detail && e.detail.scrollTop) || 0
+    this._panelScrollTop = st
+    var sc = this.data.searchPanelContentHeight || 0
+    var cl = this.data.searchPanelClientHeight || 0
+    var overflows = sc > cl
+    if (overflows && st <= 0 && this.data.searchOpen && this.data.digGroups.some(function (g) { return g.open })) {
+      var groups = this._loadDig()
+      groups.forEach(function (g) { g.open = false })
+      this._saveDig(groups)
+      this.setData({ digGroups: groups })
+    }
+  },
+  onPanelTouchStart: function (e) {
+    var t = e.touches && e.touches[0]
+    this._panelTouch = t ? { x: t.clientX, y: t.clientY, moved: false } : null
+  },
+  onPanelTouchMove: function (e) {
+    if (!this._panelTouch) return
+    var t = e.touches && e.touches[0]
+    if (!t) return
+    var dy = t.clientY - this._panelTouch.y
+    var dx = Math.abs(t.clientX - this._panelTouch.x)
+    var overflows = (this.data.searchPanelContentHeight || 0) > (this.data.searchPanelClientHeight || 0)
+    if (this.data.searchOpen && overflows && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
+      if (!this._panelTouch.moved) {
+        this._panelTouch.moved = true
+        this._collapseSearch()
+      }
+    }
+  },
+  onPanelTouchEnd: function () {
+    this._panelTouch = null
+  },
+
+  /** 一键深挖：围绕当前新闻标题搜索 */
+  onDeepQuick: function () {
+    var query = this.data.searchQuickTitle
+    if (!query) {
+      wx.showToast({ title: '暂无可搜索话题', icon: 'none' })
+      return
+    }
+    this.setData({ searchQueried: true, searchQuery: query })
+    this._runSearch(query)
+  },
+
+  onSearchFocus: function () {
+    if (this.data.searchQueried) {
+      this.setData({ searchQueried: false, searchQuery: '' })
+    }
+  },
+
+  onSearchInput: function (e) {
+    this.setData({ searchQuery: (e.detail && e.detail.value) || '' })
+  },
+
+  onSearchSubmit: function () {
+    var query = String(this.data.searchQuery || '').trim()
+    if (!query) {
+      wx.showToast({ title: '先输入一个话题吧', icon: 'none' })
+      return
+    }
+    this.setData({ searchQueried: true })
+    this._runSearch(query.slice(0, 60))
+  },
+
+  /** 调 intelSearch：60s 超时；One News 传 context（新闻标题+摘要），云函数不再依赖 itemId 查库 */
+  _runSearch: function (query) {
+    var that = this
+    if (this.data.searchLoading || this._searching) return
+    this._searching = true
+    this.setData({ searchLoading: true, searchHint: '' })
+    var news = this.data.news || {}
+    var ctx = {
+      title: news.title || '',
+      what: news.summary || news.content || '',
+      srcName: news.source || '',
+    }
+    searchIntelTopic({ context: ctx, query: query })
+      .then(function (d) {
+        if (d && d.relevant === false) {
+          that.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
+          return
+        }
+        if (d && d.relevant) {
+          var sources = Array.isArray(d.sources) ? d.sources.map(function (x) {
+            return { title: x.title || x.url || '', url: x.url || '', source: x.source || '' }
+          }).filter(function (x) { return x.url }) : []
+          var hasSections = Array.isArray(d.sections) && d.sections.some(function (x) { return x && x.text })
+          var sections = hasSections ? d.sections.map(function (x) {
+            return { type: (x.type === 'heading' || x.type === 'bullet') ? x.type : 'para', text: String(x.text || '').trim() }
+          }).filter(function (x) { return x.text }) : []
+          var parsed = sections.length ? { summary: '', items: [] } : that._parseSearchAnswer(d.answer || '')
+          var isFallback = sections.length ? false : (/为你找到以下信息/.test(d.answer || ''))
+          var entry = {
+            query: query,
+            summary: sections.length ? '' : parsed.summary,
+            sections: sections,
+            items: sections.length ? [] : (isFallback ? [] : parsed.items),
+            sources: sources,
+            sourcesExpanded: false,
+            isFallback: isFallback,
+          }
+          that._pushDigEntry(query, entry.sections, sources)
+          return
+        }
+        that.setData({ searchHint: (d && d.hint) || '这个话题联网搜索暂时没找到结果，可以换个更具体的说法再试试～' })
+      })
+      .catch(function (err) {
+        wx.showToast({ title: (err && err.message) || '搜索失败，请稍后再试', icon: 'none' })
+      })
+      .then(function () { that.setData({ searchLoading: false }) })
+      .then(function () { that._searching = false })
+  },
+
+  /** 清洗 LLM 输出中的 markdown 标记 */
+  _cleanMd: function (v) {
+    return String(v || '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/\*([^*]+)\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .replace(/^[-*]\s+/gm, '')
+      .replace(/^>\s?/gm, '')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+      .trim()
+  },
+
+  /** answer 结构化：首行为引导头；「标题：内容」拆 title/body */
+  _parseSearchAnswer: function (answer) {
+    var that = this
+    var lines = String(answer || '').split(/\n+/).map(function (x) { return x.trim() }).filter(Boolean)
+    if (!lines.length) return { summary: '', items: [] }
+    var first = that._cleanMd(lines[0])
+    var isHead = !/^\d+[.、]/.test(first) && first.length < 40
+    var summary = isHead ? first : ''
+    var rest = isHead ? lines.slice(1) : lines
+    var items = []
+    for (var i = 0; i < rest.length; i++) {
+      var cleanLn = that._cleanMd(rest[i])
+      var m = cleanLn.match(/^(?:\d+[.、]\s*)?(.+?)(?::|：)\s*([\s\S]*)$/)
+      if (m && m[1] && m[1].length < 60) {
+        items.push({ title: m[1], body: m[2].slice(0, 300) })
+      } else {
+        if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? '\n' : '') + cleanLn.slice(0, 300)
+        else items.push({ title: '', body: cleanLn.slice(0, 300) })
+      }
+    }
+    return { summary: summary, items: items }
+  },
+
+  // ============ 深挖历史（同话题折叠 + 本地持久化，按 news.id 隔离） ============
+
+  _digKey: function () {
+    return 'news_dig_history_' + (this.data.news && this.data.news.id || '')
+  },
+  _loadDig: function () {
+    try {
+      var k = this._digKey()
+      var v = wx.getStorageSync(k)
+      var groups = Array.isArray(v) ? v : []
+      var cleaned = false
+      groups = groups.map(function (g) {
+        var seen = {}
+        var entries = (g.entries || []).filter(function (en) {
+          var fp = this._sectionsFingerprint(en.sections)
+          if (seen[fp]) { cleaned = true; return false }
+          seen[fp] = true
+          return true
+        }.bind(this))
+        if (entries.length !== (g.entries || []).length) { cleaned = true; g.entries = entries }
+        return g
+      }.bind(this)).filter(function (g) { return g && g.query && (g.entries || []).length })
+      if (cleaned) { try { wx.setStorageSync(k, groups) } catch (e) {} }
+      return groups
+    } catch (e) { return [] }
+  },
+  _saveDig: function (groups) {
+    try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
+  },
+  _sectionsFingerprint: function (sections) {
+    try { return JSON.stringify((sections || []).map(function (x) { return x && x.text || '' })) } catch (e) { return '' }
+  },
+  /** 新深挖结果入历史：同话题合并 entries（最新在前），持久化；搜索完成→最新分组展开 */
+  _pushDigEntry: function (query, sections, sources) {
+    var that = this
+    var now = new Date()
+    var time = (now.getHours() < 10 ? '0' + now.getHours() : now.getHours()) + ':' +
+      (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes())
+    var groups = this._loadDig()
+    var g = null
+    for (var i = 0; i < groups.length; i++) { if (groups[i].query === query) { g = groups[i]; break } }
+    if (g && g.entries[0] && this._sectionsFingerprint(g.entries[0].sections) === this._sectionsFingerprint(sections)) {
+      groups.forEach(function (x) { x.open = (x.query === query) })
+      this._saveDig(groups)
+      this.setData({ digGroups: groups })
+      this._measureSearchPanel()
+      return
+    }
+    var entry = { time: time, sections: sections, sources: sources, sourcesExpanded: false }
+    if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
+    groups.forEach(function (x) { x.open = (x.query === query) })
+    while (groups.length > 10) groups.pop()
+    groups.forEach(function (x) { while (x.entries.length > 10) x.entries.pop() })
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
+    this._measureSearchPanel()
+  },
+  /** 收起搜索面板：内容落回，历史折叠，滚动到深挖历史区 */
+  _collapseSearch: function () {
+    this._foldAllDig(false)
+    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false })
+    this.setData({ searchIntoView: 'dig-history' })
+    setTimeout(function () { this.setData({ searchIntoView: '' }) }.bind(this), 600)
+  },
+  _foldAllDig: function (open) {
+    var groups = this._loadDig()
+    groups.forEach(function (g) { g.open = open })
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
+  },
+  /** 展开/收起某个话题的深挖历史：互斥 */
+  onToggleDigGroup: function (e) {
+    var gi = Number(e.currentTarget.dataset.gi)
+    var groups = this._loadDig()
+    if (!groups[gi]) return
+    var willOpen = !groups[gi].open
+    groups.forEach(function (g, idx) { g.open = (idx === gi && willOpen) })
+    this._saveDig(groups)
+    this.setData({ digGroups: groups, digScrollTo: 'dig-group-' + gi })
+    setTimeout(function () { this.setData({ digScrollTo: '' }) }.bind(this), 600)
+  },
+  /** 展开/收起某次结果的参考来源 */
+  onToggleEntrySources: function (e) {
+    var gi = Number(e.currentTarget.dataset.gi)
+    var ei = Number(e.currentTarget.dataset.ei)
+    var groups = this._loadDig()
+    if (!groups[gi] || !groups[gi].entries[ei]) return
+    groups[gi].entries[ei].sourcesExpanded = !groups[gi].entries[ei].sourcesExpanded
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
+  },
+  /** 打开参考来源链接（复制到剪贴板，web-view 不可用） */
+  onOpenSource: function (e) {
+    var url = e.currentTarget.dataset.url
+    var title = e.currentTarget.dataset.title || ''
+    if (!url) return
+    wx.setClipboardData({
+      data: url,
+      success: function () { wx.showToast({ title: '链接已复制，可到浏览器打开', icon: 'none' }) },
+      fail: function () { wx.showToast({ title: '复制失败', icon: 'none' }) }
+    })
   },
 })

@@ -222,3 +222,7 @@
 - **排查推荐空先查 feed_meta**：`status/errorStreak/lastFetchTime/lastCount` 一眼定位——lastFetchTime=2020-01-01 占位 + streak≥3 = 自动暂停；本地 curl 200 但云端 0 条 = 过滤/解析问题（本次是暂停）。
 - **36氪 RSS 已死**：`36kr.com/feed*` 全返回 17KB HTML（JS challenge 反爬），任何 UA 都绕不过；官方 RSS 中心（ad.36kr.com/rss-center）列的地址全部失效。判断 RSS 源可用性别信官方页面，直接 curl 看 Content-Type。
 - **夜间停跑设计 vs 用户感知**：`0 0 6-22` 停 23:00-05:00 是 owner 拍的省资源设计，但用户会以为"推送失败"。排查推送问题时先核对定时器窗口再下结论。
+
+## 2026-08-22 intelSearch 复用到 One News（跨模块功能平移）
+- **云函数复用要点**：intelSearch 原依赖 itemId 查 intel_staged/intel_current 取新闻上下文。跨模块复用时，云函数加 `event.context` 可选参数（前端传新闻标题+摘要），有则跳过查库，无则回退原逻辑——**云函数应支持"上下文由调用方注入"的降级路径**，避免功能绑定单一数据源。
+- **前端平移适配清单**：① 数据字段（news 结构差异→ itemId 用 news.id）；② 生命周期（_renderDetail 设 searchQuickTitle）；③ 交互冲突（One News 有翻页手势，面板展开时 onTouchEnd 先收起不翻页）；④ selector 适配（.panel-header → .nav-bar）；⑤ 本地存储 key 按模块隔离（intel_dig_ vs news_dig_）。

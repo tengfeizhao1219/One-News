@@ -369,17 +369,34 @@ exports.main = async (event = {}) => {
 
   const itemId = String((event && event.itemId) || '').trim()
   const query = String((event && event.query) || '').trim()
-  if (!itemId || !query) {
-    return { code: -1, message: '缺少参数 itemId/query', errorCode: 'BAD_PARAM' }
+  if (!query) {
+    return { code: -1, message: '缺少参数 query', errorCode: 'BAD_PARAM' }
   }
   if (query.length > 60) {
     return { code: -1, message: '搜索话题过长（≤60 字）', errorCode: 'QUERY_TOO_LONG' }
   }
 
-  // 读当前新闻
-  const news = await loadNews(itemId)
-  if (!news) return { code: -1, message: '未找到该情报', errorCode: 'NOT_FOUND' }
-  const ctx = newsContext(news)
+  // 2026-08-22 移植：One News 详情页深挖（新闻不在 intel_staged/intel_current）——
+  // 前端直接传 context {title, what}（当前新闻标题+摘要），有则跳过查库；
+  // 无 context 时回退原逻辑（intel 详情页按 itemId 查库）。
+  let ctx = null
+  const evCtx = (event && event.context) || null
+  if (evCtx && (evCtx.title || evCtx.what)) {
+    ctx = {
+      title: String(evCtx.title || '').slice(0, 100),
+      what: String(evCtx.what || '').replace(/\*\*/g, '').slice(0, 400),
+      def: '',
+      srcName: String(evCtx.srcName || evCtx.source || ''),
+    }
+  } else {
+    if (!itemId) {
+      return { code: -1, message: '缺少参数 itemId/query', errorCode: 'BAD_PARAM' }
+    }
+    // 读当前新闻
+    const news = await loadNews(itemId)
+    if (!news) return { code: -1, message: '未找到该情报', errorCode: 'NOT_FOUND' }
+    ctx = newsContext(news)
+  }
 
   // ① 相关性判断（宽泛）
   const tJudge = Date.now()
