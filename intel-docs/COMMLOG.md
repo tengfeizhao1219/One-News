@@ -285,3 +285,9 @@
 - **适配点**：One News 无 itemId → context 传参；selector 用 .nav-bar 替代 .panel-header；深挖历史 key 用 news_dig_history_<id> 隔离。
 - **依赖**：intelSearch 已部署且 env 齐全（Tavily/DeepSeek/智谱/DashScope）。
 - 下游：微信开发者工具重编译验证。
+## 2026-08-22 · One News 深挖报错修复（context 透传缺失）
+
+- **现象**：One News 详情页深挖提示"缺少参数 itemId/query"。
+- **根因**：utils/intelApi.js `searchIntelTopic({itemId, query})` 只透传 itemId/query，把前端传的 `context` 丢弃 → 云函数收到 {query} 无 itemId 无 context → BAD_PARAM。
+- **修复**：wrapper 参数解构加 `context` 并透传（data: {itemId, query, context}）；云函数 context 分支此前已部署，无需改。
+- 下游：前端重编译生效（utils 变更无需部署云函数）。
