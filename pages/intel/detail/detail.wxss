@@ -387,6 +387,8 @@
   color: var(--text-body);
   line-height: 1.75;
   margin-bottom: 24rpx;
+  white-space: pre-line;  /* 保留 LLM 回答的换行 */
+  word-break: break-word;
 }
 .search-sources { border-top: 1rpx solid var(--divider); padding-top: 16rpx; }
 .search-src {

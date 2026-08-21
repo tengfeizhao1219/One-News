@@ -106,7 +106,8 @@ function formatIntelDetail(d) {
 
 module.exports = {
   getIntelList,
-  getIntelDetail
+  getIntelDetail,
+  searchIntelTopic
 }
 
 /**
