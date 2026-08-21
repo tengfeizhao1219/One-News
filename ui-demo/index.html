@@ -85,6 +85,29 @@
   .fab-search.on{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(0,122,255,.35);}
   .quick-t{font-size:13.5px;font-weight:600;} .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
   .search-box{display:flex;gap:10px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:11px 13px;margin-bottom:12px;}
+  /* 搜索历史区（详情页正文流内，随内容滚动，下滑可见） */
+  .search-history{margin-top:28px;border-top:1px solid var(--divider);padding-top:18px;}
+  .sh-title{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
+  .sh-empty{font-size:12px;color:var(--text-tertiary);padding:6px 2px;}
+  .sh-groups{}
+  .sh-group{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;margin-bottom:12px;overflow:hidden;}
+  .sh-group-head{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;cursor:pointer;}
+  .sh-group-q{font-size:13.5px;font-weight:600;color:var(--text-primary);}
+  .sh-group-meta{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
+  .sh-group-arrow{color:var(--text-tertiary);font-size:13px;transition:transform .2s;}
+  .sh-group.open .sh-group-arrow{transform:rotate(180deg);}
+  .sh-group-body{display:none;padding:0 15px 14px;border-top:1px solid var(--divider);}
+  .sh-group.open .sh-group-body{display:block;}
+  .sh-entry{padding:12px 0;border-bottom:1px solid var(--divider);}
+  .sh-entry:last-child{border-bottom:none;}
+  .sh-entry-time{font-size:10.5px;color:var(--text-tertiary);margin-bottom:6px;}
+  .sh-sec-head{font-size:13px;font-weight:700;color:var(--text-primary);margin:8px 0 5px;padding-left:10px;position:relative;}
+  .sh-sec-head::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:2px;background:var(--primary);opacity:.7;}
+  .sh-sec-para{font-size:12.5px;color:var(--text-body);line-height:1.7;margin-bottom:6px;text-align:justify;}
+  .sh-sec-bullet{display:flex;gap:8px;font-size:12.5px;color:var(--text-body);line-height:1.6;margin-bottom:4px;}
+  .sh-sec-bdot{width:5px;height:5px;border-radius:50%;background:var(--primary);opacity:.55;margin-top:7px;flex-shrink:0;}
+  .sh-group-sources{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
+  .sh-src-chip{font-size:11px;color:var(--text-link);background:var(--bg-subtle);border-radius:8px;padding:4px 10px;cursor:pointer;}
   .search-input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;}
   .search-btn{background:var(--primary);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:600;flex-shrink:0;}
   .result{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:10px;}
@@ -202,7 +225,8 @@ const PROJECTS = {
           { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '三段式叙事：第一段专业解读 / 第二段大白话（术语括号注中文）；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
           { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）；「AI 预测」标注在块内左上角，与「落到你这里」的 for-k 设计一致；措辞用推测性（可能会/有望）', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pred-tag: 11.5px/700 primary（同 for-k）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-tag', guideline: '准则5 轻高亮 / 风格一致' },
           { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
-          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容（来源/正文/页脚）整体顶上去（rest 上移面板高，.65s）；再点 FAB，内容落回、把面板从顶部推下来（.65s）；视觉是同一页面的推上/推下过渡，非切页', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0, translateY(100%)→0, .65s'},{k:'内容',v:'rest 上移面板高, 与面板同速'},{k:'标题',v:'保持固定（pin）'},{k:'图标',v:'自绘放大镜 SVG'}], code: 'fab-search / data-action=search / .rest', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
+          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容整体顶上去（rest 上移）；搜索完成后面板自动收起，入口区不保留——再次搜索需再点 FAB；历史记录沉淀在正文流搜索历史区，下滑可见、退出再进保留', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0, 搜索后自动收起'},{k:'历史',v:'localStorage 持久化, 同话题折叠'}], code: 'fab-search / data-action=search / search-history', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
+          { selector: '.search-history', name: '搜索历史区', intent: '详情页正文流末尾：每次搜索的完整结果沉淀于此，随内容滚动（下滑可见）；同一话题多次搜索折叠为一条（显示次数+最近时间），点击展开各次结果；退出页面再进入，历史保留（本地持久化）', params: [{k:'标题',v:'「搜索历史」text-secondary'},{k:'分组',v:'bg-card 圆角卡, 折叠箭头'},{k:'条目',v:'每次搜索带时间戳, sections 层级排版'},{k:'持久化',v:'localStorage 按 itemId 存储'}], code: 'search-history / sh-group / sh-entry', guideline: '准则1 信息归位 / 准则3 交互' },
         ]
       },
       mine: {
@@ -263,13 +287,17 @@ const PAGE_HTML = {
         <div class="fold"><div class="fold-head"><span>了解更多</span><span>▸</span></div></div>
         <div class="fold"><div class="fold-head"><span>想试试</span><span>▸</span></div></div>
       </div>
+      <div class="search-history" id="sh-detail">
+        <div class="sh-title">搜索历史</div>
+        <div class="sh-empty" id="sh-empty-detail">还没有搜索记录，点右下角搜索按钮开始了解</div>
+        <div class="sh-groups" id="sh-groups-detail"></div>
+      </div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
       </div>
     </div>
     <div class="search-panel" id="sp-detail">
       <div class="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
-      <div class="search-box"><input class="search-input" placeholder="输入你感兴趣的话题…"><span class="search-btn">搜索</span></div>
-      <div class="result"><div class="result-t">智谱官方：GLM-5.3 技术报告</div><div class="result-meta">智谱AI 官网 · 昨天</div><div class="result-desc">模型架构、安全后训练细节与全部评测基准。</div></div>
+      <div class="search-box"><input class="search-input" id="search-input-detail" placeholder="输入你感兴趣的话题…"><span class="search-btn" data-action="do-search">搜索</span></div>
     </div>
     <div class="fab fab-search" data-action="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>`,
   mine: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
@@ -372,6 +400,71 @@ function closeDrawer(){
   document.querySelectorAll('.phone.dim').forEach(p=>p.classList.remove('dim'));
   document.querySelectorAll('[data-note].lit').forEach(e=>e.classList.remove('lit'));
 }
+// ============ 搜索历史（demo：localStorage 持久化，同话题折叠，退出再进可见） ============
+const SH_KEY = 'one-news-search-history-demo';
+function loadHistory(){ try { return JSON.parse(localStorage.getItem(SH_KEY) || '[]'); } catch(e){ return []; } }
+function saveHistory(h){ try { localStorage.setItem(SH_KEY, JSON.stringify(h)); } catch(e){} }
+/** 模拟搜索：同话题 push 新结果；不同话题新增分组。返回新历史数组 */
+function doSearch(query){
+  if(!query.trim()) return;
+  let hist = loadHistory();
+  const time = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+  // 模拟 LLM 结构化返回（与真机 sections 格式一致）
+  const entry = {
+    time: time,
+    sections: [
+      { type: 'heading', text: '核心变化' },
+      { type: 'para', text: '围绕「' + query + '」：模型在编程与安全两大方向升级，官方评测显示其 SWE-bench 领先同类，并具备漏洞定位能力。' },
+      { type: 'heading', text: '对你意味着什么' },
+      { type: 'para', text: '可评估接入代码审查管线的实际效率，成本门槛低于同类方案。' },
+      { type: 'bullet', text: '官方 API 已开放注册' },
+      { type: 'bullet', text: '安全能力或推动开源安全工具' },
+    ],
+    sources: ['https://example.com/a', 'https://example.com/b']
+  };
+  const g = hist.find(h => h.query === query);
+  if(g){ g.entries.push(entry); } else { hist.unshift({ query: query, entries: [entry] }); }
+  saveHistory(hist);
+  renderHistory();
+  return hist;
+}
+function renderHistory(){
+  const holder = document.getElementById('sh-groups-detail');
+  const empty = document.getElementById('sh-empty-detail');
+  if(!holder) return;
+  const hist = loadHistory();
+  if(empty) empty.style.display = hist.length ? 'none' : '';
+  holder.innerHTML = hist.map((g, gi) => `
+    <div class="sh-group ${g.open ? 'open' : ''}" data-gi="${gi}">
+      <div class="sh-group-head" data-action="toggle-sh-group" data-gi="${gi}">
+        <div>
+          <div class="sh-group-q">「${escapeHtml(g.query)}」</div>
+          <div class="sh-group-meta">${g.entries.length} 次搜索 · 最近 ${g.entries[0].time}</div>
+        </div>
+        <span class="sh-group-arrow">▾</span>
+      </div>
+      <div class="sh-group-body">
+        ${g.entries.map(en => `
+          <div class="sh-entry">
+            <div class="sh-entry-time">${en.time}</div>
+            ${en.sections.map(sec => {
+              if(sec.type === 'heading') return `<div class="sh-sec-head">${escapeHtml(sec.text)}</div>`;
+              if(sec.type === 'bullet') return `<div class="sh-sec-bullet"><span class="sh-sec-bdot"></span><span>${escapeHtml(sec.text)}</span></div>`;
+              return `<div class="sh-sec-para">${escapeHtml(sec.text)}</div>`;
+            }).join('')}
+            <div class="sh-group-sources">
+              ${en.sources.map(u => `<span class="sh-src-chip">来源 ›</span>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`).join('');
+}
+function toggleShGroup(gi){
+  let hist = loadHistory();
+  const g = hist.find((x, i) => i === Number(gi));
+  if(g){ g.open = !g.open; saveHistory(hist); renderHistory(); }
+}
+
 document.addEventListener('click', function(e){
   // 非标注模式：处理手机内可交互动作（返回主页/进详情/进初始化/深入了解），页面标签同步切换
   if(!noteMode){
@@ -396,12 +489,35 @@ document.addEventListener('click', function(e){
           if(panel) panel.classList.add('open');
           if(rest) rest.style.transform = 'translateY(-100%)';
           actEl.classList.add('on');
+          // 聚焦输入框
+          const inp = document.getElementById('search-input-detail');
+          if(inp){ setTimeout(()=>{ inp.focus(); }, 300); }
         } else {
           phone.classList.remove('search-on');
           if(panel){ panel.style.top = ''; panel.classList.remove('open'); }
           if(rest) rest.style.transform = '';
           actEl.classList.remove('on');
         }
+      }
+      else if(act === 'do-search'){
+        // 执行搜索 → 结果入历史 → 自动收起面板（入口区不再保留，历史在正文流下滑可见）
+        const phone = actEl.closest('.phone');
+        const inp = document.getElementById('search-input-detail');
+        const q = (inp && inp.value || '').trim();
+        if(!q){ return; }
+        doSearch(q);
+        if(inp) inp.value = '';
+        phone.classList.remove('search-on');
+        const panel = phone.querySelector('.search-panel');
+        const rest = phone.querySelector('.rest');
+        const fab = phone.querySelector('.fab-search');
+        if(panel){ panel.style.top = ''; panel.classList.remove('open'); }
+        if(rest) rest.style.transform = '';
+        if(fab) fab.classList.remove('on');
+      }
+      else if(act === 'toggle-sh-group'){
+        const gi = actEl.getAttribute('data-gi');
+        toggleShGroup(gi);
       }
       return;
     }
@@ -446,8 +562,16 @@ function copyNote(){
   const pre = document.getElementById('noteJson');
   if(navigator.clipboard && pre){ navigator.clipboard.writeText(pre.textContent).then(()=>{ alert('已复制标注 JSON'); }); }
 }
-renderToolbar(); renderPages(); showPage('home');
+renderToolbar(); renderPages(); showPage('home'); renderHistory();
+// 搜索输入框回车提交
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter' && document.getElementById('search-input-detail') === document.activeElement){
+    const btn = document.querySelector('.page-wrap.active .search-btn[data-action="do-search"]');
+    if(btn) btn.click();
+  }
+});
 if(location.search.includes('dark=1')) document.body.classList.add('dark');
+
 
 </script>
 </body>
