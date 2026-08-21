@@ -137,15 +137,12 @@
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:elif="{{searchHint}}">{{searchHint}}</view>
     <block wx:elif="{{searchItems.length || searchAnswer}}">
-      <!-- 引导头（如「关于…为你找到以下信息：」） -->
+      <!-- 引导头（如「关于…为你找到以下信息：」，弱化小字） -->
       <view class="search-summary" wx:if="{{searchSummary}}">{{searchSummary}}</view>
-      <!-- 结构化编号条目（标题加粗 + 内容截断，避免铺满屏幕） -->
-      <view class="search-item" wx:for="{{searchItems}}" wx:key="n">
-        <text class="search-item-n">{{item.n}}</text>
-        <view class="search-item-body">
-          <text class="search-item-title">{{item.title}}</text>
-          <text class="search-item-desc" wx:if="{{item.body}}">{{item.body}}</text>
-        </view>
+      <!-- 段落式结果：标题行 + 正文段落（自然排版，非编号列表） -->
+      <view class="search-item" wx:for="{{searchItems}}" wx:key="index">
+        <text class="search-item-title" wx:if="{{item.title}}">{{item.title}}</text>
+        <text class="search-item-desc" wx:if="{{item.body}}">{{item.body}}</text>
       </view>
       <!-- 兜底：无法结构化时展示原始回答 -->
       <view class="search-answer" wx:if="{{!searchItems.length}}">{{searchAnswer}}</view>

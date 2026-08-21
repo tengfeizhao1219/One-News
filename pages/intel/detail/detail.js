@@ -358,8 +358,9 @@ function parseSceneMapping(txt) {
     const t = e.touches && e.touches[0]
     if (!t) return
     const dy = t.clientY - this._panelTouch.y
-    // 下滑超过 24px 即收起（垂直手势为主，忽略横向）
-    if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(t.clientX - this._panelTouch.x) && this.data.searchOpen) {
+    const dx = Math.abs(t.clientX - this._panelTouch.x)
+    // 仅「下滑」(dy>0) 收起；上滑用于滚动查看内容，绝不触发收起
+    if (this.data.searchOpen && dy > 24 && dy > dx) {
       if (!this._panelTouch.moved) {
         this._panelTouch.moved = true
         this.onToggleSearch()
@@ -430,7 +431,7 @@ function parseSceneMapping(txt) {
       .then(() => this.setData({ searchLoading: false }))
   },
 
-  /** answer 结构化：首行为引导头，后续「N. 标题：内容」拆成编号条目 */
+  /** answer 结构化：首行为引导头；每条「标题：内容」拆成 title/body 段落（自然排版，非编号列表） */
   _parseSearchAnswer(answer) {
     const lines = String(answer || '').split(/\n+/).map(x => x.trim()).filter(Boolean)
     if (!lines.length) return { summary: '', items: [] }
@@ -440,13 +441,14 @@ function parseSceneMapping(txt) {
     const rest = isHead ? lines.slice(1) : lines
     const items = []
     for (const ln of rest) {
-      const m = ln.match(/^(\d+)[.、]\s*(.+?)(?::|：)\s*([\s\S]*)$/)
-      if (m) {
-        items.push({ n: m[1], title: m[2], body: m[3].slice(0, 120) })
+      // 「标题：内容」→ title(加粗行) + body(正文段落)
+      const m = ln.match(/^(?:\d+[.、]\s*)?(.+?)(?::|：)\s*([\s\S]*)$/)
+      if (m && m[1] && m[1].length < 60) {
+        items.push({ title: m[1], body: m[2].slice(0, 200) })
       } else {
-        const m2 = ln.match(/^(\d+)[.、]\s*([\s\S]+)$/)
-        if (m2) items.push({ n: m2[1], title: m2[2].slice(0, 60), body: '' })
-        else if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? ' ' : '') + ln.slice(0, 120)
+        // 无冒号分割：整行作为正文段落，合并到上一条 body（无上条则自成一段）
+        if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? '\n' : '') + ln.slice(0, 200)
+        else items.push({ title: '', body: ln.slice(0, 200) })
       }
     }
     return { summary, items }

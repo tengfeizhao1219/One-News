@@ -300,9 +300,12 @@
   position: absolute;
   left: 0;
   right: 0;
+  bottom: 0;
   background-color: var(--bg-page);
   padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
   z-index: 210;
+  overflow-y: auto;   /* 结果多时可上滑滚动查看（不触发收起） */
+  -webkit-overflow-scrolling: touch;
   visibility: hidden;
   opacity: 0;
   transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s, visibility 0s 0.65s;
@@ -391,56 +394,32 @@
   white-space: pre-line;  /* 保留 LLM 回答的换行 */
   word-break: break-word;
 }
-/* 结构化结果：引导头 */
+/* 段落式结果排版：引导头（弱化小字）+ 标题行 + 正文段落，分隔线划分 */
 .search-summary {
-  font-size: calc(28rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.6;
-  margin-bottom: 20rpx;
-}
-/* 结构化结果：编号条目（标题加粗 + 内容截断，避免铺满屏幕） */
-.search-item {
-  display: flex;
-  gap: 18rpx;
-  background-color: var(--bg-card);
-  border: 1rpx solid var(--divider);
-  border-radius: 20rpx;
-  padding: 20rpx 24rpx;
-  margin-bottom: 14rpx;
-}
-.search-item-n {
-  flex-shrink: 0;
-  width: 40rpx;
-  height: 40rpx;
-  border-radius: 50%;
-  background-color: var(--bg-subtle);
-  color: var(--text-secondary);
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 2rpx;
-}
-.search-item-body { flex: 1; min-width: 0; }
-.search-item-title {
-  display: block;
-  font-size: calc(28rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.5;
-}
-.search-item-desc {
-  display: block;
-  margin-top: 8rpx;
   font-size: calc(24rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
   line-height: 1.6;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+.search-item {
+  padding: 4rpx 0 26rpx;
+  border-bottom: 1rpx solid var(--divider);
+}
+.search-item:last-child { border-bottom: none; }
+.search-item-title {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: 8rpx;
+}
+.search-item-desc {
+  display: block;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.75;
+  text-align: justify;
   word-break: break-word;
 }
 /* 参考来源：折叠卡（默认收起，点击展开） */
