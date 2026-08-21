@@ -12,7 +12,7 @@
         {
           "name": "hourlyFetch",
           "type": "timer",
-          "config": "0 0 * * * * *"
+          "config": "0 0 0,5-23 * * * *"
         }
       ]
     },
