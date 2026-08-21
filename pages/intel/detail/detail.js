@@ -258,7 +258,7 @@ function parseSceneMapping(txt) {
         const raw = String(d.whatHappened || '').trim()
         if (!raw) return []
         // ① 先按标记切分：separator 捕获标记词，内容块在奇偶位
-        const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*)*\s*\*\*?\s*[:：]?\s*/
+        const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*|[:：])*\s*\*\*?\s*[:：]?\s*/
         const parts = raw.split(SEP_RE)
         const blocks = []
         const pushText = (txt) => {
