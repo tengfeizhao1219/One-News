@@ -6,6 +6,16 @@
 
 ---
 
+### [2026-08-21] 逐批清理逻辑被并行覆盖丢失（多 AI 协作/流程）
+
+- **症状**：历史数据（旧 staged/ingest/current 多版本）持续累积，旧数据混入新 brief（今天 brief 混入 5 条英文旧定义）；intel_current 残留 v16/v23/v4 三版。
+- **根因**：08-19 已实现「逐批只留本批」清理（b172858：process 清旧 staged/非本批 ingest、dispatcher 清旧 brief 只留一版），但**多 AI 并行改同一文件 intelProcess/index.js**——另一分支基于无清理的旧版本开发，合并/rebase 后**清理代码被静默覆盖**。且**删除/清理类逻辑缺失不报错**（无测试、无存在性校验），丢失无人察觉，直到数据累积暴露。
+- **正确做法**：
+  1. **关键静默逻辑（清理/翻译/兜底）必须有存在性校验**——已落地 `scripts/check_intel.sh`（purgeDone/isMostlyEnglish/purgeOldBriefs 等关键字检查）+ `.git/hooks/pre-push`（push 自动拦截，任何 AI 无法绕过）。
+  2. 共享文件（intelProcess/intelDispatcher/intelFetch 等）改动后，push 前自查清理逻辑是否仍在。
+  3. 部署后验证生效（触发一次看数据变化），不信"部署成功"。
+- **涉及角色**：I / P / O / 所有并行 AI
+
 ### [2026-08-20] 云函数时区坑：SCF 环境是 UTC，本地时间读取错 8 小时（时间/时区）
 
 - **症状**：首页"数据截至 01:36"但新闻已 2 点后——数据其实最新（北京 09:36 抓取），纯显示错位。

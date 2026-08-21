@@ -37,6 +37,13 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-21 · 逐批清理逻辑恢复并验证 + AI 协作门禁机制落地
+
+- **恢复清理**：intelProcess 本批有数据先清旧 staged/非本批 ingest（purgeDone 防误清）、intelDispatcher 发布后清旧 brief 只留一版（purgeOldBriefs）；双副本同步。
+- **验证**：手动触发（插测试 pending）→ staged 28→1、ingest 非 pending 33→1，逐批只留本批生效 ✅。
+- **门禁机制（防并行覆盖）**：scripts/check_intel.sh（关键逻辑存在性 purgeDone/isMostlyEnglish/purgeOldBriefs + 冲突标记扫描 + 语法）+ .git/hooks/pre-push（push 自动拦截）；文件所有权与修改声明协议已写入协作机制。
+- **LEARNINGS**：新增「清理逻辑被并行覆盖」教训条目。
+
 ## 2026-08-21 · 调度触发器统一 ADR-10 + 协作纪律确立
 
 - **触发器统一**：config.json 此前未同步 ADR-10（rssPoll 18:00/process 18:10/dispatcher 18:30），已统一为 fetch 17:40 / poll 17:45 / process 17:50 / dispatch 18:00（对齐 cloudbaserc.json 权威 + ADR-10，提交 f5780e7）；已重新部署 3 函数同步云端触发器。
