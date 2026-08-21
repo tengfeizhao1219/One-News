@@ -69,6 +69,7 @@ Page({
     // 话题搜索（2026-08-21：intelSearch 云函数，三种结果路径）
     searchOpen: false,          // 搜索面板展开态
     searchPanelTop: '100%',     // 面板 top（展开时注入 px：标题下+呼吸间距）
+    searchProgress: false,      // 横线进度条（面板顶上来时从左侧系统蓝加载）
     searchRestUp: false,        // 其余内容推起（面板展开时）
     searchIntoView: '',         // scroll-into-view 锚点（收起时滚到深挖历史）
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
@@ -354,7 +355,7 @@ function parseSceneMapping(txt) {
     _g.forEach(x => { if (x.open) { x.open = false; _folded = true } })
     if (_folded) { this._saveDig(_g); this.setData({ digGroups: _g }) }
     this.setData({ searchRestUp: true })
-    // 面板 top = 标题底部 + 呼吸间距（18px）
+    // 面板 top = 标题底部 + 呼吸间距（18px）；顶上来时横线进度条从左侧系统蓝加载（动画①）
     setTimeout(() => {
       const q = wx.createSelectorQuery().in(this)
       q.select('.detail-title').boundingClientRect()
@@ -362,6 +363,8 @@ function parseSceneMapping(txt) {
         const r = res && res[0]
         const titleBottom = (r && r.top + r.height) || 0
         this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
+        // 与面板 top 0.65s 过渡同步触发进度条
+        this.setData({ searchProgress: true })
       })
     }, 60)
   },
@@ -549,7 +552,7 @@ function parseSceneMapping(txt) {
     const groups = this._loadDig()
     groups.forEach(g => { g.open = false })
     this._saveDig(groups)
-    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, digGroups: groups })
+    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false, digGroups: groups })
     this.setData({ searchIntoView: 'dig-history' })
     setTimeout(() => this.setData({ searchIntoView: '' }), 600)
   },

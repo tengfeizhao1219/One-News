@@ -165,9 +165,19 @@
         <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
         <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
       </view>
+      <!-- 搜索框：极简横线式输入（无边框容器），右侧放大镜 icon 按钮 -->
       <view class="search-box">
-        <input class="search-input" value="{{searchQuery}}" bindinput="onSearchInput" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder" confirm-type="search" bindconfirm="onSearchSubmit" />
-        <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">{{searchLoading ? '搜索中' : '搜索'}}</view>
+        <view class="search-line-wrap">
+          <input class="search-input" value="{{searchQuery}}" bindinput="onSearchInput" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder" confirm-type="search" bindconfirm="onSearchSubmit" />
+          <!-- 横线：静态基线 + 进度条（面板顶上来时从左侧系统蓝加载；搜索中持续加载） -->
+          <view class="search-line">
+            <view class="search-line-progress {{searchProgress ? 'on' : ''}}"></view>
+          </view>
+        </view>
+        <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">
+          <image class="search-btn-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
+          <image class="search-btn-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
+        </view>
       </view>
     </view>
 
