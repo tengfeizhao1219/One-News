@@ -57,10 +57,10 @@
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
           <!-- 普通正文段（text / plain / def 都按自然段落渲染，不显示标记文字） -->
           <view wx:if="{{blk.type !== 'predict'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
-          <!-- AI 预测：浅灰底块 + 段尾小字「AI 预测」（UI 提示，非正文文字） -->
+          <!-- AI 预测：很浅蓝底块（highlight-bg）+ 块内左上「AI 预测」蓝字（同 for-k），对齐 ui-demo -->
           <view wx:elif="{{blk.text}}" class="wh-panel">
-            <text class="wh-panel-body">{{blk.text}}</text>
             <text class="wh-panel-tag">AI 预测</text>
+            <text class="wh-panel-body">{{blk.text}}</text>
           </view>
         </block>
       </block>

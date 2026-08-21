@@ -214,10 +214,15 @@ function parseSceneMapping(txt) {
         // 2026-08-20 v5：优先用后端结构化结果（intelProcess 已解析 whatHappenedBlocks 存 sop）；
         // 旧数据（后端未解析）才走本地兜底解析
         if (Array.isArray(d.whatHappenedBlocks) && d.whatHappenedBlocks.length) {
-          return d.whatHappenedBlocks.map(b => ({
+          const blocks = d.whatHappenedBlocks.map(b => ({
             type: (b.type === 'plain' || b.type === 'predict' || b.type === 'def') ? b.type : 'text',
             text: String(b.text || '').replace(/\*\*/g, '').trim(),
           })).filter(b => b.text)
+          // 2026-08-21 兜底修复：LLM 常把「（AI 预测）」标在正文第一段开头，
+          // 导致整段正文被误标 predict。规则：AI 预测块必须位于**最后一段**才保留预测样式，
+          // 否则降级为普通正文（text）——只有结尾的预测段才符合 UI 设计。
+          const lastIdx = blocks.length - 1
+          return blocks.map((b, i) => (b.type === 'predict' && i !== lastIdx) ? { type: 'text', text: b.text } : b)
         }
         // 本地兜底解析（对齐后端 structureWhatHappened 逻辑）——2026-08-20 v5
         const raw = String(d.whatHappened || '').trim()

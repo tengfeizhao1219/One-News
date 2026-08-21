@@ -136,12 +136,12 @@
 }
 .prose-2 { margin-top: 4rpx; }
 
-/* 2026-08-20 v5.1：发生了什么结构化——整段浅灰底圆角块（方案 B）
-   大白话/定义：浅灰底无标签；AI 预测：浅灰底 + 段尾小字标识 */
+/* 2026-08-21 对齐 ui-demo：AI 预测 = 很浅蓝底块（highlight-bg，同「落到你这里」for-card）
+   + 块内左上「AI 预测」蓝字（同 for-k：11.5px/700 primary） */
 .wh-panel {
-  background: var(--bg-page);
-  border-radius: 16rpx;
-  padding: 20rpx 24rpx;
+  background: var(--highlight-bg);
+  border-radius: 20rpx;
+  padding: 22rpx 26rpx;
   margin: 16rpx 0;
 }
 .wh-panel-body {
@@ -150,13 +150,14 @@
   line-height: 1.75;
   display: block;
 }
-/* AI 预测标识：段尾小字，弱存在感 */
+/* AI 预测标识：块内左上，蓝字（对齐 for-k 设计） */
 .wh-panel-tag {
   display: block;
-  margin-top: 10rpx;
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  text-align: right;
+  margin-bottom: 10rpx;
+  font-size: calc(23rpx * var(--font-scale-meta, 1));
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1rpx;
 }
 
 /* 落到你这里：浅蓝底卡 */
