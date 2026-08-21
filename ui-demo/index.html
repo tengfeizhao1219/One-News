@@ -73,10 +73,11 @@
   .deep-head{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;}
   .deep-sub{font-size:12px;color:var(--text-tertiary);margin-bottom:12px;}
   .deep-quick{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:12px;}
-  /* 详情页：标题 sticky 钉顶；面板固定在标题下(phone 层, 不随正文滚动)；正文 scrollTo 被推上去 */
+  /* 详情页：标题固定；面板从底部升起，把其它内容(rest)整体顶上去；关闭时内容落回把面板推下 */
   .pin{position:sticky;top:0;z-index:220;background:var(--bg-page);}
-  .search-panel{position:absolute;left:0;right:0;top:0;background:var(--bg-page);padding:14px 24px 20px;z-index:210;transform:translateY(-30px);visibility:hidden;opacity:0;transition:transform .7s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .7s;}
-  .search-panel.open{transform:translateY(0);visibility:visible;opacity:1;transition:transform .7s cubic-bezier(.22,.61,.36,1),opacity .5s;}
+  .rest{transition:transform .65s cubic-bezier(.22,.61,.36,1);}
+  .search-panel{position:absolute;left:0;right:0;bottom:0;background:var(--bg-page);padding:14px 24px 20px;z-index:210;border-top:1px solid var(--divider);transform:translateY(100%);visibility:hidden;opacity:0;transition:transform .65s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .65s;}
+  .search-panel.open{transform:translateY(0);visibility:visible;opacity:1;transition:transform .65s cubic-bezier(.22,.61,.36,1),opacity .5s;}
   /* 搜索悬浮按钮（深入了解入口）：右下角自绘放大镜 */
   .fab-search{position:absolute !important;right:16px !important;bottom:28px;width:48px;height:48px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.12);cursor:pointer;z-index:300;color:var(--text-secondary);transition:transform .15s,background .25s,color .25s;}
   .fab-search:active{transform:scale(.92);}
@@ -201,7 +202,7 @@ const PROJECTS = {
           { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '三段式叙事：第一段专业解读 / 第二段大白话（术语括号注中文）；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
           { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）；「AI 预测」标注在块内左上角，与「落到你这里」的 for-k 设计一致；措辞用推测性（可能会/有望）', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pred-tag: 11.5px/700 primary（同 for-k）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-tag', guideline: '准则5 轻高亮 / 风格一致' },
           { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
-          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后仍在当前详情页：标题 sticky 钉顶；搜索面板固定在标题正下方（phone 层，不随正文滚动）；正文整体上滚被推上去（scrollTo 面板高），顶部被面板覆盖，下滑即可滚出正文；再次点击 FAB 收起回顶', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'钉顶',v:'pin sticky top:0'},{k:'面板',v:'absolute 标题下, .7s 滑入, 不占布局'},{k:'推起',v:'正文 scrollTo 面板高, 顶部被面板盖住'},{k:'图标',v:'自绘放大镜 SVG'}], code: 'fab-search / data-action=search / .pin sticky', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
+          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容（来源/正文/页脚）整体顶上去（rest 上移面板高，.65s）；再点 FAB，内容落回、把面板从顶部推下来（.65s）；视觉是同一页面的推上/推下过渡，非切页', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0, translateY(100%)→0, .65s'},{k:'内容',v:'rest 上移面板高, 与面板同速'},{k:'标题',v:'保持固定（pin）'},{k:'图标',v:'自绘放大镜 SVG'}], code: 'fab-search / data-action=search / .rest', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
         ]
       },
       mine: {
@@ -248,6 +249,7 @@ const PAGE_HTML = {
     <div class="nav"><span class="nav-home nav-light" data-action="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
       <div class="pin"><div class="detail-title">GLM-5.3：你的代码审查管线可以直接接入这个模型</div></div>
+      <div class="rest" id="rest-detail">
       <div class="meta"><span class="src">智谱AI 官方</span><span>今天 18:00</span></div>
       <div class="detail-body" id="db-detail">
         <span class="block-label">发生了什么</span>
@@ -262,6 +264,7 @@ const PAGE_HTML = {
         <div class="fold"><div class="fold-head"><span>想试试</span><span>▸</span></div></div>
       </div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
+      </div>
     </div>
     <div class="search-panel" id="sp-detail">
       <div class="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
@@ -383,22 +386,19 @@ document.addEventListener('click', function(e){
       else if(act === 'onboard') showPage('onboard');
       else if(act === 'search'){
         const phone = actEl.closest('.phone');
-        const sc = phone.querySelector('.scroll');
-        const pin = phone.querySelector('.pin');
+        const rest = phone.querySelector('.rest');
         const panel = phone.querySelector('.search-panel');
         if(!phone.classList.contains('search-on')){
           phone.classList.add('search-on');
-          // 面板钉在标题正下方（statusbar 44 + nav 52 + 标题高），正文滚到面板高位置被推上去
-          if(panel && pin) panel.style.top = (96 + pin.offsetHeight) + 'px';
+          // 面板从底部升起，其它内容被顶上去（上移面板高）
           if(panel) panel.classList.add('open');
+          if(rest && panel) rest.style.transform = 'translateY(-' + (panel.offsetHeight) + 'px)';
           actEl.classList.add('on');
-          // 正文整体上滚「标题高+面板高」：正文顶部被推到标题+面板的正下方，下滑即可滚出正文
-          if(sc && pin && panel) setTimeout(()=>{ sc.scrollTo({top: pin.offsetHeight + panel.offsetHeight, behavior:'smooth'}); }, 60);
         } else {
           phone.classList.remove('search-on');
           if(panel) panel.classList.remove('open');
+          if(rest) rest.style.transform = '';
           actEl.classList.remove('on');
-          if(sc) sc.scrollTo({top:0, behavior:'smooth'});
         }
       }
       return;
