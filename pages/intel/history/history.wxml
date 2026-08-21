@@ -1,32 +1,33 @@
-<!-- INTEL-MODULE: AI 情报官 · 我的收藏（2026-08-21：纯本地列表，30 天 TTL 滚动清除） -->
-<view class="page {{themeClass}} intel-favorites" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+<!-- INTEL-MODULE: AI 情报官 · 浏览历史（2026-08-21：纯本地，30 天 TTL 滚动清除） -->
+<view class="page {{themeClass}} intel-history" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
   <!-- 状态栏背景层 -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
-  <!-- 导航：‹ 返回 / 标题 -->
+  <!-- 导航：‹ 返回 / 标题 + 清空 -->
   <view class="nav">
     <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
       <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
     </view>
-    <text class="nav-title">我的收藏</text>
+    <text class="nav-title">浏览历史</text>
+    <text class="nav-clear" wx:if="{{list.length}}" bindtap="onClearAll" hover-class="nav-clear--hover">清空</text>
   </view>
 
   <scroll-view class="content" scroll-y show-scrollbar="{{false}}">
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
-      <view class="state-hint"><text class="state-t">正在读取收藏…</text></view>
+      <view class="state-hint"><text class="state-t">正在读取记录…</text></view>
     </block>
 
     <!-- 空态 -->
     <block wx:elif="{{empty}}">
       <view class="state-hint">
-        <text class="state-t">还没有收藏</text>
-        <text class="state-s">在情报详情页点 ♡ 收藏，重要情报随手留住</text>
+        <text class="state-t">还没有浏览记录</text>
+        <text class="state-s">看过的情报会自动留在这里，30 天内有效</text>
       </view>
     </block>
 
-    <!-- 收藏卡片 -->
+    <!-- 历史卡片 -->
     <block wx:else>
       <view class="card" wx:for="{{list}}" wx:key="id" bindtap="goDetail" data-id="{{item.id}}">
         <view class="card-main">
@@ -37,13 +38,11 @@
           </view>
           <text class="card-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
         </view>
-        <!-- 红心取消收藏 -->
-        <view class="card-fav" catchtap="onUnfavorite" data-id="{{item.id}}" hover-class="card-fav--hover">
-          <image class="card-fav-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
-        </view>
+        <!-- 单条删除 -->
+        <view class="card-del" catchtap="onRemove" data-id="{{item.id}}" hover-class="card-del--hover">×</view>
       </view>
     </block>
 
-    <view class="foot-note">收藏保存在本机 · 30 天内自动保留</view>
+    <view class="foot-note">浏览记录保存在本机 · 30 天自动清除</view>
   </scroll-view>
 </view>

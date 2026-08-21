@@ -6,6 +6,7 @@
     "pages/intel/mine/mine",
     "pages/intel/onboard/onboard",
     "pages/intel/favorites/favorites",
+    "pages/intel/history/history",
     "pages/detail/detail",
     "pages/history/history",
     "pages/favorites/favorites",

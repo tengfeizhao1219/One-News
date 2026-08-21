@@ -24,7 +24,19 @@
       <text class="card-chev">›</text>
     </view>
 
-    <!-- 我的收藏（2026-08-20：纯本地，半年滚动清除） -->
+    <!-- 浏览历史（2026-08-21：纯本地，30 天滚动清除，与 One News 一致） -->
+    <view class="sect-head">浏览历史</view>
+    <view class="card card-action" bindtap="goHistory">
+      <view class="card-body">
+        <text class="card-title">浏览历史</text>
+        <text class="card-desc" wx:if="{{histCount}}">最近看过 {{histCount}} 条情报</text>
+        <text class="card-desc" wx:else>还没有浏览记录</text>
+        <text class="card-sub">保存在本机 · 30 天内自动保留</text>
+      </view>
+      <text class="card-chev">›</text>
+    </view>
+
+    <!-- 我的收藏（2026-08-21：TTL 统一 30 天滚动清除） -->
     <view class="sect-head">收藏</view>
     <view class="card card-action" bindtap="goFavorites">
       <view class="card-body">

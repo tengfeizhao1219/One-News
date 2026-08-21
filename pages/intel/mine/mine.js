@@ -7,6 +7,7 @@
 const app = getApp()
 const { getIntelProfile, saveIntelProfile } = require('../../../utils/intelRequest')
 const { getFavorites } = require('../../../utils/intelFavorites')
+const { getHistory } = require('../../../utils/intelHistory')
 
 /** 前端本地时区（北京时间）格式化 ISO → YYYY-MM-DD HH:MM */
 function formatLocalTime(iso) {
@@ -34,8 +35,10 @@ Page({
     identitiesSummary: '',
     focusTagsSummary: '',
     loadingProfile: false,
-    // 2026-08-20：我的收藏（纯本地，半年 TTL）
-    favCount: 0
+    // 2026-08-20：我的收藏（纯本地，30 天 TTL）
+    favCount: 0,
+    // 2026-08-21：浏览历史（纯本地，30 天 TTL）
+    histCount: 0
   },
 
   onLoad() {
@@ -81,6 +84,11 @@ Page({
       const favs = getFavorites()
       if (this.data.favCount !== favs.length) this.setData({ favCount: favs.length })
     } catch (e) { /* 收藏读取失败忽略 */ }
+    // 刷新浏览历史数
+    try {
+      const hists = getHistory()
+      if (this.data.histCount !== hists.length) this.setData({ histCount: hists.length })
+    } catch (e) { /* 历史读取失败忽略 */ }
   },
 
   async _refreshProfile() {
@@ -129,6 +137,11 @@ Page({
   // ===== T5.1 接入：编辑画像 =====
   goEditProfile() {
     wx.navigateTo({ url: '/pages/intel/onboard/onboard' })
+  },
+
+  // ===== 2026-08-21：浏览历史 =====
+  goHistory() {
+    wx.navigateTo({ url: '/pages/intel/history/history' })
   },
 
   // ===== 2026-08-20：我的收藏 =====

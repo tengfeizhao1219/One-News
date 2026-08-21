@@ -3,7 +3,7 @@
  * ============================================================
  * 对齐 One News 收藏逻辑（pages/detail B-04）：localCache 数组存储 +
  * 条目级 TTL 读取过滤（滚动清除），云函数不参与。
- * 差异：One News TTL=30 天，情报收藏按 owner 要求 = 半年（180 天）滚动清除。
+ * 差异：与 One News 一致，TTL=30 天滚动清除（owner 2026-08-21：统一 30 天）。
  *
  * 存储：
  *   - key: intelFavorites（lc: 前缀，与 One News 的 favorites 隔离）
@@ -16,7 +16,7 @@
 const { localCache } = require('./localCache')
 
 const KEY = 'intelFavorites'
-const FAVORITES_TTL = 180 * 24 * 60 * 60 * 1000 // 半年（owner 2026-08-20：按半年区间滚动清除）
+const FAVORITES_TTL = 30 * 24 * 60 * 60 * 1000 // 30 天滚动清除（owner 2026-08-21：与 One News 统一）
 const MAX_ITEMS = 200
 
 /**
@@ -70,7 +70,7 @@ function toggleFavorite(item) {
       time: item.time || item.pubTime || '',
       desc: item.desc || item.descText || '',
       addedAt: now,
-      expireAt: now + FAVORITES_TTL, // 半年滚动清除
+      expireAt: now + FAVORITES_TTL, // 30 天滚动清除
     })
     favorited = true
   }

@@ -30,6 +30,7 @@ function parseSceneMapping(txt) {
 const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
+const { recordView } = require('../../../utils/intelHistory')
 
 Page({
   data: {
@@ -296,6 +297,16 @@ function parseSceneMapping(txt) {
       app.globalData.intelDetailCache[d.id || this.data.id] = d
     }
     console.log('[intel-detail] 真实详情已加载:', d.id || '')
+    // 浏览历史（纯本地 30 天滚动清除，与 One News 一致）：数据就绪后记录
+    try {
+      recordView({
+        id: d.id || this.data.itemId || '',
+        title: cleanText(d.title) || this.data.title || '',
+        src: d.srcName || d.sourceName || this.data.srcName || '',
+        time: d.pubTime || d.publishedAt || this.data.pubTime || '',
+        desc: cleanText(d.definition) || this.data.descText || '',
+      })
+    } catch (e) { /* 浏览记录失败不阻塞 */ }
   },
 
   loadRealDetail(id) {

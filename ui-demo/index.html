@@ -45,6 +45,9 @@
   .hero-count{font-size:20px;font-weight:800;} .hero-count b{color:var(--primary);}
   .hero-sub{font-size:12px;color:var(--text-tertiary);text-align:right;} .hero-sub .warn{color:var(--warning);}
   .sect-head{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
+  .hist-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
+  .hist-clear{font-size:12px;font-weight:400;color:var(--text-link);cursor:pointer;}
+  .hist-empty{font-size:12px;font-weight:400;color:var(--text-tertiary);}
   .card{background:var(--bg-card);border:1px solid var(--divider);border-radius:16px;padding:16px;margin-bottom:14px;}
   .card-title{display:block;font-size:15px;font-weight:700;line-height:1.45;}
   .focus-tag{display:inline-block;font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-subtle);padding:3px 9px;border-radius:7px;margin-bottom:8px;}
@@ -244,6 +247,13 @@ const PROJECTS = {
           { selector: '.scroll', name: '引导流程', intent: '4 步 stepper（身份/关注领域/深度语言/合规）；独立流程无返回按钮；已初始化自动回填', params: [{k:'进度',v:'步骤标题 + step-bar/dots'},{k:'回填',v:'prefillExistingProfile() 读 getIntelProfile'}], code: 'onboard / step-bar', guideline: '准则4 流程清晰' },
         ]
       },
+      history: {
+        name: '浏览历史',
+        notes: [
+          { selector: '.hist-head', name: '历史页头部', intent: '标题「浏览历史」+ 清空按钮（确认后清空全部）；浏览记录本机留存、30 天滚动清除', params: [{k:'标题',v:'text-secondary'},{k:'清空',v:'右上角, 二次确认'}], code: 'history / hist-clear', guideline: '准则1 简洁' },
+          { selector: '.card-action', name: '历史卡片', intent: '点击回到详情页；标题 + 来源/时间，弱化展示；单条可删除', params: [{k:'卡片',v:'16px 圆角, flex 两端'},{k:'chevron',v:'提示可点'}], code: 'card-action / goDetail', guideline: '准则3 可点感' },
+        ]
+      },
       deep: {
         name: '深入了解',
         notes: [
@@ -307,6 +317,10 @@ const PAGE_HTML = {
     <div class="scroll">
       <div class="sect-head">你的身份画像</div>
       <div class="card card-action" data-action="onboard"><div class="card-body"><div class="card-t">我的身份画像</div><div class="card-d">工作：RCBC 合规 PM · 产品：One News</div><div class="card-s">情报按相关性排序，命中越多越靠前</div></div><span class="card-chev">›</span></div>
+      <div class="sect-head">浏览历史</div>
+      <div class="card card-action" data-action="history"><div class="card-body"><div class="card-t">浏览历史</div><div class="card-d">最近看过 3 条情报</div><div class="card-s">保存在本机 · 30 天内自动保留</div></div><span class="card-chev">›</span></div>
+      <div class="sect-head">收藏</div>
+      <div class="card card-action" data-action="favorites"><div class="card-body"><div class="card-t">我的收藏</div><div class="card-d">已收藏 2 条情报</div><div class="card-s">保存在本机 · 30 天内自动保留</div></div><span class="card-chev">›</span></div>
       <div class="sect-head">合规</div>
       <div class="card card-action"><div class="card-body"><div class="card-t">风险告知与授权</div><div class="card-d">已授权 · 2026-08-18</div></div><span class="revoke">撤销授权</span></div>
       <div class="foot">由 AI 情报官生成 · 更多功能开发中</div>
@@ -317,6 +331,14 @@ const PAGE_HTML = {
       <div class="card"><div class="card-t">工作身份</div><div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">RCBC 合规 PM + TrustDecision 供应商对接</div><div class="card-t" style="margin-top:14px;">产品身份</div><div style="font-size:13px;color:var(--text-tertiary);margin-top:8px;padding:10px;background:var(--bg-subtle);border-radius:8px;">One News 小程序 PD+FE + AI 阅读引擎</div></div>
       <div class="card">风险告知与版权声明（勾选后进入下一步）</div>
       <div class="foot">由 AI 情报官生成</div>
+    </div>`,
+  history: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+    <div class="nav"><span class="nav-home nav-light" data-action="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
+    <div class="scroll">
+      <div class="hist-head"><span>浏览历史</span><span class="hist-clear" data-action="clear-history">清空</span></div>
+      <div class="card card-action" data-action="detail"><div class="card-body"><div class="card-t">GLM-5.3：前沿编程能力与网络安全能力升级</div><div class="card-d">智谱AI 官方 · 今天 18:00</div></div><span class="card-chev">›</span></div>
+      <div class="card card-action" data-action="detail"><div class="card-body"><div class="card-t">MiniMax H3 正式开源</div><div class="card-d">MiniMax · 昨天 15:30</div></div><span class="card-chev">›</span></div>
+      <div class="foot">浏览记录保存在本机 · 30 天自动清除</div>
     </div>`,
   deep: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
     <div class="nav"><span class="nav-home nav-light" data-action="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
@@ -505,6 +527,15 @@ document.addEventListener('click', function(e){
       else if(act === 'detail') showPage('detail');
       else if(act === 'mine') showPage('mine');
       else if(act === 'deep') showPage('deep');
+      else if(act === 'history') showPage('history');
+      else if(act === 'favorites') showPage('favorites');
+      else if(act === 'clear-history'){
+        const phone = actEl.closest('.phone');
+        const cards = phone.querySelectorAll('.card-action');
+        cards.forEach(c => c.style.display = 'none');
+        const head = phone.querySelector('.hist-head');
+        if(head) head.innerHTML = '<span>浏览历史</span><span class="hist-empty">已清空</span>';
+      }
       else if(act === 'onboard') showPage('onboard');
       else if(act === 'search'){
         const phone = actEl.closest('.phone');

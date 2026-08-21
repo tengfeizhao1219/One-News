@@ -1,0 +1,151 @@
+/* INTEL-MODULE: AI 情报官 · 我的收藏（复用 intel-home 卡片流 + intel-mine 导航样式） */
+.page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--bg-page);
+}
+
+.status-bar-fill { flex-shrink: 0; }
+
+/* 导航（对齐 intel-detail .nav） */
+.nav {
+  position: relative;
+  height: var(--menu-height, 32px);
+  margin-top: var(--menu-top, 44px);
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 0 32rpx;
+}
+.nav-home {
+  width: 64rpx;
+  height: 64rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-left: -8rpx;
+  flex-shrink: 0;
+  z-index: 20;
+  color: var(--text-primary);
+}
+.nav-home--hover { background-color: var(--bg-subtle); }
+.nav-home-icon-img { width: 44rpx; height: 44rpx; }
+.nav-title {
+  font-size: calc(32rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.nav-dark { display: none; }
+.page--dark .nav-light { display: none; }
+.page--dark .nav-dark { display: block; }
+
+.content {
+  flex: 1;
+  height: 0;
+  padding: 24rpx 32rpx 0;
+  background-color: var(--bg-page);
+}
+
+/* 卡片（对齐 intel-home .card） */
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 32rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+.card-main { flex: 1; min-width: 0; }
+.card-title {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 10rpx;
+}
+.meta-src { color: var(--primary); font-size: calc(22rpx * var(--font-scale-meta, 1)); }
+.meta-time { color: var(--text-tertiary); font-size: calc(22rpx * var(--font-scale-meta, 1)); }
+.card-desc {
+  display: block;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin-top: 12rpx;
+}
+
+/* 红心取消收藏 */
+.card-fav {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.card-fav--hover { background-color: var(--bg-subtle); }
+.card-fav-img { width: 40rpx; height: 40rpx; }
+
+/* 状态提示（对齐 intel-home .state-hint） */
+.state-hint {
+  padding: 120rpx 32rpx 0;
+  text-align: center;
+}
+.state-t {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.state-s {
+  display: block;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin-top: 16rpx;
+  line-height: 1.6;
+}
+
+.foot-note {
+  text-align: center;
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  padding: 32rpx 0 calc(48rpx + var(--safe-bottom, 0px));
+}
+
+/* 浏览历史页特有：导航清空按钮 */
+.nav-clear {
+  position: absolute;
+  right: 32rpx;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-secondary);
+  padding: 0 8rpx;
+}
+.nav-clear--hover { opacity: 0.6; }
+
+/* 单条删除 */
+.card-del {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(32rpx * var(--font-scale));
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin: -8rpx -8rpx -8rpx 8rpx;
+}
+.card-del--hover { color: var(--color-favorite); }
