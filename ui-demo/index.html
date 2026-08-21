@@ -87,9 +87,26 @@
   .fab-search svg{width:24px;height:24px;}
   .fab-search.on{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(0,122,255,.35);}
   .quick-t{font-size:13.5px;font-weight:600;} .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
-  .search-box{display:flex;gap:10px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:11px 13px;margin-bottom:12px;}
+  /* 搜索框：极简横线式输入 + 放大镜 icon（对齐真机 pages/intel/detail） */
+  .search-box{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .search-line-wrap{flex:1;min-width:0;}
+  .search-input{display:block;width:100%;border:none;outline:none;background:transparent;font-size:14px;color:var(--text-primary);padding:6px 0;line-height:2.1;}
+  .search-placeholder{color:var(--text-tertiary);}
+  .search-input.done{color:var(--text-tertiary);}
+  .search-line{position:relative;height:2px;background:var(--divider);overflow:hidden;}
+  .search-line-progress{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--primary);transition:width .65s cubic-bezier(.22,.61,.36,1);}
+  .search-line-progress.on{width:100%;}
+  /* 放大镜按钮：纯 icon，搜索中系统蓝 + 扫动动画 */
+  .search-btn{flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);cursor:pointer;}
+  .search-btn svg{width:24px;height:24px;}
+  .search-btn:hover{opacity:.8;}
+  .search-btn.is-loading{color:var(--primary);animation:searchSweep 1.1s ease-in-out infinite;}
+  @keyframes searchSweep{0%,100%{transform:rotate(0deg) scale(1);}25%{transform:rotate(-18deg) scale(1.08);}50%{transform:rotate(0deg) scale(1);}75%{transform:rotate(18deg) scale(1.08);}}
   .panel-scroll-hint{text-align:center;font-size:11px;color:var(--text-tertiary);padding:10px 0 2px;}
   /* 搜索历史区（详情页正文流内，随内容滚动，下滑可见） */
+  /* 面板内结果列表（dig-list）：复用历史分组视觉 */
+  .dig-list{margin-top:6px;}
+  .dig-list .sh-group{margin-bottom:10px;}
   .search-history{margin-top:28px;border-top:1px solid var(--divider);padding-top:18px;}
   .sh-title{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
   .sh-empty{font-size:12px;color:var(--text-tertiary);padding:6px 2px;}
@@ -110,9 +127,14 @@
   .sh-sec-para{font-size:12.5px;color:var(--text-body);line-height:1.7;margin-bottom:6px;text-align:justify;}
   .sh-sec-bullet{display:flex;gap:8px;font-size:12.5px;color:var(--text-body);line-height:1.6;margin-bottom:4px;}
   .sh-sec-bdot{width:5px;height:5px;border-radius:50%;background:var(--primary);opacity:.55;margin-top:7px;flex-shrink:0;}
-  .sh-group-sources{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;}
-  .sh-src-chip{font-size:11px;color:var(--text-link);background:var(--bg-subtle);border-radius:8px;padding:4px 10px;cursor:pointer;}
-  .search-input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;}
+  .sh-sources{margin-top:8px;border-top:1px solid var(--divider);padding-top:8px;}
+  .sh-sources-head{display:flex;align-items:center;justify-content:space-between;padding:6px 0;cursor:pointer;}
+  .sh-sources-title{font-size:11.5px;font-weight:600;color:var(--text-secondary);}
+  .sh-sources-arrow{font-size:11px;color:var(--text-link);}
+  .sh-src{display:block;padding:6px 0;border-bottom:1px solid var(--divider);cursor:pointer;}
+  .sh-src:last-child{border-bottom:none;}
+  .sh-src-title{display:block;font-size:12.5px;font-weight:600;color:var(--text-link);line-height:1.5;}
+  .sh-src-url{display:block;font-size:10.5px;color:var(--text-tertiary);margin-top:2px;word-break:break-all;}
   .search-btn{background:var(--primary);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:600;flex-shrink:0;}
   .result{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:10px;}
   .result-t{font-size:13.5px;font-weight:600;} .result-meta{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
@@ -308,8 +330,17 @@ const PAGE_HTML = {
     </div>
     <div class="search-panel" id="sp-detail" data-panel="1">
       <div class="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
-      <div class="search-box"><input class="search-input" id="search-input-detail" placeholder="输入你感兴趣的话题…"><span class="search-btn" data-action="do-search">搜索</span></div>
+      <div class="search-box">
+        <div class="search-line-wrap">
+          <input class="search-input" id="search-input-detail" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder">
+          <div class="search-line"><div class="search-line-progress" id="search-progress-detail"></div></div>
+        </div>
+        <div class="search-btn" id="search-btn-detail" data-action="do-search" title="搜索">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        </div>
+      </div>
       <div class="panel-scroll-hint">上滑查看更多结果 · 滑到顶部再下滑收起</div>
+      <div class="dig-list" id="dig-list-detail"></div>
     </div>
     <div class="fab fab-search" data-action="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>`,
   mine: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
@@ -428,36 +459,91 @@ function closeDrawer(){
 const SH_KEY = 'one-news-search-history-demo';
 function loadHistory(){ try { return JSON.parse(localStorage.getItem(SH_KEY) || '[]'); } catch(e){ return []; } }
 function saveHistory(h){ try { localStorage.setItem(SH_KEY, JSON.stringify(h)); } catch(e){} }
-/** 模拟搜索：同话题 push 新结果；不同话题新增分组。返回新历史数组 */
+/** 模拟搜索：loading 态（放大镜变蓝+扫动+进度条）→ 同话题 push；不同话题新增分组 */
 function doSearch(query){
   if(!query.trim()) return;
-  let hist = loadHistory();
-  const time = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
-  // 模拟 LLM 结构化返回（与真机 sections 格式一致）
-  const entry = {
-    time: time,
-    sections: [
-      { type: 'heading', text: '核心变化' },
-      { type: 'para', text: '围绕「' + query + '」：模型在编程与安全两大方向升级，官方评测显示其 SWE-bench 领先同类，并具备漏洞定位能力。' },
-      { type: 'heading', text: '对你意味着什么' },
-      { type: 'para', text: '可评估接入代码审查管线的实际效率，成本门槛低于同类方案。' },
-      { type: 'bullet', text: '官方 API 已开放注册' },
-      { type: 'bullet', text: '安全能力或推动开源安全工具' },
-    ],
-    sources: ['https://example.com/a', 'https://example.com/b']
-  };
-  const g = hist.find(h => h.query === query);
-  if(g){ g.entries.push(entry); } else { hist.unshift({ query: query, entries: [entry] }); }
-  saveHistory(hist);
-  renderHistory();
-  return hist;
+  const btn = document.getElementById('search-btn-detail');
+  const prog = document.getElementById('search-progress-detail');
+  const input = document.getElementById('search-input-detail');
+  // 搜索词提交后以提示词灰显示（对齐真机）
+  if(input) input.classList.add('done');
+  // 搜索中：放大镜系统蓝 + 扫动动画 + 横线进度条
+  if(btn) btn.classList.add('is-loading');
+  if(prog) prog.classList.add('on');
+  setTimeout(() => {
+    let hist = loadHistory();
+    const time = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+    // 模拟 LLM 结构化返回（与真机 sections 格式一致）
+    const entry = {
+      time: time,
+      sections: [
+        { type: 'heading', text: '核心变化' },
+        { type: 'para', text: '围绕「' + query + '」：模型在编程与安全两大方向升级，官方评测显示其 SWE-bench 领先同类，并具备漏洞定位能力。' },
+        { type: 'heading', text: '对你意味着什么' },
+        { type: 'para', text: '可评估接入代码审查管线的实际效率，成本门槛低于同类方案。' },
+        { type: 'bullet', text: '官方 API 已开放注册' },
+        { type: 'bullet', text: '安全能力或推动开源安全工具' },
+      ],
+      sources: [
+        { title: '来源站点 A', url: 'https://example.com/a' },
+        { title: '来源站点 B', url: 'https://example.com/b' },
+      ],
+      sourcesExpanded: false
+    };
+    const g = hist.find(h => h.query === query);
+    if(g){ g.entries.push(entry); } else { hist.unshift({ query: query, entries: [entry] }); }
+    // 搜索完成：当前分组展开（互斥），来源默认折叠
+    hist.forEach(h => { h.open = (h.query === query); });
+    saveHistory(hist);
+    renderHistory();
+    // 恢复搜索态
+    if(btn) btn.classList.remove('is-loading');
+    if(prog) prog.classList.remove('on');
+  }, 900);
+  return loadHistory();
 }
 function renderHistory(){
   const holder = document.getElementById('sh-groups-detail');
+  const digList = document.getElementById('dig-list-detail');
   const empty = document.getElementById('sh-empty-detail');
-  if(!holder) return;
   const hist = loadHistory();
   if(empty) empty.style.display = hist.length ? 'none' : '';
+  // 面板内结果列表（dig-list）：与历史区同源渲染
+  if(digList){
+    digList.innerHTML = hist.map((g, gi) => `
+      <div class="sh-group ${g.open ? 'open' : ''}">
+        <div class="sh-group-head" data-action="toggle-sh-group" data-gi="${gi}">
+          <div>
+            <div class="sh-group-q">「${escapeHtml(g.query)}」</div>
+            <div class="sh-group-meta">${g.entries.length} 次搜索 · 最近 ${g.entries[0].time}</div>
+          </div>
+          <span class="sh-group-arrow">▾</span>
+        </div>
+        <div class="sh-group-body">
+          ${g.entries.map((en, ei) => `
+            <div class="sh-entry">
+              <div class="sh-entry-time">${en.time}</div>
+              ${en.sections.map(sec => {
+                if(sec.type === 'heading') return `<div class="sh-sec-head">${escapeHtml(sec.text)}</div>`;
+                if(sec.type === 'bullet') return `<div class="sh-sec-bullet"><span class="sh-sec-bdot"></span><span>${escapeHtml(sec.text)}</span></div>`;
+                return `<div class="sh-sec-para">${escapeHtml(sec.text)}</div>`;
+              }).join('')}
+              ${en.sources && en.sources.length ? `
+              <div class="sh-sources">
+                <div class="sh-sources-head" data-action="toggle-sh-sources" data-gi="${gi}" data-ei="${gi}:${ei}">
+                  <span class="sh-sources-title">参考来源（${en.sources.length}）</span>
+                  <span class="sh-sources-arrow">${en.sourcesExpanded ? '收起' : '展开'} ›</span>
+                </div>
+                ${en.sourcesExpanded ? en.sources.map(src => `
+                  <div class="sh-src" data-action="copy-link" data-url="${escapeHtml(src.url)}">
+                    <span class="sh-src-title">${escapeHtml(src.title)}</span>
+                    <span class="sh-src-url">${escapeHtml(src.url)}</span>
+                  </div>`).join('') : ''}
+              </div>` : ''}
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  }
   holder.innerHTML = hist.map((g, gi) => `
     <div class="sh-group ${g.open ? 'open' : ''}" data-gi="${gi}">
       <div class="sh-group-head" data-action="toggle-sh-group" data-gi="${gi}">
@@ -468,7 +554,7 @@ function renderHistory(){
         <span class="sh-group-arrow">▾</span>
       </div>
       <div class="sh-group-body">
-        ${g.entries.map(en => `
+        ${g.entries.map((en, ei) => `
           <div class="sh-entry">
             <div class="sh-entry-time">${en.time}</div>
             ${en.sections.map(sec => {
@@ -476,9 +562,18 @@ function renderHistory(){
               if(sec.type === 'bullet') return `<div class="sh-sec-bullet"><span class="sh-sec-bdot"></span><span>${escapeHtml(sec.text)}</span></div>`;
               return `<div class="sh-sec-para">${escapeHtml(sec.text)}</div>`;
             }).join('')}
-            <div class="sh-group-sources">
-              ${en.sources.map(u => `<span class="sh-src-chip">来源 ›</span>`).join('')}
-            </div>
+            ${en.sources && en.sources.length ? `
+            <div class="sh-sources">
+              <div class="sh-sources-head" data-action="toggle-sh-sources" data-gi="${gi}" data-ei="${gi}:${ei}">
+                <span class="sh-sources-title">参考来源（${en.sources.length}）</span>
+                <span class="sh-sources-arrow">${en.sourcesExpanded ? '收起' : '展开'} ›</span>
+              </div>
+              ${en.sourcesExpanded ? en.sources.map(src => `
+                <div class="sh-src" data-action="copy-link" data-url="${escapeHtml(src.url)}">
+                  <span class="sh-src-title">${escapeHtml(src.title)}</span>
+                  <span class="sh-src-url">${escapeHtml(src.url)}</span>
+                </div>`).join('') : ''}
+            </div>` : ''}
           </div>`).join('')}
       </div>
     </div>`).join('');
@@ -486,7 +581,14 @@ function renderHistory(){
 function toggleShGroup(gi){
   let hist = loadHistory();
   const g = hist.find((x, i) => i === Number(gi));
-  if(g){ g.open = !g.open; saveHistory(hist); renderHistory(); }
+  if(g){ const willOpen = !g.open; hist.forEach((x, i) => { x.open = (i === Number(gi)) && willOpen; }); saveHistory(hist); renderHistory(); }
+}
+function toggleShSources(e){
+  const key = String(e.currentTarget.dataset.ei || '');
+  const [gi, ei] = key.split(':').map(Number);
+  let hist = loadHistory();
+  const g = hist[gi];
+  if(g && g.entries[ei]){ g.entries[ei].sourcesExpanded = !g.entries[ei].sourcesExpanded; saveHistory(hist); renderHistory(); }
 }
 
 // ============ 面板内部滚动 + 滚到顶下滑收起 ============
@@ -560,24 +662,25 @@ document.addEventListener('click', function(e){
         }
       }
       else if(act === 'do-search'){
-        // 执行搜索 → 结果入历史 → 自动收起面板（入口区不再保留，历史在正文流下滑可见）
+        // 执行搜索：面板保持展开（结果在面板内 dig 列表 + 正文流历史区同步），不自动收起
         const phone = actEl.closest('.phone');
         const inp = document.getElementById('search-input-detail');
         const q = (inp && inp.value || '').trim();
         if(!q){ return; }
         doSearch(q);
-        if(inp) inp.value = '';
-        phone.classList.remove('search-on');
-        const panel = phone.querySelector('.search-panel');
-        const rest = phone.querySelector('.rest');
-        const fab = phone.querySelector('.fab-search');
-        if(panel){ panel.style.top = ''; panel.classList.remove('open'); }
-        if(rest) rest.style.transform = '';
-        if(fab) fab.classList.remove('on');
+        // 搜索词以提示词灰显示（focus 时清空可输入新词）
+        if(inp) inp.classList.add('done');
       }
       else if(act === 'toggle-sh-group'){
         const gi = actEl.getAttribute('data-gi');
         toggleShGroup(gi);
+      }
+      else if(act === 'toggle-sh-sources'){
+        toggleShSources(event);
+      }
+      else if(act === 'copy-link'){
+        const url = actEl.getAttribute('data-url');
+        if(url && navigator.clipboard){ navigator.clipboard.writeText(url).then(()=>{ alert('链接已复制'); }); }
       }
       return;
     }
