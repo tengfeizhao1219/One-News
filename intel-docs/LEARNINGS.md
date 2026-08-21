@@ -177,3 +177,9 @@
 - **用户拍板方案**：详情改读 brief 数据——intelDispatcher 写 brief 时 items 自包含完整 sop（sop/references/tryable/research/processedAt 等）；intelGetDetail 优先 staged，兜底 intel_current isCurrent 的 items 数组按 itemId 查，终极兜底 archive。
 - **验证**：强制重抓（清 10 源游标+窗口 ingest+staged）→ 19 pending → 9 staged（全 medium，8/9 带 blocks）→ brief v7（9/9 带完整 sop）→ 详情接口 code 0 命中。
 - **经验**：staged 清空不影响详情页（brief 自包含）；并行 agent 恢复"逐批只留"时未评估详情页依赖 staged——此类跨函数数据依赖改动前必须全链路验证。
+
+## 2026-08-21 截断时机（owner 决策）
+- **两处分类上限要分清**：
+  ① stageAi 前 `truncateStagingByCategory` = **物理删除 staging pending**（AI 前收敛）→ 已移除（owner：时机不对，会静默丢弃够格内容）
+  ② publish 时 `applyCategoryCaps` = **注入 cache 前软截断**（仅不写入，不删 staging）→ 保留（保证展示 ≤47）
+- **教训**：截断要放在"最终展示前"而非"加工前"——加工阶段应尽量保留候选，展示层再按 cap 收敛，避免内容被早期静默丢弃。

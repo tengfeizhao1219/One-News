@@ -403,12 +403,10 @@ async function stageAi(deadline) {
   let processed = 0
   // P0-4：清扫历史遗留"耗尽重试但仍 pending"的条目 → discarded（部署前的旧数据）
   try { await stagingStore.discardExhausted() } catch (e) { /* 忽略 */ }
-  // 方案 A：AI 前每类 top-N 截断，从源头收敛到 <=47（异常不阻断 AI 阶段）
-  try {
-    await truncateStagingByCategory()
-  } catch (e) {
-    console.warn('[newsPipeline][ai] 方案A截断异常（放行）:', e.message)
-  }
+  // 2026-08-21 owner 决策：**移除 AI 前的 truncateStagingByCategory 物理截断**。
+  //   理由：截断时机不对——质量门已筛选，此时物理删除会让"够格 AI 的内容"被静默丢弃。
+  //   现改为：全部过质量门的条目都进 AI 加工，最终由 publish 的 applyCategoryCaps
+  //   （注入 news_cache 前软截断 recommend<=15/其余<=8）收敛到展示上限。
   while (hasBudget(deadline)) {
     const items = await stagingStore.claimPending(STAGE_BATCH.ai)
     if (!items.length) break

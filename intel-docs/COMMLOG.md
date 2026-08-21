@@ -225,3 +225,10 @@
 - **同步**：线上触发器已重建（newsFetcher hourlyFetch / rssFetcher rssPoll，09:29 生效）；cloudbaserc.json + cloudfunctions/rssFetcher/config.json 已同步；newsFetcher config.json 触发器本就为空（由 cloudbaserc 部署），无需改。
 - **注意**：newsFetcher 代码内还有北京 01:00-05:00 静默时段兜底（QUIET），夜间停跑双保险。
 - 下游：06:00 起恢复每小时抓取；23:00-05:00 完全停跑省资源。
+## 2026-08-21 · 移除 AI 前截断（owner 决策：截断时机不对，先记下）
+
+- **决策**：去掉 stageAi 前的 `truncateStagingByCategory` 物理截断（原逻辑在 AI 前按分类 top-N 删除 staging pending，recommend≤15/其余≤8，收敛 ≤47）。
+- **理由（owner）**：截断不应发生在这个时间节点——质量门已筛选，此时物理删除会把"够格 AI 的内容"静默丢弃。
+- **新逻辑**：全部过质量门的条目都进 AI 加工；最终由 publish 的 `applyCategoryCaps`（注入 news_cache 前软截断，recommend≤15/其余≤8）收敛到展示上限。cache 展示量不变（≤47），但 AI 加工范围扩大。
+- **代码**：stageAi 移除调用（函数定义保留备用）；newsPipeline 已部署。
+- **注意**：此改动后 staging 可容纳超过 47 条 pending（此前会被截断），AI 阶段工作量可能增大；publish 前 applyCategoryCaps 仍保证 cache ≤47。
