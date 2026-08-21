@@ -392,8 +392,8 @@ document.addEventListener('click', function(e){
           phone.classList.add('search-on');
           if(panel) panel.classList.add('open');
           actEl.classList.add('on');
-          // 正文整体上滚：平滑滚到标题高度，标题+面板 sticky 钉顶
-          if(sc && pin) setTimeout(()=>{ sc.scrollTo({top: pin.offsetHeight, behavior:'smooth'}); }, 60);
+          // 等面板展开后，滚到「pin 展开高度」：标题+面板钉顶，正文顶部恰好露在面板下方，下滑即可看正文
+          if(sc && pin) setTimeout(()=>{ sc.scrollTo({top: pin.offsetHeight, behavior:'smooth'}); }, 760);
         } else {
           phone.classList.remove('search-on');
           if(panel) panel.classList.remove('open');
