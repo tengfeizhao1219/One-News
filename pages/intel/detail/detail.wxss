@@ -285,23 +285,37 @@
 .for-bold { font-weight: 700; color: var(--text-primary); }
 
 /* ============ 话题搜索（2026-08-21 前端实现，对齐 ui-demo：面板从底部升起贴标题下方，其余内容推上去） ============ */
-/* 其余内容（meta/正文/折叠/搜索区/页脚）：滚动流布局，页脚贴底 */
+/* 其余内容：面板展开时整体上移推出可视区（标题保留），收起落回 */
 .rest {
   flex: 1;
   display: flex;
   flex-direction: column;
+  transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.rest.up {
+  transform: translateY(-100%);
 }
 
 /* 搜索面板：从底部升起（top 由 JS 注入，钉在标题下方 + 呼吸间距） */
 .search-panel {
-  /* 搜索入口：默认隐藏（display:none），点 FAB 展开；搜索完成自动收起 */
-  display: none;
-  margin-top: 40rpx;
-  padding-top: 28rpx;
-  border-top: 1rpx solid var(--divider);
+  /* FAB 点击后覆盖层：从底部升起贴标题下，把其余内容顶上去；内部滚动；下滑到顶或退出收起 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--bg-page);
+  padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
+  z-index: 210;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  visibility: hidden;
+  opacity: 0;
+  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s, visibility 0s 0.65s;
 }
 .search-panel.open {
-  display: block;
+  visibility: visible;
+  opacity: 1;
+  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s;
 }
 
 /* 搜索入口（deep-quick + 搜索框）整组：结果滚动时常驻顶部，便于连续查询 */
@@ -655,10 +669,37 @@
   color: var(--text-tertiary);
   margin-bottom: 10rpx;
 }
+.dig-latest {
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--divider);
+}
+.dig-latest-q {
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 20rpx;
+}
 .dig-sources {
   margin-top: 12rpx;
   border-top: 1rpx solid var(--divider);
   padding-top: 14rpx;
+}
+.dig-sources-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+.dig-sources-head--hover { opacity: 0.7; }
+.dig-sources-title {
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.dig-sources-arrow {
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-link);
 }
 .dig-src {
   padding: 10rpx 0;

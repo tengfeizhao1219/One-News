@@ -67,8 +67,10 @@ Page({
     isFavorited: false,
     heartAnim: false,
     // 话题搜索（2026-08-21：intelSearch 云函数，三种结果路径）
-    searchOpen: false,          // 搜索区展开态（仅控制 fab 高亮）
-    searchIntoView: '',         // scroll-into-view 锚点：点击 fab 滚动到搜索区
+    searchOpen: false,          // 搜索面板展开态
+    searchPanelTop: '100%',     // 面板 top（展开时注入 px：标题下+呼吸间距）
+    searchRestUp: false,        // 其余内容推起（面板展开时）
+    searchIntoView: '',         // scroll-into-view 锚点（收起时滚到深挖历史）
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
@@ -338,9 +340,50 @@ function parseSceneMapping(txt) {
   },
 
   // ============ 话题搜索（intelSearch） ============
-  /** 点击搜索悬浮按钮：展开搜索入口并滚动到它（入口不常驻，历史在正文流深挖历史区） */
+  /** 点击搜索悬浮按钮：展开覆盖面板（其余内容推上去），再点收起（内容落回） */
   onToggleSearch() {
-    this.setData({ searchIntoView: 'search-area', searchOpen: true })
+    if (this.data.searchOpen) {
+      this._collapseSearch()
+      return
+    }
+    this.setData({ searchRestUp: true })
+    // 面板 top = 标题底部 + 呼吸间距（18px）
+    setTimeout(() => {
+      const q = wx.createSelectorQuery().in(this)
+      q.select('.detail-title').boundingClientRect()
+      q.exec(res => {
+        const r = res && res[0]
+        const titleBottom = (r && r.top + r.height) || 0
+        this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
+      })
+    }, 60)
+  },
+
+  /** 面板内部滚动：记录 scrollTop（下滑到顶才允许收起） */
+  onSearchScroll(e) {
+    this._panelScrollTop = (e.detail && e.detail.scrollTop) || 0
+  },
+  /** 面板触摸：仅当已滚到顶部时继续下滑才收起（避免浏览结果时误收起） */
+  onPanelTouchStart(e) {
+    const t = e.touches && e.touches[0]
+    this._panelTouch = t ? { x: t.clientX, y: t.clientY, moved: false } : null
+  },
+  onPanelTouchMove(e) {
+    if (!this._panelTouch) return
+    const t = e.touches && e.touches[0]
+    if (!t) return
+    const dy = t.clientY - this._panelTouch.y
+    const dx = Math.abs(t.clientX - this._panelTouch.x)
+    // 下滑且面板已滚到顶部（scrollTop<=0）才收起
+    if (this.data.searchOpen && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
+      if (!this._panelTouch.moved) {
+        this._panelTouch.moved = true
+        this._collapseSearch()
+      }
+    }
+  },
+  onPanelTouchEnd() {
+    this._panelTouch = null
   },
 
   /** 一键深挖：围绕当前新闻标题搜索（截断 60 字） */
@@ -351,7 +394,6 @@ function parseSceneMapping(txt) {
       return
     }
     this._runSearch(query)
-    this._collapseSearch()
   },
 
   onSearchInput(e) {
@@ -366,7 +408,6 @@ function parseSceneMapping(txt) {
       return
     }
     this._runSearch(query.slice(0, 60))
-    this._collapseSearch()
   },
 
   /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示 */
@@ -483,10 +524,10 @@ function parseSceneMapping(txt) {
     this._saveDig(groups)
     this.setData({ digGroups: groups })
   },
-  /** 收起搜索入口：隐藏面板，滚动到深挖历史区（历史在正文流可见） */
+  /** 收起搜索面板：内容落回，滚动到深挖历史区（历史在正文流可见） */
   _collapseSearch() {
-    this.setData({ searchOpen: false, searchIntoView: 'dig-history' })
-    // 收起后立即复位锚点，避免下次点击不触发
+    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false })
+    this.setData({ searchIntoView: 'dig-history' })
     setTimeout(() => this.setData({ searchIntoView: '' }), 600)
   },
   /** 展开/收起某个话题的深挖历史 */
@@ -499,11 +540,18 @@ function parseSceneMapping(txt) {
     this.setData({ digGroups: groups })
   },
 
-  /** 折叠/展开参考来源（按结果条目 index） */
+  /** 折叠/展开参考来源（按 digGroups 分组/条目展开独立态） */
+  onToggleEntrySources(e) {
+    const ei = Number(e.currentTarget.dataset.ei)
+    const groups = this._loadDig()
+    if (!groups.length || !groups[0].entries[ei]) return
+    groups[0].entries[ei].sourcesExpanded = !groups[0].entries[ei].sourcesExpanded
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
+  },
+  /** 兼容旧引用（searchResults 不再使用） */
   onToggleSources(e) {
-    const idx = Number(e.currentTarget.dataset.idx)
-    const key = 'searchResults[' + idx + '].sourcesExpanded'
-    this.setData({ [key]: !(this.data.searchResults[idx] && this.data.searchResults[idx].sourcesExpanded) })
+    this.onToggleEntrySources(e)
   },
 
   /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */

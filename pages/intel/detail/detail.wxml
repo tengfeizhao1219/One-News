@@ -37,7 +37,7 @@
 
       <!-- 结论式标题（搜索面板展开时保留钉顶，其余内容被推上去） -->
       <text class="detail-title">{{title}}</text>
-      <view class="rest" id="rest-detail">
+      <view class="rest {{searchRestUp ? 'up' : ''}}" id="rest-detail">
       <view class="meta">
         <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
         <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
@@ -152,10 +152,15 @@
           </view>
         </block>
       </view>
+      <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
       </view>
-      <!-- 话题搜索区（详情页一部分：搜索框 + 累积结果，随页面自然滚动，不上推/不覆盖） -->
-      <view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area">
-      <view class="search-bar">
+    </block>
+    </view>
+  </scroll-view>
+
+  <!-- 话题搜索覆盖面板（FAB 点击：面板从底部升起，把其余内容顶上去；结果展开展示，下滑到顶或退出收起） -->
+  <view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area" style="top: {{searchPanelTop}};" bindscroll="onSearchScroll" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
+    <view class="search-bar">
       <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
         <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
         <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
@@ -168,12 +173,34 @@
 
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:if="{{searchHint}}">{{searchHint}}</view>
-
-      <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
+    <!-- 最新深挖结果（digGroups[0]）：答案展开显示，不自动折叠；下滑到面板顶或退出时收起 -->
+    <view class="dig-latest" wx:if="{{digGroups.length}}">
+      <view class="dig-latest-q">「{{digGroups[0].query}}」</view>
+      <view class="dig-entry" wx:for="{{digGroups[0].entries}}" wx:key="index" wx:for-item="en">
+        <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
+          <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
+          <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
+            <view class="search-sec-bdot"></view>
+            <text class="search-sec-btext">{{sec.text}}</text>
+          </view>
+          <view class="search-sec-para" wx:else>{{sec.text}}</view>
+        </block>
+        <!-- 来源引用：默认折叠，点击展开 -->
+        <view class="dig-sources {{en.sourcesExpanded ? 'open' : ''}}">
+          <view class="dig-sources-head" bindtap="onToggleEntrySources" data-ei="{{index}}" hover-class="dig-sources-head--hover">
+            <text class="dig-sources-title">参考来源（{{en.sources.length}}）</text>
+            <text class="dig-sources-arrow">{{en.sourcesExpanded ? '收起' : '展开'}} ›</text>
+          </view>
+          <block wx:if="{{en.sourcesExpanded}}">
+            <view class="dig-src" wx:for="{{en.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
+              <text class="dig-src-title">{{item.title}}</text>
+              <text class="dig-src-url">{{item.url}}</text>
+            </view>
+          </block>
+        </view>
       </view>
-    </block>
     </view>
-  </scroll-view>
+  </view>
 
   <!-- 搜索悬浮按钮（右下角，自绘放大镜；点击滚动到搜索区） -->
   <view class="fab-search {{searchOpen ? 'on' : ''}}" hover-class="fab-search--hover" bindtap="onToggleSearch">
