@@ -302,3 +302,7 @@
 
 - **问题**：36氪 RSS 全端点被 JS challenge 反爬（返回 17KB HTML 壳），每轮仍被抓取白耗资源。
 - **处理**：seedFeeds.json kr36_tech enabled=false + retireReason 留痕；线上 feed_meta 同步停用。虎扑加注释（第三方代理间歇可用，靠 R1 自动恢复机制兜底）。
+## 2026-08-22 · 【自主迭代 R3】翻页切新闻时重置搜索态
+
+- **问题**：One News 详情页翻页（上滑/下滑）切到新新闻后，搜索面板的深挖历史仍是上一条的（数据串台）。
+- **修复**：_swipeToNext 开头调 _resetSearchForPageChange——收起面板 + 清空 digGroups/searchQuery/hint/loading + 复位 _searching 标志。

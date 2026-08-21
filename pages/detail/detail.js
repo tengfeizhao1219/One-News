@@ -599,6 +599,8 @@ Page({
     // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
     that._switching = true
     that._pendingDetail = null
+    // 2026-08-22：翻页切到新新闻 → 清空上一条的深挖历史与搜索态（避免数据错乱）
+    this._resetSearchForPageChange()
 
     var result = that._engine.goNext()
     if (!result.canGo) {
@@ -1444,6 +1446,21 @@ Page({
     this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false })
     this.setData({ searchIntoView: 'dig-history' })
     setTimeout(function () { this.setData({ searchIntoView: '' }) }.bind(this), 600)
+  },
+  /** 翻页切新闻时重置搜索态：收起面板 + 清空深挖历史（避免上一条的历史串台） */
+  _resetSearchForPageChange: function () {
+    this._searching = false
+    this.setData({
+      searchOpen: false,
+      searchPanelTop: '100%',
+      searchRestUp: false,
+      searchProgress: false,
+      searchQueried: false,
+      searchQuery: '',
+      searchHint: '',
+      searchLoading: false,
+      digGroups: [],
+    })
   },
   _foldAllDig: function (open) {
     var groups = this._loadDig()
