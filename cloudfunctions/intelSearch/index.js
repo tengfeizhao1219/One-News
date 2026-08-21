@@ -20,6 +20,13 @@ const https = require('https')
 const { intelChat } = require('./common/intelLLM')
 const { ensureSchema } = require('./common/ensureSchema')
 
+// ─── DeepSeek 直连（2026-08-21：judge/summarize 主用，1-2s，绕过混元/智谱慢链）───
+const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY || ''
+const DEEPSEEK_BASE = 'api.deepseek.com'
+const DEEPSEEK_PATH = '/v1/chat/completions'
+const DEEPSEEK_MODEL = 'deepseek-chat'
+const DEEPSEEK_TIMEOUT = 15000
+
 // ─── Tavily 搜索（2026-08-21 主搜索通道：1-3s，专为 LLM 设计）───
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || ''
 const TAVILY_BASE = 'api.tavily.com'
@@ -81,6 +88,49 @@ function quickRelevance(query) {
   if (irrelevantWords.some(w => q.includes(w))) return null // 需 LLM 确认
   if (AI_KEYWORDS.some(k => q.includes(k.toLowerCase()))) return true
   return null // 未命中 → 交 LLM
+}
+
+/** DeepSeek 直连 chat（OpenAI 兼容，1-2s，绕过混元前置慢链） */
+function deepseekChat(systemPrompt, user, { maxTokens = 500, temperature = 0.3 } = {}) {
+  return new Promise((resolve) => {
+    if (!DEEPSEEK_KEY) return resolve(null)
+    const body = JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: user },
+      ],
+      max_tokens: maxTokens,
+      temperature,
+    })
+    const req = https.request({
+      hostname: DEEPSEEK_BASE,
+      path: DEEPSEEK_PATH,
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${DEEPSEEK_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: DEEPSEEK_TIMEOUT,
+    }, (res) => {
+      const chunks = []
+      res.on('data', (c) => chunks.push(c))
+      res.on('end', () => {
+        try {
+          const data = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+          const txt = data.choices && data.choices[0] && data.choices[0].message
+            ? String(data.choices[0].message.content || '').trim() : ''
+          resolve(txt ? { text: txt, engine: 'DeepSeek' } : null)
+        } catch (e) { resolve(null) }
+      })
+      res.on('error', () => resolve(null))
+    })
+    req.on('error', () => resolve(null))
+    req.on('timeout', () => { req.destroy(); resolve(null) })
+    req.write(body)
+    req.end()
+  })
 }
 
 async function judgeRelevance(query, ctx) {
@@ -246,7 +296,7 @@ ${searchText || '（无结构化结果，基于回答内容）'}
 搜索结果回答：${search.answer || ''}
 
 请基于以上信息回答用户话题「${query}」。`
-  const r = await intelChat({ systemPrompt: system, user, minAccept: 30, maxTokens: 900, temperature: 0.4, tag: 'intelSearch-summary' })
+  const r = await deepseekChat(system, user, { maxTokens: 900, temperature: 0.4 })
   return r ? { text: r.text, engine: r.engine } : { text: null, engine: '' }
 }
 
@@ -306,7 +356,7 @@ exports.main = async (event = {}) => {
   try {
     sum = await Promise.race([
       summarize(query, ctx, search),
-      new Promise((resolve) => setTimeout(() => resolve(null), 2000)),
+      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
     ])
   } catch (e) { sum = null }
   console.log('[intelSearch] summarize 耗时:', Date.now() - tSum + 'ms', '| sum:', sum ? '成功' : 'null(兜底)')
