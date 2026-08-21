@@ -148,3 +148,8 @@
 ## 2026-08-20 收藏入口位置（owner 反馈）
 - **自定义导航页别放右上角**：微信小程序右上角是原生胶囊（…）固定区域，自定义导航布局时右侧会被胶囊遮挡——按钮只能放左侧（与返回同侧）或正文区。
 - **meta 行条件渲染陷阱**：收藏入口放「时间后面」时，meta 行若带 `wx:if="{{srcName || pubTime}}"`，无来源/时间时整个 meta（含收藏）消失。应让 meta 行在真实数据块内始终显示，来源/时间各自 wx:if。
+
+## 2026-08-21 mcporter createFunctionTrigger 整体替换语义（踩坑）
+- **createFunctionTrigger 传 triggers 列表 = 全量覆盖**：该函数已有的其它触发器会被清空，只剩本次传入的。必须一次传该函数**全部**触发器（早/午/晚 3 档一起），不能逐档创建。
+- **修复漂移触发器流程**：deleteFunctionTrigger 需 confirm=true（危险操作确认）；删旧 → createFunctionTrigger 一次性全量重建 → queryFunctions 验证 3 档齐全。
+- **线上触发器可能被并行会话直接改**（不经 git）：定时器漂移排查以 mcporter 实查为准，别信 cloudbaserc 或本地 config.json 一定是线上值；改动线上后应同步 cloudbaserc/config.json 并提交。

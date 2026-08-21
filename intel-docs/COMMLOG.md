@@ -205,3 +205,9 @@
   ③ demo：`~/Desktop/Deepseek/ui-preview/detail-fav-demo.html` + 亮/暗 PNG（未收藏/已收藏 4 态，含原右上角冲突位置红字示意）。
 - **未动**：detail.js 收藏逻辑（onToggleFavorite/_checkFavorite 与入口位置无关）。
 - 下游：微信开发者工具重编译查看效果；demo 确认后合入。
+## 2026-08-21 · 情报管线触发器漂移修复（owner 拍板：只修情报管线，其它展示不管）
+
+- **漂移发现**（对比线上 mcporter 实查 vs cloudbaserc/config.json 权威）：intelProcess 早/午档被改成 05:25/11:25（权威 05:20/11:20）、intelDispatcher 被改成 05:40/11:40（权威 05:30/11:30），疑并行会话直接改线上未同步。
+- **修复**：删除漂移触发器（intelProcess0525/1125、intelDispatcher0540/1140），按权威 cron 重建。**踩坑**：mcporter `createFunctionTrigger` 是整体替换语义（传列表会清掉该函数其它触发器），首两次单档重建导致晚间档 1800 丢失，最终一次性传全部 3 档（早/午/晚）重建成功。
+- **线上最终（北京时间）**：intelProcess 05:20/11:20/17:50；intelDispatcher 05:30/11:30/18:00——与 cloudbaserc/config.json 一致。
+- **未动**：newsFetcher/rssFetcher/newsPipeline 触发器（owner：其它展示不管）；intelFetch/intelRssPoll/intelCleanup 本已一致。
