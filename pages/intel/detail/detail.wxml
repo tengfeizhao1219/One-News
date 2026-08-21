@@ -17,7 +17,7 @@
     </view>
   </view>
 
-  <scroll-view class="content" scroll-y scroll-top="{{searchScrollTop}}" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}">
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
@@ -37,7 +37,7 @@
 
       <!-- 结论式标题（搜索面板展开时保留钉顶，其余内容被推上去） -->
       <text class="detail-title">{{title}}</text>
-      <view class="rest {{searchRestUp ? 'up' : ''}}" id="rest-detail">
+      <view class="rest" id="rest-detail">
       <view class="meta">
         <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
         <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
@@ -117,14 +117,9 @@
         </view>
       </block>
       </view>
-      <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
-    </block>
-    </view>
-  </scroll-view>
-
-  <!-- 话题搜索面板（展开时从底部升起，紧贴标题下方；其余内容被推上去；下滑手势收起） -->
-  <view class="search-panel {{searchOpen ? 'open' : ''}}" style="top: {{searchPanelTop}};" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
-    <view class="search-bar">
+      <!-- 话题搜索区（详情页一部分：搜索框 + 累积结果，随页面自然滚动，不上推/不覆盖） -->
+      <view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area">
+      <view class="search-bar">
       <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
         <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
         <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
@@ -181,10 +176,14 @@
           </block>
         </view>
       </view>
+      </block>
+      <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
+      </view>
     </block>
-  </view>
+    </view>
+  </scroll-view>
 
-  <!-- 搜索悬浮按钮（右下角，自绘放大镜） -->
+  <!-- 搜索悬浮按钮（右下角，自绘放大镜；点击滚动到搜索区） -->
   <view class="fab-search {{searchOpen ? 'on' : ''}}" hover-class="fab-search--hover" bindtap="onToggleSearch">
     <image class="fab-search-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
     <image class="fab-search-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>

@@ -285,36 +285,19 @@
 .for-bold { font-weight: 700; color: var(--text-primary); }
 
 /* ============ 话题搜索（2026-08-21 前端实现，对齐 ui-demo：面板从底部升起贴标题下方，其余内容推上去） ============ */
-/* 其余内容（meta/正文/折叠/页脚）整体推起容器 */
+/* 其余内容（meta/正文/折叠/搜索区/页脚）：滚动流布局，页脚贴底 */
 .rest {
   flex: 1;
   display: flex;
   flex-direction: column;
-  transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-.rest.up {
-  transform: translateY(-100%);
 }
 
 /* 搜索面板：从底部升起（top 由 JS 注入，钉在标题下方 + 呼吸间距） */
 .search-panel {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--bg-page);
-  padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
-  z-index: 210;
-  overflow-y: auto;   /* 结果多时可上滑滚动查看（不触发收起） */
-  -webkit-overflow-scrolling: touch;
-  visibility: hidden;
-  opacity: 0;
-  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s, visibility 0s 0.65s;
-}
-.search-panel.open {
-  visibility: visible;
-  opacity: 1;
-  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s;
+  /* 详情页一部分：随页面滚动流，无定位/无覆盖/无收起手势 */
+  margin-top: 40rpx;
+  padding-top: 28rpx;
+  border-top: 1rpx solid var(--divider);
 }
 
 /* 搜索入口（deep-quick + 搜索框）整组：结果滚动时常驻顶部，便于连续查询 */

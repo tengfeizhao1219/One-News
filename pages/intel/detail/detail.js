@@ -66,9 +66,8 @@ Page({
     isFavorited: false,
     heartAnim: false,
     // 话题搜索（2026-08-21：intelSearch 云函数，三种结果路径）
-    searchOpen: false,          // 搜索面板展开态
-    searchScrollTop: 0,         // 展开搜索时归顶（保证标题在视口顶部）
-    searchPanelTop: '100%',     // 面板 top（展开时注入 px，钉在标题下方+呼吸间距）
+    searchOpen: false,          // 搜索区展开态（仅控制 fab 高亮）
+    searchIntoView: '',         // scroll-into-view 锚点：点击 fab 滚动到搜索区
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
@@ -325,52 +324,9 @@ function parseSceneMapping(txt) {
   },
 
   // ============ 话题搜索（intelSearch） ============
-  /** 展开/收起搜索面板：展开时面板升到标题下方（呼吸间距 18px），其余内容推上去 */
+  /** 点击搜索悬浮按钮：滚动到搜索区（详情页一部分，自然滚动浏览） */
   onToggleSearch() {
-    if (this.data.searchOpen) {
-      this.setData({ searchOpen: false, searchPanelTop: '100%' })
-      this._setRestUp(false)
-      return
-    }
-    this._setRestUp(true)
-    // 归顶（保证标题在视口顶部）后再量标题底部，确定面板 top
-    this.setData({ searchScrollTop: 0 }, () => {
-      const q = wx.createSelectorQuery().in(this)
-      q.select('.detail-title').boundingClientRect()
-      q.exec(res => {
-        const r = res && res[0]
-        const titleBottom = (r && r.top + r.height) || 0
-        this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
-      })
-    })
-  },
-
-  /** 其余内容（rest）推起/落回 */
-  _setRestUp(up) {
-    this.setData({ searchRestUp: up })
-  },
-
-  // ============ 面板下滑手势收起（问题③：搜索区域滑上去后可手动滑下来） ============
-  onPanelTouchStart(e) {
-    const t = e.touches && e.touches[0]
-    this._panelTouch = t ? { x: t.clientX, y: t.clientY, moved: false } : null
-  },
-  onPanelTouchMove(e) {
-    if (!this._panelTouch) return
-    const t = e.touches && e.touches[0]
-    if (!t) return
-    const dy = t.clientY - this._panelTouch.y
-    const dx = Math.abs(t.clientX - this._panelTouch.x)
-    // 仅「下滑」(dy>0) 收起；上滑用于滚动查看内容，绝不触发收起
-    if (this.data.searchOpen && dy > 24 && dy > dx) {
-      if (!this._panelTouch.moved) {
-        this._panelTouch.moved = true
-        this.onToggleSearch()
-      }
-    }
-  },
-  onPanelTouchEnd() {
-    this._panelTouch = null
+    this.setData({ searchIntoView: 'search-area', searchOpen: true })
   },
 
   /** 一键深挖：围绕当前新闻标题搜索（截断 60 字） */
