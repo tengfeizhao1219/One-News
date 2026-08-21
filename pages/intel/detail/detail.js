@@ -438,24 +438,39 @@ function parseSceneMapping(txt) {
       .then(() => this.setData({ searchLoading: false }))
   },
 
+  /** 清洗 LLM 输出中的 markdown 标记（**加粗**、`代码`、# 标题等），只留纯文本 */
+  _cleanMd(v) {
+    return String(v || '')
+      .replace(/\*\*([^*]+)\*\*/g, '$1')   // **粗体**
+      .replace(/\*([^*]+)\*/g, '$1')           // *斜体*
+      .replace(/`([^`]+)`/g, '$1')               // `代码`
+      .replace(/^#{1,6}\s+/gm, '')              // # 标题
+      .replace(/^[-*]\s+/gm, '')                // - 列表
+      .replace(/^>\s?/gm, '')                   // 引用
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // [文字](链接)
+      .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '') // 去除 emoji
+      .trim()
+  },
+
   /** answer 结构化：首行为引导头；每条「标题：内容」拆成 title/body 段落（自然排版，非编号列表） */
   _parseSearchAnswer(answer) {
     const lines = String(answer || '').split(/\n+/).map(x => x.trim()).filter(Boolean)
     if (!lines.length) return { summary: '', items: [] }
-    const first = lines[0]
+    const first = this._cleanMd(lines[0])
     const isHead = !/^\d+[.、]/.test(first) && first.length < 40
     const summary = isHead ? first : ''
     const rest = isHead ? lines.slice(1) : lines
     const items = []
     for (const ln of rest) {
       // 「标题：内容」→ title(加粗行) + body(正文段落)
-      const m = ln.match(/^(?:\d+[.、]\s*)?(.+?)(?::|：)\s*([\s\S]*)$/)
+      const cleanLn = this._cleanMd(ln)
+      const m = cleanLn.match(/^(?:\d+[.、]\s*)?(.+?)(?::|：)\s*([\s\S]*)$/)
       if (m && m[1] && m[1].length < 60) {
-        items.push({ title: m[1], body: m[2].slice(0, 200) })
+        items.push({ title: m[1], body: m[2].slice(0, 300) })
       } else {
         // 无冒号分割：整行作为正文段落，合并到上一条 body（无上条则自成一段）
-        if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? '\n' : '') + ln.slice(0, 200)
-        else items.push({ title: '', body: ln.slice(0, 200) })
+        if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? '\n' : '') + cleanLn.slice(0, 300)
+        else items.push({ title: '', body: cleanLn.slice(0, 300) })
       }
     }
     return { summary, items }
