@@ -317,6 +317,15 @@
   transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s;
 }
 
+/* 搜索入口（deep-quick + 搜索框）整组：结果滚动时常驻顶部，便于连续查询 */
+.search-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: var(--bg-page);
+  padding-top: 8rpx;
+}
+
 /* 一键深挖卡片 */
 .deep-quick {
   background-color: var(--bg-card);
@@ -404,6 +413,8 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16rpx;
+  padding-bottom: 14rpx;
+  border-bottom: 1rpx solid var(--divider);
 }
 .search-result-q {
   font-size: calc(26rpx * var(--font-scale));
@@ -421,13 +432,27 @@
   padding: 8rpx 0 4rpx;
 }
 
-/* 结构化层级排版（后端 sections） */
+/* 结构化层级排版（后端 sections）：
+   heading 主色左侧竖线 + 加粗；段落两端对齐留白；列表圆点对齐 */
 .search-sec-head {
+  position: relative;
+  padding-left: 18rpx;
   font-size: calc(30rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.5;
-  margin: 24rpx 0 10rpx;
+  margin: 30rpx 0 12rpx;
+}
+.search-sec-head::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6rpx;
+  bottom: 6rpx;
+  width: 6rpx;
+  border-radius: 3rpx;
+  background-color: var(--primary);
+  opacity: 0.7;
 }
 .search-sec-head:first-child { margin-top: 4rpx; }
 .search-sec-para {
@@ -435,22 +460,23 @@
   color: var(--text-body);
   line-height: 1.75;
   text-align: justify;
-  margin-bottom: 14rpx;
+  margin-bottom: 16rpx;
   word-break: break-word;
 }
 .search-sec-bullet {
   display: flex;
   align-items: flex-start;
-  gap: 12rpx;
-  margin-bottom: 10rpx;
+  gap: 14rpx;
+  margin-bottom: 12rpx;
 }
 .search-sec-bdot {
   flex-shrink: 0;
   width: 10rpx;
   height: 10rpx;
   border-radius: 50%;
-  background-color: var(--text-tertiary);
-  margin-top: 16rpx;
+  background-color: var(--primary);
+  opacity: 0.55;
+  margin-top: 17rpx;
 }
 .search-sec-btext {
   flex: 1;

@@ -315,7 +315,7 @@ async function summarize(query, ctx, search) {
 - 客观、基于搜索结果与当前新闻，不编造事实
 - 组织清晰：先直接回答核心，再补充关键细节/影响
 - 200-450 字
-- 结尾另起一行输出「参考来源：」并列出引用序号
+- 不要输出「参考来源」列表（引用链接由系统另行提供，正文无需罗列）
 - 格式：段落间用空行分隔；小标题独立成行，用 **小标题** 包裹（如 **核心变化**）；
   不要使用其它 markdown 标记（禁 #、-、反引号、[链接](url)、*斜体*）`
   const user = `当前新闻：${ctx.title}
@@ -351,6 +351,8 @@ ${searchText || '（无结构化结果，基于回答内容）'}
   }
   const rawLines = String(r.text).split(/\n+/).map(x => x.trim()).filter(Boolean)
   for (const ln of rawLines) {
+    // 滤掉「参考来源：…」行（引用已由 sources 字段承载，正文不重复罗列）
+    if (/^参考来源[:：]/.test(ln) || /^(?:参考|来源)[:：]?\s*(?:\d+[.、]\s*)?https?:\/\//i.test(ln)) continue
     if (/^\*\*[^*]+\*\*$/.test(ln)) pushSection('heading', ln)                    // **小标题**
     else if (/^#{1,6}\s+/.test(ln)) pushSection('heading', ln.replace(/^#{1,6}\s+/, '')) // # 小标题（兜底）
     else if (/^[-*]\s+/.test(ln)) pushSection('bullet', ln.replace(/^[-*]\s+/, '')) // - 列表项

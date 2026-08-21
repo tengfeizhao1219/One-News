@@ -124,13 +124,15 @@
 
   <!-- 话题搜索面板（展开时从底部升起，紧贴标题下方；其余内容被推上去；下滑手势收起） -->
   <view class="search-panel {{searchOpen ? 'open' : ''}}" style="top: {{searchPanelTop}};" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
-    <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
-      <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
-      <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
-    </view>
-    <view class="search-box">
-      <input class="search-input" value="{{searchQuery}}" bindinput="onSearchInput" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder" confirm-type="search" bindconfirm="onSearchSubmit" />
-      <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">{{searchLoading ? '搜索中' : '搜索'}}</view>
+    <view class="search-bar">
+      <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
+        <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
+        <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
+      </view>
+      <view class="search-box">
+        <input class="search-input" value="{{searchQuery}}" bindinput="onSearchInput" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder" confirm-type="search" bindconfirm="onSearchSubmit" />
+        <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">{{searchLoading ? '搜索中' : '搜索'}}</view>
+      </view>
     </view>
 
     <!-- 结果区：loading / 当次 hint / 累积查询结果（作为详情页一部分整体保留） -->
