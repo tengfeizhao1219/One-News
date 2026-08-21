@@ -446,42 +446,7 @@
   color: var(--text-secondary);
   line-height: 1.6;
 }
-.search-answer {
-  font-size: calc(28rpx * var(--font-scale));
-  color: var(--text-body);
-  line-height: 1.75;
-  margin-bottom: 24rpx;
-  white-space: pre-line;  /* 保留 LLM 回答的换行 */
-  word-break: break-word;
-}
 /* 单次查询结果区块：累积排列，上滑查看、下滑回原文 */
-.search-result {
-  padding: 8rpx 0 10rpx;
-}
-.search-result-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16rpx;
-  padding-bottom: 14rpx;
-  border-bottom: 1rpx solid var(--divider);
-}
-.search-result-q {
-  font-size: calc(26rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--primary);
-}
-.search-result-arrow {
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-}
-.search-fallback-tip {
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  line-height: 1.6;
-  padding: 8rpx 0 4rpx;
-}
-
 /* 结构化层级排版（后端 sections）：
    heading 主色左侧竖线 + 加粗；段落两端对齐留白；列表圆点对齐 */
 .search-sec-head {
@@ -537,83 +502,9 @@
 }
 
 /* 段落式结果排版：引导头（弱化小字）+ 标题行 + 正文段落，分隔线划分 */
-.search-summary {
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  line-height: 1.6;
-  margin-bottom: 24rpx;
-}
-.search-item {
-  padding: 4rpx 0 26rpx;
-  border-bottom: 1rpx solid var(--divider);
-}
-.search-item:last-child { border-bottom: none; }
-.search-item-title {
-  display: block;
-  font-size: calc(30rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.5;
-  margin-bottom: 8rpx;
-}
-.search-item-desc {
-  display: block;
-  font-size: calc(26rpx * var(--font-scale));
-  color: var(--text-body);
-  line-height: 1.75;
-  text-align: justify;
-  word-break: break-word;
-}
 /* 参考来源：折叠卡（默认收起，点击展开） */
-.search-sources {
-  margin-top: 24rpx;
-  background-color: var(--bg-card);
-  border: 1rpx solid var(--divider);
-  border-radius: 20rpx;
-  overflow: hidden;
-}
-.search-sources-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 22rpx 26rpx;
-}
 .search-sources-head--hover { background-color: var(--bg-subtle); }
-.search-sources-title {
-  font-size: calc(26rpx * var(--font-scale));
-  font-weight: 600;
-  color: var(--text-primary);
-}
-.search-sources-arrow {
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
-  color: var(--text-link);
-}
-.search-src {
-  padding: 20rpx 26rpx;
-  border-top: 1rpx solid var(--divider);
-}
 .search-src--hover { background-color: var(--bg-subtle); }
-.search-src-title {
-  display: block;
-  font-size: calc(28rpx * var(--font-scale));
-  font-weight: 600;
-  color: var(--text-link);
-  line-height: 1.5;
-}
-.search-src-source {
-  display: block;
-  margin-top: 6rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--primary);
-}
-.search-src-url {
-  display: block;
-  margin-top: 6rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  word-break: break-all;
-}
-
 /* 搜索悬浮按钮（右下角，自绘放大镜；对齐首页 floating-more 形态） */
 .fab-search {
   /* 与首页 floating-more 完全同尺寸/同动画（96rpx 圆 + floatY 浮动） */
@@ -649,7 +540,6 @@
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10rpx); }
 }
-
 
 /* ============ 深挖历史区（正文流内，同话题折叠，退出再进保留） ============ */
 .dig-history {
@@ -720,11 +610,6 @@
 }
 .dig-list {
   margin-top: 24rpx;
-}
-.dig-sources-block {
-  margin-top: 32rpx;
-  padding-top: 24rpx;
-  border-top: 1rpx solid var(--divider);
 }
 .dig-sources {
   margin-top: 12rpx;
