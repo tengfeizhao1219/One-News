@@ -37,6 +37,13 @@
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
 
+## 2026-08-21 · UI 基准页（GitHub Pages）建立——UI 改动唯一确认源
+
+- **基准页**：https://tengfeizhao1219.github.io/One-News/（源 ui-demo/，Actions 自动部署）。
+- **规则（owner 拍板）**：任何 UI 改动先改基准页 → 确认 → 再落地小程序；禁止临时单页 demo 推翻已确认方案。
+- **设计标注**：基准页带标注模式（元素意图 + 代码位置 data-note/data-code），新增元素必须补标注。
+- 已纳入《UI 设计准则》§6，Notion 已同步。
+
 ## 2026-08-21 · 逐批清理逻辑恢复并验证 + AI 协作门禁机制落地
 
 - **恢复清理**：intelProcess 本批有数据先清旧 staged/非本批 ingest（purgeDone 防误清）、intelDispatcher 发布后清旧 brief 只留一版（purgeOldBriefs）；双副本同步。
