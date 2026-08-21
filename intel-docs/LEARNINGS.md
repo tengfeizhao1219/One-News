@@ -170,3 +170,10 @@
   ② COMMLOG 权威时间表"早间 05:10/05:15/05:20/05:30" = cron `0 10 5`/`0 15 5`/`0 20 5`/`0 30 5` 直接对应北京时间。
   ③ intelCleanup "每日 03:00 清理" = cron `0 0 3`，凌晨清理是北京语义。
 - **踩坑**：5561cd2 把 `0-14,22-23` 当 UTC 写（以为停北京 23:00-05:00），实际按北京时间解析 = 停北京 15:00-21:00，完全相反。**写 cron 前先确认时区语义**；改后必须用 queryFunctions 核验线上 cron，并对照"意图时段 vs 实际时段"自查。
+
+## 2026-08-21 详情页失效根因：逐批只留本批 vs 详情数据源
+- **现象**：用户反馈详情页"UI 完全失效/结构不对"。
+- **根因链**：① 08-19 owner 拍板「逐批只留本批」（intelProcess 每次处理清空旧 staged + 非 pending ingest）；② 08-21 并行 agent 恢复该逻辑（26c500c）；③ 定时 process 跑后 staged 从 27 条被清到 1 条 → intelGetDetail 只查 staged/current 按 itemId → 其余条目详情查不到 → 前端 fallback 空态/结构错乱。
+- **用户拍板方案**：详情改读 brief 数据——intelDispatcher 写 brief 时 items 自包含完整 sop（sop/references/tryable/research/processedAt 等）；intelGetDetail 优先 staged，兜底 intel_current isCurrent 的 items 数组按 itemId 查，终极兜底 archive。
+- **验证**：强制重抓（清 10 源游标+窗口 ingest+staged）→ 19 pending → 9 staged（全 medium，8/9 带 blocks）→ brief v7（9/9 带完整 sop）→ 详情接口 code 0 命中。
+- **经验**：staged 清空不影响详情页（brief 自包含）；并行 agent 恢复"逐批只留"时未评估详情页依赖 staged——此类跨函数数据依赖改动前必须全链路验证。

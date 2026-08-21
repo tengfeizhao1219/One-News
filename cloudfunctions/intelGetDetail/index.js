@@ -61,12 +61,29 @@ exports.main = async (event = {}) => {
     console.warn('[intelGetDetail] intel_staged 读取失败:', e.message)
   }
 
-  // 2) 兜底 intel_current
+  // 2) 兜底 intel_current（2026-08-21：brief items 自包含完整 sop，从 items 数组按 itemId 查；
+  //    staged 逐批清理不影响详情页）
   try {
-    const r2 = await db.collection(INTEL_CURRENT).where({ itemId: id }).limit(1).get()
-    if (r2.data && r2.data[0]) return { code: 0, data: toDetail(r2.data[0]) }
+    const r2 = await db.collection(INTEL_CURRENT).where({ isCurrent: true }).limit(1).get()
+    if (r2.data && r2.data[0]) {
+      const items = r2.data[0].items || []
+      const hit = items.find((it) => it && it.itemId === id)
+      if (hit) return { code: 0, data: toDetail(hit) }
+    }
   } catch (e) {
     console.warn('[intelGetDetail] intel_current 读取失败:', e.message)
+  }
+
+  // 3) 终极兜底：历史 brief 归档（items 同样自包含 sop）
+  try {
+    const r3 = await db.collection('intel_current_archive')
+      .where({ 'items.itemId': id }).limit(1).get()
+    if (r3.data && r3.data[0]) {
+      const hit = (r3.data[0].items || []).find((it) => it && it.itemId === id)
+      if (hit) return { code: 0, data: toDetail(hit) }
+    }
+  } catch (e) {
+    console.warn('[intelGetDetail] intel_current_archive 读取失败:', e.message)
   }
 
   return { code: -1, message: '未找到该情报', errorCode: 'NOT_FOUND' }

@@ -357,6 +357,15 @@ function renderBrief(todayItems, weekTryable) {
     contract: Boolean(d.contract),
     card: renderItemCard(d), // §6.3 固定模板已渲染片段
     degraded: !(d.sop && d.sop.definition && String(d.sop.definition).trim()), // 定义缺失标记，供剔除/展示降级(2026-08-19 治理)
+    // 2026-08-21：详情数据随 brief 自包含（sop 全量 + references + tryable），
+    //   intelGetDetail 可从 intel_current items 按 itemId 查——staged 逐批清理不再影响详情页
+    sop: d.sop || null,
+    references: Array.isArray(d.references) ? d.references : [],
+    tryable: d.tryable === true,
+    research: d.research || null,
+    processedAt: d.processedAt || '',
+    modelUsed: d.modelUsed || '',
+    cost: d.cost || 0,
   })).filter(function (it) { return !it.degraded }) // 定义缺失条目剔除，不显示占位文案
 
   // 本周可试用清单 = 当周 tryable 滚动去重
