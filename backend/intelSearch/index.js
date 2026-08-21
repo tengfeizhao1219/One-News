@@ -279,7 +279,34 @@ function zhipuWebSearch(query) {
   })
 }
 
-// ─── ③ 总结回答（混元为主，智谱备选）───
+// ─── ②c 搜索词改写（2026-08-21：模糊 query 结合新闻主题，避免搜出无关结果）───
+//   例：新闻=DeepSeek 发布，query="和其他的有什么区别"
+//   → 改写为 "DeepSeek 与其他大模型（GPT-4/Claude/Gemini）的区别对比"
+async function buildSearchQuery(query, ctx) {
+  // 区别/对比/优缺点类 → 必须 LLM 改写（拼接会产生"标题+和其他的区别"这种半截句）
+  const needsRewrite = /(?:区别|对比|优缺点|优势|劣势|怎么样|如何|怎么|哪些|和其他的|和.*比|比较)/i.test(query)
+  if (!needsRewrite && /(?:是什么|介绍|最新|发布|影响|发展|趋势|原理|用法|教程|使用|案例|性能|价格|下载|安装)/i.test(query) && ctx.title) {
+    // 含主体的明确 query → 拼接新闻主体增强（省一次 LLM）
+    const subject = String(ctx.title || '').replace(/\s+/g, ' ').slice(0, 40)
+    return `${subject} ${query}`
+  }
+  // 残缺/对比类 query（"和其他的有什么区别""这个怎么样"）→ LLM 改写
+  const system = `你是搜索词优化器。用户想了解某条新闻的进一步信息，输入了搜索意图（可能很简短或残缺）。
+结合「当前新闻」把用户意图改写成一个具体、完整、适合搜索引擎的搜索词（10-25 个字），
+必须包含新闻主体，让搜索引擎能搜到真正相关的内容。
+只输出改写后的搜索词，不要解释。`
+  const user = `当前新闻：${ctx.title}
+新闻摘要：${ctx.what}
+用户搜索意图：${query}
+改写后的搜索词：`
+  const r = await deepseekChat(system, user, { maxTokens: 60, temperature: 0.3 })
+  const rewritten = r && r.text ? r.text.replace(/["'\n\r]+/g, '').trim() : ''
+  if (rewritten && rewritten.length >= 6 && rewritten.length <= 60) return rewritten
+  // LLM 失败 → 用新闻标题拼接兜底
+  return `${String(ctx.title || '').replace(/\s+/g, ' ').slice(0, 40)} ${query}`
+}
+
+// ─── ③ 总结回答（DeepSeek 为主）───
 async function summarize(query, ctx, search) {
   const searchText = (search.sources || [])
     .map((s, i) => `${i + 1}. ${s.title} ${s.url}${s.snippet ? '\n   ' + s.snippet : ''}`).join('\n')
@@ -334,9 +361,12 @@ exports.main = async (event = {}) => {
     }
   }
 
+  // ② 搜索词改写（模糊 query 结合新闻主题，搜得准）
+  const searchQuery = await buildSearchQuery(query, ctx)
+
   // ② 联网搜索（主 Tavily 1-3s → 兜底智谱 web_search）
   const tSearch = Date.now()
-  let search = await tavilySearch(query)
+  let search = await tavilySearch(searchQuery)
   console.log('[intelSearch] 搜索耗时:', Date.now() - tSearch + 'ms | ok:', search.ok, '| sources:', (search.sources||[]).length)
   if (!search.ok) {
     console.warn('[intelSearch] tavily 失败:', search.reason, '→ 兜底智谱 web_search')
