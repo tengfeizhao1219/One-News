@@ -36,6 +36,7 @@ Page({
     panelCurrentIndex: 0,   // 侧边栏中标记的当前阅读位置
     filteredNewsList: [],   // 侧边栏过滤后的列表
     panelSubtitle: '',      // UI-B7：面板头部副标题「当前分类 · N 条」
+    lastUpdated: '',        // 2026-08-21：列表数据最新一条的发布时间（HH:MM），用于「更新于」提示
     favList: [],             // 已废弃：收藏入口已迁移至 dock 菜单独立页
     // 页面状态
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
@@ -315,7 +316,29 @@ Page({
       if (cats[i].id === cat) { name = cats[i].name; break }
     }
     var n = typeof count === 'number' ? count : (this.data.filteredNewsList || []).length
-    this.setData({ panelSubtitle: name + ' · ' + n + ' 条' })
+    var lu = this.data.lastUpdated
+    this.setData({ panelSubtitle: name + ' · ' + n + ' 条' + (lu ? ' · 更新于 ' + lu : '') })
+  },
+
+  /**
+   * 2026-08-21：根据列表计算「最新一条」的发布时间，格式化为 HH:MM（本地时区）。
+   * 取 publishTime / createdAt / fetchedAt 三者最大者，作为「数据更新于」展示。
+   * @param {Array} list 新闻列表（含 publishTime 等毫秒时间戳字段）
+   * @returns {string} "HH:MM" 或 ''
+   */
+  _computeLastUpdated(list) {
+    if (!list || !list.length) return ''
+    var max = 0
+    for (var i = 0; i < list.length; i++) {
+      var it = list[i]
+      var t = it.publishTime || it.createdAt || it.fetchedAt || 0
+      if (t > max) max = t
+    }
+    if (!max) return ''
+    var d = new Date(max)
+    var hh = ('0' + d.getHours()).slice(-2)
+    var mm = ('0' + d.getMinutes()).slice(-2)
+    return hh + ':' + mm
   },
 
   /**
@@ -451,7 +474,8 @@ Page({
       // resolveIndex 由详情页返回定位使用；未传则沿用当前位置（renderCards 内会做边界钳制）
       const idx = typeof resolveIndex === 'function' ? resolveIndex(list) : undefined
       // DG-03: 首次加载/切分类重置 loadMoreCount（方案 5 改动 B：每次 loadCategory 重置为 0）
-      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
+      const lastUpdated = this._computeLastUpdated(list)
+      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0, lastUpdated })
       this._startSwipeHintTimer()
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
@@ -509,11 +533,12 @@ Page({
         this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
         this._syncPanelList([], 0)
       } else {
-        this.setData({ newsList: list, pageState: 'ready', currentPage: 1, currentIndex: 0, loadingMore: false, loadMoreCount: 0 })
+        const lastUpdated = this._computeLastUpdated(list)
+        this.setData({ newsList: list, pageState: 'ready', currentPage: 1, currentIndex: 0, loadingMore: false, loadMoreCount: 0, lastUpdated })
         this.renderCards(list, 0)
         this._syncPanelList(list, 0)
       }
-      wx.showToast({ title: '已刷新', icon: 'none', duration: 1000 })
+      wx.showToast({ title: '已刷新' + (this.data.lastUpdated ? ' · ' + this.data.lastUpdated : ''), icon: 'none', duration: 1200 })
     } catch (err) {
       console.error('下拉刷新(读库)失败:', err)
       const msg = handleApiError(err.errorCode, err.message)

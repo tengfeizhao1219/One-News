@@ -12,7 +12,21 @@
         {
           "name": "hourlyFetch",
           "type": "timer",
-          "config": "0 0 0,5-23 * * * *"
+          "config": "0 0 * * * * *"
+        }
+      ]
+    },
+    {
+      "name": "rssFetcher",
+      "path": "rssFetcher",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "installDependency": true,
+      "triggers": [
+        {
+          "name": "rssPoll",
+          "type": "timer",
+          "config": "0 0 * * * *"
         }
       ]
     },
