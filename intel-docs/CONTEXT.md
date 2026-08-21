@@ -46,3 +46,5 @@ One News 仓库（不改原有逻辑）
 > v2 新增必读：**LEARNINGS.md**（教训库，开工前必读）· **ADR.md**（决策日志）。关口前跑 `python3 scripts/check.py intel-docs`。
 crets.env`（600，未入库）
 - **GitHub DNS 修复**：`/etc/hosts` 写入 `140.82.113.4 github.com`；或 `git -c http.curloptResolve=github.com:443:140.82.113.4 pull --rebase`
+
+> ⚠️ UI 相关改动必读：`AI情报官_UI设计准则.md`（owner 拍板的项目级 UI 宪法）

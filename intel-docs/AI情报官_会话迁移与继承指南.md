@@ -65,7 +65,7 @@ git clone -b intel-officer https://github.com/tengfeizhao1219/One-News.git
 6. 读 AI情报官_协作机制.md —— 协作总规（认领/交付/关口/Git 纪律，含 v2 质量门禁/DoD）
 7. 读 LEARNINGS.md —— 教训库（本项目的坑，开工前必读）
 8. 读 ADR.md —— 决策日志（owner 拍板与关键决策）
-9. 如需要更细上下文，读 intel-docs/ 下其余文档（需求/调研/设计/复用审计/UI 规范等）
+9. 如需要更细上下文，读 intel-docs/ 下其余文档（需求/调研/设计/复用审计/UI 规范等）；**涉及 UI 改动前必读《AI情报官_UI设计准则.md》**
 10. 跑 `python3 scripts/check.py intel-docs` —— 一致性审计，结果纳入继承摘要（有阻断项先报告）
 
 第二步：向用户汇报继承摘要（300 字内）：
