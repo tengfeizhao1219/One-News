@@ -83,6 +83,12 @@
   .card-s{font-size:11px;color:var(--text-tertiary);margin-top:5px;} .card-chev{color:var(--text-tertiary);font-size:15px;}
   .revoke{font-size:11.5px;color:#FF3B30;border:1px solid #FF3B30;border-radius:14px;padding:6px 12px;flex-shrink:0;}
   .foot{text-align:center;font-size:11px;color:var(--text-tertiary);padding:18px 0 6px;}
+  /* FAB：复刻 One News floating-more（tag-bg 圆 + 浮动动画），「我的」入口 */
+  .phone{position:relative;}
+  .fab{position:absolute;right:20px;bottom:24px;width:48px;height:48px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.08);animation:floatY 3.2s ease-in-out infinite;cursor:pointer;z-index:5;}
+  .fab:active{transform:scale(.92);animation:none;}
+  .fab svg{width:26px;height:26px;}
+  @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
   /* 标注模式：显性标注线（默认可见，非 hover）+ 编号角标 */
   [data-note]{cursor:pointer;position:relative;}
   body.note-mode [data-note]{outline:1.5px dashed var(--primary);outline-offset:2px;}
@@ -162,9 +168,10 @@ const PROJECTS = {
         notes: [
           { selector: '.hero', name: '摘要区', intent: '重点前置：今日条数 + 数据截至单行两端对齐；删除「情报官已完成梳理」类无意义状态条（准则1）', params: [{k:'布局',v:'flex space-between, baseline'},{k:'标题',v:'20px/800'},{k:'副文',v:'12px text-tertiary'}], code: 'hero-count / hero-sub / .hero', guideline: '准则1 简洁形态引导' },
           { selector: '.card:nth-of-type(1)', name: '重点卡（对你最重要）', intent: '仅画像 focusTags 命中（sceneTags∩focusTags）才标记；浅蓝底展示与你画像的关联（focusFor）；不默认第一条', params: [{k:'卡片',v:'bg-card, 1px divider, 16px 圆角'},{k:'间距',v:'卡片间 48rpx'},{k:'tag',v:'primary 文字 + primary-subtle 底, 7px 圆角'}], code: 'card-focus / focus-tag / card-for', guideline: '准则5 风格一致' },
-          { selector: '.card-desc', name: '次级卡摘要', intent: '单行摘要；来源/时间不在首页（挪详情页，减少噪音）', params: [{k:'字号',v:'12.5px text-tertiary'},{k:'行距',v:'1.5'}], code: 'card-desc', guideline: '准则1 简洁' },
+          { selector: '.card:nth-of-type(2)', name: '次级卡', intent: '普通条目卡片：标题 + 单行摘要；来源/时间不在首页（挪详情页，减少噪音）；非重点无 tag/浅蓝底', params: [{k:'卡片',v:'bg-card, 1px divider, 16px 圆角'},{k:'间距',v:'卡片间 48rpx'},{k:'摘要',v:'12.5px text-tertiary, 行距1.5'}], code: 'card / card-desc', guideline: '准则5 风格一致' },
           { selector: '.try', name: '可试用清单项', intent: '细线勾选圆 + 标题 + 最小行动；完成态划线弱化；仅此区块保留标题避免重复', params: [{k:'勾选',v:'19px 圆, 1.5px divider, 选中 primary'},{k:'卡片',v:'14px 圆角'}], code: 'try / try-check', guideline: '准则3 交互可点感' },
           { selector: '.nav', name: '顶部导航', intent: 'Home 图标（复用 One News home.svg/home-dark.svg）+ 无标题；与右上角原生胶囊垂直居中对齐（menu-top/menu-height）', params: [{k:'图标',v:'44px 容器, 24px 图标, 亮黑/暗白'},{k:'对齐',v:'top=menu-top, height=menu-height, flex center'}], code: 'nav-home / .page--dark .nav-light', guideline: '准则4 原生胶囊' },
+          { selector: '.fab', name: '悬浮按钮（FAB）', intent: '「我的」入口：完全复刻 One News 首页 floating-more（tag-bg 浅灰圆 + 细阴影 + floatY 浮动动画）；点击进入我的页；深浅色图标跟随主题（CSS 双图标）', params: [{k:'尺寸',v:'48px(96rpx) 圆'},{k:'背景',v:'tag-bg, 阴影 0 2px 10px rgba(0,0,0,.08)'},{k:'位置',v:'右下角, 安全区避让'},{k:'图标',v:'settings.svg 亮色/settings-dark.svg 暗色'}], code: 'floating-more / more-icon-img / .page--dark .more-light', guideline: '准则4 原生设备形态 / 准则2 自绘图标' },
           { selector: '.sect-head', name: '区块标题', intent: '仅「本周可试用清单」保留区块标题（首页卡片区无标题避免重复）；主次分隔用留白而非标题堆叠', params: [{k:'字号',v:'13px/700 text-secondary'},{k:'间距',v:'12px 下边距'}], code: 'sect-head', guideline: '准则1 不重复设计' },
           { selector: '.foot', name: '页脚', intent: '统一页脚「由 AI 情报官生成 · 仅供参考」；弱化、居中小字', params: [{k:'字号',v:'11px text-tertiary'},{k:'对齐',v:'居中'}], code: 'foot-note', guideline: '准则1 简洁' },
         ]
@@ -220,7 +227,8 @@ const PAGE_HTML = {
       <div class="sect-head">本周可试用清单</div>
       <div class="try"><div class="try-check on"></div><div><div class="try-t">GLM-5.3 编程能力实测</div><div class="try-s">官方 API 注册即可体验</div></div></div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>`,
+    </div>
+    <div class="fab" data-action="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>`,
   detail: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
     <div class="nav"><span class="nav-home nav-light" data-action="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
@@ -233,7 +241,8 @@ const PAGE_HTML = {
       <div class="fold"><div class="fold-head"><span>想试试</span><span>▸</span></div></div>
       <div class="deep"><div class="deep-head">深入了解</div><div class="deep-quick" data-action="deep"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">点击进入深入了解页</div></div></div></div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>`,
+    </div>
+    <div class="fab" data-action="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>`,
   mine: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
     <div class="nav"><span class="nav-home nav-light" data-action="home"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span><span class="nav-home nav-dark"><svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3l9-8z"/></svg></span></div>
     <div class="scroll">
@@ -264,7 +273,8 @@ const PAGE_HTML = {
         <div class="result"><div class="result-t">智谱官方：GLM-5.3 技术报告</div><div class="result-meta">智谱AI 官网 · 昨天</div><div class="result-desc">模型架构、安全后训练细节与全部评测基准。</div></div>
       </div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
-    </div>`,
+    </div>
+    <div class="fab" data-action="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>`,
 };
 
 let curProject = 'ai-intel';
@@ -300,8 +310,7 @@ function renderPages(){
       let el = null;
       if(n.selector.includes(':nth-of-type')){
         const [base, nth] = n.selector.split(':nth-of-type(');
-        const tag = base.replace('.','');
-        const els = wrap.querySelectorAll(tag);
+        const els = wrap.querySelectorAll(base.trim());
         el = els[parseInt(nth)-1];
       } else {
         el = wrap.querySelector(n.selector);
