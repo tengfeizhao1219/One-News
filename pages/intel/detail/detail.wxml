@@ -136,13 +136,32 @@
     <!-- 结果区：loading / 不相关 hint / 相关+回答+sources / 相关但失败 hint -->
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:elif="{{searchHint}}">{{searchHint}}</view>
-    <block wx:elif="{{searchAnswer}}">
-      <view class="search-answer">{{searchAnswer}}</view>
-      <view class="search-sources" wx:if="{{searchSources.length}}">
-        <view class="search-src" wx:for="{{searchSources}}" wx:key="url" bindtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
-          <text class="search-src-title">{{item.title}}</text>
-          <text class="search-src-url">{{item.url}}</text>
+    <block wx:elif="{{searchItems.length || searchAnswer}}">
+      <!-- 引导头（如「关于…为你找到以下信息：」） -->
+      <view class="search-summary" wx:if="{{searchSummary}}">{{searchSummary}}</view>
+      <!-- 结构化编号条目（标题加粗 + 内容截断，避免铺满屏幕） -->
+      <view class="search-item" wx:for="{{searchItems}}" wx:key="n">
+        <text class="search-item-n">{{item.n}}</text>
+        <view class="search-item-body">
+          <text class="search-item-title">{{item.title}}</text>
+          <text class="search-item-desc" wx:if="{{item.body}}">{{item.body}}</text>
         </view>
+      </view>
+      <!-- 兜底：无法结构化时展示原始回答 -->
+      <view class="search-answer" wx:if="{{!searchItems.length}}">{{searchAnswer}}</view>
+      <!-- 参考来源：默认折叠，点击展开（带样式） -->
+      <view class="search-sources" wx:if="{{searchSources.length}}">
+        <view class="search-sources-head" bindtap="onToggleSources" hover-class="search-sources-head--hover">
+          <text class="search-sources-title">参考来源（{{searchSources.length}}）</text>
+          <text class="search-sources-arrow">{{searchSourcesExpanded ? '收起' : '展开'}} ›</text>
+        </view>
+        <block wx:if="{{searchSourcesExpanded}}">
+          <view class="search-src" wx:for="{{searchSources}}" wx:key="url" bindtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
+            <text class="search-src-title">{{item.title}}</text>
+            <text class="search-src-source" wx:if="{{item.source}}">{{item.source}}</text>
+            <text class="search-src-url">{{item.url}}</text>
+          </view>
+        </block>
       </view>
     </block>
   </view>

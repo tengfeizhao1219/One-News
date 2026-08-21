@@ -73,8 +73,11 @@ Page({
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关 / 搜索失败 hint
-    searchAnswer: '',           // 相关+成功：总结回答
+    searchAnswer: '',           // 相关+成功：总结回答（原始）
+    searchSummary: '',          // 结构化：引导头（「关于…为你找到以下信息：」）
+    searchItems: [],            // 结构化：编号条目 [{n,title,body}]（标题加粗、内容截断）
     searchSources: [],          // 相关+成功：引用来源列表 [{title,url,source}]
+    searchSourcesExpanded: false, // 来源折叠态（默认收起，点击展开）
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -402,10 +405,14 @@ function parseSceneMapping(txt) {
           this.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
           return
         }
-        // ② 相关+成功
+        // ② 相关+成功：answer 结构化解析（引导头 + 编号条目），sources 折叠展示
         if (d && d.relevant && d.answer) {
+          const parsed = this._parseSearchAnswer(d.answer)
           this.setData({
             searchAnswer: d.answer,
+            searchSummary: parsed.summary,
+            searchItems: parsed.items,
+            searchSourcesExpanded: false,
             searchSources: Array.isArray(d.sources) ? d.sources.map(x => ({
               title: x.title || x.url || '',
               url: x.url || '',
@@ -421,6 +428,33 @@ function parseSceneMapping(txt) {
         wx.showToast({ title: (err && err.message) || '搜索失败，请稍后再试', icon: 'none' })
       })
       .then(() => this.setData({ searchLoading: false }))
+  },
+
+  /** answer 结构化：首行为引导头，后续「N. 标题：内容」拆成编号条目 */
+  _parseSearchAnswer(answer) {
+    const lines = String(answer || '').split(/\n+/).map(x => x.trim()).filter(Boolean)
+    if (!lines.length) return { summary: '', items: [] }
+    const first = lines[0]
+    const isHead = !/^\d+[.、]/.test(first) && first.length < 40
+    const summary = isHead ? first : ''
+    const rest = isHead ? lines.slice(1) : lines
+    const items = []
+    for (const ln of rest) {
+      const m = ln.match(/^(\d+)[.、]\s*(.+?)(?::|：)\s*([\s\S]*)$/)
+      if (m) {
+        items.push({ n: m[1], title: m[2], body: m[3].slice(0, 120) })
+      } else {
+        const m2 = ln.match(/^(\d+)[.、]\s*([\s\S]+)$/)
+        if (m2) items.push({ n: m2[1], title: m2[2].slice(0, 60), body: '' })
+        else if (items.length) items[items.length - 1].body += (items[items.length - 1].body ? ' ' : '') + ln.slice(0, 120)
+      }
+    }
+    return { summary, items }
+  },
+
+  /** 折叠/展开参考来源 */
+  onToggleSources() {
+    this.setData({ searchSourcesExpanded: !this.data.searchSourcesExpanded })
   },
 
   /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */
