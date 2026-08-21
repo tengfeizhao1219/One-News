@@ -183,3 +183,8 @@
   ① stageAi 前 `truncateStagingByCategory` = **物理删除 staging pending**（AI 前收敛）→ 已移除（owner：时机不对，会静默丢弃够格内容）
   ② publish 时 `applyCategoryCaps` = **注入 cache 前软截断**（仅不写入，不删 staging）→ 保留（保证展示 ≤47）
 - **教训**：截断要放在"最终展示前"而非"加工前"——加工阶段应尽量保留候选，展示层再按 cap 收敛，避免内容被早期静默丢弃。
+
+## 2026-08-21 owner 拍板：回退「逐批只留本批」清理逻辑 + 并行变更处置纪律
+- **回退**：intelProcess 移除「清空旧 staged + 清非本批 ingest」逻辑（曾清空数据、破坏详情页）。详情数据已随 brief 自包含，staged 增量保留不清理。已部署。
+- **门禁同步**：check_intel.sh 改为 require/forbid 双模式——purgeDone/清空 staged 逻辑 forbid（禁止出现），翻译兜底/purgeOldBriefs/sourceId require（必须存在）。
+- **协作纪律（owner 拍板）**：今后发现他人（并行 agent）的任何变更/改动，默认**不做任何处理**；先记录、汇报 owner，经 owner 确认后再决定处理动作。

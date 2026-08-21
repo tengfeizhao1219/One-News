@@ -28,25 +28,29 @@ if [ -z "$NODE_BIN" ]; then
 fi
 NODE_BIN="${NODE_BIN:-node}"
 
-# 需要校验关键逻辑存在的函数/文件（防止静默逻辑被并行覆盖）
+# 需要校验关键逻辑存在/禁止的函数/文件（防止静默逻辑被并行覆盖/误引入）
+# 格式：文件|needle|描述|mode（require=必须存在 / forbid=禁止出现）
 declare -a CRITICAL_CHECKS=(
-  # intelProcess：逐批清理（purgeDone）+ 翻译兜底（isMostlyEnglish）
-  "cloudfunctions/intelProcess/index.js|purgeDone|intelProcess 逐批清理逻辑(purgeDone)"
-  "cloudfunctions/intelProcess/index.js|isMostlyEnglish|intelProcess 翻译兜底(isMostlyEnglish)"
-  "cloudfunctions/intelProcess/index.js|translateZh|intelProcess 翻译兜底(translateZh)"
-  # intelDispatcher：发布后清旧 brief（purgeOldBriefs）
-  "cloudfunctions/intelDispatcher/index.js|purgeOldBriefs|intelDispatcher 清旧 brief(purgeOldBriefs)"
-  # intelRssPoll：按源手动触发能力（sourceId）
-  "cloudfunctions/intelRssPoll/index.js|event.sourceId|intelRssPoll 单源触发(event.sourceId)"
+  # intelProcess：翻译兜底（isMostlyEnglish/translateZh）——必须存在
+  "cloudfunctions/intelProcess/index.js|isMostlyEnglish|intelProcess 翻译兜底(isMostlyEnglish)|require"
+  "cloudfunctions/intelProcess/index.js|translateZh|intelProcess 翻译兜底(translateZh)|require"
+  # 2026-08-21 owner 拍板回退：禁止「清空旧 staged/非本批 ingest」清理逻辑（曾清空数据破坏详情页）
+  "cloudfunctions/intelProcess/index.js|清空旧 staged|intelProcess 清空 staged 清理逻辑|forbid"
+  "cloudfunctions/intelProcess/index.js|purgeDone|intelProcess 逐批清理(purgeDone)|forbid"
+  # intelDispatcher：发布后清旧 brief（purgeOldBriefs）——仅清旧 brief 文档，不影响详情数据，保留
+  "cloudfunctions/intelDispatcher/index.js|purgeOldBriefs|intelDispatcher 清旧 brief(purgeOldBriefs)|require"
+  # intelRssPoll：按源手动触发能力（sourceId）——必须存在
+  "cloudfunctions/intelRssPoll/index.js|event.sourceId|intelRssPoll 单源触发(event.sourceId)|require"
 )
 
 FAIL=0
 MODE="${1:-all}"
 
-# ── 1) 关键逻辑存在性 ────────────────────────────────────────────────
-echo "── [1/4] 关键逻辑存在性校验 ──"
+# ── 1) 关键逻辑存在/禁止校验 ─────────────────────────────────────────────
+echo "── [1/4] 关键逻辑校验（require=必须存在 / forbid=禁止出现）──"
 for entry in "${CRITICAL_CHECKS[@]}"; do
-  file="${entry%%|*}"; rest="${entry#*|}"; needle="${rest%%|*}"; desc="${rest#*|}"
+  file="${entry%%|*}"; rest="${entry#*|}"; needle="${rest%%|*}"; rest2="${rest#*|}"; desc="${rest2%%|*}"; mode="${rest2#*|}"
+  mode="${mode:-require}"
   # MODE 过滤：only backend / only cloudfunctions
   case "$MODE" in
     cloudfunctions) [[ "$file" == cloudfunctions/* ]] || continue ;;
@@ -56,11 +60,20 @@ for entry in "${CRITICAL_CHECKS[@]}"; do
   bfile="${file/cloudfunctions\//backend\/}"
   for target in "$file" "$bfile"; do
     if [ -f "$target" ]; then
-      if grep -q "$needle" "$target"; then
-        echo "  ✅ $target 含「$desc」"
+      if [ "$mode" = "forbid" ]; then
+        if grep -q "$needle" "$target"; then
+          echo "  ❌ $target 含「$desc」——已回退/禁止，请移除后再 push！"
+          FAIL=1
+        else
+          echo "  ✅ $target 无「$desc」（符合回退要求）"
+        fi
       else
-        echo "  ❌ $target 缺失「$desc」——可能被并行覆盖，禁止 push/部署！"
-        FAIL=1
+        if grep -q "$needle" "$target"; then
+          echo "  ✅ $target 含「$desc」"
+        else
+          echo "  ❌ $target 缺失「$desc」——可能被并行覆盖，禁止 push/部署！"
+          FAIL=1
+        fi
       fi
     fi
   done
