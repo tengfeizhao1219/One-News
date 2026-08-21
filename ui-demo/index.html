@@ -63,8 +63,7 @@
   /* AI 预测段：很浅底色 + 末尾「AI 预测」标注 */
   .ai-pred{background:var(--highlight-bg);border-radius:10px;padding:11px 14px 9px;margin-top:4px;}
   .ai-pred .pred-text{font-size:13px;color:var(--text-body);line-height:1.7;}
-  .ai-pred .pred-footer{text-align:right;margin-top:8px;}
-  .ai-pred .pred-tag{display:inline-block;font-size:10px;color:var(--primary);font-weight:600;letter-spacing:1px;/* 非胶囊：纯文字标注 */}
+  .ai-pred .pred-tag{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;letter-spacing:.5px;/* 与 for-k（落到你这里）保持一致：块内左上 */}
   .for-card{background:var(--highlight-bg);border-radius:12px;padding:13px 15px;margin-bottom:10px;}
   .for-k{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;}
   .for-body{font-size:13px;color:var(--text-body);line-height:1.7;}
@@ -74,6 +73,11 @@
   .deep-head{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:6px;}
   .deep-sub{font-size:12px;color:var(--text-tertiary);margin-bottom:12px;}
   .deep-quick{background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:13px 15px;margin-bottom:12px;}
+  /* 深入了解入口：底部搜索 icon（自绘放大镜），退化的轻入口 */
+  .deep-search{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:20px 0 4px;border-top:1px solid var(--divider);margin-top:22px;cursor:pointer;color:var(--text-tertiary);}
+  .deep-search:hover{color:var(--primary);}
+  .deep-search svg{width:26px;height:26px;}
+  .deep-search .ds-txt{font-size:11px;letter-spacing:.5px;}
   .quick-t{font-size:13.5px;font-weight:600;} .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
   .search-box{display:flex;gap:10px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:11px 13px;margin-bottom:12px;}
   .search-input{flex:1;border:none;outline:none;background:transparent;font-size:13.5px;}
@@ -191,7 +195,7 @@ const PROJECTS = {
           { selector: '.for-card', name: '落到你这里', intent: '浅蓝底卡，按身份（工作/产品/家庭）呈现与画像关联；命中才显示，弱相关隐藏', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'13px/1.7'}], code: 'for-card', guideline: '准则5 轻高亮' },
           { selector: '.fold', name: '了解更多/想试试', intent: '可展开；想试试仅存在可落地案例时显示，无则隐藏（禁硬造）', params: [{k:'卡片',v:'bg-card, 12px 圆角'},{k:'触发',v:'点击展开 + chevron'}], code: 'fold / expand-head', guideline: '准则3 交互' },
           { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '三段式叙事：第一段专业解读 / 第二段大白话（术语括号注中文）；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
-          { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）+ 文字末尾「AI 预测」标注（primary 小标签）；措辞用推测性（可能会/有望），不写成既成事实', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'右侧 pred-footer 对齐, primary 纯文字（非胶囊）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-text / pred-tag', guideline: '准则5 轻高亮 / 准则1 明确来源' },
+          { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）；「AI 预测」标注在块内左上角，与「落到你这里」的 for-k 设计一致；措辞用推测性（可能会/有望）', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pred-tag: 11.5px/700 primary（同 for-k）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-tag', guideline: '准则5 轻高亮 / 风格一致' },
           { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
         ]
       },
@@ -212,7 +216,7 @@ const PROJECTS = {
       deep: {
         name: '深入了解',
         notes: [
-          { selector: '.deep-quick', name: '一键深挖', intent: '用当前事件标题/关键词自动触发 LLM 联网搜索 → 生成详细解读 + 资料列表', params: [{k:'卡片',v:'bg-card, 14px 圆角'},{k:'文案',v:'「围绕「xx」继续深挖」+ 说明'}], code: 'deep-quick', guideline: '准则2 禁系统表情（emoji 需替换）' },
+          { selector: '.deep-search', name: '深入了解入口（搜索 icon）', intent: '退化的轻入口：底部搜索 icon（自绘放大镜）+ 极弱文字；点击进入深入了解页（LLM 联网搜索）；不占主内容区', params: [{k:'icon',v:'自绘放大镜 SVG 26px'},{k:'位置',v:'详情内容底部, 分隔线上'},{k:'文字',v:'「搜索更多相关资料」11px 弱化'}], code: 'deep-search / data-action=deep', guideline: '准则2 自绘图标 / 准则1 简洁' },
           { selector: '.search-box', name: '自定义话题搜索', intent: '用户输入任意话题 → 搜索相关介绍/文档；支持自定义深挖方向', params: [{k:'输入框',v:'14px 圆角, placeholder 引导'},{k:'按钮',v:'primary 实心'}], code: 'search-box / search-btn', guideline: '准则3 大众输入习惯' },
           { selector: '.llm', name: 'AI 综合解读', intent: '联网检索后生成的多段详细介绍；浅蓝底区分于普通搜索结果，置顶', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'12.5px/1.7'}], code: 'llm / llm-body', guideline: '准则5 轻高亮' },
           { selector: '.result', name: '搜索结果卡片', intent: '标题 + 来源 + 摘要 + 链接；点击进入原文', params: [{k:'卡片',v:'bg-card, 14px 圆角'},{k:'链接',v:'text-link'}], code: 'result', guideline: '准则3 可点感' },
@@ -245,13 +249,16 @@ const PAGE_HTML = {
       <div class="prose">
         <p class="prose-para">智谱今日发布 GLM-5.3，聚焦编程与网络安全两大方向。官方评测显示其在 SWE-bench 上领先同类模型，并在漏洞定位任务中表现出"涌现"式的安全能力——这源于其在后训练阶段引入的安全强化数据。</p>
         <p class="prose-para">用大白话说：这个模型写代码更厉害，而且开始"会找漏洞"了——你把一段代码给它，它能指出哪里可能有安全问题，相当于多了一个会读代码的安全工程师。</p>
-        <div class="ai-pred"><div class="pred-text">从 AI 从业者视角看，GLM-5.3 的安全能力外溢可能推动"代码审查 + 安全扫描"类工具的重新洗牌——低成本接入安全能力的门槛大幅降低，未来 3-6 个月或出现一批基于该能力的开源安全工具。</div><div class="pred-footer"><span class="pred-tag">AI 预测</span></div></div>
+        <div class="ai-pred"><span class="pred-tag">AI 预测</span><div class="pred-text">从 AI 从业者视角看，GLM-5.3 的安全能力外溢可能推动"代码审查 + 安全扫描"类工具的重新洗牌——低成本接入安全能力的门槛大幅降低，未来 3-6 个月或出现一批基于该能力的开源安全工具。</div></div>
       </div>
       <span class="block-label">落到你这里</span>
       <div class="for-card"><span class="for-k">工作 · One News</span><div class="for-body">可将 GLM-5.3 接入代码审查管线，评估其安全扫描效率。</div></div>
       <div class="fold"><div class="fold-head"><span>了解更多</span><span>▸</span></div></div>
       <div class="fold"><div class="fold-head"><span>想试试</span><span>▸</span></div></div>
-      <div class="deep"><div class="deep-head">深入了解</div><div class="deep-quick" data-action="deep"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">点击进入深入了解页</div></div></div></div>
+      <div class="deep-search" data-action="deep">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <span class="ds-txt">搜索更多相关资料</span>
+      </div>
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
     </div>
     <div class="fab" data-action="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>`,
@@ -280,7 +287,7 @@ const PAGE_HTML = {
       <div class="prose">
         <p class="prose-para">智谱发布 GLM-5.3，聚焦编程与网络安全能力，官方同时开源部分权重与评测基准。</p>
         <p class="prose-para">简单说：这个模型编程强，还带安全扫描能力。</p>
-        <div class="ai-pred"><div class="pred-text">预测：安全能力外溢将降低代码审计门槛，短期或催生一批安全辅助工具。</div><div class="pred-footer"><span class="pred-tag">AI 预测</span></div></div>
+        <div class="ai-pred"><span class="pred-tag">AI 预测</span><div class="pred-text">预测：安全能力外溢将降低代码审计门槛，短期或催生一批安全辅助工具。</div></div>
       </div>
       <div class="deep">
         <div class="deep-head">深入了解</div><div class="deep-sub">对这条情报感兴趣？一键深挖，或输入你关心的话题。</div>
