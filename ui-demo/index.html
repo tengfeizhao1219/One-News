@@ -83,10 +83,21 @@
   .card-s{font-size:11px;color:var(--text-tertiary);margin-top:5px;} .card-chev{color:var(--text-tertiary);font-size:15px;}
   .revoke{font-size:11.5px;color:#FF3B30;border:1px solid #FF3B30;border-radius:14px;padding:6px 12px;flex-shrink:0;}
   .foot{text-align:center;font-size:11px;color:var(--text-tertiary);padding:18px 0 6px;}
-  /* 标注模式 */
-  [data-note]{cursor:pointer;}
-  body.note-mode [data-note]:hover{outline:2px dashed var(--primary);outline-offset:2px;}
+  /* 标注模式：显性标注线（默认可见，非 hover）+ 编号角标 */
+  [data-note]{cursor:pointer;position:relative;}
+  body.note-mode [data-note]{outline:1.5px dashed var(--primary);outline-offset:2px;}
+  body.note-mode [data-note]::after{
+    content:attr(data-idx);position:absolute;top:-7px;left:-7px;width:17px;height:17px;
+    background:var(--primary);color:#fff;border-radius:50%;font-size:10px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;line-height:1;
+    box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:50;
+  }
   body.note-mode [data-note].lit{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary-subtle);}
+  /* 手机框左滑让位（点击元素后） */
+  .page-wrap.active{transition:transform .28s cubic-bezier(.32,.72,0,1);}
+  .page-wrap.active.pushed{transform:translateX(calc(-1 * min(210px, 20vw)));}
+  .page-wrap.active .phone{transition:box-shadow .28s;}
+  .page-wrap.active.pushed .phone{box-shadow:-6px 20px 50px rgba(0,0,0,.25);}
   /* 侧边抽屉 */
   .drawer{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--bg-card);border-left:1px solid var(--divider);box-shadow:-12px 0 40px rgba(0,0,0,.2);transform:translateX(105%);transition:transform .28s cubic-bezier(.32,.72,0,1);z-index:200;display:flex;flex-direction:column;}
   body.dark .drawer{background:#161618;}
@@ -254,6 +265,24 @@ function renderPages(){
   const holder = document.getElementById('pages');
   holder.innerHTML = Object.keys(PROJECTS[curProject].pages).map(k =>
     `<div class="page-wrap" id="wrap-${k}"><div class="phone">${PAGE_HTML[k]}</div></div>`).join('');
+  // 给标注元素编号（显性标注线的角标序号，与 notes 顺序对应）
+  Object.keys(PROJECTS[curProject].pages).forEach(k => {
+    const notes = PROJECTS[curProject].pages[k].notes || [];
+    const wrap = document.getElementById('wrap-'+k);
+    if(!wrap) return;
+    notes.forEach((n, i) => {
+      let el = null;
+      if(n.selector.includes(':nth-of-type')){
+        const [base, nth] = n.selector.split(':nth-of-type(');
+        const tag = base.replace('.','');
+        const els = wrap.querySelectorAll(tag);
+        el = els[parseInt(nth)-1];
+      } else {
+        el = wrap.querySelector(n.selector);
+      }
+      if(el) el.setAttribute('data-idx', String(i+1));
+    });
+  });
 }
 function showPage(name){
   curPage = name;
@@ -272,6 +301,7 @@ function toggleNote(){
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   document.querySelectorAll('[data-note].lit').forEach(e=>e.classList.remove('lit'));
+  document.querySelectorAll('.page-wrap.active.pushed').forEach(w => w.classList.remove('pushed'));
 }
 document.addEventListener('click', function(e){
   if(!noteMode) return;
@@ -281,9 +311,12 @@ document.addEventListener('click', function(e){
     el.classList.add('lit');
     const notes = (PROJECTS[curProject].pages[curPage] || {}).notes || [];
     const cls = (el.className.baseVal !== undefined ? el.className.baseVal : el.className) || '';
-    let note = notes.find(n => cls.split(' ').some(c => n.selector.replace('.','').split(' ')[0] === c));
-    if(!note && el.parentElement) note = notes.find(n => n.selector.includes('.card'));
+    const idx = el.getAttribute('data-idx');
+    let note = idx ? notes[parseInt(idx)-1] : null;
+    if(!note) note = notes.find(n => cls.split(' ').some(c => n.selector.replace('.','').split(' ')[0] === c));
     if(!note) note = notes[0];
+    // 手机框左滑让位，右侧滑出说明
+    document.querySelectorAll('.page-wrap.active').forEach(w => w.classList.add('pushed'));
     openDrawer(note || { name:'元素', intent:'（暂无标注，请在 PROJECTS 数据中补充）', params:[], code:'—', guideline:'—' });
   } else { closeDrawer(); }
 });
