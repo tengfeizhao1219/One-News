@@ -29,6 +29,22 @@ function formatRelativeTime(dateStr) {
 }
 
 /**
+ * 格式化绝对时间：月/日 时:分（MM/DD HH:mm）
+ * @param {Date|string|number} dateStr 时间
+ * @returns {string} 如 "8/21 14:05"；无效输入返回 ''
+ */
+function formatAbsoluteTime(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return ''
+  const mm = d.getMonth() + 1
+  const dd = d.getDate()
+  const hh = ('0' + d.getHours()).slice(-2)
+  const mi = ('0' + d.getMinutes()).slice(-2)
+  return mm + '/' + dd + ' ' + hh + ':' + mi
+}
+
+/**
  * 浏览记录相对时间（TL-B14 / UI-03）
  * 今天 → HH:mm；昨天 → 昨天；2~7 天 → N 天前；超过 7 天 → ''（不展示）
  * @param {number} ts 毫秒时间戳
@@ -66,6 +82,7 @@ function isBrowseExpired(ts) {
 
 module.exports = {
   formatRelativeTime,
+  formatAbsoluteTime,
   formatBrowseTime,
   isBrowseExpired,
 }

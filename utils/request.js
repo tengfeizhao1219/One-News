@@ -7,7 +7,7 @@
 // 2026-08-03 owner 裁定：全链路真实数据，所有 mock 数据文件已物理删除。
 
 const { PAGE_SIZE, RECOMMEND_PAGE_SIZE, CATEGORY_MAP } = require('./constants')
-const { formatRelativeTime } = require('./util')
+const { formatAbsoluteTime } = require('./util')
 
 /**
  * 获取新闻列表
@@ -129,10 +129,10 @@ function formatNewsItem(item, includeContent = false) {
     aiOpinion: item.aiOpinion || '',
     sourceUrl: item.sourceUrl || item._url || '',
     picUrl: item.picUrl || '',
-    // 2026-08-18 owner 方案1：前端相对时间用落库时刻 createdAt（True freshness）
-    // 旧逻辑用 publishTime 会因源站篡改/补填发布时间导致排序错位与时间误显
-    // publishTime 仍透传详情页作原创发布时间参照
-    time: formatRelativeTime(item.createdAt || item.publishTime || item.time),
+    // 2026-08-21 owner 方案：首页时间改为「新闻源抓取的绝对时间」publishTime，
+    // 格式 MM/DD HH:mm（如 8/21 14:05）。不再用 createdAt 相对时间（True freshness 曾有争议）。
+    // publishTime 缺失时兜底 createdAt；两者都无 → 空（不渲染乱码）
+    time: formatAbsoluteTime(item.publishTime || item.createdAt || item.time),
     publishTime: item.publishTime || item.time,
     createdAt: item.createdAt,
     isRetained: item.isRetained === true

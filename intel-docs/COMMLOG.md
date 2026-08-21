@@ -232,3 +232,11 @@
 - **新逻辑**：全部过质量门的条目都进 AI 加工；最终由 publish 的 `applyCategoryCaps`（注入 news_cache 前软截断，recommend≤15/其余≤8）收敛到展示上限。cache 展示量不变（≤47），但 AI 加工范围扩大。
 - **代码**：stageAi 移除调用（函数定义保留备用）；newsPipeline 已部署。
 - **注意**：此改动后 staging 可容纳超过 47 条 pending（此前会被截断），AI 阶段工作量可能增大；publish 前 applyCategoryCaps 仍保证 cache ≤47。
+## 2026-08-21 · 首页卡片时间改绝对时间（owner 决策）
+
+- **需求**：首页卡片展示时间改为「新闻源抓取的绝对时间」，格式 月/日 时:分。
+- **改动**：
+  ① utils/util.js 新增 `formatAbsoluteTime(dateStr)` → "8/21 14:05"（MM/DD HH:mm，无效输入返回空串）；
+  ② utils/request.js `time` 字段：`formatRelativeTime(item.createdAt || ...)`（相对时间，优先 createdAt 落库时刻）→ `formatAbsoluteTime(item.publishTime || item.createdAt || item.time)`（绝对时间，优先新闻源 publishTime）。
+- **说明**：publishTime 在 newsPipeline Stage 1 已归一化为毫秒时间戳（优先源 pubDate，缺失回退抓取时间），前端按设备本地时区渲染（中国用户=北京时间）。
+- 下游：微信开发者工具重编译后生效（纯前端改动，无需部署云函数）。
