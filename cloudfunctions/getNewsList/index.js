@@ -139,32 +139,100 @@ async function queryCache(where, pageNum, pageSize) {
 
 // ─── 内置精选列表（极端兜底：news_cache + backup 均空时使用）───
 // ADR-003 §3.4：覆盖 5 个分类，每个分类至少 1 条占位内容，确保任何情况下不返回空白页。
+//
+// 占位新闻设计（owner 2026-08-21 决策）：
+//   - summary（列表卡片）：~100 字结构化介绍——
+//       首句提示「当前分类下暂无新资讯」→ 中段介绍初衷/功能/来源/更新机制 → 末句引导「AI 情报」模块。
+//   - content（详情正文）：模块化功能介绍（getBuiltinContent 拼装，末尾动态追加近 1 个月版本更新）。
+//   - contentSource='app_intro'：区别于 AI 解读，详情页不挂「AI 解读」徽标。
+
+// 详情正文：模块化功能介绍（不含版本更新块，由 getBuiltinContent 动态追加）
+const BUILTIN_INTRO_BODY = [
+  '关于一页',
+  '一页是一款极简资讯速览小程序，初衷是帮你在碎片时间里，用最少的滑动看懂当天值得关注的资讯。我们不做信息流轰炸，而是先筛选、再做解读。',
+  '我们提供什么',
+  '· AI 摘要：每条新闻由 AI 提炼核心要点，划几秒就能抓住重点。',
+  '· AI 解读：把事件的背景、影响与争议点讲清楚，帮你理解"这件事意味着什么"。',
+  '· 一页说：对有价值的新闻额外生成独立观点，带你跳出流水账，看到更深入的一页。',
+  '新闻从哪里来',
+  '我们接入官方媒体直连，同时整合权威聚合源，覆盖科技、国际、科学探索、社会等方向。所有内容都经过去重与质量筛选后才展示。',
+  '多久更新一次',
+  '主链路每个整点抓取并加工一次：抓取 → AI 摘要/解读 → 整批替换展示。你没有看到新内容，通常只是这一轮当前分类没有合格的新资讯。',
+  '怎么用',
+  '· 左右滑动：在分类之间切换，浏览不同方向的最新资讯。',
+  '· 右滑进入：在首页右滑可进入独立的「AI 情报」模块。',
+  '· 下拉刷新：在列表顶部下滑，重新读取当前已展示的资讯。',
+  '· 点击卡片：进入详情，查看 AI 摘要、解读与原文。',
+  '关于你的数据',
+  '· 我的收藏、我的浏览历史都保存在你当前设备的本地存储中，与云端资讯缓存相互独立。',
+  '· 请注意：卸载小程序或清除小程序缓存会清空收藏与浏览历史，且无法恢复。重要内容建议随手收藏，并留意本地数据的留存。',
+  '关于「AI 情报」模块',
+  '如果你对 AI 本身更感兴趣，在首页右滑即可进入独立的「AI 情报」模块，获取更聚焦的 AI 动态与解读。',
+].join('\n')
+
+// 近 1 个月版本更新（手工维护；getRecentVersionUpdates 仅取 30 天内条目，过期自动消失）
+const VERSION_UPDATES = [
+  { version: 'v1.0.2', date: '2026-08-16', items: ['接入官方媒体直连，重要事件站内读完', '每条新闻新增 AI 摘要与 AI 解读，"一页说"独立观点上线', '修复同一篇新闻在列表里反复出现'] },
+  { version: 'v1.2.0', date: '2026-08-09', items: ['AI 摘要升级（混元大模型，优先免费额度）', '摘要来源角标（AI/来源/正文/标题）', '品牌 Logo 全站落地', '分享增强（发送给朋友 + 朋友圈）'] },
+  { version: 'v1.2.1', date: '2026-08-10', items: ['修复关于页/设置页空白、首页卡片布局与浅色模式 Logo', '工程化拆分私有配置，解决部署 JSON 冲突'] },
+]
+
+/**
+ * 取近 30 天内的版本更新文本块（无则空串）
+ */
+function getRecentVersionUpdates() {
+  const now = Date.now()
+  const monthAgo = now - 30 * 24 * 3600 * 1000
+  const recent = VERSION_UPDATES.filter((u) => {
+    const t = new Date(u.date + 'T00:00:00').getTime()
+    return Number.isFinite(t) && t >= monthAgo && t <= now
+  })
+  if (!recent.length) return ''
+  const lines = recent.map((u) => `· ${u.version}（${u.date}）：${(u.items || []).join('；')}`)
+  return '近期更新\n' + lines.join('\n')
+}
+
+/**
+ * 拼装占位新闻详情正文（功能介绍 + 近 1 个月版本更新）
+ */
+function getBuiltinContent() {
+  const updates = getRecentVersionUpdates()
+  return updates ? `${BUILTIN_INTRO_BODY}\n\n${updates}` : BUILTIN_INTRO_BODY
+}
+
+// 每分类列表 summary（首句提示当前分类暂无新资讯，中段介绍，末句引导 AI 情报）
 const BUILTIN_NEWS = {
   recommend: [
-    { id: 'builtin-rec-01', title: '欢迎使用 One-News', summary: '这是一款极简资讯速览小程序，每天为你精选值得关注的资讯。', category: 'recommend', categoryName: '推荐', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-rec-01', title: '欢迎使用 One News', summary: '【推荐】分类下暂时没有新的资讯。你可以左右滑动切换其它分类看看。一页是一款极简资讯速览小程序，每天从官方媒体与权威聚合源为你精选科技、国际、科学、社会的动态，并由 AI 生成摘要与解读，每小时更新一次。如果你对 AI 感兴趣，在首页右滑即可进入「AI 情报」模块。', category: 'recommend', categoryName: '推荐', source: 'One-News', publishTime: Date.now() },
   ],
   tech: [
-    { id: 'builtin-tech-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'tech', categoryName: '科技', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-tech-01', title: '欢迎使用 One News', summary: '【科技】分类下暂时没有新的资讯。你可以左右滑动切换其它分类看看。一页是一款极简资讯速览小程序，每天从官方媒体与权威聚合源为你精选科技、国际、科学、社会的动态，并由 AI 生成摘要与解读，每小时更新一次。如果你对 AI 感兴趣，在首页右滑即可进入「AI 情报」模块。', category: 'tech', categoryName: '科技', source: 'One-News', publishTime: Date.now() },
   ],
   science: [
-    { id: 'builtin-science-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'science', categoryName: '科学探索', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-science-01', title: '欢迎使用 One News', summary: '【科学探索】分类下暂时没有新的资讯。你可以左右滑动切换其它分类看看。一页是一款极简资讯速览小程序，每天从官方媒体与权威聚合源为你精选科技、国际、科学、社会的动态，并由 AI 生成摘要与解读，每小时更新一次。如果你对 AI 感兴趣，在首页右滑即可进入「AI 情报」模块。', category: 'science', categoryName: '科学探索', source: 'One-News', publishTime: Date.now() },
   ],
   international: [
-    { id: 'builtin-intl-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'international', categoryName: '国际', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-intl-01', title: '欢迎使用 One News', summary: '【国际】分类下暂时没有新的资讯。你可以左右滑动切换其它分类看看。一页是一款极简资讯速览小程序，每天从官方媒体与权威聚合源为你精选科技、国际、科学、社会的动态，并由 AI 生成摘要与解读，每小时更新一次。如果你对 AI 感兴趣，在首页右滑即可进入「AI 情报」模块。', category: 'international', categoryName: '国际', source: 'One-News', publishTime: Date.now() },
   ],
   life: [
-    { id: 'builtin-life-01', title: '新闻数据加载中', summary: '当前新闻缓存尚未填充，请稍后刷新或联系管理员触发 refreshNews。', category: 'life', categoryName: '社会', source: 'One-News', publishTime: Date.now() },
+    { id: 'builtin-life-01', title: '欢迎使用 One News', summary: '【社会】分类下暂时没有新的资讯。你可以左右滑动切换其它分类看看。一页是一款极简资讯速览小程序，每天从官方媒体与权威聚合源为你精选科技、国际、科学、社会的动态，并由 AI 生成摘要与解读，每小时更新一次。如果你对 AI 感兴趣，在首页右滑即可进入「AI 情报」模块。', category: 'life', categoryName: '社会', source: 'One-News', publishTime: Date.now() },
   ],
 }
 
 /**
  * 从内置精选列表返回分页数据（极端兜底，meta.source='cache-fallback'）
+ * 每条附带 content（详情正文）+ contentSource='app_intro'，供详情页渲染模块化介绍。
  */
 function getBuiltinNewsList(category, pageNum, pageSize) {
   const cat = (category === 'all' || !BUILTIN_NEWS[category]) ? 'recommend' : category
   const items = BUILTIN_NEWS[cat] || BUILTIN_NEWS.recommend
   const start = (pageNum - 1) * pageSize
-  const list = items.slice(start, start + pageSize)
+  const builtinContent = getBuiltinContent()
+  const list = items.slice(start, start + pageSize).map((it) => ({
+    ...it,
+    content: builtinContent,
+    contentSource: 'app_intro',
+  }))
   return {
     list,
     total: items.length,

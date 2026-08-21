@@ -118,6 +118,11 @@
             <text class="source-badge-desc">内容整理自官方源</text>
             <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">出处 ↗</text>
           </view>
+          <!-- 占位欢迎新闻：关于本小程序介绍（contentSource==='app_intro'） -->
+          <view class="source-attribution-badge" wx:if="{{news.contentSource === 'app_intro'}}">
+            <text class="source-chip">关于一页</text>
+            <text class="source-badge-desc">本小程序的功能介绍</text>
+          </view>
           <block wx:for="{{paragraphs}}" wx:key="*this">
             <view class="text-p">{{item}}</view>
           </block>
@@ -169,7 +174,7 @@
   <!-- 底部应用来源归属：固定常驻视口底部，内容与长短/是否滚动无关（11:45 新增，15:0x 改为 position:fixed） -->
   <view class="detail-app-source">
     <view class="app-source-line"></view>
-    <text class="app-source-text">{{news.contentSource === 'official_rss' ? '内容整理自官方源 · 一页 One News' : '内容由 AI 整理生成 · 一页 One News'}}</text>
+    <text class="app-source-text">{{news.contentSource === 'official_rss' ? '内容整理自官方源 · 一页 One News' : (news.contentSource === 'app_intro' ? '一页 One News · 关于本小程序' : '内容由 AI 整理生成 · 一页 One News')}}</text>
   </view>
 
 

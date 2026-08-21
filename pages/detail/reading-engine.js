@@ -36,7 +36,9 @@ var ALLOWED_RENDER_CONTENT_SOURCE = 'ai_interpretation'
 // v1.2 路线1 + 2026-08-12 修订：官方源（official_rss）落库 content 可能是 AI 解读正文
 // （A.4/A.5：解读是加工产物非原文复述，可展示），应渲染 content；仅当 content 为空（解读失败）
 // 时降级 summary。R1（FS）已保证 official_rss 的 content 要么是 AI 解读正文要么为空，不会是原文全文。
-var ALLOWED_RENDER_CONTENT_SOURCES = ['ai_interpretation', 'official_rss']
+// v1.2.1 builtin（owner 2026-08-21）：占位欢迎新闻 contentSource='app_intro'，
+// 其 content 是「关于一页」功能介绍正文（非 AI 生成），同样允许渲染。
+var ALLOWED_RENDER_CONTENT_SOURCES = ['ai_interpretation', 'official_rss', 'app_intro']
 var R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
 
 /**
@@ -188,6 +190,7 @@ ReadingEngine.prototype._initFromPreloaded = function (preloadedList, preloadedC
       id: nid,
       title: item.title || '',
       summary: item.summary || '',
+      content: item.content || '',
       category: catId,
       categoryName: item.categoryName || '',
       source: item.source || '',
@@ -284,6 +287,7 @@ ReadingEngine.prototype._buildMergedList = function (results) {
         id: nid,
         title: item.title || '',
         summary: item.summary || '',
+        content: item.content || '',
         category: catId,
         categoryName: item.categoryName || '',
         source: item.source || '',
