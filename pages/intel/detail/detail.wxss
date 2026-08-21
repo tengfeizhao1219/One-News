@@ -333,7 +333,8 @@
   border: 1rpx solid var(--divider);
   border-radius: 28rpx;
   padding: 26rpx 30rpx;
-  margin-bottom: 20rpx;
+  /* 横线距上方「围绕…继续深挖」高度 1.4 倍：20 → 28rpx（owner 2026-08-21） */
+  margin-bottom: 28rpx;
 }
 .deep-quick--hover { background-color: var(--bg-subtle); }
 .quick-t {
@@ -415,14 +416,7 @@
 }
 /* 默认跟随主题色（search.svg currentColor / search-dark.svg 白） */
 .search-btn .nav-light { color: var(--text-secondary); }
-/* 点击搜索：放大镜变系统蓝（用 currentColor 的亮色版继承蓝，暗色版隐藏） */
-.search-btn.is-loading .nav-light {
-  display: block !important;
-  color: var(--primary);
-}
-.search-btn.is-loading .nav-dark {
-  display: none !important;
-}
+/* 搜索中：放大镜已切换为系统蓝图标（search-blue.svg / search-blue-dark.svg），无需 css 变色 */
 /* 搜索中动画：放大镜轻微摆动 + 缩放（像在"扫动查找"） */
 @keyframes searchSweep {
   0%, 100% { transform: rotate(0deg) scale(1); }

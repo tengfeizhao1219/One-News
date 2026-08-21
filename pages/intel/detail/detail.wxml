@@ -176,8 +176,15 @@
           </view>
         </view>
         <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">
-          <image class="search-btn-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
-          <image class="search-btn-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
+          <!-- 默认：灰色放大镜（浅色 currentColor 黑 / 深色白）；搜索中：系统蓝放大镜 -->
+          <block wx:if="{{searchLoading}}">
+            <image class="search-btn-icon nav-light" src="/assets/icons/search-blue.svg" mode="aspectFit"></image>
+            <image class="search-btn-icon nav-dark" src="/assets/icons/search-blue-dark.svg" mode="aspectFit"></image>
+          </block>
+          <block wx:else>
+            <image class="search-btn-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
+            <image class="search-btn-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
+          </block>
         </view>
       </view>
     </view>
