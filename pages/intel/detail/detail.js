@@ -218,10 +218,13 @@ function parseSceneMapping(txt) {
         // 2026-08-20 v5：优先用后端结构化结果（intelProcess 已解析 whatHappenedBlocks 存 sop）；
         // 旧数据（后端未解析）才走本地兜底解析
         if (Array.isArray(d.whatHappenedBlocks) && d.whatHappenedBlocks.length) {
-          const blocks = d.whatHappenedBlocks.map(b => ({
-            type: (b.type === 'plain' || b.type === 'predict' || b.type === 'def') ? b.type : 'text',
-            text: String(b.text || '').replace(/\*\*/g, '').trim(),
-          })).filter(b => b.text)
+          // 2026-08-21：大白话（plain）不再展示——首页卡片已有 15-50 字摘要，详情页大白话冗余
+          const blocks = d.whatHappenedBlocks
+            .filter(b => b.type !== 'plain')
+            .map(b => ({
+              type: (b.type === 'predict' || b.type === 'def') ? b.type : 'text',
+              text: String(b.text || '').replace(/\*\*/g, '').trim(),
+            })).filter(b => b.text)
           // 2026-08-21 兜底修复 v2：仅当「AI 预测」误标在**第一段**时降级为正文
           //（LLM 曾把标记放正文开头 → 整段正文被误判）。正常结构「正文+预测(+定义)」中
           // 预测在后面，必须保留预测样式（之前「非最后一段即降级」误伤正常数据）。
@@ -263,6 +266,8 @@ function parseSceneMapping(txt) {
             if (/大白话|用大白话说/.test(label)) type = 'plain'
             else if (/AI\s*预测|预测/.test(label)) type = 'predict'
             else if (/定义/.test(label)) type = 'def'
+            // 2026-08-21：大白话不再展示（首页摘要已覆盖），过滤 plain 块
+            if (type === 'plain') continue
             blocks.push({ type, text: content })
           }
           idx += 2

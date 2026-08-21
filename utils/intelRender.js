@@ -34,7 +34,7 @@ function toCards(focusItems) {
   return (focusItems || []).map((it) => ({
     id: it.id || it.itemId || '',
     title: it.title || '',
-    desc: it.definition || it.sceneMapping || '',   // 卡片副文本：一句话定义兜底
+    desc: it.summary || it.definition || it.sceneMapping || '',   // 卡片副文本：15-50字摘要（dispatcher 预计算），兜底一句话定义
     focusFor: it.sceneMapping || '',                // 与用户画像的关联介绍（sceneMapping 原文，命中画像时浅蓝区展示）
     src: it.sourceName || '',
     time: it.publishedAt ? formatLabel(it.publishedAt) : '',

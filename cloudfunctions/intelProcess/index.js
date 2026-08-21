@@ -527,6 +527,8 @@ function structureWhatHappened(raw) {
       if (/大白话|用大白话说/.test(label)) type = 'plain'
       else if (/AI\s*预测|预测/.test(label)) type = 'predict'
       else if (/定义/.test(label)) type = 'def'
+      // 2026-08-21：大白话不再进 blocks（首页卡片已有 15-50 字摘要，详情页大白话冗余）
+      if (type === 'plain') continue
       blocks.push({ type, text: content })
     }
   }

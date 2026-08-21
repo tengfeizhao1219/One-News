@@ -292,6 +292,39 @@ function rankItems(items) {
 }
 
 /** 将单条 ProcessedItem 渲染为 §6.3 固定模板片段 */
+/** 2026-08-21：卡片摘要——15~50 字，按正文长度自适应
+ * 取 whatHappened 正文首段（去 AI 预测标记），按目标长度截取：
+ *   正文 < 60 字 → 全取（约 15-40 字）
+ *   正文 < 200 字 → 截 40 字
+ *   否则 → 截 50 字
+ * 优先用 definition（一句话定义，若合理长度），否则从正文提取。
+ * 返回摘要字符串（去尾部标点/截断省略号），供首页卡片 desc 使用。
+ */
+function buildSummary(d) {
+  const s = (d && d.sop) || {}
+  const def = String(s.definition || '').trim().replace(/^作者[｜|].*?\s+/, '')
+  // definition 若是干净的一句话（不含换行/来源痕迹）且长度合适 → 直接用
+  if (def && def.length >= 10 && def.length <= 60 && !def.includes('\n') && !/^[a-z0-9_\-:]+$/i.test(def)) {
+    return def
+  }
+  const wh = String(s.whatHappened || '').trim()
+    .replace(/^\s*（?AI\s*预测）?[:：]?\s*/i, '')   // 去开头 AI 预测标记
+    .replace(/\*\*/g, '')
+  const firstPara = wh.split(/\n+/).map(x => x.trim()).filter(Boolean)[0] || ''
+  if (!firstPara) return def.slice(0, 50) || ''
+  const target = firstPara.length < 60 ? 40 : (firstPara.length < 200 ? 40 : 50)
+  let sum = firstPara.slice(0, target)
+  // 断句收尾：截断处若停在句号/逗号前，补完整
+  const lastPunc = Math.max(sum.lastIndexOf('。'), sum.lastIndexOf('，'), sum.lastIndexOf('；'), sum.lastIndexOf('：'))
+  if (lastPunc >= target - 10) sum = sum.slice(0, lastPunc + 1)
+  else {
+    const space = Math.max(sum.lastIndexOf(' '), sum.lastIndexOf('的'), sum.lastIndexOf('、'))
+    if (space > target * 0.5) sum = sum.slice(0, space)
+  }
+  if (firstPara.length > sum.length) sum += '…'
+  return sum.trim()
+}
+
 function renderItemCard(d) {
   const s = (d && d.sop) || {}
   const src = (s.source) || {}
@@ -356,6 +389,7 @@ function renderBrief(todayItems, weekTryable) {
     sceneHits: d.sceneHits || 0,
     contract: Boolean(d.contract),
     card: renderItemCard(d), // §6.3 固定模板已渲染片段
+    summary: buildSummary(d), // 2026-08-21：首页卡片摘要（15-50 字，按正文长度自适应）
     degraded: !(d.sop && d.sop.definition && String(d.sop.definition).trim()), // 定义缺失标记，供剔除/展示降级(2026-08-19 治理)
     // 2026-08-21：详情数据随 brief 自包含（sop 全量 + references + tryable），
     //   intelGetDetail 可从 intel_current items 按 itemId 查——staged 逐批清理不再影响详情页
