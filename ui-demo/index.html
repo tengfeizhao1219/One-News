@@ -93,26 +93,32 @@
     box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:50;
   }
   body.note-mode [data-note].lit{outline:2px solid var(--primary);outline-offset:2px;background:var(--primary-subtle);}
-  /* 手机框 + 说明卡 并排；点击元素后手机缓慢左移、说明卡从手机右侧平滑滑出 */
-  .PHONE_W:root{--pw:390px;--pw-gap:28px;}
-  .page-wrap.active{transition:transform .55s cubic-bezier(.22,.61,.36,1);gap:0;}
-  .page-wrap.active.pushed{transform:translateX(calc(-1 * (390px + 28px + 24px)));}
-  .page-wrap.active .phone{transition:box-shadow .55s;flex-shrink:0;}
-  .page-wrap.active.pushed .phone{box-shadow:-6px 20px 50px rgba(0,0,0,.25);}
-  /* 说明卡：与手机同尺寸（390px）的手机形态，默认叠在手机右侧后，展开时向右滑出并留出间距 */
+  /* 手机 + 说明卡：容器宽度动画实现整体居中（收起=只手机居中，展开=手机+间距+卡整体居中） */
+  .demo-row{display:flex;gap:28px;align-items:flex-start;width:390px;overflow:hidden;transition:width .55s cubic-bezier(.22,.61,.36,1);}
+  .demo-row.open{width:808px;} /* 390 + 28 + 390 */
+  .page-wrap.active .phone{flex-shrink:0;box-shadow:0 24px 60px rgba(0,0,0,.28);}
+  .page-wrap.active .phone.dim{box-shadow:-6px 20px 50px rgba(0,0,0,.25);}
+  /* 说明卡：与手机完全一致的形态（同边框 8px / 圆角 44px / 状态栏 / 尺寸 390x844） */
   .note-card{
-    width:390px;min-height:844px;border-radius:26px;border:6px solid #2c2c2e;background:var(--bg-card);
-    box-shadow:0 20px 50px rgba(0,0,0,.25);overflow:hidden;flex-shrink:0;
-    margin-left:calc(-1 * (390px + 28px));opacity:0;pointer-events:none;
-    transform:scale(.98);transform-origin:left center;
-    transition:margin-left .55s cubic-bezier(.22,.61,.36,1),opacity .45s ease,transform .55s cubic-bezier(.22,.61,.36,1);
-    display:flex;flex-direction:column;align-self:stretch;
+    width:390px;min-height:844px;border-radius:44px;border:8px solid #2c2c2e;background:var(--bg-page);
+    box-shadow:0 24px 60px rgba(0,0,0,.28);overflow:hidden;flex-shrink:0;
+    display:flex;flex-direction:column;opacity:0;transition:opacity .45s ease;
   }
-  .note-card.open{
-    margin-left:28px;opacity:1;pointer-events:auto;transform:scale(1);
-  }
+  .demo-row.open .note-card{opacity:1;}
+  .nc-head{padding:14px 22px 10px;flex-shrink:0;}
+  .nc-name{font-size:17px;font-weight:800;color:var(--text-primary);}
+  .nc-sub{font-size:12px;color:var(--text-tertiary);margin-top:3px;}
+  .nc-body{flex:1;overflow-y:auto;padding:0 22px 22px;}
+  .nc-sec{font-size:10.5px;font-weight:700;color:var(--text-tertiary);letter-spacing:.4px;margin:13px 0 5px;text-transform:uppercase;}
+  .nc-intent{font-size:13px;line-height:1.65;color:var(--text-body);}
+  .nc-param{background:var(--bg-subtle);border-radius:8px;padding:7px 10px;margin-bottom:5px;font-size:12px;display:flex;justify-content:space-between;gap:10px;}
+  .nc-param .k{color:var(--text-secondary);flex-shrink:0;}
+  .nc-param .v{color:var(--text-primary);text-align:right;font-family:ui-monospace,Menlo,monospace;font-size:11px;word-break:break-all;}
+  .nc-code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--text-link);background:var(--bg-subtle);border-radius:6px;padding:7px 9px;word-break:break-all;line-height:1.5;}
+  .nc-guide{font-size:11.5px;color:var(--text-secondary);padding-left:10px;border-left:2px solid var(--primary);margin-top:4px;}
+  .nc-copy{width:100%;margin-top:12px;background:var(--bg-subtle);border:1px solid var(--divider);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--text-primary);cursor:pointer;text-align:left;}
+  .nc-json{display:none;}
   body.dark .note-card{background:#161618;}
-  .note-card .nc-status{height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;color:var(--text-tertiary);font-size:12px;flex-shrink:0;border-bottom:1px solid var(--divider);}
   .note-card .nc-head{padding:14px 16px 10px;flex-shrink:0;}
   .note-card .nc-name{font-size:15px;font-weight:800;}
   .note-card .nc-body{flex:1;overflow-y:auto;padding:0 16px 16px;}
@@ -159,6 +165,8 @@ const PROJECTS = {
           { selector: '.card-desc', name: '次级卡摘要', intent: '单行摘要；来源/时间不在首页（挪详情页，减少噪音）', params: [{k:'字号',v:'12.5px text-tertiary'},{k:'行距',v:'1.5'}], code: 'card-desc', guideline: '准则1 简洁' },
           { selector: '.try', name: '可试用清单项', intent: '细线勾选圆 + 标题 + 最小行动；完成态划线弱化；仅此区块保留标题避免重复', params: [{k:'勾选',v:'19px 圆, 1.5px divider, 选中 primary'},{k:'卡片',v:'14px 圆角'}], code: 'try / try-check', guideline: '准则3 交互可点感' },
           { selector: '.nav', name: '顶部导航', intent: 'Home 图标（复用 One News home.svg/home-dark.svg）+ 无标题；与右上角原生胶囊垂直居中对齐（menu-top/menu-height）', params: [{k:'图标',v:'44px 容器, 24px 图标, 亮黑/暗白'},{k:'对齐',v:'top=menu-top, height=menu-height, flex center'}], code: 'nav-home / .page--dark .nav-light', guideline: '准则4 原生胶囊' },
+          { selector: '.sect-head', name: '区块标题', intent: '仅「本周可试用清单」保留区块标题（首页卡片区无标题避免重复）；主次分隔用留白而非标题堆叠', params: [{k:'字号',v:'13px/700 text-secondary'},{k:'间距',v:'12px 下边距'}], code: 'sect-head', guideline: '准则1 不重复设计' },
+          { selector: '.foot', name: '页脚', intent: '统一页脚「由 AI 情报官生成 · 仅供参考」；弱化、居中小字', params: [{k:'字号',v:'11px text-tertiary'},{k:'对齐',v:'居中'}], code: 'foot-note', guideline: '准则1 简洁' },
         ]
       },
       detail: {
@@ -169,11 +177,14 @@ const PROJECTS = {
           { selector: '.block-label', name: '区块标题', intent: '系统蓝；SOP 五步呈现顺序：发生了什么→落到你这里→了解更多/想试试', params: [{k:'字号',v:'13px/700 primary'},{k:'间距',v:'22px 上边距'}], code: 'block-label', guideline: '准则5 风格一致' },
           { selector: '.for-card', name: '落到你这里', intent: '浅蓝底卡，按身份（工作/产品/家庭）呈现与画像关联；命中才显示，弱相关隐藏', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'13px/1.7'}], code: 'for-card', guideline: '准则5 轻高亮' },
           { selector: '.fold', name: '了解更多/想试试', intent: '可展开；想试试仅存在可落地案例时显示，无则隐藏（禁硬造）', params: [{k:'卡片',v:'bg-card, 12px 圆角'},{k:'触发',v:'点击展开 + chevron'}], code: 'fold / expand-head', guideline: '准则3 交互' },
+          { selector: '.prose', name: '正文（发生了什么）', intent: '三段式叙事：专业解读 / 大白话 / AI 预测，段间空行；语气贴合内容', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'空行分隔（前端按段渲染）'}], code: 'prose / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
+          { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
         ]
       },
       mine: {
         name: '我的页',
         notes: [
+          { selector: '.sect-head', name: '区块标题', intent: '我的页仅两个区块：身份画像 + 合规（信息源/推送暂不支持已移除，不占位）', params: [{k:'字号',v:'13px/700 text-secondary'}], code: 'sect-head', guideline: '准则1 不重复设计' },
           { selector: '.card-action', name: '身份画像（可编辑）', intent: '已初始化显示摘要（identitiesSummary），点击进入 onboard 自动回填；信息源/推送暂不支持已移除', params: [{k:'卡片',v:'16px 圆角, flex 两端'},{k:'chevron',v:'提示可点'}], code: 'card-action / prefillExistingProfile', guideline: '准则3 可点感' },
           { selector: '.revoke', name: '撤销授权', intent: '合规：授权状态 + 撤销按钮；数据仅用于相关性匹配', params: [{k:'按钮',v:'#FF3B30 边框文字, 14px 圆角'},{k:'禁用',v:'disabled 灰'}], code: 'revoke-btn / consentSigned', guideline: '准则5 一致性' },
         ]
@@ -191,6 +202,7 @@ const PROJECTS = {
           { selector: '.search-box', name: '自定义话题搜索', intent: '用户输入任意话题 → 搜索相关介绍/文档；支持自定义深挖方向', params: [{k:'输入框',v:'14px 圆角, placeholder 引导'},{k:'按钮',v:'primary 实心'}], code: 'search-box / search-btn', guideline: '准则3 大众输入习惯' },
           { selector: '.llm', name: 'AI 综合解读', intent: '联网检索后生成的多段详细介绍；浅蓝底区分于普通搜索结果，置顶', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'12.5px/1.7'}], code: 'llm / llm-body', guideline: '准则5 轻高亮' },
           { selector: '.result', name: '搜索结果卡片', intent: '标题 + 来源 + 摘要 + 链接；点击进入原文', params: [{k:'卡片',v:'bg-card, 14px 圆角'},{k:'链接',v:'text-link'}], code: 'result', guideline: '准则3 可点感' },
+          { selector: '.deep-head', name: '深入了解区块标题', intent: '与详情区块标题一致（text-secondary），引导延伸阅读；副标题一句话说明用途', params: [{k:'字号',v:'13px/700'},{k:'分隔',v:'上边框 divider'}], code: 'deep-head / deep-sub', guideline: '准则5 一致性' },
         ]
       },
     }
@@ -269,8 +281,14 @@ function renderPages(){
   const holder = document.getElementById('pages');
   holder.innerHTML = Object.keys(PROJECTS[curProject].pages).map(k =>
     `<div class="page-wrap" id="wrap-${k}">
-       <div class="phone">${PAGE_HTML[k]}</div>
-       <div class="note-card" id="noteCard"><div class="nc-status"><span>设计说明</span><span>AI 情报官 · UI</span></div><div class="nc-head"><div class="nc-name" id="ncName"></div></div><div class="nc-body" id="ncBody"></div></div>
+       <div class="demo-row" id="row-${k}">
+         <div class="phone">${PAGE_HTML[k]}</div>
+         <div class="note-card">
+           <div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
+           <div class="nc-head"><div class="nc-name" id="ncName"></div><div class="nc-sub">设计说明 · AI 情报官 UI</div></div>
+           <div class="nc-body" id="ncBody"></div>
+         </div>
+       </div>
      </div>`).join('');
   // 给标注元素编号（显性标注线的角标序号，与 notes 顺序对应）
   Object.keys(PROJECTS[curProject].pages).forEach(k => {
@@ -287,7 +305,7 @@ function renderPages(){
       } else {
         el = wrap.querySelector(n.selector);
       }
-      if(el) el.setAttribute('data-idx', String(i+1));
+      if(el){ el.setAttribute('data-idx', String(i+1)); el.setAttribute('data-note',''); }
     });
   });
 }
@@ -306,9 +324,9 @@ function toggleNote(){
   document.getElementById('hintText').textContent = noteMode ? '标注模式：点击元素 → 侧边滑出详细说明' : '标注模式：点击元素查看设计意图与代码位置';
 }
 function closeDrawer(){
-  document.querySelectorAll('.note-card.open').forEach(c=>c.classList.remove('open'));
+  document.querySelectorAll('.demo-row.open').forEach(r=>r.classList.remove('open'));
+  document.querySelectorAll('.phone.dim').forEach(p=>p.classList.remove('dim'));
   document.querySelectorAll('[data-note].lit').forEach(e=>e.classList.remove('lit'));
-  document.querySelectorAll('.page-wrap.active.pushed').forEach(w => w.classList.remove('pushed'));
 }
 document.addEventListener('click', function(e){
   if(!noteMode) return;
@@ -322,17 +340,17 @@ document.addEventListener('click', function(e){
     let note = idx ? notes[parseInt(idx)-1] : null;
     if(!note) note = notes.find(n => cls.split(' ').some(c => n.selector.replace('.','').split(' ')[0] === c));
     if(!note) note = notes[0];
-    // 手机框左滑让位，右侧滑出说明
-    document.querySelectorAll('.page-wrap.active').forEach(w => w.classList.add('pushed'));
+    // 容器宽度展开：手机+说明卡整体居中，说明卡从手机右侧滑出
+    document.querySelectorAll('.page-wrap.active .demo-row').forEach(r => r.classList.add('open'));
+    document.querySelectorAll('.page-wrap.active .phone').forEach(p => p.classList.add('dim'));
     openDrawer(note || { name:'元素', intent:'（暂无标注，请在 PROJECTS 数据中补充）', params:[], code:'—', guideline:'—' });
   } else { closeDrawer(); }
 });
 function openDrawer(note){
   const wrap = document.querySelector('.page-wrap.active');
   if(!wrap) return;
-  const card = wrap.querySelector('.note-card');
-  const name = wrap.querySelector('.nc-name');
   const body = wrap.querySelector('.nc-body');
+  const name = wrap.querySelector('.nc-name');
   name.textContent = note.name || '元素说明';
   body.innerHTML = `
     <div class="nc-sec">设计意图</div><div class="nc-intent">${note.intent}</div>
