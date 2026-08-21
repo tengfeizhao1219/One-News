@@ -263,3 +263,14 @@
   ③ pages/detail/reading-engine.js：base.content 用 cur.content（列表全文），aiOpinion 一并带入。
 - **验证**：news_cache content 已是完整解读正文（如候鸟 399 字 vs summary 145 字）；resolveContentText 对 ai_interpretation 返回 content。
 - 下游：前端需重编译；后台 getNewsDetail 刷新仍保留（补 references/合规字段增量）。
+## 2026-08-22 · One News 推荐分类空 + 推送"失败"排查修复
+
+- **现象**：① 推荐分类经常 0 条；② 22:40 后真机刷新无新数据。
+- **排查**：
+  ① news_cache 22:40 批次 recommend=0，来源仅 IT之家/中华/新华——推荐源被自动暂停（status=disabled + errorStreak 3~5），`listDueFeeds` 直接跳过，永不抓取；
+  ② 定时器 `0 0 6-22`（北京 06:00-22:00 每小时）——23:00/00:00 不触发属设计（owner 拍的夜间停跑），非故障；
+  ③ 36氪 RSS 全端点被 JS challenge 反爬（返回 17KB HTML 壳），本地 curl 各 UA 均无法绕过 → errorStreak=5 → disabled，**不可恢复**；
+  ④ 虎扑 RSS 依赖第三方代理 decemberpei.cyou，间歇可用（恢复后抓到 9 条）。
+- **修复**：数据库恢复 6 源 active + errorStreak=0（中新网 finance/edu/sports/culture/society + 虎扑）；手动触发 newsFetcher（42 源）→ 中新网全部正常（finance 30/edu 14/sports 30/culture 30/society 29）；推进 newsPipeline → publish 完成。
+- **验证**：news_cache 47 条满配（recommend 15 / 其余各 8），第一条「美国政府紧急下场救市难解美债危局」，来源多样（中新网 15/IT之家 16/新华 4 等），staging 清空 idle。
+- **遗留**：36氪 建议从源列表移除或标记永久停用；虎扑第三方代理不稳定需留意；"errorStreak 达上限即永久停用"的机制可考虑改为定时自动重试。

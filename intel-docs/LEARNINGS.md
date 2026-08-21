@@ -216,3 +216,9 @@
 - **自我保护**：scripts/fix-intel-search-dep.js——校验 InstallDependency/CodeSize，异常自动重部署（installDependency=TRUE）。实测：检测 FALSE → 自动修复 → 7.0MB 正常。
 - **提醒**：AI情报官_协作机制.md 新增"部署 intelSearch 必须带依赖安装"章节（含标准部署流程 + 排查清单）。
 - **教训**：任何部署类操作必须校验依赖安装状态，不能只信部署 API 返回成功。
+
+## 2026-08-22 One News 推荐空根因（自动暂停 + 夜间停跑叠加）
+- **status=disabled 是"自动暂停"而非"不可用"**：newsFetcher 连续 3 轮入库 0 → errorStreak≥3 → status=disabled → listDueFeeds 永久跳过。**恢复 = 直接改库**（writeNoSqlDatabaseContent $set status=active,errorStreak=0），无需改代码。
+- **排查推荐空先查 feed_meta**：`status/errorStreak/lastFetchTime/lastCount` 一眼定位——lastFetchTime=2020-01-01 占位 + streak≥3 = 自动暂停；本地 curl 200 但云端 0 条 = 过滤/解析问题（本次是暂停）。
+- **36氪 RSS 已死**：`36kr.com/feed*` 全返回 17KB HTML（JS challenge 反爬），任何 UA 都绕不过；官方 RSS 中心（ad.36kr.com/rss-center）列的地址全部失效。判断 RSS 源可用性别信官方页面，直接 curl 看 Content-Type。
+- **夜间停跑设计 vs 用户感知**：`0 0 6-22` 停 23:00-05:00 是 owner 拍的省资源设计，但用户会以为"推送失败"。排查推送问题时先核对定时器窗口再下结论。
