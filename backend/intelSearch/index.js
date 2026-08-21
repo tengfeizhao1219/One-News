@@ -159,7 +159,7 @@ function zhipuWebSearch(query) {
             if (sources.length >= 8) break
           }
           // 检测智谱"未真正联网"的兜底回答（web_search 偶发不触发搜索）
-          const noSearch = /无法.*(?:实时)?(?:网络)?搜索|不能.*搜索|知识(?:截止|更新).*(?:2023|2024)|无法访问互联网/i.test(answer)
+          const noSearch = /无法.*(?:实时)?(?:网络)?搜索|不能.*搜索|知识(?:截止|更新).*(?:2023|2024)|无法访问互联网|太过宽泛|太宽泛|没有具体指向|不够具体/i.test(answer)
           resolve(noSearch ? { ok: false, reason: 'zhipu-no-search' } : { ok: true, answer, sources })
         } catch (e) {
           resolve({ ok: false, reason: 'parse-fail:' + e.message })
