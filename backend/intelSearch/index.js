@@ -315,7 +315,9 @@ async function summarize(query, ctx, search) {
 - 客观、基于搜索结果与当前新闻，不编造事实
 - 组织清晰：先直接回答核心，再补充关键细节/影响
 - 200-450 字
-- 结尾另起一行输出「参考来源：」并列出引用序号`
+- 结尾另起一行输出「参考来源：」并列出引用序号
+- 输出纯文本：禁止任何 markdown 标记（禁止 **、*、#、-、\`、[链接](url)），
+  段落间用空行分隔，小标题直接写文字不加符号`
   const user = `当前新闻：${ctx.title}
 新闻摘要：${ctx.what}
 联网搜索结果：
@@ -324,7 +326,20 @@ ${searchText || '（无结构化结果，基于回答内容）'}
 
 请基于以上信息回答用户话题「${query}」。`
   const r = await deepseekChat(system, user, { maxTokens: 900, temperature: 0.4 })
-  return r ? { text: r.text, engine: r.engine } : { text: null, engine: '' }
+  if (!r || !r.text) return r ? { text: null, engine: r.engine } : { text: null, engine: '' }
+  // 清洗兜底：即使模型未遵守 prompt，也剥离 markdown 标记，前端零二次处理
+  const text = String(r.text)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/^[-*]\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+  return { text, engine: r.engine }
 }
 
 // ─── 主入口 ─────────────────────────────
