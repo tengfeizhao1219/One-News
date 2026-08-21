@@ -76,6 +76,8 @@ Page({
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关 / 搜索失败 hint（当次提示，不累积）
     digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries:[{time, sections, sources}]}]
+    digLatestSources: [],       // 底部来源折叠块：最新一次深挖的来源（默认折叠）
+    digLatestSourcesOpen: false,
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -359,9 +361,16 @@ function parseSceneMapping(txt) {
     }, 60)
   },
 
-  /** 面板内部滚动：记录 scrollTop（下滑到顶才允许收起） */
+  /** 面板内部滚动：记录 scrollTop；滚到顶部时深挖历史自动折叠（需求1） */
   onSearchScroll(e) {
-    this._panelScrollTop = (e.detail && e.detail.scrollTop) || 0
+    const st = (e.detail && e.detail.scrollTop) || 0
+    this._panelScrollTop = st
+    if (st <= 0 && this.data.searchOpen && this.data.digGroups.some(g => g.open)) {
+      const groups = this._loadDig()
+      groups.forEach(g => { g.open = false })
+      this._saveDig(groups)
+      this.setData({ digGroups: groups })
+    }
   },
   /** 面板触摸：仅当已滚到顶部时继续下滑才收起（避免浏览结果时误收起） */
   onPanelTouchStart(e) {
@@ -509,8 +518,12 @@ function parseSceneMapping(txt) {
   _saveDig(groups) {
     try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
   },
-  /** 新深挖结果入历史：同话题合并 entries（最新在前），并持久化 */
+  /** 新深挖结果入历史：同话题合并 entries（最新在前），并持久化；同步底部来源块 */
   _pushDigEntry(query, sections, sources) {
+    this.setData({
+      digLatestSources: Array.isArray(sources) ? sources : [],
+      digLatestSourcesOpen: false,
+    })
     const now = new Date()
     const time = (now.getHours() < 10 ? '0' + now.getHours() : now.getHours()) + ':' +
       (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes())
@@ -524,35 +537,31 @@ function parseSceneMapping(txt) {
     this._saveDig(groups)
     this.setData({ digGroups: groups })
   },
-  /** 收起搜索面板：内容落回，滚动到深挖历史区（历史在正文流可见） */
+  /** 收起搜索面板：内容落回，历史折叠（退出即折叠），滚动到深挖历史区 */
   _collapseSearch() {
-    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false })
+    const groups = this._loadDig()
+    groups.forEach(g => { g.open = false })
+    this._saveDig(groups)
+    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, digGroups: groups })
     this.setData({ searchIntoView: 'dig-history' })
     setTimeout(() => this.setData({ searchIntoView: '' }), 600)
   },
-  /** 展开/收起某个话题的深挖历史 */
+  /** 展开/收起某个话题的深挖历史：互斥——点开一个，其它自动折叠 */
   onToggleDigGroup(e) {
     const gi = Number(e.currentTarget.dataset.gi)
     const groups = this._loadDig()
     if (!groups[gi]) return
-    groups[gi].open = !groups[gi].open
+    const willOpen = !groups[gi].open
+    groups.forEach((g, i) => { g.open = (i === gi) && willOpen })
     this._saveDig(groups)
     this.setData({ digGroups: groups })
   },
 
-  /** 折叠/展开参考来源（按 digGroups 分组/条目展开独立态） */
-  onToggleEntrySources(e) {
-    const ei = Number(e.currentTarget.dataset.ei)
-    const groups = this._loadDig()
-    if (!groups.length || !groups[0].entries[ei]) return
-    groups[0].entries[ei].sourcesExpanded = !groups[0].entries[ei].sourcesExpanded
-    this._saveDig(groups)
-    this.setData({ digGroups: groups })
+  /** 底部来源折叠块：展开/收起（默认折叠） */
+  onToggleLatestSources() {
+    this.setData({ digLatestSourcesOpen: !this.data.digLatestSourcesOpen })
   },
-  /** 兼容旧引用（searchResults 不再使用） */
-  onToggleSources(e) {
-    this.onToggleEntrySources(e)
-  },
+
 
   /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */
   onOpenSource(e) {

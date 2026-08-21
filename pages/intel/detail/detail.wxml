@@ -173,32 +173,47 @@
 
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:if="{{searchHint}}">{{searchHint}}</view>
-    <!-- 最新深挖结果（digGroups[0]）：答案展开显示，不自动折叠；下滑到面板顶或退出时收起 -->
-    <view class="dig-latest" wx:if="{{digGroups.length}}">
-      <view class="dig-latest-q">「{{digGroups[0].query}}」</view>
-      <view class="dig-entry" wx:for="{{digGroups[0].entries}}" wx:key="index" wx:for-item="en">
-        <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
-          <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
-          <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
-            <view class="search-sec-bdot"></view>
-            <text class="search-sec-btext">{{sec.text}}</text>
-          </view>
-          <view class="search-sec-para" wx:else>{{sec.text}}</view>
-        </block>
-        <!-- 来源引用：默认折叠，点击展开 -->
-        <view class="dig-sources {{en.sourcesExpanded ? 'open' : ''}}">
-          <view class="dig-sources-head" bindtap="onToggleEntrySources" data-ei="{{index}}" hover-class="dig-sources-head--hover">
-            <text class="dig-sources-title">参考来源（{{en.sources.length}}）</text>
-            <text class="dig-sources-arrow">{{en.sourcesExpanded ? '收起' : '展开'}} ›</text>
-          </view>
-          <block wx:if="{{en.sourcesExpanded}}">
-            <view class="dig-src" wx:for="{{en.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
-              <text class="dig-src-title">{{item.title}}</text>
-              <text class="dig-src-url">{{item.url}}</text>
+
+    <!-- 深挖历史分组（互斥展开：点开一个收起其它；滚到面板顶部时全部折叠） -->
+    <view class="dig-list" wx:if="{{digGroups.length}}">
+      <block wx:for="{{digGroups}}" wx:key="query" wx:for-item="g" wx:for-index="gi">
+        <view class="dig-group {{g.open ? 'open' : ''}}">
+          <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
+            <view class="dig-group-info">
+              <text class="dig-group-q">「{{g.query}}」</text>
+              <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
             </view>
-          </block>
+            <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
+          </view>
+          <view class="dig-group-body" wx:if="{{g.open}}">
+            <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
+              <text class="dig-entry-time">{{en.time}}</text>
+              <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
+                <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
+                <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
+                  <view class="search-sec-bdot"></view>
+                  <text class="search-sec-btext">{{sec.text}}</text>
+                </view>
+                <view class="search-sec-para" wx:else>{{sec.text}}</view>
+              </block>
+            </view>
+          </view>
         </view>
+      </block>
+    </view>
+
+    <!-- 参考来源：底部独立折叠块（默认折叠，汇总最新一次深挖的来源） -->
+    <view class="dig-sources-block" wx:if="{{digLatestSources.length}}">
+      <view class="dig-sources-head" bindtap="onToggleLatestSources" hover-class="dig-sources-head--hover">
+        <text class="dig-sources-title">参考来源（{{digLatestSources.length}}）</text>
+        <text class="dig-sources-arrow">{{digLatestSourcesOpen ? '收起' : '展开'}} ›</text>
       </view>
+      <block wx:if="{{digLatestSourcesOpen}}">
+        <view class="dig-src" wx:for="{{digLatestSources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
+          <text class="dig-src-title">{{item.title}}</text>
+          <text class="dig-src-url">{{item.url}}</text>
+        </view>
+      </block>
     </view>
   </view>
 

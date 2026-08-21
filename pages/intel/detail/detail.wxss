@@ -669,16 +669,13 @@
   color: var(--text-tertiary);
   margin-bottom: 10rpx;
 }
-.dig-latest {
+.dig-list {
   margin-top: 24rpx;
+}
+.dig-sources-block {
+  margin-top: 32rpx;
   padding-top: 24rpx;
   border-top: 1rpx solid var(--divider);
-}
-.dig-latest-q {
-  font-size: calc(28rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 20rpx;
 }
 .dig-sources {
   margin-top: 12rpx;
