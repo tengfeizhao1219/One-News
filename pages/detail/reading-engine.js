@@ -57,6 +57,18 @@ function resolveContentText(news) {
 }
 
 /**
+ * 把 app_intro 正文拆成结构化块（标题/正文），供详情页分段美化渲染。
+ * 标题判定：短行（≤8 字）且不以句末标点结尾（避免把正文首句误判为标题）。
+ */
+function buildIntroBlocks(text) {
+  var lines = (text || '').split('\n').map(function (l) { return l.trim() }).filter(function (l) { return l })
+  return lines.map(function (line) {
+    var isTitle = line.length <= 8 && !/[。？！；：…，、]/.test(line)
+    return { type: isTitle ? 'title' : 'text', text: line }
+  })
+}
+
+/**
  * R2 辅助：把任意来源对象规范化为前端使用的"详情文档"
  * 兜底（降级摘要、缓存命中、AI 解读三种路径）一律产出结构一致的 shape，
  * 避免不同路径下字段缺失导致 wxml 渲染分支走错。
@@ -555,6 +567,11 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   }
   var normalized = normalizeDetail(base)
   var text = resolveContentText(normalized)
+  // app_intro：结构化块供详情页 hero + 分段标题卡片渲染
+  if (normalized.contentSource === 'app_intro') {
+    normalized.isAppIntro = true
+    normalized.introBlocks = buildIntroBlocks(text)
+  }
   var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
   that._onDetailReady(normalized, paragraphs)
 
@@ -576,6 +593,10 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     if (that._onDetailRefresh) {
       var t2 = resolveContentText(fresh)
       var p2 = t2.split('\n').filter(function (p) { return p.trim() })
+      if (fresh.contentSource === 'app_intro') {
+        fresh.isAppIntro = true
+        fresh.introBlocks = buildIntroBlocks(t2)
+      }
       that._onDetailRefresh(fresh, p2)
     }
   }).catch(function () { /* 网络失败：保持本地渲染 */ })

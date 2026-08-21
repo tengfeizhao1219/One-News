@@ -118,13 +118,26 @@
             <text class="source-badge-desc">内容整理自官方源</text>
             <text wx:if="{{news.sourceUrl}}" class="meta-source-link" bindtap="onCopySourceUrl">出处 ↗</text>
           </view>
-          <!-- 占位欢迎新闻：关于本小程序介绍（contentSource==='app_intro'） -->
-          <view class="source-attribution-badge" wx:if="{{news.contentSource === 'app_intro'}}">
-            <text class="source-chip">关于一页</text>
-            <text class="source-badge-desc">本小程序的功能介绍</text>
-          </view>
-          <block wx:for="{{paragraphs}}" wx:key="*this">
-            <view class="text-p">{{item}}</view>
+          <!-- 占位欢迎新闻：关于本小程序介绍（contentSource==='app_intro'，品牌绿 hero + 分段标题卡片） -->
+          <block wx:if="{{news.isAppIntro && news.introBlocks.length}}">
+            <view class="app-intro-hero">
+              <view class="app-intro-logo"><logo mode="avatar-circle" size="72" /></view>
+              <view class="app-intro-hero-text">
+                <text class="app-intro-title">关于一页</text>
+                <text class="app-intro-tagline">极简资讯，安静地躺在这里</text>
+              </view>
+            </view>
+            <view class="app-intro-body">
+              <block wx:for="{{news.introBlocks}}" wx:key="index">
+                <view wx:if="{{item.type === 'title'}}" class="app-intro-h">{{item.text}}</view>
+                <view wx:else class="app-intro-p">{{item.text}}</view>
+              </block>
+            </view>
+          </block>
+          <block wx:else>
+            <block wx:for="{{paragraphs}}" wx:key="*this">
+              <view class="text-p">{{item}}</view>
+            </block>
           </block>
           <!-- PRD §2.5：paragraphs 为空时 inline 空态（AI 解读/摘要皆无时兜底） -->
           <view class="inline-empty" wx:if="{{paragraphs.length === 0 && news.contentSource}}">

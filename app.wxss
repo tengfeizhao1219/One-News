@@ -36,6 +36,8 @@ page {
   --overlay: rgba(0, 0, 0, 0.7);
   --primary: #0A84FF;
   --primary-subtle: rgba(10, 132, 255, 0.18);
+  --brand-green: #4FAD5B;
+  --brand-green-subtle: rgba(79, 173, 91, 0.18);
   --progress: rgba(10, 132, 255, 0.60);
   --highlight-bg: rgba(10, 132, 255, 0.10);
   --color-favorite: #FF453A;
@@ -91,6 +93,8 @@ page {
   --overlay: rgba(0, 0, 0, 0.25);
   --primary: #007AFF;
   --primary-subtle: rgba(0, 122, 255, 0.12);
+  --brand-green: #4FAD5B;
+  --brand-green-subtle: rgba(79, 173, 91, 0.12);
   --progress: rgba(0, 122, 255, 0.55);
   --highlight-bg: rgba(0, 122, 255, 0.06);
   --color-favorite: #FF3B30;
