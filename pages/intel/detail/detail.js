@@ -72,12 +72,9 @@ Page({
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
-    searchHint: '',             // 不相关 / 搜索失败 hint
-    searchAnswer: '',           // 相关+成功：总结回答（原始）
-    searchSummary: '',          // 结构化：引导头（「关于…为你找到以下信息：」）
-    searchItems: [],            // 结构化：编号条目 [{n,title,body}]（标题加粗、内容截断）
-    searchSources: [],          // 相关+成功：引用来源列表 [{title,url,source}]
-    searchSourcesExpanded: false, // 来源折叠态（默认收起，点击展开）
+    searchHint: '',             // 不相关 / 搜索失败 hint（当次提示，不累积）
+    searchResults: [],          // 查询结果累积（作为详情页一部分整体保留，不覆盖）
+                                // 每条: {query, summary, items:[{title,body}], sources:[{title,url,source}], sourcesExpanded, isFallback}
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -400,34 +397,39 @@ function parseSceneMapping(txt) {
     this._runSearch(query.slice(0, 60))
   },
 
-  /** 调 intelSearch：60s 超时；渲染三种结果路径 */
+  /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示 */
   _runSearch(query) {
     if (this.data.searchLoading) return
-    this.setData({ searchLoading: true, searchHint: '', searchAnswer: '', searchSources: [] })
+    this.setData({ searchLoading: true, searchHint: '' })
     searchIntelTopic({ itemId: this.data.itemId, query })
       .then(d => {
-        // ① 不相关
+        // ① 不相关（当次提示条，不影响已有结果）
         if (d && d.relevant === false) {
           this.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
           return
         }
-        // ② 相关+成功：answer 结构化解析（引导头 + 编号条目），sources 折叠展示
-        if (d && d.relevant && d.answer) {
-          const parsed = this._parseSearchAnswer(d.answer)
-          this.setData({
-            searchAnswer: d.answer,
-            searchSummary: parsed.summary,
-            searchItems: parsed.items,
-            searchSourcesExpanded: false,
-            searchSources: Array.isArray(d.sources) ? d.sources.map(x => ({
-              title: x.title || x.url || '',
-              url: x.url || '',
-              source: x.source || '',
-            })).filter(x => x.url) : [],
-          })
+        // ② 相关+成功：answer 解析为段落；来源拼接(fallback)不显示正文，只保留折叠来源
+        if (d && d.relevant) {
+          const parsed = this._parseSearchAnswer(d.answer || '')
+          const sources = Array.isArray(d.sources) ? d.sources.map(x => ({
+            title: x.title || x.url || '',
+            url: x.url || '',
+            source: x.source || '',
+          })).filter(x => x.url) : []
+          // fallback 识别：后端总结失败时拼的「为你找到以下信息：1. 标题：snippet…」
+          const isFallback = !parsed.summary && parsed.items.every(it => /^(?:https?:\/\/)?[\w.-]+\.[a-z]{2,}/i.test(it.title || '')) || /为你找到以下信息/.test(d.answer || '')
+          const entry = {
+            query: query,
+            summary: parsed.summary,
+            items: isFallback ? [] : parsed.items,
+            sources: sources,
+            sourcesExpanded: false,
+            isFallback: isFallback,
+          }
+          this.setData({ searchResults: this.data.searchResults.concat([entry]) })
           return
         }
-        // ③ 相关但失败
+        // ③ 相关但失败（当次提示条）
         this.setData({ searchHint: (d && d.hint) || '这个话题联网搜索暂时没找到结果，可以换个更具体的说法再试试～' })
       })
       .catch(err => {
@@ -459,9 +461,11 @@ function parseSceneMapping(txt) {
     return { summary, items }
   },
 
-  /** 折叠/展开参考来源 */
-  onToggleSources() {
-    this.setData({ searchSourcesExpanded: !this.data.searchSourcesExpanded })
+  /** 折叠/展开参考来源（按结果条目 index） */
+  onToggleSources(e) {
+    const idx = Number(e.currentTarget.dataset.idx)
+    const key = 'searchResults[' + idx + '].sourcesExpanded'
+    this.setData({ [key]: !(this.data.searchResults[idx] && this.data.searchResults[idx].sourcesExpanded) })
   },
 
   /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */

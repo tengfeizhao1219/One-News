@@ -395,6 +395,32 @@
   white-space: pre-line;  /* 保留 LLM 回答的换行 */
   word-break: break-word;
 }
+/* 单次查询结果区块：累积排列，上滑查看、下滑回原文 */
+.search-result {
+  padding: 8rpx 0 10rpx;
+}
+.search-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.search-result-q {
+  font-size: calc(26rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--primary);
+}
+.search-result-arrow {
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+}
+.search-fallback-tip {
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  padding: 8rpx 0 4rpx;
+}
+
 /* 段落式结果排版：引导头（弱化小字）+ 标题行 + 正文段落，分隔线划分 */
 .search-summary {
   font-size: calc(24rpx * var(--font-scale-meta, 1));

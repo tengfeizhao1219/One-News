@@ -390,17 +390,12 @@ exports.main = async (event = {}) => {
     ])
   } catch (e) { sum = null }
   console.log('[intelSearch] summarize 耗时:', Date.now() - tSum + 'ms', '| sum:', sum ? '成功' : 'null(兜底)')
-  // 总结失败 → 用 Tavily 结果摘要拼一个简答（保证有内容返回，不空转）
-  let fallbackAnswer = ''
-  if (!(sum && sum.text) && search.sources && search.sources.length) {
-    fallbackAnswer = '关于「' + query + '」为你找到以下信息：\n' +
-      search.sources.map((s, i) => `${i + 1}. ${s.title}：${s.snippet || ''}`).join('\n')
-  }
+  // 总结失败 → 不把来源页内容拼进正文（来源已在 sources 折叠展示，避免「来源当正文」）
   const result = {
     code: 0,
     data: {
       relevant: true,
-      answer: (sum && sum.text) || fallbackAnswer || search.answer || '',
+      answer: (sum && sum.text) || '',
       sources: search.sources || [],
       engine: (sum && sum.engine) || 'tavily',
       query,

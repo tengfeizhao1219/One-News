@@ -133,32 +133,40 @@
       <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">{{searchLoading ? '搜索中' : '搜索'}}</view>
     </view>
 
-    <!-- 结果区：loading / 不相关 hint / 相关+回答+sources / 相关但失败 hint -->
+    <!-- 结果区：loading / 当次 hint / 累积查询结果（作为详情页一部分整体保留） -->
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
-    <view class="search-hint" wx:elif="{{searchHint}}">{{searchHint}}</view>
-    <block wx:elif="{{searchItems.length || searchAnswer}}">
-      <!-- 引导头（如「关于…为你找到以下信息：」，弱化小字） -->
-      <view class="search-summary" wx:if="{{searchSummary}}">{{searchSummary}}</view>
-      <!-- 段落式结果：标题行 + 正文段落（自然排版，非编号列表） -->
-      <view class="search-item" wx:for="{{searchItems}}" wx:key="index">
-        <text class="search-item-title" wx:if="{{item.title}}">{{item.title}}</text>
-        <text class="search-item-desc" wx:if="{{item.body}}">{{item.body}}</text>
-      </view>
-      <!-- 兜底：无法结构化时展示原始回答 -->
-      <view class="search-answer" wx:if="{{!searchItems.length}}">{{searchAnswer}}</view>
-      <!-- 参考来源：默认折叠，点击展开（带样式） -->
-      <view class="search-sources" wx:if="{{searchSources.length}}">
-        <view class="search-sources-head" bindtap="onToggleSources" hover-class="search-sources-head--hover">
-          <text class="search-sources-title">参考来源（{{searchSources.length}}）</text>
-          <text class="search-sources-arrow">{{searchSourcesExpanded ? '收起' : '展开'}} ›</text>
+    <view class="search-hint" wx:if="{{searchHint}}">{{searchHint}}</view>
+    <block wx:for="{{searchResults}}" wx:key="index" wx:for-item="r">
+      <view class="search-result">
+        <!-- 查询词标签 -->
+        <view class="search-result-head">
+          <text class="search-result-q">「{{r.query}}」</text>
+          <text class="search-result-arrow" wx:if="{{r.sources.length}}">{{r.sourcesExpanded ? '收起来源' : '展开来源'}} ›</text>
         </view>
-        <block wx:if="{{searchSourcesExpanded}}">
-          <view class="search-src" wx:for="{{searchSources}}" wx:key="url" bindtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
-            <text class="search-src-title">{{item.title}}</text>
-            <text class="search-src-source" wx:if="{{item.source}}">{{item.source}}</text>
-            <text class="search-src-url">{{item.url}}</text>
+        <!-- 段落式结果（标题行 + 正文段落） -->
+        <block wx:if="{{r.items.length}}">
+          <view class="search-summary" wx:if="{{r.summary}}">{{r.summary}}</view>
+          <view class="search-item" wx:for="{{r.items}}" wx:for-item="it" wx:key="index">
+            <text class="search-item-title" wx:if="{{it.title}}">{{it.title}}</text>
+            <text class="search-item-desc" wx:if="{{it.body}}">{{it.body}}</text>
           </view>
         </block>
+        <!-- 来源拼接 fallback：不显示正文，仅折叠来源 -->
+        <view class="search-fallback-tip" wx:elif="{{r.isFallback}}">已找到相关来源，展开下方链接查看详情。</view>
+        <!-- 参考来源：折叠卡，点击展开 -->
+        <view class="search-sources" wx:if="{{r.sources.length}}" bindtap="onToggleSources" data-idx="{{index}}" hover-class="search-sources-head--hover">
+          <view class="search-sources-head">
+            <text class="search-sources-title">参考来源（{{r.sources.length}}）</text>
+            <text class="search-sources-arrow">{{r.sourcesExpanded ? '收起' : '展开'}} ›</text>
+          </view>
+          <block wx:if="{{r.sourcesExpanded}}">
+            <view class="search-src" wx:for="{{r.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
+              <text class="search-src-title">{{item.title}}</text>
+              <text class="search-src-source" wx:if="{{item.source}}">{{item.source}}</text>
+              <text class="search-src-url">{{item.url}}</text>
+            </view>
+          </block>
+        </view>
       </view>
     </block>
   </view>
