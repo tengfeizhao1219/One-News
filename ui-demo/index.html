@@ -76,7 +76,7 @@
   /* 详情页：标题固定；面板从底部升起，把其它内容(rest)整体顶上去；关闭时内容落回把面板推下 */
   .pin{position:sticky;top:0;z-index:220;background:var(--bg-page);}
   .rest{transition:transform .65s cubic-bezier(.22,.61,.36,1);}
-  .search-panel{position:absolute;left:0;right:0;top:100%;background:var(--bg-page);padding:14px 24px 20px;z-index:210;border-top:1px solid var(--divider);visibility:hidden;opacity:0;transition:top .65s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .65s;}
+  .search-panel{position:absolute;left:0;right:0;top:100%;bottom:0;background:var(--bg-page);padding:14px 24px 20px;z-index:210;border-top:1px solid var(--divider);overflow-y:auto;-webkit-overflow-scrolling:touch;visibility:hidden;opacity:0;transition:top .65s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .65s;}
   .search-panel.open{visibility:visible;opacity:1;transition:top .65s cubic-bezier(.22,.61,.36,1),opacity .5s;}
   /* 搜索悬浮按钮（深入了解入口）：右下角自绘放大镜 */
   .fab-search{position:absolute !important;right:16px !important;bottom:28px;width:48px;height:48px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.12);cursor:pointer;z-index:300;color:var(--text-secondary);transition:transform .15s,background .25s,color .25s;}
@@ -85,6 +85,7 @@
   .fab-search.on{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(0,122,255,.35);}
   .quick-t{font-size:13.5px;font-weight:600;} .quick-s{font-size:12px;color:var(--text-tertiary);margin-top:2px;}
   .search-box{display:flex;gap:10px;background:var(--bg-card);border:1px solid var(--divider);border-radius:14px;padding:11px 13px;margin-bottom:12px;}
+  .panel-scroll-hint{text-align:center;font-size:11px;color:var(--text-tertiary);padding:10px 0 2px;}
   /* 搜索历史区（详情页正文流内，随内容滚动，下滑可见） */
   .search-history{margin-top:28px;border-top:1px solid var(--divider);padding-top:18px;}
   .sh-title{font-size:13px;font-weight:700;color:var(--text-secondary);margin-bottom:12px;}
@@ -225,7 +226,7 @@ const PROJECTS = {
           { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '三段式叙事：第一段专业解读 / 第二段大白话（术语括号注中文）；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
           { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）；「AI 预测」标注在块内左上角，与「落到你这里」的 for-k 设计一致；措辞用推测性（可能会/有望）', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pred-tag: 11.5px/700 primary（同 for-k）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-tag', guideline: '准则5 轻高亮 / 风格一致' },
           { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
-          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容整体顶上去（rest 上移）；搜索完成后面板自动收起，入口区不保留——再次搜索需再点 FAB；历史记录沉淀在正文流搜索历史区，下滑可见、退出再进保留', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0, 搜索后自动收起'},{k:'历史',v:'localStorage 持久化, 同话题折叠'}], code: 'fab-search / data-action=search / search-history', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
+          { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容整体顶上去（rest 上移）；搜索完成后面板自动收起，入口区不保留——再次搜索需再点 FAB；历史记录沉淀在正文流搜索历史区，下滑可见、退出再进保留；面板展开时内部滚动，滑到最顶部再下滑即自动收起', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0 + overflow-y auto, 搜索后自动收起'},{k:'收起',v:'面板内部滚到顶(scrollTop<=0)后下滑手势收起'},{k:'历史',v:'localStorage 持久化, 同话题折叠'}], code: 'fab-search / data-action=search / search-history', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
           { selector: '.search-history', name: '搜索历史区', intent: '详情页正文流末尾：每次搜索的完整结果沉淀于此，随内容滚动（下滑可见）；同一话题多次搜索折叠为一条（显示次数+最近时间），点击展开各次结果；退出页面再进入，历史保留（本地持久化）', params: [{k:'标题',v:'「搜索历史」text-secondary'},{k:'分组',v:'bg-card 圆角卡, 折叠箭头'},{k:'条目',v:'每次搜索带时间戳, sections 层级排版'},{k:'持久化',v:'localStorage 按 itemId 存储'}], code: 'search-history / sh-group / sh-entry', guideline: '准则1 信息归位 / 准则3 交互' },
         ]
       },
@@ -295,9 +296,10 @@ const PAGE_HTML = {
       <div class="foot">由 AI 情报官生成 · 仅供参考</div>
       </div>
     </div>
-    <div class="search-panel" id="sp-detail">
+    <div class="search-panel" id="sp-detail" data-panel="1">
       <div class="deep-quick"><div><div class="quick-t">围绕「GLM-5.3」继续深挖</div><div class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</div></div></div>
       <div class="search-box"><input class="search-input" id="search-input-detail" placeholder="输入你感兴趣的话题…"><span class="search-btn" data-action="do-search">搜索</span></div>
+      <div class="panel-scroll-hint">上滑查看更多结果 · 滑到顶部再下滑收起</div>
     </div>
     <div class="fab fab-search" data-action="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></div>`,
   mine: `<div class="statusbar"><span>9:41</span><span class="capsule"></span></div>
@@ -464,6 +466,33 @@ function toggleShGroup(gi){
   const g = hist.find((x, i) => i === Number(gi));
   if(g){ g.open = !g.open; saveHistory(hist); renderHistory(); }
 }
+
+// ============ 面板内部滚动 + 滚到顶下滑收起 ============
+let panelTouch = null;
+document.addEventListener('scroll', function(e){
+  const panel = e.target && e.target.closest ? e.target.closest('.search-panel') : null;
+  if(panel){ panel.dataset.scrollTop = String(e.target.scrollTop || 0); }
+}, true);
+document.addEventListener('touchstart', function(e){
+  const panel = e.target.closest ? e.target.closest('.search-panel') : null;
+  if(panel){ panelTouch = { y: e.touches[0].clientY, panel: panel, moved: false }; }
+}, true);
+document.addEventListener('touchmove', function(e){
+  if(!panelTouch) return;
+  const dy = e.touches[0].clientY - panelTouch.y;
+  const dx = Math.abs(e.touches[0].clientX - panelTouch.x);
+  const scrollTop = Number(panelTouch.panel.dataset.scrollTop || 0);
+  // 仅在面板已滚到最顶部(scrollTop<=0)且下滑时收起；否则让面板自然滚动
+  if(dy > 24 && dy > dx && scrollTop <= 0 && panelTouch.panel.classList.contains('open')){
+    if(!panelTouch.moved){
+      panelTouch.moved = true;
+      const phone = panelTouch.panel.closest('.phone');
+      const fab = phone.querySelector('.fab-search');
+      if(fab) fab.click();  // 复用收起逻辑
+    }
+  }
+}, true);
+document.addEventListener('touchend', function(){ panelTouch = null; }, true);
 
 document.addEventListener('click', function(e){
   // 非标注模式：处理手机内可交互动作（返回主页/进详情/进初始化/深入了解），页面标签同步切换
