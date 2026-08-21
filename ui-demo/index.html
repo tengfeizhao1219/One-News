@@ -390,9 +390,9 @@ document.addEventListener('click', function(e){
         const panel = phone.querySelector('.search-panel');
         if(!phone.classList.contains('search-on')){
           phone.classList.add('search-on');
-          // 面板从底部升起，其它内容被顶上去（上移面板高）
+          // 面板从底部升起，其它内容被完全顶上去（上移自身高度，全部推出可视区，只剩标题+面板）
           if(panel) panel.classList.add('open');
-          if(rest && panel) rest.style.transform = 'translateY(-' + (panel.offsetHeight) + 'px)';
+          if(rest) rest.style.transform = 'translateY(-100%)';
           actEl.classList.add('on');
         } else {
           phone.classList.remove('search-on');
