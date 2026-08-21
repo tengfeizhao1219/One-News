@@ -368,9 +368,9 @@
   width: 100%;
   font-size: calc(28rpx * var(--font-scale));
   color: var(--text-primary);
-  /* 输入区高度 1.3 倍：padding 8→10.4rpx, 行高 1.4→1.8（owner 2026-08-21） */
-  padding: 10rpx 0;
-  line-height: 1.8;
+  /* 输入区高度 1.5 倍：padding 8→12rpx, 行高 1.4→2.1（owner 2026-08-21） */
+  padding: 12rpx 0;
+  line-height: 2.1;
 }
 .search-placeholder { color: var(--text-tertiary); }
 /* 已搜索过：搜索词以提示词样式（灰色）显示，聚焦即清空可输入新词 */
