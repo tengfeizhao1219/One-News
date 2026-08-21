@@ -345,6 +345,28 @@ function parseSceneMapping(txt) {
     this.setData({ searchRestUp: up })
   },
 
+  // ============ 面板下滑手势收起（问题③：搜索区域滑上去后可手动滑下来） ============
+  onPanelTouchStart(e) {
+    const t = e.touches && e.touches[0]
+    this._panelTouch = t ? { x: t.clientX, y: t.clientY, moved: false } : null
+  },
+  onPanelTouchMove(e) {
+    if (!this._panelTouch) return
+    const t = e.touches && e.touches[0]
+    if (!t) return
+    const dy = t.clientY - this._panelTouch.y
+    // 下滑超过 24px 即收起（垂直手势为主，忽略横向）
+    if (Math.abs(dy) > 24 && Math.abs(dy) > Math.abs(t.clientX - this._panelTouch.x) && this.data.searchOpen) {
+      if (!this._panelTouch.moved) {
+        this._panelTouch.moved = true
+        this.onToggleSearch()
+      }
+    }
+  },
+  onPanelTouchEnd() {
+    this._panelTouch = null
+  },
+
   /** 一键深挖：围绕当前新闻标题搜索（截断 60 字） */
   onDeepQuick() {
     const query = this.data.searchQuickTitle

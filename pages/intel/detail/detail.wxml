@@ -19,6 +19,8 @@
 
   <scroll-view class="content" scroll-y scroll-top="{{searchScrollTop}}" enhanced show-scrollbar="{{false}}">
 
+    <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
+    <view class="scroll-inner">
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
       <view class="state-hint"><text class="state-t">情报官正在梳理详情…</text></view>
@@ -117,10 +119,11 @@
       </view>
       <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
     </block>
+    </view>
   </scroll-view>
 
-  <!-- 话题搜索面板（展开时从底部升起，紧贴标题下方；其余内容被推上去） -->
-  <view class="search-panel {{searchOpen ? 'open' : ''}}" style="top: {{searchPanelTop}};">
+  <!-- 话题搜索面板（展开时从底部升起，紧贴标题下方；其余内容被推上去；下滑手势收起） -->
+  <view class="search-panel {{searchOpen ? 'open' : ''}}" style="top: {{searchPanelTop}};" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
     <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
       <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
       <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
