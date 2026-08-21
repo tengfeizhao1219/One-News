@@ -17,7 +17,7 @@
     </view>
   </view>
 
-  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView || digScrollTo}}" enhanced show-scrollbar="{{false}}">
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
@@ -159,7 +159,8 @@
   </scroll-view>
 
   <!-- 话题搜索覆盖面板（FAB 点击：面板从底部升起，把其余内容顶上去；结果展开展示，下滑到顶或退出收起） -->
-  <view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area" style="top: {{searchPanelTop}};" bindscroll="onSearchScroll" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
+  <scroll-view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area" style="top: {{searchPanelTop}};" scroll-y scroll-into-view="{{digScrollTo}}" enhanced show-scrollbar="{{false}}" bindscroll="onSearchScroll" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">
+    <view class="search-panel-inner">
     <view class="search-bar">
       <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
         <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
@@ -187,7 +188,7 @@
     <!-- 深挖历史分组（互斥展开：点开一个收起其它；滚到面板顶部时全部折叠） -->
     <view class="dig-list" wx:if="{{digGroups.length}}">
       <block wx:for="{{digGroups}}" wx:key="query" wx:for-item="g" wx:for-index="gi">
-        <view class="dig-group {{g.open ? 'open' : ''}}">
+        <view class="dig-group {{g.open ? 'open' : ''}}" id="dig-group-{{gi}}">
           <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
             <view class="dig-group-info">
               <text class="dig-group-q">「{{g.query}}」</text>
@@ -206,26 +207,26 @@
                 </view>
                 <view class="search-sec-para" wx:else>{{sec.text}}</view>
               </block>
+              <!-- 参考来源：内置在搜索结果框内，默认折叠 -->
+              <view class="dig-sources" wx:if="{{en.sources.length}}">
+                <view class="dig-sources-head" bindtap="onToggleEntrySources" data-gi="{{gi}}" data-ei="{{index}}" hover-class="dig-sources-head--hover">
+                  <text class="dig-sources-title">参考来源（{{en.sources.length}}）</text>
+                  <text class="dig-sources-arrow">{{en.sourcesExpanded ? '收起' : '展开'}} ›</text>
+                </view>
+                <block wx:if="{{en.sourcesExpanded}}">
+                  <view class="dig-src" wx:for="{{en.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
+                    <text class="dig-src-title">{{item.title}}</text>
+                    <text class="dig-src-url">{{item.url}}</text>
+                  </view>
+                </block>
+              </view>
             </view>
           </view>
         </view>
       </block>
     </view>
-
-    <!-- 参考来源：底部独立折叠块（默认折叠，汇总最新一次深挖的来源） -->
-    <view class="dig-sources-block" wx:if="{{digLatestSources.length}}">
-      <view class="dig-sources-head" bindtap="onToggleLatestSources" hover-class="dig-sources-head--hover">
-        <text class="dig-sources-title">参考来源（{{digLatestSources.length}}）</text>
-        <text class="dig-sources-arrow">{{digLatestSourcesOpen ? '收起' : '展开'}} ›</text>
-      </view>
-      <block wx:if="{{digLatestSourcesOpen}}">
-        <view class="dig-src" wx:for="{{digLatestSources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
-          <text class="dig-src-title">{{item.title}}</text>
-          <text class="dig-src-url">{{item.url}}</text>
-        </view>
-      </block>
     </view>
-  </view>
+  </scroll-view>
 
   <!-- 搜索悬浮按钮（右下角，自绘放大镜；点击滚动到搜索区） -->
   <view class="fab-search {{searchOpen ? 'on' : ''}}" hover-class="fab-search--hover" bindtap="onToggleSearch">

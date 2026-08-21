@@ -304,13 +304,13 @@
   right: 0;
   bottom: 0;
   background-color: var(--bg-page);
-  padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
   z-index: 210;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   visibility: hidden;
   opacity: 0;
   transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s, visibility 0s 0.65s;
+}
+.search-panel-inner {
+  padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
 }
 .search-panel.open {
   visibility: visible;

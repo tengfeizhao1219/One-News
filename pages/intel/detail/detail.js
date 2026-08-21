@@ -71,15 +71,17 @@ Page({
     searchPanelTop: '100%',     // 面板 top（展开时注入 px：标题下+呼吸间距）
     searchProgress: false,      // 横线进度条（面板顶上来时从左侧系统蓝加载）
     searchQueried: false,       // 已搜索过：搜索词以提示词灰显示，聚焦时清空可直接输入新词
+    searchPanelClientHeight: 0, // 面板可视高度（px）
+    searchPanelContentHeight: 0, // 面板内容总高（px）——内容不足一屏时禁止滑动收起（bug3）
     searchRestUp: false,        // 其余内容推起（面板展开时）
     searchIntoView: '',         // scroll-into-view 锚点（收起时滚到深挖历史）
+    digScrollTo: '',            // scroll-into-view 锚点（展开某分组时该主题置顶）
     searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关 / 搜索失败 hint（当次提示，不累积）
     digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries:[{time, sections, sources}]}]
-    digLatestSources: [],       // 底部来源折叠块：最新一次深挖的来源（默认折叠）
-    digLatestSourcesOpen: false,
+
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -90,6 +92,25 @@ Page({
         themeClass: g.themeClass,
         isDark: g.effectiveTheme === 'dark'
       })
+    }
+  },
+
+  /** 离开页面（返回首页等）：搜索区/结果自动折叠（bug4：再进不保持展开） */
+  onHide() {
+    this._foldAllDig(true)
+  },
+
+  /** 折叠所有深挖历史分组并持久化（可选项收起面板） */
+  _foldAllDig(alsoCollapsePanel) {
+    const groups = this._loadDig()
+    let changed = false
+    groups.forEach(g => { if (g.open) { g.open = false; changed = true } })
+    if (changed) {
+      this._saveDig(groups)
+      this.setData({ digGroups: groups })
+    }
+    if (alsoCollapsePanel && this.data.searchOpen) {
+      this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false })
     }
   },
 
@@ -371,22 +392,45 @@ function parseSceneMapping(txt) {
         this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
         // 与面板 top 0.65s 过渡同步触发进度条
         this.setData({ searchProgress: true })
+        this._measureSearchPanel()
       })
     }, 60)
   },
 
-  /** 面板内部滚动：记录 scrollTop；滚到顶部时深挖历史自动折叠（需求1） */
+  /** 测量面板可视高/内容高（bug3：内容不足一屏时禁止滑动收起） */
+  _measureSearchPanel() {
+    setTimeout(() => {
+      const q = wx.createSelectorQuery().in(this)
+      q.select('#search-area').boundingClientRect()
+      q.select('.search-panel-inner').boundingClientRect()
+      q.exec(res => {
+        const area = res && res[0]
+        const inner = res && res[1]
+        if (area && inner) {
+          this.setData({
+            searchPanelClientHeight: area.height || 0,
+            searchPanelContentHeight: inner.height || 0,
+          })
+        }
+      })
+    }, 100)
+  },
+
+  /** 面板内部滚动：记录 scrollTop/可滚空间；滚到顶部且内容超出时折叠历史（bug3：内容不足一屏不折叠） */
   onSearchScroll(e) {
     const st = (e.detail && e.detail.scrollTop) || 0
     this._panelScrollTop = st
-    if (st <= 0 && this.data.searchOpen && this.data.digGroups.some(g => g.open)) {
+    const sc = this.data.searchPanelContentHeight || 0
+    const cl = this.data.searchPanelClientHeight || 0
+    const overflows = sc > cl
+    if (overflows && st <= 0 && this.data.searchOpen && this.data.digGroups.some(g => g.open)) {
       const groups = this._loadDig()
       groups.forEach(g => { g.open = false })
       this._saveDig(groups)
       this.setData({ digGroups: groups })
     }
   },
-  /** 面板触摸：仅当已滚到顶部时继续下滑才收起（避免浏览结果时误收起） */
+  /** 面板触摸：仅当内容超出可滚 + 已滚到顶部时继续下滑才收起（bug3） */
   onPanelTouchStart(e) {
     const t = e.touches && e.touches[0]
     this._panelTouch = t ? { x: t.clientX, y: t.clientY, moved: false } : null
@@ -397,8 +441,9 @@ function parseSceneMapping(txt) {
     if (!t) return
     const dy = t.clientY - this._panelTouch.y
     const dx = Math.abs(t.clientX - this._panelTouch.x)
-    // 下滑且面板已滚到顶部（scrollTop<=0）才收起
-    if (this.data.searchOpen && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
+    const overflows = (this.data.searchPanelContentHeight || 0) > (this.data.searchPanelClientHeight || 0)
+    // 内容超出可滚 + 已滚到顶 + 下滑 → 收起；不足一屏永不因滑动收起
+    if (this.data.searchOpen && overflows && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
       if (!this._panelTouch.moved) {
         this._panelTouch.moved = true
         this._collapseSearch()
@@ -541,37 +586,33 @@ function parseSceneMapping(txt) {
   _saveDig(groups) {
     try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
   },
-  /** 新深挖结果入历史：同话题合并 entries（最新在前），并持久化；同步底部来源块 */
+  /** 新深挖结果入历史：同话题合并 entries（最新在前），持久化；搜索完成→最新分组展开（bug1） */
   _pushDigEntry(query, sections, sources) {
-    this.setData({
-      digLatestSources: Array.isArray(sources) ? sources : [],
-      digLatestSourcesOpen: false,
-    })
     const now = new Date()
     const time = (now.getHours() < 10 ? '0' + now.getHours() : now.getHours()) + ':' +
       (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes())
     const groups = this._loadDig()
     const g = groups.find(x => x.query === query)
-    const entry = { time: time, sections: sections, sources: sources }
+    // 新条目来源默认折叠（bug2）
+    const entry = { time: time, sections: sections, sources: sources, sourcesExpanded: false }
     if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
-    // 所有情况下默认折叠（含已展开过的历史话题）
-    groups.forEach(x => { x.open = false })
+    // 搜索完成：当前话题分组展开（其余折叠）；来源保持默认折叠
+    groups.forEach(x => { x.open = (x.query === query) })
     // 上限保护：最多 10 个话题、每话题 10 次
     while (groups.length > 10) groups.pop()
     groups.forEach(x => { while (x.entries.length > 10) x.entries.pop() })
     this._saveDig(groups)
     this.setData({ digGroups: groups })
+    this._measureSearchPanel()
   },
-  /** 收起搜索面板：内容落回，历史折叠（退出即折叠），滚动到深挖历史区 */
+  /** 收起搜索面板：内容落回，历史折叠，滚动到深挖历史区 */
   _collapseSearch() {
-    const groups = this._loadDig()
-    groups.forEach(g => { g.open = false })
-    this._saveDig(groups)
-    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false, digGroups: groups })
+    this._foldAllDig(false)
+    this.setData({ searchOpen: false, searchPanelTop: '100%', searchRestUp: false, searchProgress: false })
     this.setData({ searchIntoView: 'dig-history' })
     setTimeout(() => this.setData({ searchIntoView: '' }), 600)
   },
-  /** 展开/收起某个话题的深挖历史：互斥——点开一个，其它自动折叠 */
+  /** 展开/收起某个话题的深挖历史：互斥；展开后该主题滚动到页面顶部（bug5） */
   onToggleDigGroup(e) {
     const gi = Number(e.currentTarget.dataset.gi)
     const groups = this._loadDig()
@@ -580,13 +621,23 @@ function parseSceneMapping(txt) {
     groups.forEach((g, i) => { g.open = (i === gi) && willOpen })
     this._saveDig(groups)
     this.setData({ digGroups: groups })
+    if (willOpen) {
+      // 展开后：该分组置顶（scroll-into-view 定位分组头）
+      this.setData({ digScrollTo: 'dig-group-' + gi })
+      setTimeout(() => this.setData({ digScrollTo: '' }), 500)
+    }
   },
 
-  /** 底部来源折叠块：展开/收起（默认折叠） */
-  onToggleLatestSources() {
-    this.setData({ digLatestSourcesOpen: !this.data.digLatestSourcesOpen })
+  /** 折叠/展开某条结果的参考来源（内置结果框内，默认折叠） */
+  onToggleEntrySources(e) {
+    const gi = Number(e.currentTarget.dataset.gi)
+    const ei = Number(e.currentTarget.dataset.ei)
+    const groups = this._loadDig()
+    if (!groups[gi] || !groups[gi].entries[ei]) return
+    groups[gi].entries[ei].sourcesExpanded = !groups[gi].entries[ei].sourcesExpanded
+    this._saveDig(groups)
+    this.setData({ digGroups: groups })
   },
-
 
   /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */
   onOpenSource(e) {
