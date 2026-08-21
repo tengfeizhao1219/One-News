@@ -76,8 +76,8 @@
   /* 详情页：标题固定；面板从底部升起，把其它内容(rest)整体顶上去；关闭时内容落回把面板推下 */
   .pin{position:sticky;top:0;z-index:220;background:var(--bg-page);}
   .rest{transition:transform .65s cubic-bezier(.22,.61,.36,1);}
-  .search-panel{position:absolute;left:0;right:0;bottom:0;background:var(--bg-page);padding:14px 24px 20px;z-index:210;border-top:1px solid var(--divider);transform:translateY(100%);visibility:hidden;opacity:0;transition:transform .65s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .65s;}
-  .search-panel.open{transform:translateY(0);visibility:visible;opacity:1;transition:transform .65s cubic-bezier(.22,.61,.36,1),opacity .5s;}
+  .search-panel{position:absolute;left:0;right:0;top:100%;background:var(--bg-page);padding:14px 24px 20px;z-index:210;border-top:1px solid var(--divider);visibility:hidden;opacity:0;transition:top .65s cubic-bezier(.22,.61,.36,1),opacity .5s,visibility 0s .65s;}
+  .search-panel.open{visibility:visible;opacity:1;transition:top .65s cubic-bezier(.22,.61,.36,1),opacity .5s;}
   /* 搜索悬浮按钮（深入了解入口）：右下角自绘放大镜 */
   .fab-search{position:absolute !important;right:16px !important;bottom:28px;width:48px;height:48px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.12);cursor:pointer;z-index:300;color:var(--text-secondary);transition:transform .15s,background .25s,color .25s;}
   .fab-search:active{transform:scale(.92);}
@@ -390,13 +390,15 @@ document.addEventListener('click', function(e){
         const panel = phone.querySelector('.search-panel');
         if(!phone.classList.contains('search-on')){
           phone.classList.add('search-on');
-          // 面板从底部升起，其它内容被完全顶上去（上移自身高度，全部推出可视区，只剩标题+面板）
+          // 面板从底部升到标题正下方（96 + 标题高 + 呼吸间距）；其它内容完全顶出可视区
+          const pin = phone.querySelector('.pin');
+          if(panel && pin) panel.style.top = (96 + pin.offsetHeight + 18) + 'px';
           if(panel) panel.classList.add('open');
           if(rest) rest.style.transform = 'translateY(-100%)';
           actEl.classList.add('on');
         } else {
           phone.classList.remove('search-on');
-          if(panel) panel.classList.remove('open');
+          if(panel){ panel.style.top = ''; panel.classList.remove('open'); }
           if(rest) rest.style.transform = '';
           actEl.classList.remove('on');
         }
