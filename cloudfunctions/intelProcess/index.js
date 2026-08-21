@@ -211,7 +211,8 @@ async function scoreSourceQuality(todo, results) {
       const srcDoc = (doc && doc.data && doc.data[0]) || null
       if (!srcDoc) continue
       const prev = Array.isArray(srcDoc.qualityScores) ? srcDoc.qualityScores : []
-      const scores = [...prev, quality].slice(-5)
+      // 2026-08-21（owner 拍板）：滚动窗口 = 近 42 次评分（每天 3 批次 × 两周），停用看平均分
+      const scores = [...prev, quality].slice(-42)
       const avg = scores.reduce((a, b) => a + b, 0) / scores.length
       const patch = {
         qualityScore: quality,
@@ -219,11 +220,15 @@ async function scoreSourceQuality(todo, results) {
         qualityScores: scores,
         lastQualityAt: new Date().toISOString(),
       }
-      if (quality < 6) {
+      // 2026-08-21 优化（owner 拍板）：停用判断用「近 42 次评分（约两周）平均分」而非单轮分——
+      //   单轮低分可能源于重抓/批次波动/解析失败（如 arxiv 单轮全 rejected 但 avg 9.3），
+      //   用滚动平均避免误伤；avg 连续低质才停用。
+      //   至少累计 5 次评分才启用停用判断（新源/刚恢复源先积累样本，防单次波动误杀）。
+      if (scores.length >= 5 && avg < 6) {
         patch.enabled = false
         patch.status = 'retired'
-        patch.retireReason = `quality<6(${quality}): staged=${s.staged}/${s.processed}, low=${s.low}, rejected=${s.rejected}`
-        console.warn(`[intelProcess] 源 ${src} 质量分 ${quality}<6 自动停用（staged ${s.staged}/${s.processed}, rejected ${s.rejected}）`)
+        patch.retireReason = `avg<6(${Math.round(avg * 10) / 10}): 近${scores.length}次=[${scores.slice(-10).join(',')}] 本轮 staged=${s.staged}/${s.processed}, rejected=${s.rejected}`
+        console.warn(`[intelProcess] 源 ${src} 平均质量分 ${Math.round(avg * 10) / 10}<6 自动停用（近 ${scores.length} 次: ${scores.join(',')}）`)
       }
       await db.collection(INTEL_SOURCES).where({ key: src }).update({ data: patch }).catch(() => {})
     }
