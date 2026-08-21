@@ -90,6 +90,10 @@ function formatIntelDetail(d) {
     definitionParas: toParas(d.definition),
     whatHappened: clean(d.whatHappened),          // 2026-08-20 修复：详情页"发生了什么"多段正文（此前未透传导致前端只显示一句话定义）
     whatHappenedParagraphs: toParas(d.whatHappened),
+    whatHappenedBlocks: Array.isArray(d.whatHappenedBlocks) ? d.whatHappenedBlocks.map(b => ({
+      type: b.type === 'plain' || b.type === 'predict' || b.type === 'def' ? b.type : 'text',
+      text: clean(b.text),
+    })).filter(b => b.text) : [],   // 2026-08-21 修复：透传结构化块（此前丢失 → 前端永远走本地兜底解析，predict 类型不稳定）
     sceneMapping: clean(d.sceneMapping),
     sceneTags: Array.isArray(d.sceneTags) ? d.sceneTags : [],
     relevance: d.relevance || '',

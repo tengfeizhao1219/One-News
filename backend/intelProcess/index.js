@@ -31,7 +31,7 @@
 //   语义 → 先 commlog 广播留痕再进入今日关注。云端无法直达用户设备
 //   127.0.0.1，先打日志级告警留痕，本地文件落地待 owner 拍部署形态。
 //
-// 部署注意：本函数 require('../common/intelLLM') 与 require('../common/ensureSchema')，
+// 部署注意：本函数 require('./common/intelLLM') 与 require('./common/ensureSchema')，
 //   部署云函数时需将 backend/common/ 一并上传。
 // ============================================================
 
@@ -40,10 +40,10 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { ensureSchema } = require('../common/ensureSchema')
-const { intelChat } = require('../common/intelLLM')
-const router = require('../common/intelRouter')
-const { qualify } = require('../common/intelClean')
+const { ensureSchema } = require('./common/ensureSchema')
+const { intelChat } = require('./common/intelLLM')
+const router = require('./common/intelRouter')
+const { qualify } = require('./common/intelClean')
 
 // ─── 集合名（intel_* 命名空间）───
 const INTEL_INGEST = 'intel_ingest'
@@ -530,13 +530,11 @@ function structureWhatHappened(raw) {
       blocks.push({ type, text: content })
     }
   }
-  // 2026-08-21 兜底：AI 预测块必须位于最后一段才保留 predict 样式，
-  // 否则降级为普通正文（LLM 曾把「（AI 预测）」误标在正文第一段开头 → 整段正文被误判）
-  if (blocks.length > 1) {
-    const lastIdx = blocks.length - 1
-    for (let i = 0; i < lastIdx; i++) {
-      if (blocks[i].type === 'predict') blocks[i].type = 'text'
-    }
+  // 2026-08-21 兜底修复 v2：仅当「AI 预测」被 LLM 误标在**第一段**（blocks[0]）时降级为正文
+  // ——那是把整段正文误当预测。正常数据中 AI 预测在正文之后（后面可能还有定义段），
+  // 必须保留 predict 类型（之前「非最后一段即降级」误伤了「正文+预测+定义」的正常结构）。
+  if (blocks.length > 1 && blocks[0].type === 'predict') {
+    blocks[0].type = 'text'
   }
   // 无任何标记 → 退回纯段落（按换行/句号兜底分段）
   if (blocks.length <= 1) {
@@ -561,6 +559,32 @@ function structureWhatHappened(raw) {
  * event.batch=false / event.limit 可强制串行（联调用）。
  */
 exports.main = async (event = {}) => {
+  // ── 运维 action：rebuildBlocks（2026-08-21 v2 修复后，重算全部 staged 的 whatHappenedBlocks）
+  // 用途：prompt/解析器升级后，历史 staged 的结构化块类型可能过期（如 predict 被误降级），
+  // 此 action 用当前解析逻辑重算并写回（纯本地计算，不耗 LLM）。
+  if (event.action === 'rebuildBlocks') {
+    let rebuilt = 0, failed = 0
+    try {
+      const res = await db.collection(INTEL_STAGED).limit(1000).get()
+      for (const d of res.data || []) {
+        const sop = (d && d.sop) || {}
+        const raw = String(sop.whatHappened || '').trim()
+        if (!raw) continue
+        const blocks = structureWhatHappened(raw)
+        if (!blocks.length) continue
+        try {
+          await db.collection(INTEL_STAGED).doc(d._id).update({
+            data: { sop: Object.assign({}, sop, { whatHappenedBlocks: blocks }) },
+          })
+          rebuilt++
+        } catch (e) { failed++ }
+      }
+    } catch (e) {
+      return { ok: false, reason: 'scan-fail:' + (e.message || e) }
+    }
+    return { ok: true, action: 'rebuildBlocks', rebuilt, failed }
+  }
+
   const now = new Date().toISOString()
   const force = event.force === true
   // 全局开关（对齐 worker：app.js 里 FEED_GLOBAL_ON）
