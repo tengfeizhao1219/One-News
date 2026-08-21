@@ -336,9 +336,9 @@ async function fetchOfficialRss(feed) {
     etag: fetchRes.etag || feed.etag,
   })
 
-  // 6. 连续空周期告警
+  // 6. 连续空周期告警（记录 disabledAt：自动恢复机制依赖它做冷却期判定）
   if (newStreak >= 3) {
-    await feedStore.updateFeed(sourceId, { status: 'disabled' })
+    await feedStore.updateFeed(sourceId, { status: 'disabled', disabledAt: new Date().toISOString() })
     await sendAlert(`源 **${sourceId}** 连续 ${newStreak} 周期入库 0，已自动暂停。`, { dedupKey: `rss-empty-${sourceId}` })
   }
 

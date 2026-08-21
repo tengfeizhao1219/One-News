@@ -291,3 +291,10 @@
 - **根因**：utils/intelApi.js `searchIntelTopic({itemId, query})` 只透传 itemId/query，把前端传的 `context` 丢弃 → 云函数收到 {query} 无 itemId 无 context → BAD_PARAM。
 - **修复**：wrapper 参数解构加 `context` 并透传（data: {itemId, query, context}）；云函数 context 分支此前已部署，无需改。
 - 下游：前端重编译生效（utils 变更无需部署云函数）。
+## 2026-08-22 · 【自主迭代 R1】newsFetcher 自动暂停源自动恢复机制
+
+- **问题**：源连续 3 轮入库 0 → 自动暂停(disabled)后**永久不抓**（无恢复机制），本轮曾因推荐源 disabled 导致推荐分类空。
+- **方案**：暂停时记录 `disabledAt`；`listDueFeeds` 对 disabled 源做冷却期(24h)判定——超过则重置 active+errorStreak=0 重新探测一轮，源恢复则重新接入、仍失败则再暂停（不无限重试）。
+- **兼容**：旧数据无 disabledAt 回退 lastFetchTime；两者皆无视为暂停已久直接探测。
+- **验证**：5 个边界用例全过（刚暂停不恢复/超冷却恢复/旧数据兼容/无时间直接探测）。
+- **部署**：newsFetcher 已更新。
