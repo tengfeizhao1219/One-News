@@ -454,9 +454,12 @@ function cleanText(v) {
     this._runSearch(query.slice(0, 60))
   },
 
-  /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示 */
+  /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示
+   *  bug：searchLoading 是异步 setData，快速连点/confirm+按钮并发时守卫失效 →
+   *  同一搜索 push 两次 → 历史出现重复条目。用同步标志 _searching 兜底。 */
   _runSearch(query) {
-    if (this.data.searchLoading) return
+    if (this.data.searchLoading || this._searching) return
+    this._searching = true
     this.setData({ searchLoading: true, searchHint: '' })
     searchIntelTopic({ itemId: this.data.itemId, query })
       .then(d => {
@@ -500,6 +503,7 @@ function cleanText(v) {
         wx.showToast({ title: (err && err.message) || '搜索失败，请稍后再试', icon: 'none' })
       })
       .then(() => this.setData({ searchLoading: false }))
+      .then(() => { this._searching = false })
   },
 
   /** 清洗 LLM 输出中的 markdown 标记（**加粗**、`代码`、# 标题等），只留纯文本 */
@@ -547,19 +551,48 @@ function cleanText(v) {
     try {
       const k = this._digKey()
       const v = wx.getStorageSync(k)
-      return Array.isArray(v) ? v : []
+      let groups = Array.isArray(v) ? v : []
+      // 清洗：同 query 内指纹相同的重复 entry 只留最新（修复历史遗留重复）
+      let cleaned = false
+      groups = groups.map(g => {
+        const seen = {}
+        const entries = (g.entries || []).filter(en => {
+          const fp = this._sectionsFingerprint(en.sections)
+          if (seen[fp]) { cleaned = true; return false }
+          seen[fp] = true
+          return true
+        })
+        if (entries.length !== (g.entries || []).length) { cleaned = true; g.entries = entries }
+        return g
+      }).filter(g => g && g.query && (g.entries || []).length)
+      if (cleaned) { try { wx.setStorageSync(k, groups) } catch (e) {} }
+      return groups
     } catch (e) { return [] }
   },
   _saveDig(groups) {
     try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
   },
-  /** 新深挖结果入历史：同话题合并 entries（最新在前），持久化；搜索完成→最新分组展开（bug1） */
+  /** sections 指纹：用于去重（同 query 同内容不重复入库） */
+  _sectionsFingerprint(sections) {
+    try { return JSON.stringify((sections || []).map(x => x && x.text || '')) } catch (e) { return '' }
+  },
+  /** 新深挖结果入历史：同话题合并 entries（最新在前），持久化；搜索完成→最新分组展开（bug1）
+   *  bug：并发触发时同 query 会 push 两条相同内容 → 入库前去重 */
   _pushDigEntry(query, sections, sources) {
     const now = new Date()
     const time = (now.getHours() < 10 ? '0' + now.getHours() : now.getHours()) + ':' +
       (now.getMinutes() < 10 ? '0' + now.getMinutes() : now.getMinutes())
     const groups = this._loadDig()
     const g = groups.find(x => x.query === query)
+    // 去重：同 query 最新 entry 指纹相同则跳过（防并发重复）
+    if (g && g.entries[0] && this._sectionsFingerprint(g.entries[0].sections) === this._sectionsFingerprint(sections)) {
+      // 仅刷新展开态，不重复 push
+      groups.forEach(x => { x.open = (x.query === query) })
+      this._saveDig(groups)
+      this.setData({ digGroups: groups })
+      this._measureSearchPanel()
+      return
+    }
     // 新条目来源默认折叠（bug2）
     const entry = { time: time, sections: sections, sources: sources, sourcesExpanded: false }
     if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
