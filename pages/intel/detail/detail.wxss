@@ -44,29 +44,33 @@
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
 
-/* 收藏按钮（2026-08-20：导航栏右侧，♡/♥ 双态；favorite-fill 固定红心不走主题色） */
-.nav-fav {
-  margin-left: auto;
-  width: 64rpx;
-  height: 64rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  flex-shrink: 0;
-  z-index: 20;
-  color: var(--text-primary);
-}
-.nav-fav--hover { background-color: var(--bg-subtle); }
-.nav-fav-icon-img { width: 44rpx; height: 44rpx; }
-.nav-fav.heart-anim .nav-fav-icon-img {
-  animation: heartBeat 0.3s ease-out;
-}
-
 .nav-dark { display: none; }
 .page--dark .nav-light { display: none; }
 .page--dark .nav-dark { display: block; }
 .nav-title { font-size: calc(32rpx * var(--font-scale)); font-weight: 600; color: var(--text-primary); }
+
+/* 收藏入口（2026-08-20 v2：右上角撞原生胶囊 → 移入 meta 时间后；对齐 One News 底部栏样式：
+   小图标(32rpx) + 小字 label，未收藏跟随主题描边心，已收藏固定红心 + 红字，整体不鲜艳） */
+.meta-fav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-left: 24rpx;
+  padding: 4rpx 12rpx 4rpx 8rpx;
+  border-radius: 24rpx;
+  vertical-align: middle;
+}
+.meta-fav--hover { background-color: var(--bg-subtle); }
+.meta-fav-icon { width: 32rpx; height: 32rpx; }
+.meta-fav-label {
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+.meta-fav-label.is-favorited { color: var(--color-favorite); }
+.meta-fav.heart-anim .meta-fav-icon {
+  animation: heartBeat 0.3s ease-out;
+}
 
 @keyframes heartBeat {
   0%   { transform: scale(1); }

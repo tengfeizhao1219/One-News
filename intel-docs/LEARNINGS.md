@@ -144,3 +144,7 @@
 - **修复**：改用 `chunks.push(c)` + `Buffer.concat(chunks).toString('utf8')` 统一解码。同类问题 wechatAdapter.js:176 一并修复。
 - **存量修复**：staged 6 条乱码（全在 whatHappened 字段）→ 删 staged + 重置 ingest pending → 重跑 intelProcess 重新生成（乱码不可逆，只能重跑）。
 - **教训**：Node 里收集 HTTP body 永远用 Buffer 数组，不要 `+=`；部署副本（cloudfunctions/intelProcess/common/intelLLM.js）需同步。
+
+## 2026-08-20 收藏入口位置（owner 反馈）
+- **自定义导航页别放右上角**：微信小程序右上角是原生胶囊（…）固定区域，自定义导航布局时右侧会被胶囊遮挡——按钮只能放左侧（与返回同侧）或正文区。
+- **meta 行条件渲染陷阱**：收藏入口放「时间后面」时，meta 行若带 `wx:if="{{srcName || pubTime}}"`，无来源/时间时整个 meta（含收藏）消失。应让 meta 行在真实数据块内始终显示，来源/时间各自 wx:if。

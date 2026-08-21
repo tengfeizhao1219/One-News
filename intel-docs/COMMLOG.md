@@ -196,3 +196,12 @@
   ⑤ app.json 注册新页面。
 - **验证**：node 冒烟测试 7 项全过（空态/收藏/取消/倒序/半年过期滚动清除+回写/移除/容量满）。
 - **注意**：并行会话 v5.1 提交（6efb6c2）把 detail 三件套 + intelFavorites.js + favorites 页 js/json/wxml 一并带入；本提交（8991706）补齐 mine 入口 + 列表页 wxss + app.json。前端需微信开发者工具重编译。
+## 2026-08-20 · 收藏入口 v2：右上角 → meta 时间后（owner 反馈：右上角撞原生胶囊）
+
+- **owner 反馈**：收藏按钮放详情页右上角会与微信原生胶囊重叠冲突；建议移到新闻详情页时间后面，做成不鲜艳的入口，样式参考 One News。
+- **落地**：
+  ① detail.wxml：删除导航栏右侧 nav-fav 按钮；meta 行（来源/时间）后新增收藏入口——One News 风格小图标(32rpx) + 小字 label；meta 行条件从 `{{srcName || pubTime}}` 改为始终显示（真实数据块内），保证无来源/时间时收藏入口仍在。
+  ② detail.wxss：删 nav-fav 样式；新增 meta-fav——未收藏=主题色描边心(跟随深浅色)+灰字「收藏」，已收藏=固定红心+红字「已收藏」；hover 浅底；heartBeat 动画保留。
+  ③ demo：`~/Desktop/Deepseek/ui-preview/detail-fav-demo.html` + 亮/暗 PNG（未收藏/已收藏 4 态，含原右上角冲突位置红字示意）。
+- **未动**：detail.js 收藏逻辑（onToggleFavorite/_checkFavorite 与入口位置无关）。
+- 下游：微信开发者工具重编译查看效果；demo 确认后合入。

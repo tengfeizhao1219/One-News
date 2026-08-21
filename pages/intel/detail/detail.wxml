@@ -7,17 +7,11 @@
   <!-- 顶部条带（对齐原生胶囊） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
-  <!-- 导航 -->
+  <!-- 导航（收藏入口不在导航栏：右上角是原生胶囊，会冲突；改放详情 meta 行时间后） -->
   <view class="nav">
     <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
       <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
-    </view>
-    <!-- 收藏（2026-08-20：纯本地，对齐 One News ♡/♥ 双态；空态/加载态隐藏） -->
-    <view wx:if="{{!loading && !empty}}" class="nav-fav {{heartAnim ? 'heart-anim' : ''}}" bindtap="onToggleFavorite" hover-class="nav-fav--hover">
-      <image wx:if="{{!isFavorited}}" class="nav-fav-icon-img nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
-      <image wx:if="{{!isFavorited}}" class="nav-fav-icon-img nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
-      <image wx:if="{{isFavorited}}" class="nav-fav-icon-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
     </view>
   </view>
 
@@ -38,9 +32,16 @@
     <block wx:else>
       <!-- 结论式标题 + 来源（时间字段后端补上后自动展示） -->
       <text class="detail-title">{{title}}</text>
-      <view class="meta" wx:if="{{srcName || pubTime}}">
+      <view class="meta">
         <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
-        <text wx:if="{{pubTime}}">{{pubTime}}</text>
+        <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
+        <!-- 收藏入口（2026-08-20 v2：右上角撞原生胶囊 → 移入时间后；样式对齐 One News：小图标+文字，不鲜艳） -->
+        <view class="meta-fav {{heartAnim ? 'heart-anim' : ''}}" catchtap="onToggleFavorite" hover-class="meta-fav--hover">
+          <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+          <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
+          <image wx:if="{{isFavorited}}" class="meta-fav-icon" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
+          <text class="meta-fav-label {{isFavorited ? 'is-favorited' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
+        </view>
       </view>
 
       <!-- 发生了什么（2026-08-20 v5.1：结构化块——正文自然段落 + 大白话/AI预测/定义整段浅灰底；AI 预测标识放段尾） -->
