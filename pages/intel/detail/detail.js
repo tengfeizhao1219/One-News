@@ -11,22 +11,7 @@ function cleanText(v) {
   return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
 }
 
-/** sceneMapping 结构化解析：按 \n 分行，每行拆 **加粗** 段 → {lines:[{segments:[{text,bold}]}]}
- * （不用 rich-text：微信 rich-text 的 \n 换行渲染不可靠；view+text 完全可控） */
-function parseSceneMapping(txt) {
-  const text = cleanText(txt)
-  const lines = String(text).split('\n').map((line) => {
-    const segments = []
-    const parts = line.split(/\*\*(.+?)\*\*/g)
-    parts.forEach((p, i) => {
-      if (!p) return
-      if (i % 2 === 1) segments.push({ text: p, bold: true })
-      else segments.push({ text: p, bold: false })
-    })
-    return { segments }
-  }).filter((l) => l.segments.length)
-  return lines
-}
+
 const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
@@ -155,18 +140,49 @@ Page({
     // 深挖历史：退出再进保留（本地持久化，按 itemId 隔离）
     this.setData({ digGroups: this._loadDig() })
 
-    // 2026-08-21 修复（问题④）：去掉「先卡片摘要后全量覆盖」两段式——
-    //   统一等云函数返回完整详情再渲染（期间 loading），避免用户先看到一句话摘要再闪成完整内容。
+    // 2026-08-22 优化：卡片透传完整数据（sop 已随 brief 下发）→ 本地渲染秒开，免云函数等待。
+    //   云函数 intelGetDetail 仅作兜底（数据缺失时）。
     if (id) {
       const cached = (app.globalData && app.globalData.intelDetailCache && app.globalData.intelDetailCache[id]) || null
       if (cached) {
         this.applyDetail(cached)
+      } else if (card && card.sop && card.sop.whatHappened) {
+        // 首页已带完整详情（sop）→ 本地渲染，零等待；云函数兜底不必要
+        this._renderFromCard(card, id)
       } else {
         this.loadRealDetail(id)
       }
     } else {
       this.setData({ loading: false, empty: true })
     }
+  },
+
+  /** 2026-08-22：从首页透传的 card.sop 本地渲染详情（秒开，免云函数调用） */
+  _renderFromCard(card, id) {
+    const sop = card.sop || {}
+    const d = {
+      id: id || card.id || '',
+      title: card.title || '',
+      url: card.url || '',
+      srcName: card.sourceName || card.src || '',
+      sourceUrl: card.url || '',
+      publishedAt: card.publishedAt || '',
+      definition: sop.definition || card.desc || '',
+      whatHappened: sop.whatHappened || '',
+      whatHappenedBlocks: Array.isArray(sop.whatHappenedBlocks) ? sop.whatHappenedBlocks : [],
+      sceneMapping: sop.sceneMapping || '',
+      sceneTags: Array.isArray(card.sceneTags) ? card.sceneTags.map(t => (typeof t === 'object' ? t.key || t.label : t)) : [],
+      relevance: card.relevance || 'medium',
+      minAction: sop.minAction || '',
+      references: Array.isArray(card.references) ? card.references : [],
+      practice: sop.practice || '',
+      tryable: card.tryable === true,
+      research: { status: 'todo' },
+      processedAt: card.time || '',
+      modelUsed: '',
+      cost: 0,
+    }
+    this.applyDetail(d)
   },
 
   // 2026-08-20 修复：收藏方法缺失（wxml 已引用 bindtap / onLoad 已调用 _checkFavorite，
@@ -205,22 +221,7 @@ function cleanText(v) {
   return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
 }
 
-/** sceneMapping 结构化解析：按 \n 分行，每行拆 **加粗** 段 → {lines:[{segments:[{text,bold}]}]}
- * （不用 rich-text：微信 rich-text 的 \n 换行渲染不可靠；view+text 完全可控） */
-function parseSceneMapping(txt) {
-  const text = cleanText(txt)
-  const lines = String(text).split('\n').map((line) => {
-    const segments = []
-    const parts = line.split(/\*\*(.+?)\*\*/g)
-    parts.forEach((p, i) => {
-      if (!p) return
-      if (i % 2 === 1) segments.push({ text: p, bold: true })
-      else segments.push({ text: p, bold: false })
-    })
-    return { segments }
-  }).filter((l) => l.segments.length)
-  return lines
-}
+
     if (!d || (!d.definitionParas && !d.definition && !d.sceneMapping && !d.title && !d.whatHappened)) {
       console.warn('[intel-detail] 进入空态: d 为空或全字段空')
       this.setData({ loading: false, empty: true })
@@ -228,90 +229,45 @@ function parseSceneMapping(txt) {
     }
     // definitionParas 是按换行拆好的段；单段 .prose 整文展示时拼回换行
     const definition = d.definition || (Array.isArray(d.definitionParas) ? d.definitionParas.join('\n\n') : '')
-    const relateItems = d.sceneMapping
-      ? [{ who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''), txt: d.sceneMapping, lines: parseSceneMapping(d.sceneMapping) }]
+    // 2026-08-21 方案A：落到你这里用后端结构化 lines（segments+bold，LLM 直接输出），
+    // 不再本地正则解析 **加粗**；旧数据无 lines 时回退字符串 sceneMapping（按行拆分兜底）
+    const relateItems = (d.sceneMapping || (d.sceneMappingLines && d.sceneMappingLines.length))
+      ? [{
+          who: '命中场景' + (d.sceneTags && d.sceneTags.length ? '：' + (d.sceneTags.map(t => (t && t.label) || (typeof t === 'string' ? t : '')).filter(Boolean).join(' / ')) : ''),
+          txt: d.sceneMapping || '',
+          lines: (d.sceneMappingLines && d.sceneMappingLines.length)
+            ? d.sceneMappingLines
+            : String(d.sceneMapping || '').split('\n').map(line => ({ segments: [{ text: line, bold: false }] })).filter(l => l.segments[0].text),
+        }]
       : []
     this.setData({
       title: cleanText(d.title) || this.data.title,
       descText: cleanText(d.definition) || this.data.descText,
       whatHappenedText: cleanText(d.whatHappened) || cleanText(d.definition) || '',
       whatHappenedBlocks: (() => {
-        // 2026-08-20 v5：优先用后端结构化结果（intelProcess 已解析 whatHappenedBlocks 存 sop）；
-        // 旧数据（后端未解析）才走本地兜底解析
+        // 2026-08-21 方案A：后端 LLM 直接输出结构化块（text/predict/def 类型），前端只做清洗；
+        // 大白话（plain）不再展示（首页摘要已覆盖）；无 blocks 时按空行切 text 段落兜底
         if (Array.isArray(d.whatHappenedBlocks) && d.whatHappenedBlocks.length) {
-          // 2026-08-21：大白话（plain）不再展示——首页卡片已有 15-50 字摘要，详情页大白话冗余
           const blocks = d.whatHappenedBlocks
             .filter(b => b.type !== 'plain')
             .map(b => ({
               type: (b.type === 'predict' || b.type === 'def') ? b.type : 'text',
               text: String(b.text || '').replace(/\*\*/g, '').trim(),
             })).filter(b => b.text)
-          // 2026-08-21 兜底修复 v2：仅当「AI 预测」误标在**第一段**时降级为正文
-          //（LLM 曾把标记放正文开头 → 整段正文被误判）。正常结构「正文+预测(+定义)」中
-          // 预测在后面，必须保留预测样式（之前「非最后一段即降级」误伤正常数据）。
+          // 兜底：仅当「AI 预测」误标在第一段时降级为正文
           if (blocks.length > 1 && blocks[0].type === 'predict') {
             blocks[0] = { type: 'text', text: blocks[0].text }
           }
           return blocks
         }
-        // 本地兜底解析（对齐后端 structureWhatHappened 逻辑）——2026-08-20 v5
         const raw = String(d.whatHappened || '').trim()
         if (!raw) return []
-        // ① 先按标记切分：separator 捕获标记词，内容块在奇偶位
-        const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*|[:：])*\s*\*\*?\s*[:：]?\s*/
-        const parts = raw.split(SEP_RE)
-        const blocks = []
-        const pushText = (txt) => {
-          const t = String(txt || '').replace(/\*\*/g, '').trim()
-          if (!t) return
-          blocks.push({ type: 'text', text: t })
-        }
-        // ② 开头正文（parts[0]）：按换行拆成多个自然段落
-        const head = String(parts[0] || '').trim()
-        if (head) {
-          const paras = head.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
-          if (paras.length >= 2) paras.forEach(p => pushText(p))
-          else pushText(head)
-        }
-        // ③ 标记块：label → 类型，content → 整块（先截断后续标记，再清星号）
-        let idx = 1
-        while (idx < parts.length) {
-          const label = String(parts[idx] || '').trim()
-          let content = String(parts[idx + 1] || '').trim()
-          // 内容里若混入后续标记（**对老赵的意义** 等）→ 截断，只保留本块内容
-          const cut = content.search(/\*{1,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么)\s*\*{0,2}\s*[:：]?/)
-          if (cut >= 0) content = content.slice(0, cut).trim()
-          content = content.replace(/\*\*/g, '').trim()
-          if (content) {
-            let type = 'text'
-            if (/大白话|用大白话说/.test(label)) type = 'plain'
-            else if (/AI\s*预测|预测/.test(label)) type = 'predict'
-            else if (/定义/.test(label)) type = 'def'
-            // 2026-08-21：大白话不再展示（首页摘要已覆盖），过滤 plain 块
-            if (type === 'plain') continue
-            blocks.push({ type, text: content })
-          }
-          idx += 2
-        }
-        // ④ 无任何标记 → 退回纯段落（按换行/句号兜底分段）
-        if (blocks.length <= 1) {
-          const byNewline = raw.split(/\n+\s*/).map(x => x.trim().replace(/\*\*/g, '')).filter(Boolean)
-          if (byNewline.length >= 2) return byNewline.map(t => ({ type: 'text', text: t }))
-          const parts2 = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
-          const merged = []
-          let cur = ''
-          for (const p of parts2) {
-            cur = (cur ? cur + ' ' : '') + p
-            if (cur.length >= 40) { merged.push(cur); cur = '' }
-          }
-          if (cur) merged.push(cur)
-          return (merged.length >= 2 ? merged : [raw]).map(t => ({ type: 'text', text: t }))
-        }
-        return blocks
+        const paras = raw.split(/\n{2,}/).map(x => x.replace(/\*\*/g, '').trim()).filter(Boolean)
+        return paras.length ? paras.map(p => ({ type: 'text', text: p })) : [{ type: 'text', text: raw }]
       })(),
       srcName: d.srcName || d.sourceName || this.data.srcName,
       relateItems: relateItems,
-      relateSkip: d.sceneMapping ? '' : '这条与你当前场景暂时不沾边，先跳过。',
+      relateSkip: (d.sceneMapping || (d.sceneMappingLines && d.sceneMappingLines.length)) ? '' : '这条与你当前场景暂时不沾边，先跳过。',
       hasMore: !!(d.sourceUrl || (d.references && d.references.length)),
       sourceUrl: d.sourceUrl || '',
       references: Array.isArray(d.references) ? d.references : [],

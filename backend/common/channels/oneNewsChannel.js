@@ -115,6 +115,11 @@ class OneNewsChannel extends IntelChannel {
       practice: extractCardField(card, '可以怎么做'),      // 实操
       minAction: extractCardField(card, '最小行动'),       // 最小行动
       card,                                                // 完整五步 Markdown（详情页）
+      // 2026-08-22：透传结构化 sop（详情页本地渲染秒开，免云函数等待）
+      //   brief items 已自包含 sop（whatHappenedBlocks/definition/sceneMapping/practice/minAction）
+      sop: it.sop || null,
+      references: Array.isArray(it.references) ? it.references : [],
+      tryable: it.tryable === true,
       contract: it.contract === true,                       // 合同/接口变更置顶标记
       // 场景标签
       sceneTags: (it.sceneTags || []).map((t) => ({ key: t, label: SCENE_LABEL[t] || t })),

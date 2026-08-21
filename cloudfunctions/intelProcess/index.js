@@ -165,8 +165,9 @@ async function processOne(item, profile) {
       source: { name: String(item.sourceName || ''), layer: String(item.layer || ''), publishedAt: String(item.publishedAt || ''), url: String(item.url || ''), titleEn: String(item.title || '') },
       definition: parsed.definition,
       whatHappened: parsed.whatHappened,
-      whatHappenedBlocks: structureWhatHappened(parsed.whatHappened), // 2026-08-20 v5：结构化块（后端解析，前端不依赖文本分节）
+      whatHappenedBlocks: parsed.whatHappenedBlocks, // 2026-08-21 方案A：LLM 直接输出的结构化块（含 predict 类型），不再文本正则切分
       sceneMapping: parsed.sceneMapping,
+      sceneMappingLines: parsed.sceneMappingLines,   // 2026-08-21 方案A：落到你这里结构化 lines（segments+bold），前端直接渲染
       practice: parsed.practice,
       minAction: parsed.minAction,
     },
@@ -306,39 +307,54 @@ function buildPrompts(item, profile, level) {
 
   if (level === 'medium') {
     return {
-      system: baseSystem + `\n对下面的单条情报做「轻量摘要」：
-先输出「发生了什么」（**段落间用空行分隔**，总 180-320 字）：**严格基于情报原文客观转述发生了什么**——把原文的核心事实、关键数字、机制讲清楚，**像如实复述新闻本身**；**禁止出现「他/该公司/我们」「专业解读」「大白话」等介绍性口吻或标签字样**，不要以"我/我给你讲"的视角说话；结尾若确有未来影响可加一段——该段必须放在**所有正文段落之后**（最后一段），段首单独一行用「（AI 预测）：」作标记（该标记仅供程序识别，不要展开成正文文字）；**严禁把「（AI 预测）」放在第一段或正文段落开头**。**语言风格贴合内容**（技术→冷静专业/社区→轻松），句式多样化，避免八股腔。**禁止只写一句话、禁止写成一整段不换行。**
-再输出一句话定义（含能力边界）。**必须用自然通顺的中文**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格。
-再输出「对老赵的意义」：**先判断关联性**——仅当与老赵初始化的行业/职位/关注议题**强相关且能具体点出关联点**时才写，结构清晰（第一行点明相关性，后续每行一个使用场景，关键处加粗）；弱相关输出「无」（前端隐藏），禁止强行关联凑数。${depth === 'lite' ? '（精简档，更短）' : ''}
-再输出「可以怎么做」：给 1-2 句能落地的做法（工具/动作/收益），若无明显可做点输出「无」。
-再输出「想试试」：**轻松引导语气（owner 拍板，非命令式）**——仅当本条存在一个现在就能上手尝试的具体功能/产品/新特性时，用「想体验的话，可以试试…」这类口吻给 1 条最轻步骤；否则输出「无」，禁止硬造。${depth === 'lite' ? '（精简档：可以怎么做/想试试各压到一句话）' : ''}
-最后单独一行输出 JSON 供程序解析：{"titleCn":"中文标题（把本条标题翻译成自然通顺的中文）","sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`,
+      system: baseSystem + `\n对下面单条情报做「轻量摘要」，**只输出一个 JSON 对象**（不要 markdown 代码块、不要任何解释文字、不要输出 JSON 以外的内容）：
+{
+  "titleCn": "中文标题（把本条标题翻译成自然通顺的中文）",
+  "whatHappened": [
+    {"type": "text", "text": "第一段正文：**严格基于情报原文客观转述发生了什么**，把核心事实、关键数字、机制讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司/我们」「专业解读」「大白话」等字样）。总 180-320 字，按逻辑分 2-3 段（每个对象一段），语言风格贴合内容（技术→冷静专业/社区→轻松），句式多样化"},
+    {"type": "text", "text": "第二段正文……"},
+    {"type": "predict", "text": "结尾若确有未来影响才加这一段：推测性措辞（可能会…），不要写成既成事实；没有未来影响就不要这个对象"}
+  ],
+  "definition": "一句话定义（是什么 + 能做什么 + 能力边界，不夸大不堆参数，供列表摘要用）。**必须用自然通顺的中文**：英文源先翻译成中文，专有术语保留原文首次出现括号注中文；输出英文视为不合格",
+  "sceneMapping": {
+    "relevant": true,
+    "lines": [
+      {"segments": [{"text": "相关性：", "bold": false}, {"text": "强相关概念", "bold": true}]},
+      {"segments": [{"text": "使用场景一（关键动作加粗）", "bold": false}]}
+    ]
+  },
+  "practice": "可以怎么做：1-2 句能落地的做法（工具/动作/收益），无则空字符串",
+  "minAction": "想试试：轻松引导口吻（想体验的话，可以试试…），给 1 条最轻步骤，无则空字符串",
+  "tryable": true,
+  "sceneTags": ["work_rcbc"]
+}
+约束：
+- whatHappened 的正文段 type 必须是 "text"；未来影响段 type 必须是 "predict"（有才加）；严禁把 predict 放第一段
+- sceneMapping：仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才 relevant=true 并给 lines（第一行点明相关性、关键概念 bold=true，后续每行一个使用场景）；弱相关/无法关联 → relevant=false、lines 空数组，禁止强行关联凑数
+- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集，按命中填充
+- 严格 JSON：字段名、类型、缩进无关紧要，但必须可被 JSON.parse 解析；不要省略字段`,
       user: `情报原文：\n${String(text || '').replace(/\uFFFD/g, '')}`,
     }
   }
 
   const system = baseSystem + depthHint + `
 
-对下面单条情报按 SOP 六步硬性结构输出（欠一步即视为不合格）：
-0. 发生了什么（最关键，结构要求见下）：**严格基于情报原文客观转述发生了什么**，把核心事实、关键数字、机制、背景讲清楚，像如实复述新闻本身；**禁止以介绍者视角说话**——不要出现「他/该公司做了…」「我们来看…」「专业解读」「大白话」等字样或口吻，不添加原文没有的观点。**段落之间必须用空行分隔**，总长 300-550 字：
-   - 正文段落：按原文逻辑分 2-4 段客观陈述（谁、发生了什么、关键数据/机制/背景），术语保留原文，贴合内容性质选择语气（技术发布→冷静专业；行业动态→洞见；警示类→谨慎），句式多样化。
-   - 结尾若确有未来影响：可加一段——放在**所有正文段落之后**（最后一段），段首单独一行「（AI 预测）：」标记（仅供程序识别，不展开成正文文字），用推测性措辞（"可能会…"），不要写成既成事实；**严禁把「（AI 预测）」放在第一段或正文段开头**。
-1. 信息溯源：来源、发布时间、原文链接；来源存疑标「待验证」
-2. 一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）。**必须用自然通顺的中文输出**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格
-3. 场景映射（落到你这里）：**先判断关联性**——仅当本条与老赵初始化的行业/职位/关注议题**强相关且能具体点出关联点**时才写；弱相关或无法具体关联时输出「无」（前端自动隐藏该区块），禁止强行关联凑数。**结构清晰**：第一行「相关性」用一句话点明关联点（关键概念用 **加粗** 强调）；接下来每行一条「使用场景/可以做的事」，用换行分隔，关键动作加粗。不要几句话揉成一团、不要无换行。
-4. 可落地实操案例：工具 + 步骤 + 收益 + 坑点，老赵明天就能用
-5. 想试试（**轻松引导语气，owner 2026-08-19 拍板**）：仅当本条存在一个老赵**现在就能上手尝试**的具体功能/产品/新特性（如新发布模型可直接调用、新工具可注册体验、新功能可在产品里打开）时，给 1 条可落地案例，用**朋友推荐般的轻松引导口吻**（如「想体验的话，可以试试…」「上手很顺手」「会更省事」），具体到「打开哪里 → 做什么 → 得到什么」；**禁止命令式措辞**——不得出现「本周X前」「必须」「请尽快」等催促/命令语气；若本条是行业动态/收购/融资/观点类新闻，或无明显可试点 → 输出「无」，禁止硬造尝试建议。
-
-输出用如下固定 Markdown 模板（严格对齐，字段缺失视为失败）：
-### [条目标题]
-**发生了什么**：[科普向详细叙事，3-5 段，普通人都能懂，见步骤 0]
-- **溯源**：[来源] · [发布时间] · [链接]
-- **一句话**：[定义 + 能力边界]
-- **对老赵的意义**：[仅强相关时写，否则「无」]
-- **可以怎么做**：[工具 + 步骤 + 收益 + 坑点]
-- **想试试**：[仅存在可立即上手的案例时写，否则「无」]
-最后单独一行输出 JSON 供程序解析（务必严格 JSON）：
-{"titleCn":"中文标题（把本条标题翻译成自然通顺的中文）","sceneTags":["work_rcbc"|"product_onenews"|"life"],"tryable":true|false}`
+对下面单条情报按完整 SOP 处理，**只输出一个 JSON 对象**（不要 markdown 代码块、不要任何解释文字、不要输出 JSON 以外的任何内容）。字段全部使用字符串/布尔/数组，结构扁平：
+{
+  "titleCn": "中文标题（把本条标题翻译成自然通顺的中文）",
+  "whatHappened": "发生了什么正文：**严格基于情报原文客观转述**，把核心事实、关键数据、机制、背景讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司做了…」「我们来看…」「专业解读」「大白话」等字样），不添加原文没有的观点。按原文逻辑分 2-4 段，段与段之间用【换行+空行】分隔；术语保留原文，贴合内容性质选择语气（技术发布→冷静专业；行业动态→洞见；警示类→谨慎），句式多样化，总长 300-550 字",
+  "aiPrediction": "结尾若确有未来影响才写这一段（推测性措辞，可能会…，不要写成既成事实；没有未来影响则为空字符串）。**这一段不要写进 whatHappened**",
+  "definition": "一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）。**必须用自然通顺的中文输出**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格",
+  "sceneMapping": "落到你这里（场景映射）：**先判断关联性**——仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才写；第一行点明相关性（关键概念用 **加粗** 强调），后续每行一个使用场景（关键动作加粗），用换行分隔；弱相关/无法关联 → 空字符串，禁止强行关联凑数",
+  "practice": "可以怎么做：工具 + 步骤 + 收益 + 坑点，老赵明天就能用",
+  "minAction": "想试试：**轻松引导语气（owner 拍板，非命令式）**——仅当存在现在就能上手尝试的具体功能/产品/新特性时，用「想体验的话，可以试试…」口吻给 1 条，具体到「打开哪里 → 做什么 → 得到什么」；无则空字符串。**禁止命令式措辞**（不得出现「本周X前」「必须」「请尽快」等）；行业动态/收购/融资/观点类新闻 → 空字符串，禁止硬造",
+  "tryable": true,
+  "sceneTags": ["work_rcbc", "product_onenews"]
+}
+约束：
+- 所有字段都要输出，值不确定时用空字符串，不要省略字段
+- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集
+- 严格 JSON：必须可被 JSON.parse 解析；缩进无关紧要；不要输出 JSON 以外的任何文字${depthHint}`
   return { system, user: `情报原文：\n${text}` }
 }
 
@@ -380,179 +396,109 @@ async function translateZh(text) {
   return (out && out.text && String(out.text).trim()) ? String(out.text).trim() : null
 }
 
+/**
+ * 解析 LLM 输出为结构化 ProcessedItem 字段（2026-08-21 方案 A：全 JSON 结构化）。
+ * LLM 被要求只输出一个 JSON 对象（见 buildPrompts），这里：
+ *   1) 剥 markdown 代码块/杂散文本，取最后一个合法 JSON 对象
+ *   2) JSON.parse + 字段校验/归一
+ *   3) 计算 sceneHits（场景命中强度，rank 用）——纯文本统计，不依赖 LLM
+ * 不再使用任何章节正则（旧 sec/secBlock/SEP_RE 全部废弃）。
+ */
 function parseSopOut(text, item, profile, route) {
-  const t = String(text || '')
-  let parsedTitleCn = ''
+  const t = String(text || '').trim()
+  console.log('[parseSopOut] LLM 原始输出前300字:', JSON.stringify(t.slice(0, 300)))
+  const empty = {
+    whatHappened: '', whatHappenedBlocks: [],
+    definition: '', sceneMapping: '', sceneMappingLines: [],
+    practice: '', minAction: '',
+    sceneTags: [], sceneHits: 0, tryable: false, titleCn: '', translated: true,
+  }
+  if (!t) return empty
 
-  /** 「无」/「无（…）」/空 → 归一为空串（弱相关不强行关联；想试试不可落地则留空） */
-  function normNone(v) {
+  // 1) 提取最后一个合法 JSON 对象（剥 ```json 代码块、杂散前后文）
+  let jsonStr = ''
+  const fenced = t.match(/```(?:json)?\s*\n?([\s\S]*?)\s*```/i)
+  if (fenced && fenced[1]) jsonStr = fenced[1]
+  else {
+    const all = [...t.matchAll(/\{[\s\S]*?\}/g)]
+    for (let i = all.length - 1; i >= 0; i--) {
+      const cand = all[i][0]
+      try { JSON.parse(cand); jsonStr = cand; break } catch (e) { /* 继续找更早的 */ }
+    }
+  }
+  if (!jsonStr) {
+    // 终极兜底：全文从第一个 { 到最后一个 }（LLM 可能在 JSON 前后夹带文字）
+    const s = t.indexOf('{'), e = t.lastIndexOf('}')
+    if (s >= 0 && e > s) jsonStr = t.slice(s, e + 1)
+  }
+  let j = null
+  if (jsonStr) {
+    try { j = JSON.parse(jsonStr) } catch (e) { console.warn('[parseSopOut] JSON 解析失败，返回空结构:', (e && e.message) || e) }
+  }
+  if (!j || typeof j !== 'object') return empty
+
+  /** 「无」/「无（…）」/空 → 归一为空串 */
+  const normNone = (v) => {
     const s = String(v || '').trim()
     if (!s) return ''
     if (/^无[。）)]?$/.test(s)) return ''
     if (/^（?无关联）?$/.test(s)) return ''
     return s
   }
+  const clean = (v) => String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '').trim()
 
-  const sceneTags = []
+  // 2) whatHappened：数组 → 文本（join 双换行，兼容旧字段）/ blocks（结构化，供前端渲染）
+  const whRaw = Array.isArray(j.whatHappened) ? j.whatHappened : []
+  const blocks = whRaw
+    .map((b) => ({
+      type: b && (b.type === 'predict' || b.type === 'def' || b.type === 'plain') ? b.type : 'text',
+      text: clean(b && b.text),
+    }))
+    .filter((b) => b.text)
+  // 兜底（2026-08-21）：LLM 可能仍输出 predict 在第一段 → 降级为 text（仅第一段）
+  if (blocks.length > 1 && blocks[0].type === 'predict') blocks[0].type = 'text'
+  const whatHappened = blocks.map((b) => b.text).join('\n\n')
+
+  // 3) sceneMapping：结构化 lines（前端直接渲染 segments） + 兼容字符串
+  const sm = (j.sceneMapping && typeof j.sceneMapping === 'object') ? j.sceneMapping : {}
+  const smRelevant = sm.relevant !== false
+  const smLines = (Array.isArray(sm.lines) ? sm.lines : [])
+    .map((ln) => ({
+      segments: (Array.isArray(ln && ln.segments) ? ln.segments : [{ text: clean(ln && ln.text), bold: false }])
+        .map((sg) => ({ text: clean(sg && sg.text), bold: sg && sg.bold === true }))
+        .filter((sg) => sg.text),
+    }))
+    .filter((ln) => ln.segments.length)
+  const sceneMapping = smRelevant ? (smLines.map((ln) => ln.segments.map((sg) => sg.text).join('')).join('\n') || clean(j.sceneMapping)) : ''
+  const sceneMappingLines = smRelevant ? smLines : []
+
+  // 4) 场景标签 + 命中强度（rank 用，纯文本统计）
+  const sceneTags = Array.isArray(j.sceneTags)
+    ? j.sceneTags.map(String).filter((x) => ['work_rcbc', 'product_onenews', 'life'].includes(x))
+    : []
   const hitsIndicators = ['工作', '产品', '家庭', 'rcbc', 'framl', 'trustdecision', 'one news', 'onenews', '阅读引擎', 'theme.json', 'rss', '装修', '育儿', '自动化']
+  const corpus = (t + ' ' + String(item.title || '')).toLowerCase()
   let sceneHits = 0
-  const profileHint = describeIdentities(profile)
-  const hitMap = {
-    work_rcbc: /rcbc|framl|合规|trustdecision|制裁|aml|反洗钱|供应商/i,
-    product_onenews: /one news|onenews|阅读引擎|小程序|rss|theme|设计系统|信息流|摘要|情报/i,
-    life: /装修|育儿|家居|家电|家庭|厨房|效率|自动化|脚本|节能/i,
-  }
-  for (const k of Object.keys(hitMap)) {
-    const re = hitMap[k]
-    const inBody = re.test(t) || re.test(String(item.title || ''))
-    const inIdentity = re.test(profileHint)
-    if (inBody || inIdentity) sceneTags.push(k)
-  }
-  // 场景命中强度 = 文本+标题里显式身份词的命中数（设计 §6.4 强度规则）
-  hitsIndicators.forEach((kw) => { if (t.toLowerCase().includes(kw.toLowerCase())) sceneHits++ })
+  hitsIndicators.forEach((kw) => { if (corpus.includes(kw.toLowerCase())) sceneHits++ })
 
-  // 提取 JSON 内嵌行（规则：单独一行以 { 开头、含 "tryable" 或 "sceneTags"）
-  let tryable = false
-  const jsonMatch = t.match(/^\s*\{[\s\S]*?\}\s*$/m) || (() => {
-    // 容错（2026-08-21）：LLM 常把 JSON 混在正文里，搜全文含 titleCn 的最后一个 JSON 块
-    const all = [...t.matchAll(/\{[\s\S]*?"titleCn"[\s\S]*?\}/g)]
-    return all.length ? all[all.length - 1] : null
-  })()
-  if (jsonMatch) {
-    try {
-      const j = JSON.parse(jsonMatch[0])
-      if (j && Array.isArray(j.sceneTags)) sceneTags.length = 0, sceneTags.push(...j.sceneTags.filter(Boolean))
-      if (typeof j.tryable === 'boolean') tryable = j.tryable
-      if (j && typeof j.titleCn === 'string' && j.titleCn.trim()) parsedTitleCn = j.titleCn.trim()
-    } catch (e) { /* 解析失败则用正则兜底 */ }
-  }
-  if (!jsonMatch) {
-    tryable = /tryable"?\s*:\s*true/i.test(t)
-  }
+  // 5) 其余字段 + 兼容：definition 缺时用 whatHappened 首段兜底（保证列表摘要有内容）
+  let definition = clean(j.definition)
+  if (!definition && blocks.length) definition = blocks[0].text.slice(0, 60)
 
-  // 2026-08-20 修复：LLM（智谱 glm-4-flash）medium 路径常输出「一句话定义：\n正文」——旧正则 .{0,600}
-  //   不跨行，冒号后紧跟 \n → 捕获空串 → definition-empty 误杀全部 medium 条目。改为跨行捕获，
-  //   在「空行 或 下一个章节标签行（对老赵的意义/可以怎么做/想试试/最小行动/场景映射/溯源等）」处截断，
-  //   避免吞掉后续章节内容（单行无空行场景同样安全）。
-  // 2026-08-21：加强——章节标签允许被「」/()/*** 包裹（medium 自由文本常输出「可以怎么做」：），
-  //   截断前瞻允许任意位置出现下一个章节标签（不要求行首/空行，兼容单行连写）。
-  const sec = (re) => {
-    const m = t.match(new RegExp(re + '\\s*(?:「|」|\\(|\\)|\\*)*\\s*[:：]([\\s\\S]{0,600}?)(?=\\n\\s*\\n|(?:再输出|最后输出)?\\s*[-*「」]*\\s*\\*{0,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么|一句话|定义)\\s*(?:「|」|\\(|\\)|\\*)*\\s*[:：]|$)', 'i'))
-    return m ? m[1].replace(/\n+/g, ' ').trim() : ''
-  }
-  // 块级提取：取 startRe 匹配后的多段正文，直到遇到 endRe 为止（用于「发生了什么」多段科普叙事）
-  const secBlock = (startRe, endRe) => {
-    const t2 = String(t)
-    const sm = t2.match(startRe)
-    if (!sm) return ''
-    let start = sm.index + sm[0].length
-    let end = t2.length
-    if (endRe) {
-      const ei = t2.search(endRe)
-      if (ei >= start) end = ei
-    }
-    return t2.slice(start, end).replace(/^[\s\n*-]+|[\s\n]+$/g, '').replace(/\n{3,}/g, '\n\n').trim() // 2026-08-20: 保留段落分隔(双换行)，不再压平成单段
-  }
-  // 发生了什么：优先取模板块（标题下第一块，至溯源前）；否则取「发生了什么:」到「对老赵的意义」/「定义」之前的文本
-  const whatHappened =
-    secBlock(/\*\*发生了什么\*\*\s*[:：]?\s*/, /[-*]\s*\*\*溯源\*\*/) ||
-    secBlock(/发生了什么\s*[:：]/, /对老赵的意义|一句话|定义/) ||
-    ''
   return {
     whatHappened,
-    definition: sec('-?\\*\\*一句话定义\\*\\*') || sec('一句话定义') || sec('-?\\*\\*一句话\\*\\*') || sec('一句话') || sec('2\\)?[．.、]?\\s*一句话') || sec('定义'),
-    // 「落到你这里」/「想试试」：仅强相关才产出；「无」归一为空（前端按空值隐藏区块，不强行关联）
-    sceneMapping: normNone(sec('-?\\*\\*对老赵的意义\\*\\*') || sec('对老赵的意义') || sec('3\\)?[．.、]?\\s*场景映射')),
-    practice: sec('-?\\*\\*可以怎么做\\*\\*') || sec('可以怎么做') || sec('4\\)?[．.、]?\\s*可落地实操'),
-    minAction: normNone(sec('-?\\*\\*想试试\\*\\*') || sec('想试试') || sec('-?\\*\\*最小行动\\*\\*') || sec('最小行动') || sec('5\\)?[．.、]?\\s*今日/本周最小行动')),
-    sceneTags: sceneTags.length ? sceneTags : (route.level === 'low' ? [] : ['life']),
+    whatHappenedBlocks: blocks,
+    definition,
+    sceneMapping,
+    sceneMappingLines,
+    practice: clean(j.practice),
+    minAction: normNone(j.minAction),
+    sceneTags: sceneTags.length ? sceneTags : ['life'],
     sceneHits,
-    tryable,
-    titleCn: parsedTitleCn, // 2026-08-20 修复：processOne 引用跨函数未定义变量 parsedTitleCn → 作为返回字段
+    tryable: j.tryable === true,
+    titleCn: clean(j.titleCn),
     translated: true,
   }
-}
-
-/**
- * 2026-08-20 v5：whatHappened 结构化解析（后端侧，前端不依赖文本解析）。
- * 把「发生了什么」拆成结构化块：正文自然段落 + 大白话/AI 预测/定义（用标记段识别），
- * 避免 LLM 章节识别漂移导致前端拿不到分节。返回 [{ type:'text'|'plain'|'predict'|'def', text }]。
- */
-function structureWhatHappened(raw) {
-  raw = String(raw || '').trim()
-  if (!raw) return []
-  // 标记段识别（2026-08-21）：两种形式——
-  //   A) **大白话** / **（AI 预测）** / **定义**：星号包裹（任意位置）
-  //   B) 行首独立「（AI 预测）：」/「AI 预测：」（新 prompt 段落标记，供 UI 提示不显示文字）
-  // 只匹配段落标记，不匹配正文中出现的"定义/预测"等普通词汇（B 形式要求行首）。
-  // 实现：exec 迭代收集所有标记（位置+label），再按位置切分（避免 split 多捕获组错乱）。
-  const SEP_RE = /\*\*\s*(?:（|\(|\s)*(大白话|AI\s*预测|预测|定义|一句话定义|大白话版|用大白话说)(?:\s|）|\)|\*|[:：])*\s*\*\*?\s*[:：]?\s*|(?:^|\n)\s*(?:（|\(|\[)?(AI\s*预测|大白话)(?:）|\)|\])?\s*[:：]?\s*/g
-  const markers = []
-  let mm
-  while ((mm = SEP_RE.exec(raw)) !== null) {
-    markers.push({ index: mm.index, label: (mm[1] || mm[2] || '').trim(), matchLen: mm[0].length })
-    if (mm.index === SEP_RE.lastIndex) SEP_RE.lastIndex++
-  }
-  const blocks = []
-  const pushText = (txt) => {
-    const t = String(txt || '').replace(/\*\*/g, '').trim()
-    if (!t) return
-    blocks.push({ type: 'text', text: t })
-  }
-  // 开头正文：第一个标记前的文本，按换行拆自然段落
-  const head = String(raw.slice(0, markers.length ? markers[0].index : raw.length)).trim()
-  if (head) {
-    const paras = head.split(/\n+\s*/).map(x => x.trim()).filter(Boolean)
-    if (paras.length >= 2) paras.forEach(p => pushText(p))
-    else pushText(head)
-  }
-  // 标记块：marker → 类型，内容 = 该标记到下一标记之间的文本（截断后续章节标记，清星号）
-  for (let i = 0; i < markers.length; i++) {
-    const label = markers[i].label
-    // 内容起点：标记结束后的紧邻冒号（同一行内）；无冒号 → 标记匹配结束处。
-    // 注意：不能全文找下一个冒号（会误定位到 JSON 输出里的冒号）。
-    const markEnd = markers[i].index + markers[i].matchLen
-    const afterMark = raw.slice(markEnd, Math.min(markEnd + 20, raw.length))
-    const colonPos = afterMark.indexOf(':') >= 0 ? afterMark.indexOf(':') : afterMark.indexOf('：')
-    const contentStart = colonPos >= 0 ? markEnd + colonPos + 1 : markEnd
-    // 用 next 标记位置作为内容终点
-    const end = i + 1 < markers.length ? markers[i + 1].index : raw.length
-    let content = String(raw.slice(contentStart, end) || '').trim()
-    // 截断：后续章节标记 / JSON 输出起始（LLM 定义段后常直接跟 {"titleCn"...}） / 空行
-    const cut = content.search(/\*{1,2}(?:对老赵的意义|可以怎么做|想试试|最小行动|场景映射|溯源|发生了什么)\s*\*{0,2}\s*[:：]?|\n\s*\n|\n\s*\{["\\']/)
-    if (cut >= 0) content = content.slice(0, cut).trim()
-    content = content.replace(/\*\*/g, '').trim()
-    if (content) {
-      let type = 'text'
-      if (/大白话|用大白话说/.test(label)) type = 'plain'
-      else if (/AI\s*预测|预测/.test(label)) type = 'predict'
-      else if (/定义/.test(label)) type = 'def'
-      // 2026-08-21：大白话不再进 blocks（首页卡片已有 15-50 字摘要，详情页大白话冗余）
-      if (type === 'plain') continue
-      blocks.push({ type, text: content })
-    }
-  }
-  // 2026-08-21 兜底修复 v2：仅当「AI 预测」被 LLM 误标在**第一段**（blocks[0]）时降级为正文
-  // ——那是把整段正文误当预测。正常数据中 AI 预测在正文之后（后面可能还有定义段），
-  // 必须保留 predict 类型（之前「非最后一段即降级」误伤了「正文+预测+定义」的正常结构）。
-  if (blocks.length > 1 && blocks[0].type === 'predict') {
-    blocks[0].type = 'text'
-  }
-  // 无任何标记 → 退回纯段落（按换行/句号兜底分段）
-  if (blocks.length <= 1) {
-    const byNewline = raw.split(/\n+\s*/).map(x => x.trim().replace(/\*\*/g, '')).filter(Boolean)
-    if (byNewline.length >= 2) return byNewline.map(t => ({ type: 'text', text: t }))
-    const parts2 = raw.split(/(?<=[。！？；])\s*/).map(x => x.trim()).filter(Boolean)
-    const merged = []
-    let cur = ''
-    for (const p of parts2) {
-      cur = (cur ? cur + ' ' : '') + p
-      if (cur.length >= 40) { merged.push(cur); cur = '' }
-    }
-    if (cur) merged.push(cur)
-    return (merged.length >= 2 ? merged : [raw]).map(t => ({ type: 'text', text: t }))
-  }
-  return blocks
 }
 
 /**
@@ -561,19 +507,20 @@ function structureWhatHappened(raw) {
  * event.batch=false / event.limit 可强制串行（联调用）。
  */
 exports.main = async (event = {}) => {
-  // ── 运维 action：rebuildBlocks（2026-08-21 v2 修复后，重算全部 staged 的 whatHappenedBlocks）
-  // 用途：prompt/解析器升级后，历史 staged 的结构化块类型可能过期（如 predict 被误降级），
-  // 此 action 用当前解析逻辑重算并写回（纯本地计算，不耗 LLM）。
+  // ── 运维 action：rebuildBlocks（2026-08-21 方案A 后简化）
+  // 用途：兼容旧数据——已无结构化 blocks 的 staged，从 whatHappened 文本按空行切 text 段落补上；
+  //      新数据（方案A JSON）自带 blocks，跳过不动。
   if (event.action === 'rebuildBlocks') {
     let rebuilt = 0, failed = 0
     try {
       const res = await db.collection(INTEL_STAGED).limit(1000).get()
       for (const d of res.data || []) {
         const sop = (d && d.sop) || {}
+        if (Array.isArray(sop.whatHappenedBlocks) && sop.whatHappenedBlocks.length) continue
         const raw = String(sop.whatHappened || '').trim()
         if (!raw) continue
-        const blocks = structureWhatHappened(raw)
-        if (!blocks.length) continue
+        const paras = raw.split(/\n{2,}/).map(x => x.replace(/\*\*/g, '').trim()).filter(Boolean)
+        const blocks = paras.length ? paras.map(p => ({ type: 'text', text: p })) : [{ type: 'text', text: raw }]
         try {
           await db.collection(INTEL_STAGED).doc(d._id).update({
             data: { sop: Object.assign({}, sop, { whatHappenedBlocks: blocks }) },

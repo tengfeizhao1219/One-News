@@ -34,6 +34,7 @@ function toDetail(doc) {
     whatHappenedBlocks: Array.isArray(sop.whatHappenedBlocks) ? sop.whatHappenedBlocks : [],
     // 落到你这里（场景映射散文 + 命中场景标签）
     sceneMapping: sop.sceneMapping || '',
+    sceneMappingLines: Array.isArray(sop.sceneMappingLines) ? sop.sceneMappingLines : [], // 2026-08-21 方案A：结构化 lines（segments+bold）
     sceneTags: Array.isArray(doc.sceneTags) ? doc.sceneTags : [],
     relevance: doc.relevance || '',
     // 了解更多（最小行动 + 参考链接）

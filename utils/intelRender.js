@@ -41,6 +41,16 @@ function toCards(focusItems) {
     contract: it.contract === true,
     sceneTags: it.sceneTags || [],
     rank: it.rank || 0,
+    // 2026-08-22：透传完整详情数据（详情页本地渲染秒开，免云函数等待）
+    card: it.card || '',
+    sop: it.sop || null,
+    references: Array.isArray(it.references) ? it.references : [],
+    tryable: it.tryable === true,
+    sourceName: it.sourceName || '',
+    publishedAt: it.publishedAt || '',
+    url: it.url || '',
+    relevance: it.relevance || 'medium',
+    sceneHits: it.sceneHits || 0,
   }))
 }
 
