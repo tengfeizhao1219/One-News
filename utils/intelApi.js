@@ -108,3 +108,26 @@ module.exports = {
   getIntelList,
   getIntelDetail
 }
+
+/**
+ * 详情页话题搜索（intelSearch 云函数）
+ * 后端流程：相关性判断 → 联网搜索 → 总结回答；60s 超时（联网 3-25s+）。
+ * @param {Object} params
+ * @param {string} params.itemId 当前详情页新闻 id
+ * @param {string} params.query   用户输入话题（≤60 字）
+ * @returns {Promise<Object>} 三种路径：{relevant:false,hint} / {relevant:true,answer,sources,engine} / {relevant:true,answer:null,error,hint}
+ */
+function searchIntelTopic({ itemId, query } = {}) {
+  return wx.cloud.callFunction({
+    name: 'intelSearch',
+    data: { itemId, query },
+    timeout: 60000,
+  }).then(res => {
+    if (!res.result || res.result.code !== 0) {
+      const err = new Error((res.result && res.result.message) || '搜索失败，请稍后再试')
+      err.errorCode = res.result && res.result.errorCode
+      throw err
+    }
+    return res.result.data || {}
+  })
+}

@@ -17,7 +17,7 @@
     </view>
   </view>
 
-  <view class="content">
+  <scroll-view class="content" scroll-y scroll-top="{{searchScrollTop}}" enhanced show-scrollbar="{{false}}">
 
     <!-- 加载态 -->
     <block wx:if="{{loading}}">
@@ -33,8 +33,9 @@
     <block wx:else>
       <!-- 2026-08-21 问题②：状态条已按要求去掉（用户明确不需要「情报官已完成梳理」提示条） -->
 
-      <!-- 结论式标题 + 来源/时间 -->
+      <!-- 结论式标题（搜索面板展开时保留钉顶，其余内容被推上去） -->
       <text class="detail-title">{{title}}</text>
+      <view class="rest {{searchRestUp ? 'up' : ''}}" id="rest-detail">
       <view class="meta">
         <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
         <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
@@ -113,8 +114,39 @@
           </view>
         </view>
       </block>
+      </view>
+      <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
     </block>
+  </scroll-view>
 
-    <view class="foot-note">由 AI 情报官生成 · 内容基于公开信息整理，仅供参考</view>
+  <!-- 话题搜索面板（展开时从底部升起，紧贴标题下方；其余内容被推上去） -->
+  <view class="search-panel {{searchOpen ? 'open' : ''}}" style="top: {{searchPanelTop}};">
+    <view class="deep-quick" hover-class="deep-quick--hover" bindtap="onDeepQuick">
+      <text class="quick-t">围绕「{{searchQuickTitle}}」继续深挖</text>
+      <text class="quick-s">AI 联网搜索更多资料 · 生成更详细介绍</text>
+    </view>
+    <view class="search-box">
+      <input class="search-input" value="{{searchQuery}}" bindinput="onSearchInput" placeholder="输入你感兴趣的话题…" placeholder-class="search-placeholder" confirm-type="search" bindconfirm="onSearchSubmit" />
+      <view class="search-btn {{searchLoading ? 'is-loading' : ''}}" hover-class="search-btn--hover" bindtap="onSearchSubmit">{{searchLoading ? '搜索中' : '搜索'}}</view>
+    </view>
+
+    <!-- 结果区：loading / 不相关 hint / 相关+回答+sources / 相关但失败 hint -->
+    <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
+    <view class="search-hint" wx:elif="{{searchHint}}">{{searchHint}}</view>
+    <block wx:elif="{{searchAnswer}}">
+      <view class="search-answer">{{searchAnswer}}</view>
+      <view class="search-sources" wx:if="{{searchSources.length}}">
+        <view class="search-src" wx:for="{{searchSources}}" wx:key="url" bindtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="search-src--hover">
+          <text class="search-src-title">{{item.title}}</text>
+          <text class="search-src-url">{{item.url}}</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- 搜索悬浮按钮（右下角，自绘放大镜） -->
+  <view class="fab-search {{searchOpen ? 'on' : ''}}" hover-class="fab-search--hover" bindtap="onToggleSearch">
+    <image class="fab-search-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
+    <image class="fab-search-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
   </view>
 </view>

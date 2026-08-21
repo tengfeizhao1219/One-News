@@ -268,3 +268,153 @@
 .for-line { display: block; margin-bottom: 8rpx; }
 .for-line:last-child { margin-bottom: 0; }
 .for-bold { font-weight: 700; color: var(--text-primary); }
+
+/* ============ 话题搜索（2026-08-21 前端实现，对齐 ui-demo：面板从底部升起贴标题下方，其余内容推上去） ============ */
+/* 其余内容（meta/正文/折叠/页脚）整体推起容器 */
+.rest {
+  transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.rest.up {
+  transform: translateY(-100%);
+}
+
+/* 搜索面板：从底部升起（top 由 JS 注入，钉在标题下方 + 呼吸间距） */
+.search-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background-color: var(--bg-page);
+  padding: 8rpx 32rpx calc(32rpx + var(--safe-bottom, 0px));
+  z-index: 210;
+  visibility: hidden;
+  opacity: 0;
+  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s, visibility 0s 0.65s;
+}
+.search-panel.open {
+  visibility: visible;
+  opacity: 1;
+  transition: top 0.65s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.5s;
+}
+
+/* 一键深挖卡片 */
+.deep-quick {
+  background-color: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 28rpx;
+  padding: 26rpx 30rpx;
+  margin-bottom: 20rpx;
+}
+.deep-quick--hover { background-color: var(--bg-subtle); }
+.quick-t {
+  display: block;
+  font-size: calc(30rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.quick-s {
+  display: block;
+  margin-top: 8rpx;
+  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  background-color: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 28rpx;
+  padding: 14rpx 16rpx 14rpx 28rpx;
+  margin-bottom: 24rpx;
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-primary);
+}
+.search-placeholder { color: var(--text-tertiary); }
+.search-btn {
+  flex-shrink: 0;
+  background-color: var(--primary);
+  color: #ffffff;
+  border-radius: 18rpx;
+  padding: 14rpx 34rpx;
+  font-size: calc(26rpx * var(--font-scale));
+  font-weight: 600;
+  line-height: 1;
+}
+.search-btn--hover { opacity: 0.85; }
+.search-btn.is-loading { opacity: 0.6; }
+
+/* 结果区 */
+.search-status { padding: 36rpx 0; text-align: center; }
+.search-status-txt {
+  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  color: var(--text-secondary);
+}
+.search-hint {
+  background-color: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 24rpx;
+  padding: 24rpx 28rpx;
+  font-size: calc(26rpx * var(--font-scale));
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+.search-answer {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.75;
+  margin-bottom: 24rpx;
+}
+.search-sources { border-top: 1rpx solid var(--divider); padding-top: 16rpx; }
+.search-src {
+  padding: 18rpx 4rpx;
+  border-bottom: 1rpx solid var(--divider);
+}
+.search-src:last-child { border-bottom: none; }
+.search-src--hover { opacity: 0.7; }
+.search-src-title {
+  display: block;
+  font-size: calc(28rpx * var(--font-scale));
+  font-weight: 600;
+  color: var(--text-link);
+  line-height: 1.5;
+}
+.search-src-url {
+  display: block;
+  margin-top: 6rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  word-break: break-all;
+}
+
+/* 搜索悬浮按钮（右下角，自绘放大镜；对齐首页 floating-more 形态） */
+.fab-search {
+  position: absolute;
+  right: 40rpx;
+  bottom: calc(48rpx + var(--safe-bottom, 0px));
+  z-index: 300;
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--tag-bg);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  transition: transform 0.15s ease, background-color 0.25s, color 0.25s;
+}
+.fab-search--hover { transform: scale(0.92); }
+.fab-search.on {
+  background-color: var(--primary);
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.35);
+}
+.fab-search-icon { width: 56rpx; height: 56rpx; }
+.fab-search.on .fab-search-icon.nav-light { display: none; }
+.fab-search.on .fab-search-icon.nav-dark { display: block; }

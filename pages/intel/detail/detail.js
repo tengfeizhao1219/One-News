@@ -27,7 +27,7 @@ function parseSceneMapping(txt) {
   }).filter((l) => l.segments.length)
   return lines
 }
-const { getIntelDetail } = require('../../../utils/intelApi')
+const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
 const { getSafeBottom } = require('../../../utils/intelRender')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 
@@ -65,6 +65,16 @@ Page({
     itemId: '',
     isFavorited: false,
     heartAnim: false,
+    // 话题搜索（2026-08-21：intelSearch 云函数，三种结果路径）
+    searchOpen: false,          // 搜索面板展开态
+    searchScrollTop: 0,         // 展开搜索时归顶（保证标题在视口顶部）
+    searchPanelTop: '100%',     // 面板 top（展开时注入 px，钉在标题下方+呼吸间距）
+    searchQuickTitle: '',       // 一键深挖：围绕「当前新闻标题」继续深挖（截断 60 字）
+    searchQuery: '',            // 输入框内容
+    searchLoading: false,       // 搜索中（60s 超时）
+    searchHint: '',             // 不相关 / 搜索失败 hint
+    searchAnswer: '',           // 相关+成功：总结回答
+    searchSources: [],          // 相关+成功：引用来源列表 [{title,url,source}]
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -271,6 +281,7 @@ function parseSceneMapping(txt) {
       minActionText: cleanText(d.minAction) || '',
       loading: false,
       empty: false,
+      searchQuickTitle: (cleanText(d.title) || this.data.title || '').slice(0, 60),
     })
     // 内存缓存：同一 id 重复进入直接展示，不再调云函数
     if (d && d.title) {
@@ -306,6 +317,99 @@ function parseSceneMapping(txt) {
     } catch (e) {
       return false
     }
+  },
+
+  // ============ 话题搜索（intelSearch） ============
+  /** 展开/收起搜索面板：展开时面板升到标题下方（呼吸间距 18px），其余内容推上去 */
+  onToggleSearch() {
+    if (this.data.searchOpen) {
+      this.setData({ searchOpen: false, searchPanelTop: '100%' })
+      this._setRestUp(false)
+      return
+    }
+    this._setRestUp(true)
+    // 归顶（保证标题在视口顶部）后再量标题底部，确定面板 top
+    this.setData({ searchScrollTop: 0 }, () => {
+      const q = wx.createSelectorQuery().in(this)
+      q.select('.detail-title').boundingClientRect()
+      q.exec(res => {
+        const r = res && res[0]
+        const titleBottom = (r && r.top + r.height) || 0
+        this.setData({ searchOpen: true, searchPanelTop: (titleBottom + 18) + 'px' })
+      })
+    })
+  },
+
+  /** 其余内容（rest）推起/落回 */
+  _setRestUp(up) {
+    this.setData({ searchRestUp: up })
+  },
+
+  /** 一键深挖：围绕当前新闻标题搜索（截断 60 字） */
+  onDeepQuick() {
+    const query = this.data.searchQuickTitle
+    if (!query) {
+      wx.showToast({ title: '暂无可搜索话题', icon: 'none' })
+      return
+    }
+    this._runSearch(query)
+  },
+
+  onSearchInput(e) {
+    this.setData({ searchQuery: (e.detail && e.detail.value) || '' })
+  },
+
+  /** 提交搜索（输入框 confirm / 按钮） */
+  onSearchSubmit() {
+    const query = String(this.data.searchQuery || '').trim()
+    if (!query) {
+      wx.showToast({ title: '先输入一个话题吧', icon: 'none' })
+      return
+    }
+    this._runSearch(query.slice(0, 60))
+  },
+
+  /** 调 intelSearch：60s 超时；渲染三种结果路径 */
+  _runSearch(query) {
+    if (this.data.searchLoading) return
+    this.setData({ searchLoading: true, searchHint: '', searchAnswer: '', searchSources: [] })
+    searchIntelTopic({ itemId: this.data.itemId, query })
+      .then(d => {
+        // ① 不相关
+        if (d && d.relevant === false) {
+          this.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
+          return
+        }
+        // ② 相关+成功
+        if (d && d.relevant && d.answer) {
+          this.setData({
+            searchAnswer: d.answer,
+            searchSources: Array.isArray(d.sources) ? d.sources.map(x => ({
+              title: x.title || x.url || '',
+              url: x.url || '',
+              source: x.source || '',
+            })).filter(x => x.url) : [],
+          })
+          return
+        }
+        // ③ 相关但失败
+        this.setData({ searchHint: (d && d.hint) || '这个话题联网搜索暂时没找到结果，可以换个更具体的说法再试试～' })
+      })
+      .catch(err => {
+        wx.showToast({ title: (err && err.message) || '搜索失败，请稍后再试', icon: 'none' })
+      })
+      .then(() => this.setData({ searchLoading: false }))
+  },
+
+  /** 打开来源链接：个人主体无 web-view，复用「复制链接」方案 */
+  onOpenSource(e) {
+    const url = e.currentTarget.dataset.url
+    if (!url) return
+    wx.setClipboardData({
+      data: url,
+      success: () => wx.showToast({ title: '链接已复制', icon: 'none' }),
+      fail: () => wx.showToast({ title: '复制失败', icon: 'none' })
+    })
   },
 
   toggleMore() { this.setData({ showMore: !this.data.showMore }) },
