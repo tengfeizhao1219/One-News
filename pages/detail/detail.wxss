@@ -223,6 +223,10 @@
 }
 
 .detail-title {
+  /* 2026-08-22：标题钉顶时背景不透明（与页面同色），搜索面板展开 rest 上移时不被顶没/叠影 */
+  position: relative;
+  z-index: 230;
+  background-color: var(--bg-page);
   /* BUG-20260806-004: 标题使用相对尺寸 44rpx（不再跟随字体缩放） */
   font-size: 44rpx;
   font-weight: 700;

@@ -97,6 +97,15 @@
 }
 .page--dark .content { background-color: #000000; }
 
+/* 2026-08-22 修复：标题+meta 整体钉顶（title-block）——搜索展开时 rest 上移不顶没标题；
+   背景与页面同色 var(--bg-page) 且不透明，杜绝灰白叠影 */
+.title-block {
+  position: relative;
+  z-index: 230;
+  background-color: var(--bg-page);
+  padding-bottom: 8rpx;
+}
+
 /* 结论式标题 + 来源 */
 .detail-title {
   /* 搜索展开时 rest 上移会滑过标题区：背景不透明 + 高 z-index 盖住，避免重合 */

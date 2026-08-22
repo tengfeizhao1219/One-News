@@ -353,7 +353,8 @@ function cleanText(v) {
     // 面板 top = 标题底部 + 呼吸间距（18px）；顶上来时横线进度条从左侧系统蓝加载（动画①）
     setTimeout(() => {
       const q = wx.createSelectorQuery().in(this)
-      q.select('.detail-title').boundingClientRect()
+      // 2026-08-22：改测 .title-block 底部（标题+meta 整体钉顶），面板贴在 meta 下方不遮挡
+      q.select('.title-block').boundingClientRect()
       q.select('.nav').boundingClientRect()
       q.exec(res => {
         const rTitle = res && res[0]

@@ -35,20 +35,24 @@
     <block wx:else>
       <!-- 2026-08-21 问题②：状态条已按要求去掉（用户明确不需要「情报官已完成梳理」提示条） -->
 
-      <!-- 结论式标题（搜索面板展开时保留钉顶，其余内容被推上去） -->
-      <text class="detail-title">{{title}}</text>
-      <view class="rest {{searchRestUp ? 'up' : ''}}" id="rest-detail">
-      <view class="meta">
-        <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
-        <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
-        <!-- 收藏入口 -->
-        <view class="meta-fav {{heartAnim ? 'heart-anim' : ''}}" catchtap="onToggleFavorite" hover-class="meta-fav--hover">
-          <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
-          <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
-          <image wx:if="{{isFavorited}}" class="meta-fav-icon" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
-          <text class="meta-fav-label {{isFavorited ? 'is-favorited' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
+      <!-- 结论式标题 + meta（2026-08-22 修复：标题+来源+收藏整体钉顶，搜索展开时不被内容顶没） -->
+      <view class="title-block">
+        <text class="detail-title">{{title}}</text>
+        <view class="meta">
+          <text class="meta-src" wx:if="{{srcName}}">{{srcName}}</text>
+          <text class="meta-time" wx:if="{{pubTime}}">{{pubTime}}</text>
+          <!-- 收藏入口 -->
+          <view class="meta-fav {{heartAnim ? 'heart-anim' : ''}}" catchtap="onToggleFavorite" hover-class="meta-fav--hover">
+            <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-light" src="/assets/icons/favorite.svg" mode="aspectFit"></image>
+            <image wx:if="{{!isFavorited}}" class="meta-fav-icon nav-dark" src="/assets/icons/favorite-dark.svg" mode="aspectFit"></image>
+            <image wx:if="{{isFavorited}}" class="meta-fav-icon" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
+            <text class="meta-fav-label {{isFavorited ? 'is-favorited' : ''}}">{{isFavorited ? '已收藏' : '收藏'}}</text>
+          </view>
         </view>
       </view>
+
+      <!-- 其余内容（meta 已移入 title-block；这里从正文开始，搜索展开时整体上移） -->
+      <view class="rest {{searchRestUp ? 'up' : ''}}" id="rest-detail">
 
       <!-- 发生了什么（2026-08-21 问题③⑥：正文自然段落；仅 AI 预测用浅灰底块+段尾 UI 提示，
            大白话/定义归为普通正文段（不显示标签文字）） -->
