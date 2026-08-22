@@ -312,3 +312,8 @@
 - **修复**：失败分支更新 lastFetchTime（按 pollSeconds 冷却）+ errorStreak 累计；连续 3 次失败自动暂停（进入 R1 的 24h 冷却恢复机制，闭环）。
 - **语义**：fetch/parse 失败（源不可达/格式坏）比"抓到但空内容"更重——前者 3 次即暂停，后者沿用 3 轮入库 0 暂停。
 - **部署**：newsFetcher 已更新。
+## 2026-08-22 · 【自主迭代 R5】rssFetcher 同步 R1/R4 修复
+
+- **问题**：rssFetcher（One News 旧 RSS 链路）与 newsFetcher 同构但缺两处修复：①fetch_error 不更新 lastFetchTime → 失败源每轮重试；②disabled 无自动恢复。
+- **修复**：feedStore.js 整体同步（含 R1 自动恢复机制）；fetch_error 更新 lastFetchTime 冷却（保留"网络失败不累计 errorStreak"原语义）；disabled 分支记录 disabledAt。
+- **部署**：rssFetcher 已更新。

@@ -4,10 +4,17 @@
  * 对齐方案 §3/§4：每源独立频率(pollSeconds)、灰度启用(enabled)、
  * 连续空周期计数(errorStreak)、缓存头(304 语义)、上次抓取统计。
  * 只负责 feed_meta 的增删改查，不接触新闻数据。
+ *
+ * 2026-08-22 自动恢复：被自动暂停(disabled)的源超过冷却期后，
+ * 重置 active + errorStreak=0 重新探测一轮——源恢复则重新接入，
+ * 仍失败则再暂停（不会无限重试）。
  * ============================================================
  */
 
 const cloud = require('wx-server-sdk')
+
+// 自动暂停源的冷却期：暂停超过此时间后自动恢复探测（毫秒，默认 24h）
+const DISABLED_RECOVER_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function col() {
   return cloud.database().collection('feed_meta')
@@ -49,7 +56,20 @@ async function listDueFeeds(nowMs) {
   const due = []
   for (const f of feeds) {
     if (f.enabled !== true) continue               // 灰度未开
-    if (f.status === 'disabled') continue          // 告警暂停
+    if (f.status === 'disabled') {
+      // 2026-08-22 自动恢复：暂停超过冷却期 → 重置 active 重新探测（源恢复则重新接入）。
+      // disabledAt 缺省（旧数据）时回退 lastFetchTime；两者都无 → 视为暂停已久，直接探测。
+      const t1 = f.disabledAt ? new Date(f.disabledAt).getTime() : 0
+      const t2 = f.lastFetchTime ? new Date(f.lastFetchTime).getTime() : 0
+      const pausedAt = t1 || t2
+      const shouldRecover = !pausedAt || (nowMs - pausedAt) >= DISABLED_RECOVER_COOLDOWN_MS
+      if (shouldRecover) {
+        await updateFeed(f._id || f.sourceId, { status: 'active', errorStreak: 0 })
+        console.warn(`[feedStore] 源 ${f._id || f.sourceId} 暂停超冷却期，自动恢复探测`)
+        due.push(f)
+      }
+      continue
+    }
     const poll = Number(f.pollSeconds) || 3600
     const last = f.lastFetchTime ? new Date(f.lastFetchTime).getTime() : 0
     if (!last || (nowMs - last) >= poll * 1000) {

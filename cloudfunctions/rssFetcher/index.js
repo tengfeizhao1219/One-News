@@ -122,7 +122,9 @@ async function runWorker(feed, now) {
   }
 
   if (!fetchRes.ok) {
-    await feedStore.updateFeed(sourceId, { lastFetchStatus: 'fetch_error' })
+    // 2026-08-22 修复：更新 lastFetchTime 冷却，避免失败源每轮重试（浪费调用）。
+    // 网络失败仍不累计 errorStreak（保留"临时抖动不暂停"语义，与原设计一致）
+    await feedStore.updateFeed(sourceId, { lastFetchTime: new Date(now).toISOString(), lastFetchStatus: 'fetch_error' })
     console.warn(`[worker] ${sourceId} 抓取失败 status=${fetchRes.status}`)
     // 网络失败不累计 errorStreak（不算「空周期」，可能临时抖动）
     return summarize({ sourceId, status: 'fetch_error', inserts: 0 })
@@ -213,9 +215,9 @@ async function runWorker(feed, now) {
   // 8. 告警判定
   const alerts = []
 
-  // 8a. 连续空周期 → error/disable + 告警
+  // 8a. 连续空周期 → error/disable + 告警（记录 disabledAt 供 R1 自动恢复判定）
   if (newStreak >= ERROR_STREAK_LIMIT) {
-    await feedStore.updateFeed(sourceId, { status: 'disabled' })
+    await feedStore.updateFeed(sourceId, { status: 'disabled', disabledAt: new Date(now).toISOString() })
     console.warn(`[worker] ${sourceId} 连续 ${newStreak} 周期入库=0，暂停`)
     await sendAlert(`源 **${sourceId}** 连续 ${newStreak} 周期入库 0，已自动暂停。请检查源站是否停更或 feed 地址失效。`, { dedupKey: `rss-empty-${sourceId}` })
     alerts.push('disabled-empty')
