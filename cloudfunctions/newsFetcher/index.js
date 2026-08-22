@@ -283,8 +283,17 @@ async function fetchOfficialRss(feed) {
     return { ok: true, sourceId, status: 'not_modified', written: 0 }
   }
   if (!fetchRes.ok) {
-    await feedStore.updateFeed(sourceId, { lastFetchStatus: 'fetch_error' })
-    console.warn(`[newsFetcher][rss] ${sourceId} 抓取失败 status=${fetchRes.status}`)
+    // 2026-08-22 修复：失败也更新 lastFetchTime + errorStreak——
+    // ① lastFetchTime 按 pollSeconds 冷却，避免失败源每轮重试（浪费调用）；
+    // ② errorStreak 累计，连续失败可触发 R1 自动暂停/恢复机制。
+    const prevStreak = Number(feed.errorStreak) || 0
+    const newStreak = prevStreak + 1
+    const patch = { lastFetchTime: new Date().toISOString(), lastFetchStatus: 'fetch_error', errorStreak: newStreak }
+    if (newStreak >= 3) patch.status = 'disabled'
+    await feedStore.updateFeed(sourceId, patch)
+    if (newStreak >= 3) {
+      console.warn(`[newsFetcher][rss] ${sourceId} 连续 ${newStreak} 次抓取失败，已自动暂停（R1 冷却后恢复探测）`)
+    }
     return { ok: true, sourceId, status: 'fetch_error', written: 0 }
   }
 
@@ -293,8 +302,15 @@ async function fetchOfficialRss(feed) {
   try {
     parsed = rssParser.parse(fetchRes.text)
   } catch (e) {
-    await feedStore.updateFeed(sourceId, { lastFetchStatus: 'parse_error' })
-    console.warn(`[newsFetcher][rss] ${sourceId} 解析失败:`, e.message)
+    // 2026-08-22：同 fetch_error，更新 lastFetchTime 冷却 + errorStreak 累计（防每轮重试）
+    const prevStreak = Number(feed.errorStreak) || 0
+    const newStreak = prevStreak + 1
+    const patch = { lastFetchTime: new Date().toISOString(), lastFetchStatus: 'parse_error', errorStreak: newStreak }
+    if (newStreak >= 3) patch.status = 'disabled'
+    await feedStore.updateFeed(sourceId, patch)
+    if (newStreak >= 3) {
+      console.warn(`[newsFetcher][rss] ${sourceId} 连续 ${newStreak} 次解析失败，已自动暂停（R1 冷却后恢复探测）`)
+    }
     return { ok: true, sourceId, status: 'parse_error', written: 0 }
   }
 

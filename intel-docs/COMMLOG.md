@@ -306,3 +306,9 @@
 
 - **问题**：One News 详情页翻页（上滑/下滑）切到新新闻后，搜索面板的深挖历史仍是上一条的（数据串台）。
 - **修复**：_swipeToNext 开头调 _resetSearchForPageChange——收起面板 + 清空 digGroups/searchQuery/hint/loading + 复位 _searching 标志。
+## 2026-08-22 · 【自主迭代 R4】抓取/解析失败源冷却重试（防每轮白抓）
+
+- **问题**：fetch_error/parse_error 分支只更新 lastFetchStatus 不更新 lastFetchTime → 失败源每轮 listDueFeeds 仍判 due → 每轮重试失败源（浪费云函数调用）。
+- **修复**：失败分支更新 lastFetchTime（按 pollSeconds 冷却）+ errorStreak 累计；连续 3 次失败自动暂停（进入 R1 的 24h 冷却恢复机制，闭环）。
+- **语义**：fetch/parse 失败（源不可达/格式坏）比"抓到但空内容"更重——前者 3 次即暂停，后者沿用 3 轮入库 0 暂停。
+- **部署**：newsFetcher 已更新。
