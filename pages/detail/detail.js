@@ -1193,7 +1193,8 @@ Page({
     var _folded = false
     _g.forEach(function (x) { if (x.open) { x.open = false; _folded = true } })
     if (_folded) { this._saveDig(_g); this.setData({ digGroups: _g }) }
-    this.setData({ searchRestUp: true })
+    // 2026-08-22：先量标题位置（内容未推上，位置稳定），再触发推上 + 面板升起同帧生效，
+    // 避免 translateY 过程中标题漂移导致面板 top 计算错位。
     setTimeout(function () {
       var q = wx.createSelectorQuery().in(that)
       q.select('.detail-title').boundingClientRect()
@@ -1205,7 +1206,7 @@ Page({
         var titleBottom = (rTitle && rTitle.top + rTitle.height) ||
           (navBottom + Math.round(84 * (that.data._fontScaleValue || 1)))
         var top = Math.max(titleBottom, navBottom) + 18
-        that.setData({ searchOpen: true, searchPanelTop: top + 'px' })
+        that.setData({ searchRestUp: true, searchOpen: true, searchPanelTop: top + 'px' })
         that.setData({ searchProgress: true })
         that._measureSearchPanel()
       })

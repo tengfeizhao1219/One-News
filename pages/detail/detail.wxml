@@ -67,7 +67,7 @@
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
     wx:if="{{pageState === 'ready'}}"
-    class="content {{animClass}}"
+    class="content {{animClass}} {{searchOpen ? 'search-push-up' : ''}}"
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
@@ -180,6 +180,48 @@
         </view>
 
         <!-- 底部返回已移除 -->
+
+        <!-- ===== 深挖历史区（2026-08-22：作为正文内容的一部分保留在页面底部，对齐 intel 版） ===== -->
+        <view class="dig-history" id="dig-history">
+          <view class="dig-title">深挖历史</view>
+          <view class="dig-empty" wx:if="{{!digGroups.length}}">还没有深挖记录，点右下角搜索按钮开始了解</view>
+          <block wx:for="{{digGroups}}" wx:key="query" wx:for-item="g" wx:for-index="gi">
+            <view class="dig-group {{g.open ? 'open' : ''}}">
+              <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
+                <view class="dig-group-info">
+                  <text class="dig-group-q">「{{g.query}}」</text>
+                  <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+                </view>
+                <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
+              </view>
+              <view class="dig-group-body" wx:if="{{g.open}}">
+                <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
+                  <text class="dig-entry-time">{{en.time}}</text>
+                  <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
+                    <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
+                    <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
+                      <view class="search-sec-bdot"></view>
+                      <text class="search-sec-btext">{{sec.text}}</text>
+                    </view>
+                    <view class="search-sec-para" wx:else>{{sec.text}}</view>
+                  </block>
+                  <view class="dig-sources" wx:if="{{en.sources.length}}">
+                    <view class="dig-sources-head" bindtap="onToggleEntrySources" data-gi="{{gi}}" data-ei="{{index}}" hover-class="dig-sources-head--hover">
+                      <text class="dig-sources-title">参考来源（{{en.sources.length}}）</text>
+                      <text class="dig-sources-arrow">{{en.sourcesExpanded ? '收起' : '展开'}} ›</text>
+                    </view>
+                    <block wx:if="{{en.sourcesExpanded}}">
+                      <view class="dig-src" wx:for="{{en.sources}}" wx:key="url" catchtap="onOpenSource" data-url="{{item.url}}" data-title="{{item.title}}" hover-class="dig-src--hover">
+                        <text class="dig-src-title">{{item.title}}</text>
+                        <text class="dig-src-url">{{item.url}}</text>
+                      </view>
+                    </block>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
       </view>
     </view>
   </scroll-view>

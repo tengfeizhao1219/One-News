@@ -354,3 +354,10 @@
   ④ utils/intelApi.js：intel 列表项 time + 详情 processedTime。
 - **保留**：utils/util.js 的 formatRelativeTime 定义（浏览记录等内部仍可能用，未删）。
 - 下游：微信开发者工具重编译生效（纯前端）。
+## 2026-08-22 · One News 深挖 UI 完全对齐 intel 版（4 处）
+
+- **① 推上动画**：正文 scroll-view 加 `search-push-up`（translateY(-100%) 0.65s 推上）；js 改为**先量标题位置再推上**（避免 translateY 漂移导致面板 top 错位）。
+- **② 输入框高度**：search-input 对齐 intel（padding 12rpx + line-height 2.1），按钮 56rpx，search-box gap 20rpx。
+- **③ 搜索中动画**：search-btn.is-loading + search-blue 图标 + searchSweep 摆动动画（1.1s infinite）。
+- **④ 深挖历史在正文底部**：正文 scroll-view 内新增 `#dig-history` 区（始终显示，含空态提示"还没有深挖记录"），与面板内 dig-list 并存（对齐 intel：面板展开看 dig-list，收起看正文 dig-history）。
+- **样式**：搜索样式整段替换为 intel 版完整样式（含 .rest 推上 + nav-light/dark 主题切换）。
