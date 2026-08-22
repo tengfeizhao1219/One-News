@@ -375,3 +375,7 @@
 - **问题**：intel 源连续入库 0 → status=disabled 后永久不抓（无恢复机制）；retired（质量退休）本就不该恢复，但 disabled（errorStreak 暂停，网络类临时失败）值得探测恢复。
 - **修复**：暂停时记录 disabledAt；listEnabledFeeds 对 disabled 源 24h 冷却后重置 active+errorStreak=0 重新探测；retired 不动。
 - **部署**：intelRssPoll 已更新。
+## 2026-08-22 · 自主迭代暂停存档（晚上继续）
+
+- **已完成**：R1-R9 全部推送（自动恢复/死源停用/失败冷却/brief 缓存失效/storage 上限/publish 容错/getNewsList 降级/intelRssPoll 恢复 + 深挖 UI 对齐/标题钉顶/FAB 高度/触底翻页修正）。
+- **R10 进行中（未处理）**：发现 **newsFetcher 与 rssFetcher 重复抓取同一批源**——两函数共用 feed_meta 集合 + 同一批 seed 源 + 同一触发时段（`0 0 6-22` 每小时），线上两者均 Enable=1。潜在问题：① 双倍抓取调用（成本）；② 双份写入 news_raw（去重靠 urlFp 兜底，但重复消费）。**待晚上决定**：停用其一（rssFetcher 是旧链路）或错开时段（newsFetcher 6-22 整点 / rssFetcher 半点）。
