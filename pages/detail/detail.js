@@ -194,6 +194,11 @@ Page({
   },
 
   // BUG-004: 页面销毁标记，防止回调中 setData
+  onHide: function () {
+    // 2026-08-22：切后台/被覆盖时折叠深挖历史（与 intel 详情页行为一致）
+    if (this._foldAllDig && !this._destroyed) this._foldAllDig(false)
+  },
+
   onUnload: function () {
     this._destroyed = true
     // BUG-20260806-025: 清理浏览完毕 toast 计时器，防止异步 setData 在已销毁页面执行
@@ -205,6 +210,18 @@ Page({
     // 原仅 goBack()（顶部返回按钮）回写 _detailReturnState，系统返回手势走 onUnload 不回写，
     // 导致首页从详情返回后仍显示初始新闻。此处与 goBack 同逻辑回写，无论哪种返回方式首页都能恢复。
     this._writeReturnState()
+    // 2026-08-22：退出页面折叠深挖历史（纯本地持久化，不 setData——页面已销毁）
+    this._foldAllDigPersistOnly()
+  },
+
+  /** 2026-08-22：退出页面时仅持久化折叠状态（页面销毁中，避免 setData 到已销毁实例） */
+  _foldAllDigPersistOnly: function () {
+    try {
+      var groups = this._loadDig()
+      var changed = false
+      groups.forEach(function (g) { if (g.open) { g.open = false; changed = true } })
+      if (changed) this._saveDig(groups)
+    } catch (e) { /* 页面销毁场景容错 */ }
   },
 
   /**
@@ -818,6 +835,8 @@ Page({
     // B-07: 回写阅读位置（含跨分类索引 + newsId 用于精确定位）
     // BUG-20260806-023: 复用 _writeReturnState（与 onUnload 同逻辑），保证两种返回方式一致
     this._writeReturnState()
+    // 2026-08-22：返回时折叠深挖历史（页面仍在，可正常 setData）
+    if (this._foldAllDig) this._foldAllDig(false)
     wx.navigateBack()
   },
 
@@ -1307,6 +1326,11 @@ Page({
     var that = this
     if (this.data.searchLoading || this._searching) return
     this._searching = true
+    // 2026-08-22：新搜索发起 → 折叠已有展开的深挖历史（排他性延伸）
+    var _g = this._loadDig()
+    var _anyOpen = false
+    _g.forEach(function (x) { if (x.open) { x.open = false; _anyOpen = true } })
+    if (_anyOpen) { this._saveDig(_g); this.setData({ digGroups: _g }) }
     this.setData({ searchLoading: true, searchHint: '' })
     var news = this.data.news || {}
     var ctx = {
