@@ -1282,7 +1282,7 @@
 .detail-body.rest.up {
   transform: translateY(-100%);
 }
-/* 标题移出 detail-body 后：保持在 article 顶部，搜索面板展开时不被推走 */
+/* 标题移出 detail-body 后：保持与正文一致的 64rpx 左右 padding + 顶部呼吸 */
 .article > .detail-title {
-  padding-top: 24rpx;
+  padding: 24rpx 64rpx 0;
 }
