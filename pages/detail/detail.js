@@ -725,6 +725,8 @@ Page({
     // v5.8: 标记切换中，onDetailReady 先暂存不渲染，等 in 阶段再切内容
     that._switching = true
     that._pendingDetail = null
+    // 2026-08-22：下滑翻到上一条同样重置搜索态（对齐 _swipeToNext R3）
+    this._resetSearchForPageChange()
 
     var result = that._engine.goPrev()
     if (!result.canGo) {

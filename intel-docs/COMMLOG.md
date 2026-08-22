@@ -336,3 +336,7 @@
 - **修复**：链式排序包 try/catch，失败降级单字段 createdAt desc（排序精度降级优于整页失败）。
 - **部署**：getNewsList 已更新。
 - **提醒**：news_cache 组合索引需云开发控制台手动建（wx-server-sdk 4.x 不支持 createIndex）；线上实测排序正常（索引已存在）。
+## 2026-08-22 · 【自主迭代 R10】下滑翻页也重置搜索态（补 R3 遗漏）
+
+- **问题**：R3 只在 _swipeToNext（上滑下一条）重置搜索态，_swipeToPrev（下滑上一条）遗漏——下滑翻页后深挖历史仍串台。
+- **修复**：_swipeToPrev 开头同样调 _resetSearchForPageChange。
