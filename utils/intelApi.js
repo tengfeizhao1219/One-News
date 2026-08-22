@@ -6,7 +6,7 @@
 // 摘除方式：删除本文件 + 页面内调用点即可，不影响 One News。
 // ============================================================
 
-const { formatRelativeTime } = require('./util')
+const { formatAbsoluteTime } = require('./util')
 
 /**
  * 获取情报列表
@@ -62,7 +62,7 @@ function formatIntelItem(item) {
     title: item.title || '',
     desc: item.desc || '',
     src: item.src || '',
-    time: formatRelativeTime(item.time || item.processedAt),
+    time: formatAbsoluteTime(item.time || item.processedAt),
     _time: item.time || item.processedAt || '',
     url: item.url || '',
     relevance: item.relevance || '',
@@ -105,7 +105,7 @@ function formatIntelDetail(d) {
     tryable: d.tryable === true,
     researchStatus: (d.research && d.research.status) || 'todo',
     processedAt: d.processedAt || '',
-    processedTime: formatRelativeTime(d.processedAt),
+    processedTime: formatAbsoluteTime(d.processedAt),
     modelUsed: d.modelUsed || '',
     cost: d.cost || 0
   }

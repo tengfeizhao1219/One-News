@@ -344,3 +344,13 @@
 
 - **问题**：One News 深挖传 `what: news.summary || news.content` 优先摘要——摘要过短时相关性判断（judgeRelevance）信息不足可能误判不相关。
 - **修复**：摘要完整保留 + 正文补充至合计 ≤400 字（云函数再截断；优先保摘要）。
+## 2026-08-22 · 时间格式统一为绝对时间（owner 拍板）
+
+- **需求**：首页卡片已改绝对时间（MM/DD HH:mm），但详情页元信息行/收藏页/反馈页/intel 列表仍用相对时间——同一新闻多处时间显示不一致。
+- **改动**（5 处全部 formatRelativeTime → formatAbsoluteTime）：
+  ① pages/detail/reading-engine.js：详情页元信息行 time；
+  ② pages/favorites/favorites.js：收藏列表 _time（收藏时刻）；
+  ③ pages/feedback/feedback.js：反馈列表时间；
+  ④ utils/intelApi.js：intel 列表项 time + 详情 processedTime。
+- **保留**：utils/util.js 的 formatRelativeTime 定义（浏览记录等内部仍可能用，未删）。
+- 下游：微信开发者工具重编译生效（纯前端）。

@@ -2,7 +2,7 @@
 // 上游：PRD-RQ22-意见反馈留言板.md（v1.1 已确认）· D-02-增量-RQ22-意见反馈留言板-UIUX设计.md（v1.0）
 // 作者识别/筛选/删除等管理控件仅由云函数返回 isAuthor 驱动渲染，前端不可伪造身份（PRD §4.3.2/§4.3.3）
 
-var { formatRelativeTime } = require('../../utils/util')
+var { formatAbsoluteTime } = require('../../utils/util')
 var app = getApp()
 
 // 30s 限频（PRD §3.1 F2 / D-02 §4：30s/条）
@@ -177,7 +177,7 @@ Page({
   },
 
   _timeText: function (ts) {
-    return ts ? formatRelativeTime(ts) : ''
+    return ts ? formatAbsoluteTime(ts) : ''
   },
 
   // ============ 底部输入：提交留言 ============

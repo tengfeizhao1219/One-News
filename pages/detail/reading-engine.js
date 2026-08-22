@@ -13,8 +13,8 @@ var CATEGORIES = require('../../utils/constants').CATEGORIES
 var getNewsList = require('../../utils/request').getNewsList
 var getNewsDetail = require('../../utils/request').getNewsDetail
 var PAGE_SIZE = require('../../utils/constants').PAGE_SIZE
-// 与首页列表一致：用相对时间（"X分钟前"）呈现发布时间
-var formatRelativeTime = require('../../utils/util').formatRelativeTime
+// 2026-08-22：与首页列表一致，详情页元信息行用绝对时间（MM/DD HH:mm）
+var formatAbsoluteTime = require('../../utils/util').formatAbsoluteTime
 
 // 参与跨分类串联的分类（CATEGORIES 已无 all，DG-03 后 recommend 在列）
 var READING_CATEGORIES = []
@@ -95,7 +95,7 @@ function normalizeDetail(raw) {
     picUrl: raw.picUrl || '',
     publishTime: raw.publishTime || raw.time || '',
     // 相对时间展示字段（沿用首页列表形式："X分钟前"），供详情页元信息行渲染
-    time: (raw.publishTime || raw.time) ? formatRelativeTime(raw.publishTime || raw.time) : '',
+    time: (raw.publishTime || raw.time) ? formatAbsoluteTime(raw.publishTime || raw.time) : '',
   }
   // 兜底场景下若 contentSource 为空，视为 AI 解读（与 R5 兜底语义一致）
   if (!normalized.contentSource && normalized.summary) {

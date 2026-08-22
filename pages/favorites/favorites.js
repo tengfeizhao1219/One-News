@@ -2,7 +2,7 @@
 
 // DG-03: 统一全局单例 localCache（detail/favorites/history 同源）
 var localCache = require('../../utils/localCache').localCache
-var { formatRelativeTime } = require('../../utils/util')
+var { formatAbsoluteTime } = require('../../utils/util')
 var ALL_CATEGORIES = require('../../utils/constants').CATEGORIES
 var app = getApp()
 
@@ -143,7 +143,7 @@ Page({
     arr.sort(function (a, b) { return (b.addedAt || 0) - (a.addedAt || 0) })
     return arr.map(function (item) {
       return Object.assign({}, item, {
-        _time: formatRelativeTime(item.addedAt),
+        _time: formatAbsoluteTime(item.addedAt),
         _pending: false,  // DG-04: 纯本地无待同步
       })
     })
