@@ -415,3 +415,7 @@
   - wxml 面板 search-hint 下加「猜你想搜 ✦」+ 推荐列表；
   - wxss 加 rel-item/rel-title 样式（复用 dig-group 卡片视觉）。
 - **Demo**：ui-demo/detail-dig-related-demo.html 已上线（https://tengfeizhao1219.github.io/One-News/detail-dig-related-demo.html）。
+## 2026-08-22 · 推荐问题逻辑复用到 intel（AI 情报官）详情页
+
+- **需求**：把 One News 的"不相关推荐问题"逻辑复用到 intel 详情页（后端已支持 related，前端此前未接入）。
+- **复用**：intel detail.js data 加 relatedQuestions；_runSearch reset 清空；_doCallSearch 不相关分支存推荐、相关清空；新增 onRelatedTap（点击推荐直接搜索）；wxml 面板加「猜你想搜 ✦」推荐列表；wxss 加 rel-* 样式（与 One News 同款，复用 dig-group 视觉）。

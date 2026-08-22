@@ -66,6 +66,7 @@ Page({
     searchQuery: '',            // 输入框内容
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关 / 搜索失败 hint（当次提示，不累积）
+    relatedQuestions: [],       // 2026-08-22：不相关时后端推荐的搜索问题（点击直接搜索，对齐 One News）
     digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries:[{time, sections, sources}]}]
 
   },
@@ -460,6 +461,14 @@ function cleanText(v) {
     this._runSearch(query.slice(0, 60))
   },
 
+  /** 2026-08-22：点击推荐问题 → 自动填入输入框并直接搜索（对齐 One News） */
+  onRelatedTap(e) {
+    const q = String((e.currentTarget.dataset.query) || '').trim()
+    if (!q) return
+    this.setData({ searchQueried: true, searchQuery: q, searchHint: '', relatedQuestions: [] })
+    this._runSearch(q.slice(0, 60))
+  },
+
   /** 调 intelSearch：60s 超时；结果累积为详情页一部分（不覆盖），hint 当次提示
    *  bug：searchLoading 是异步 setData，快速连点/confirm+按钮并发时守卫失效 →
    *  同一搜索 push 两次 → 历史出现重复条目。用同步标志 _searching 兜底。 */
@@ -471,7 +480,7 @@ function cleanText(v) {
     let _anyOpen = false
     _g.forEach(x => { if (x.open) { x.open = false; _anyOpen = true } })
     if (_anyOpen) { this._saveDig(_g); this.setData({ digGroups: _g }) }
-    this.setData({ searchLoading: true, searchHint: '' })
+    this.setData({ searchLoading: true, searchHint: '', relatedQuestions: [] })
     // 意图理解上下文：画像摘要 + 最近历史搜索词（后端 inferIntent 使用）
     let profilePayload = null
     let historyPayload = null
@@ -495,13 +504,18 @@ function cleanText(v) {
   _doCallSearch(query, profile, history) {
     searchIntelTopic({ itemId: this.data.itemId, query, profile: profile, history: history })
       .then(d => {
-        // ① 不相关（当次提示条，不影响已有结果）
+        // ① 不相关（当次提示条 + 推荐问题，不影响已有结果）
         if (d && d.relevant === false) {
-          this.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
+          this.setData({
+            searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～',
+            relatedQuestions: Array.isArray(d.related) ? d.related : [],
+          })
           return
         }
         // ② 相关+成功：优先后端 sections（层级排版），回退前端段落解析；来源折叠展示
         if (d && d.relevant) {
+          // 相关 → 清空推荐问题
+          this.setData({ relatedQuestions: [] })
           const sources = Array.isArray(d.sources) ? d.sources.map(x => ({
             title: x.title || x.url || '',
             url: x.url || '',
