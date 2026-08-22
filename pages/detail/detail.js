@@ -383,6 +383,8 @@ Page({
       flashColor: that._getCategoryColorVar(news && news.category),
       // 一键深挖标题：当前新闻标题截断 60 字（intel 版同款）
       searchQuickTitle: String((news && news.title) || '').slice(0, 60),
+      // 2026-08-22：恢复该新闻的深挖历史（退出页面再进保留，作为详情页一部分展示在正文底部）
+      digGroups: that._loadDig(news && news.id),
     }, function () {
       // BUG-20260802-001: 每条新闻正文长度不同，渲染完成后重测真实高度/内容高度
       that._measureScroll()
@@ -1395,12 +1397,13 @@ Page({
 
   // ============ 深挖历史（同话题折叠 + 本地持久化，按 news.id 隔离） ============
 
-  _digKey: function () {
-    return 'news_dig_history_' + (this.data.news && this.data.news.id || '')
+  _digKey: function (id) {
+    var nid = id || (this.data.news && this.data.news.id) || ''
+    return 'news_dig_history_' + nid
   },
-  _loadDig: function () {
+  _loadDig: function (id) {
     try {
-      var k = this._digKey()
+      var k = this._digKey(id)
       var v = wx.getStorageSync(k)
       var groups = Array.isArray(v) ? v : []
       var cleaned = false

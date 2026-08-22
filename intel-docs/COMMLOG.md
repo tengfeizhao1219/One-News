@@ -379,3 +379,8 @@
 
 - **已完成**：R1-R9 全部推送（自动恢复/死源停用/失败冷却/brief 缓存失效/storage 上限/publish 容错/getNewsList 降级/intelRssPoll 恢复 + 深挖 UI 对齐/标题钉顶/FAB 高度/触底翻页修正）。
 - **R10 进行中（未处理）**：发现 **newsFetcher 与 rssFetcher 重复抓取同一批源**——两函数共用 feed_meta 集合 + 同一批 seed 源 + 同一触发时段（`0 0 6-22` 每小时），线上两者均 Enable=1。潜在问题：① 双倍抓取调用（成本）；② 双份写入 news_raw（去重靠 urlFp 兜底，但重复消费）。**待晚上决定**：停用其一（rssFetcher 是旧链路）或错开时段（newsFetcher 6-22 整点 / rssFetcher 半点）。
+## 2026-08-22 · One News 深挖历史退出重进保留（修复）
+
+- **问题**：退出详情页再返回，正文底部的深挖历史消失——digGroups 只在搜索交互时从 storage 加载，onLoad/渲染时未恢复。
+- **修复**：_renderDetail 渲染时按 news.id 恢复 `digGroups = _loadDig(news.id)`；_digKey/_loadDig 支持传入 id（避免 setData 异步时 this.data.news 未更新读到旧 key）。翻页到新新闻时按新 id 恢复（无历史则为空），与 _resetSearchForPageChange 自洽。
+- **对照**：intel 版在 onLoad 恢复（无翻页，itemId 固定）；One News 有翻页，改在 _renderDetail 恢复更稳。
