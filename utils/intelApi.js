@@ -124,12 +124,14 @@ module.exports = {
  * @param {string} params.itemId  intel 详情页新闻 id（context 缺省时按此查库）
  * @param {Object} [params.context] One News 详情页直传新闻上下文 {title, what, srcName}（有则跳过查库）
  * @param {string} params.query   用户输入话题（≤60 字）
+ * @param {Object} [params.profile] 用户画像摘要 {identitiesSummary, focusTags}（意图理解用）
+ * @param {Array}  [params.history] 最近历史搜索词（意图理解用）
  * @returns {Promise<Object>} 三种路径：{relevant:false,hint} / {relevant:true,answer,sources,engine} / {relevant:true,answer:null,error,hint}
  */
-function searchIntelTopic({ itemId, query, context } = {}) {
+function searchIntelTopic({ itemId, query, context, profile, history } = {}) {
   return wx.cloud.callFunction({
     name: 'intelSearch',
-    data: { itemId, query, context },
+    data: { itemId, query, context, profile, history },
     timeout: 60000,
   }).then(res => {
     if (!res.result || res.result.code !== 0) {

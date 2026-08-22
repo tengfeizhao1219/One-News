@@ -1345,7 +1345,10 @@ Page({
       })(),
       srcName: news.source || '',
     }
-    searchIntelTopic({ context: ctx, query: query })
+    // 意图理解上下文：最近历史搜索词（后端 inferIntent 结合新闻/历史优化搜索词与回答）
+    var _groups = this._loadDig()
+    var historyPayload = (_groups && _groups.length) ? _groups.slice(0, 5).map(function (x) { return x.query }) : null
+    searchIntelTopic({ context: ctx, query: query, profile: null, history: historyPayload })
       .then(function (d) {
         if (d && d.relevant === false) {
           that.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
