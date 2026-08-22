@@ -1282,7 +1282,12 @@
 .detail-body.rest.up {
   transform: translateY(-100%);
 }
-/* 标题移出 detail-body 后：保持与正文一致的 64rpx 左右 padding + 顶部呼吸 */
+/* 标题移出 detail-body 后：保持与正文一致的 64rpx 左右 padding + 顶部呼吸；
+   背景不透明（var(--bg-page)）——搜索面板展开时正文被推上来，透明背景会让
+   正文文字透过标题显示重叠（用户反馈 2026-08-22） */
 .article > .detail-title {
   padding: 24rpx 64rpx 0;
+  background-color: var(--bg-page);
+  position: relative;
+  z-index: 1;
 }

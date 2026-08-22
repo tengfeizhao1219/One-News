@@ -384,3 +384,7 @@
 - **问题**：退出详情页再返回，正文底部的深挖历史消失——digGroups 只在搜索交互时从 storage 加载，onLoad/渲染时未恢复。
 - **修复**：_renderDetail 渲染时按 news.id 恢复 `digGroups = _loadDig(news.id)`；_digKey/_loadDig 支持传入 id（避免 setData 异步时 this.data.news 未更新读到旧 key）。翻页到新新闻时按新 id 恢复（无历史则为空），与 _resetSearchForPageChange 自洽。
 - **对照**：intel 版在 onLoad 恢复（无翻页，itemId 固定）；One News 有翻页，改在 _renderDetail 恢复更稳。
+## 2026-08-22 · 详情页标题背景不透明（防推上重叠）
+
+- **问题**：搜索面板展开时正文被推上，标题背景透明导致正文文字透过标题显示重叠。
+- **修复**：`.article > .detail-title` 加 `background-color: var(--bg-page)`（跟随主题深浅色）+ `position: relative; z-index: 1`（盖住推上来的正文）。
