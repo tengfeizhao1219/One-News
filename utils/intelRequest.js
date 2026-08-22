@@ -27,6 +27,11 @@
 let _briefCache = { ts: 0, data: null }
 const BRIEF_TTL = 5 * 60 * 1000
 
+/** 2026-08-22：失效 brief 缓存（手动刷新/手动管线完成后调用，避免 5min 内看到旧 brief） */
+function invalidateIntelBrief() {
+  _briefCache = { ts: 0, data: null }
+}
+
 function getIntelBrief({ channel = 'oneNews', date } = {}) {
   if (!date && _briefCache.data && Date.now() - _briefCache.ts < BRIEF_TTL) {
     return Promise.resolve(_briefCache.data)  // 缓存命中（仅当期）
@@ -139,4 +144,4 @@ function saveIntelProfile(profile) {
   })
 }
 
-module.exports = { getIntelBrief, getIntelProfile, saveIntelProfile }
+module.exports = { getIntelBrief, getIntelProfile, saveIntelProfile, invalidateIntelBrief }

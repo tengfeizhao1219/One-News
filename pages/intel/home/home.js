@@ -7,7 +7,7 @@
 //   今日关注卡片流 + 本周可试用清单 + 「数据截至 HH:MM」+ 源健康提示。
 // owner 2026-08-18 19:45 要求：前端不放任何 mock 数据，空态展示友好提示。
 const app = getApp()
-const { getIntelBrief, getIntelProfile } = require('../../../utils/intelRequest')
+const { getIntelBrief, getIntelProfile, invalidateIntelBrief } = require('../../../utils/intelRequest')
 const { toCards, getSafeBottom, markFocus } = require('../../../utils/intelRender')
 const C = require('../../../utils/constants')
 
@@ -47,6 +47,8 @@ Page({
         isDark: g.effectiveTheme === 'dark'
       })
     }
+    // 2026-08-22：回首页时失效 brief 缓存（手动刷新后的新数据立即可见；缓存仍防同页面高频重复请求）
+    invalidateIntelBrief()
   },
 
   onLoad() {

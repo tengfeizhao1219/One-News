@@ -317,3 +317,7 @@
 - **问题**：rssFetcher（One News 旧 RSS 链路）与 newsFetcher 同构但缺两处修复：①fetch_error 不更新 lastFetchTime → 失败源每轮重试；②disabled 无自动恢复。
 - **修复**：feedStore.js 整体同步（含 R1 自动恢复机制）；fetch_error 更新 lastFetchTime 冷却（保留"网络失败不累计 errorStreak"原语义）；disabled 分支记录 disabledAt。
 - **部署**：rssFetcher 已更新。
+## 2026-08-22 · 【自主迭代 R6】brief 缓存失效接口 + 回首页自动失效
+
+- **问题**：getIntelBrief 5 分钟内存缓存无失效接口——手动刷新（intelManualRun）完成后前端仍可能看到旧 brief，违背"手动触发即完整流程"语义。
+- **修复**：intelRequest.js 导出 `invalidateIntelBrief()`（清 _briefCache）；intel home onShow 时调用（每次回首页强制拉最新，缓存仍防同页面高频重复请求）。
