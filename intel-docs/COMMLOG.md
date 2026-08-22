@@ -388,3 +388,11 @@
 
 - **问题**：搜索面板展开时正文被推上，标题背景透明导致正文文字透过标题显示重叠。
 - **修复**：`.article > .detail-title` 加 `background-color: var(--bg-page)`（跟随主题深浅色）+ `position: relative; z-index: 1`（盖住推上来的正文）。
+## 2026-08-22 · intelSearch 云函数依赖缺失修复（深挖报 CallFunctions error）
+
+- **现象**：One News 深挖查询报 `CallFunctions error`。
+- **根因**：intelSearch 的 `InstallDependency=FALSE` + 本地无 node_modules → 部署代码包不含 wx-server-sdk → 实例启动即 `Cannot find module 'wx-server-sdk'`。
+- **对比**：intelProcess（本地有 node_modules，部署时打包带上）；newsPipeline（InstallDependency=TRUE，云端自动装）。intelSearch 两者都缺。
+- **修复**：复用 intelProcess 的 node_modules（同为 wx-server-sdk latest）→ 重新部署 intelSearch（CodeSize 几百 KB → 7.4MB 含依赖）。
+- **验证**：invoke 无缺模块错误，ErrNo=0，CodeSize 7.4MB。
+- **教训**：云函数部署后必须确认依赖（InstallDependency 或本地 node_modules 至少其一）；LEARNINGS 补充。

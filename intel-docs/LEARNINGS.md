@@ -226,3 +226,9 @@
 ## 2026-08-22 intelSearch 复用到 One News（跨模块功能平移）
 - **云函数复用要点**：intelSearch 原依赖 itemId 查 intel_staged/intel_current 取新闻上下文。跨模块复用时，云函数加 `event.context` 可选参数（前端传新闻标题+摘要），有则跳过查库，无则回退原逻辑——**云函数应支持"上下文由调用方注入"的降级路径**，避免功能绑定单一数据源。
 - **前端平移适配清单**：① 数据字段（news 结构差异→ itemId 用 news.id）；② 生命周期（_renderDetail 设 searchQuickTitle）；③ 交互冲突（One News 有翻页手势，面板展开时 onTouchEnd 先收起不翻页）；④ selector 适配（.panel-header → .nav-bar）；⑤ 本地存储 key 按模块隔离（intel_dig_ vs news_dig_）。
+
+## 2026-08-22 云函数依赖缺失（Cannot find module）
+- **根因**：`InstallDependency=FALSE` + 本地无 node_modules → 部署包不含 wx-server-sdk，实例启动崩溃。
+- **诊断**：invoke 后查日志/CodeSize——CodeSize 过小（几百 KB）即疑似无依赖；正常含 wx-server-sdk 约 7MB+。
+- **修复**：复用同依赖函数（intelProcess）的 node_modules 复制过去再部署；或开启 InstallDependency。
+- **预防**：新云函数部署后**必须 invoke 一次确认无缺模块错误**，不能只看"已更新函数代码"。
