@@ -77,6 +77,28 @@ bash scripts/git_push.sh
 
 ---
 
+## 4B. 本地编译 + 每日定时推送模式（2026-08-22 定稿）
+
+> owner 拍板：改动**直接落本地目录**（`~/Desktop/One-News`，即微信开发者工具打开的项目，
+> 工具点「编译」即时生效，**不经 GitHub**）；GitHub 降级为**每日备份 + 多 AI 协同**。
+
+### 工作流
+1. **改动落本地**：任何修改直接写 `~/Desktop/One-News` 对应文件 → 开发者工具编译生效（无需 push）。
+2. **每日 23:30 自动提交推送**（launchd：`com.one-news.daily-push`）：
+   - `scripts/daily-commit-push.sh`：有改动才提交（无改动静默退出）
+   - 提交信息 = 日期 + 改动文件清单；推送复用 `git_push.sh`（退避 + 频率保护）
+   - 日志：`/tmp/one-news-daily-push.log`
+3. **手动触发**：`bash scripts/daily-commit-push.sh`
+4. **紧急推送**：`bash scripts/git_push.sh`（60s 间隔保护，多 AI 场景慎用 --force）
+
+### 约束
+- 每晚定时任务会自动 `git add -A`（含新文件）——**工作区保持干净**，避免意外文件入库。
+- 仍建议**改动即本地提交**（`git add + git commit`），定时任务只做「补交 + 推送」；
+  若当天已多次手动提交，定时任务自动跳过空提交。
+- GitHub 上他人（如 WorkBuddy）改动需 `git pull` 合并后再推——多 AI 并行时仍要遵守先 pull。
+
+---
+
 ## 5. 协作纪律
 
 - **多 AI 并行**：所有改动先 `git pull`（以线上为准），改后即提交，推送走 `git_push.sh`。
