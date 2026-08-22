@@ -321,3 +321,7 @@
 
 - **问题**：getIntelBrief 5 分钟内存缓存无失效接口——手动刷新（intelManualRun）完成后前端仍可能看到旧 brief，违背"手动触发即完整流程"语义。
 - **修复**：intelRequest.js 导出 `invalidateIntelBrief()`（清 _briefCache）；intel home onShow 时调用（每次回首页强制拉最新，缓存仍防同页面高频重复请求）。
+## 2026-08-22 · 【自主迭代 R7】深挖历史 storage 全局上限（防超限静默失效）
+
+- **问题**：深挖历史每条新闻独立 storage key（news_dig_history_<id>/intel_dig_history_<id>），单条有 10 话题×10 次上限但**新闻数无上限**——翻页几百条后 storage 超 10MB，wx.setStorageSync 抛错被静默 catch，功能静默失效。
+- **修复**：_saveDig 写入后做全局清理——保留当前 key + 最多 200 个深挖历史 key，超限删多余（One News + intel 两处）。

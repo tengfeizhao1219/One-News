@@ -571,6 +571,23 @@ function cleanText(v) {
   },
   _saveDig(groups) {
     try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
+    // 2026-08-22：全局深挖历史 key 上限（防大量情报导致 storage 超限静默失败）
+    try {
+      const MAX_KEYS = 200
+      const info = wx.getStorageInfoSync()
+      const current = this._digKey()
+      const digKeys = (info.keys || []).filter(k => k.indexOf('intel_dig_history_') === 0)
+      if (digKeys.length > MAX_KEYS) {
+        const extra = digKeys.length - MAX_KEYS
+        let removed = 0
+        for (let i = digKeys.length - 1; i >= 0 && removed < extra; i--) {
+          if (digKeys[i] !== current) {
+            wx.removeStorageSync(digKeys[i])
+            removed++
+          }
+        }
+      }
+    } catch (e) { /* 清理失败不影响主流程 */ }
   },
   /** sections 指纹：用于去重（同 query 同内容不重复入库） */
   _sectionsFingerprint(sections) {

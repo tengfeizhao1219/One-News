@@ -1411,6 +1411,26 @@ Page({
   },
   _saveDig: function (groups) {
     try { wx.setStorageSync(this._digKey(), groups) } catch (e) {}
+    // 2026-08-22：全局深挖历史 key 上限（防翻页大量新闻导致 storage 超限静默失败）。
+    // 保留当前 key + 最多 DIG_HISTORY_MAX_KEYS 个，超限删多余（无时间戳，删后写入的）。
+    try {
+      var MAX_KEYS = 200
+      var info = wx.getStorageInfoSync()
+      var current = this._digKey()
+      var digKeys = (info.keys || []).filter(function (k) {
+        return k.indexOf('news_dig_history_') === 0
+      })
+      if (digKeys.length > MAX_KEYS) {
+        var extra = digKeys.length - MAX_KEYS
+        var removed = 0
+        for (var i = digKeys.length - 1; i >= 0 && removed < extra; i--) {
+          if (digKeys[i] !== current) {
+            wx.removeStorageSync(digKeys[i])
+            removed++
+          }
+        }
+      }
+    } catch (e) { /* 清理失败不影响主流程 */ }
   },
   _sectionsFingerprint: function (sections) {
     try { return JSON.stringify((sections || []).map(function (x) { return x && x.text || '' })) } catch (e) { return '' }
