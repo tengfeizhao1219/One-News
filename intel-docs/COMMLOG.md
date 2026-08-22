@@ -366,3 +366,7 @@
 - **问题**：One News 正文底部深挖历史展开时，内容变长但 `_isAtBottom` 标志残留（展开前触底置位）→ 展开后立即上滑就翻页，未滚到新页面底部。
 - **修复**：onToggleDigGroup 展开分组时重置 `_isAtBottom=false` + `_needsSecondSwipe=true`——用户必须重新滚到新的页面底部才触发翻页（遵循"滑到页面底部才翻页"的既有语义）。
 - **说明**：intel 版深挖历史在搜索面板内（面板滚动与正文翻页解耦），无此问题；One News 在正文内需此处理。
+## 2026-08-22 · 标题钉顶 + FAB 高度修正（用户反馈 2 点）
+
+- **① 标题固定顶部**：detail-title 移到 detail-body 外（article 内独立），detail-body 加 `.rest` 类——搜索面板推上时标题钉顶不动（对齐 intel 版 .rest 结构）；scroll-view 移除 search-push-up 整体推上（避免标题被一起推走）。
+- **② FAB 高度**：详情页有底部操作栏(80rpx)，fab-search bottom 从 48rpx 抬到 `80rpx+32rpx+safe-bottom`（操作栏上方），保持首页 floating-more 的 96rpx 圆 + floatY 动画形态。

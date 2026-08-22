@@ -1120,10 +1120,11 @@
 .search-src--hover { background-color: var(--bg-subtle); }
 /* 搜索悬浮按钮（右下角，自绘放大镜；对齐首页 floating-more 形态） */
 .fab-search {
-  /* 与首页 floating-more 完全同尺寸/同动画（96rpx 圆 + floatY 浮动） */
+  /* 对齐首页 floating-more 形态（96rpx 圆 + floatY 动画）；
+     因详情页有底部操作栏(80rpx)，bottom 抬到操作栏上方 + 32rpx 间距 */
   position: absolute;
   right: 40rpx;
-  bottom: calc(48rpx + var(--safe-bottom, 0px));
+  bottom: calc(80rpx + 32rpx + var(--safe-bottom, 0px));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
@@ -1265,16 +1266,23 @@
 }
 
 
-/* ===== One News 适配（2026-08-22）：正文 scroll-view 推上 ===== */
-/* One News 正文是 scroll-view，直接对 .content 做推上动画（对齐 intel .rest.up） */
-.content.search-push-up {
-  transform: translateY(-100%);
-  transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
 
 /* 搜索图标深浅主题切换（One News 详情页需独立定义，intel 版复用其页面级） */
 .nav-light { display: inline-block; }
 .nav-dark { display: none; }
 .page--dark .nav-light { display: none; }
 .page--dark .nav-dark { display: inline-block; }
+
+/* ===== One News 深挖推上适配（2026-08-22）：标题固定钉顶，detail-body 整体推上 ===== */
+/* intel 版 .rest.up = translateY(-100%) 已随搜索样式带入；One News 用 .detail-body.rest */
+.detail-body.rest {
+  transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+.detail-body.rest.up {
+  transform: translateY(-100%);
+}
+/* 标题移出 detail-body 后：保持在 article 顶部，搜索面板展开时不被推走 */
+.article > .detail-title {
+  padding-top: 24rpx;
+}

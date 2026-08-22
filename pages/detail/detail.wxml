@@ -67,7 +67,7 @@
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
     wx:if="{{pageState === 'ready'}}"
-    class="content {{animClass}} {{searchOpen ? 'search-push-up' : ''}}"
+    class="content {{animClass}}"
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
@@ -81,10 +81,10 @@
     bindtouchend="onTouchEnd">
 
     <view class="article">
-      <view class="detail-body">
-        <!-- 标题 -->
-        <view class="detail-title {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
+      <!-- 标题（2026-08-22：移到 detail-body 外固定，搜索面板推上时标题钉顶不动，对齐 intel 版） -->
+      <view class="detail-title {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
 
+      <view class="detail-body rest {{searchOpen ? 'up' : ''}}">
         <!-- 元信息 -->
         <view class="detail-meta">
           <view class="category-tag">{{news.categoryName}}</view>
