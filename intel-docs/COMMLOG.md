@@ -396,3 +396,11 @@
 - **修复**：复用 intelProcess 的 node_modules（同为 wx-server-sdk latest）→ 重新部署 intelSearch（CodeSize 几百 KB → 7.4MB 含依赖）。
 - **验证**：invoke 无缺模块错误，ErrNo=0，CodeSize 7.4MB。
 - **教训**：云函数部署后必须确认依赖（InstallDependency 或本地 node_modules 至少其一）；LEARNINGS 补充。
+## 2026-08-22 · One News 深挖相关性判断修正（按新闻主题，非 AI）
+
+- **需求澄清**：One News 深挖仍需相关性判断，但标准是「与当前新闻主题相关」而非「AI 相关」（此前完全跳过判断过松；用户例：台风新闻搜"开学时间"应判不相关并提示）。
+- **实现**：judgeRelevance 加 scene 参数——
+  - intel 场景：保留「AI 相关 或 新闻相关」双标准（含 AI 快路径）；
+  - One News（context）场景：只判断「与当前新闻主题相关」（同一事件/背景延伸/上下游/同类对比/后续发展/相关政策/自然延伸），不预设 AI 相关，不走 AI 快路径；
+  - 提示文案区分：One News「你输入的搜索条件和当前新闻关系不大哦…」。
+- **部署**：intelSearch 已更新。

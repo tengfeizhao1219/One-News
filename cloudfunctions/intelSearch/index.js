@@ -133,11 +133,23 @@ function deepseekChat(systemPrompt, user, { maxTokens = 500, temperature = 0.3 }
   })
 }
 
-async function judgeRelevance(query, ctx) {
-  // 快路径：AI 关键词命中直接相关（省 LLM 调用，稳定）
-  const quick = quickRelevance(query)
-  if (quick === true) return { relevant: true, reason: 'AI 相关话题' }
-  const system = `你是情报相关性判断器。判断用户搜索的话题是否与 AI 相关，或与给定新闻的主题相关（宽泛标准）。
+async function judgeRelevance(query, ctx, opts = {}) {
+  // opts.scene: 'intel'（默认，判断 AI 相关或新闻相关）| 'news'（One News，仅判断与当前新闻主题相关）
+  const scene = opts.scene || 'intel'
+  // 快路径：intel 场景 AI 关键词命中直接相关；One News 场景不走 AI 快路径
+  // （One News 只按新闻主题相关性判断，不预设 AI 相关）
+  if (scene === 'intel') {
+    const quick = quickRelevance(query)
+    if (quick === true) return { relevant: true, reason: 'AI 相关话题' }
+  }
+  const system = scene === 'news'
+    ? `你是新闻主题相关性判断器。判断用户搜索的话题是否与给定新闻的主题相关（宽泛标准）。
+判断规则：
+1. 话题与新闻主题相关（同一事件、背景延伸、上下游、行业影响、同类对比、后续发展、相关政策等）
+2. 话题属于该新闻主题的自然延伸（如台风新闻 → 台风路径/防台措施/受灾情况/天气预警等）
+只有与新闻主题完全无关的（如台风新闻搜"开学时间"）才判不相关。
+只输出 JSON：{"relevant": true|false, "reason": "一句话理由"}，不要输出其它内容。`
+    : `你是情报相关性判断器。判断用户搜索的话题是否与 AI 相关，或与给定新闻的主题相关（宽泛标准）。
 判断规则（满足任一即可判相关）：
 1. 话题属于 AI 相关（AI 技术/模型/产品/行业/应用/工具/论文/公司动态等）
 2. 话题与新闻主题相关（技术上下游、行业影响、同类对比、背景延伸等）
@@ -155,7 +167,7 @@ async function judgeRelevance(query, ctx) {
     const j = JSON.parse(rawText)
     return { relevant: j.relevant !== false, reason: j.reason || '' }
   } catch (e) {
-    // 解析失败：保守放行（无法确认不相关就允许搜索），避免误拦 AI 相关话题
+    // 解析失败：保守放行（无法确认不相关就允许搜索），避免误拦
     return { relevant: true, reason: '' }
   }
 }
@@ -437,16 +449,22 @@ exports.main = async (event = {}) => {
     ctx = newsContext(news)
   }
 
-  // ① 相关性判断（宽泛）
+  // ① 相关性判断——intel 场景判断「AI 相关或新闻相关」；
+  //    One News（context 模式）判断「与当前新闻主题相关」（2026-08-22：
+  //    范围放开但保留主题相关性——如台风新闻搜"开学时间"判不相关并提示）。
+  const isIntelScene = !evCtx || !(evCtx.title || evCtx.what)
   const tJudge = Date.now()
-  const judge = await judgeRelevance(query, ctx)
+  const judge = await judgeRelevance(query, ctx, { scene: isIntelScene ? 'intel' : 'news' })
   console.log('[intelSearch] judge 耗时:', Date.now() - tJudge + 'ms', '| relevant:', judge.relevant)
   if (!judge.relevant) {
+    const hint = isIntelScene
+      ? '这个话题和这条新闻关系不大哦，可以搜索 AI 相关或本条新闻相关的话题～'
+      : '你输入的搜索条件和当前新闻关系不大哦，换个与这条新闻相关的话题试试～'
     return {
       code: 0,
       data: {
         relevant: false,
-        hint: '这个话题和这条新闻关系不大哦，可以搜索 AI 相关或本条新闻相关的话题～',
+        hint: hint,
         reason: judge.reason || '',
       },
     }
