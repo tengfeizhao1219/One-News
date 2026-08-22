@@ -325,3 +325,8 @@
 
 - **问题**：深挖历史每条新闻独立 storage key（news_dig_history_<id>/intel_dig_history_<id>），单条有 10 话题×10 次上限但**新闻数无上限**——翻页几百条后 storage 超 10MB，wx.setStorageSync 抛错被静默 catch，功能静默失效。
 - **修复**：_saveDig 写入后做全局清理——保留当前 key + 最多 200 个深挖历史 key，超限删多余（One News + intel 两处）。
+## 2026-08-22 · 【自主迭代 R8】publish 注入失败保留 staging 重试
+
+- **问题**：stagePublish 先 wipeNewsCache 全清再 batchInsert——若 batchInsert 抛异常（集合异常等），cache 已空、staging 已删，数据双丢失，前端空首页。
+- **修复**：batchInsert 外包 try/catch——失败时 staging 保留（不 removeStaged）+ trigger('publish') 下一轮用同批 done 重试，避免"cache 空 + staging 丢"。
+- **部署**：newsPipeline 已更新。

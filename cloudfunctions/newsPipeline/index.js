@@ -661,7 +661,16 @@ async function stagePublish(deadline) {
     trigger('publish')
     return { stage: 'publish', deferred: true, reason: 'wipe failed' }
   }
-  const r = await batchInsert(capped.items)
+  let r
+  try {
+    r = await batchInsert(capped.items)
+  } catch (e) {
+    // 2026-08-22：注入失败（如集合异常）→ cache 已空，staging 未删（保留数据）。
+    // 下一轮 selfHeal/publish 会用同批 done 重试，避免"cache 空 + staging 也丢"双丢失。
+    console.error('[newsPipeline][publish] batchInsert 异常，staging 保留待重试:', (e && e.message) || e)
+    trigger('publish')
+    return { stage: 'publish', deferred: true, reason: 'insert failed, staging kept', error: (e && e.message) || '' }
+  }
   await stagingStore.removeStaged(collected.map((i) => i._id))
   trigger('run')
   console.log(`[newsPipeline][publish] 批次替换完成 inserted=${r.inserted} trimmed=${capped.trimmed} from=${collected.length}`)
