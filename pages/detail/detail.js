@@ -1308,7 +1308,14 @@ Page({
     var news = this.data.news || {}
     var ctx = {
       title: news.title || '',
-      what: news.summary || news.content || '',
+      // 2026-08-22：摘要完整 + 正文补充（合计 ≤400 字，云函数会再截断；优先保摘要，信息更足避免误判）
+      what: (function () {
+        var sum = String(news.summary || '').trim()
+        var body = String(news.content || '').trim()
+        if (!body) return sum.slice(0, 400)
+        var remain = Math.max(0, 400 - sum.length)
+        return sum + (remain > 20 ? '\n' + body.slice(0, remain) : '')
+      })(),
       srcName: news.source || '',
     }
     searchIntelTopic({ context: ctx, query: query })

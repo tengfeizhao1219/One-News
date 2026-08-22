@@ -340,3 +340,7 @@
 
 - **问题**：R3 只在 _swipeToNext（上滑下一条）重置搜索态，_swipeToPrev（下滑上一条）遗漏——下滑翻页后深挖历史仍串台。
 - **修复**：_swipeToPrev 开头同样调 _resetSearchForPageChange。
+## 2026-08-22 · 【自主迭代 R11】深挖搜索上下文增强（摘要+正文）
+
+- **问题**：One News 深挖传 `what: news.summary || news.content` 优先摘要——摘要过短时相关性判断（judgeRelevance）信息不足可能误判不相关。
+- **修复**：摘要完整保留 + 正文补充至合计 ≤400 字（云函数再截断；优先保摘要）。
