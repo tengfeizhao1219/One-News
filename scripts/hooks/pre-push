@@ -1,0 +1,39 @@
+#!/bin/bash
+# pre-push hook —— AI 协作门禁：push 前自动跑 check_intel.sh + 推送频率保护
+# 任何 AI（无论客户端）push 都会触发；检查失败则拒绝推送。
+# 目的：技术强制约束多 AI 并行——防止清理/翻译等静默逻辑被覆盖、冲突标记误推；
+#       并防高频 push 触发 GitHub secondary rate limit（滥用冷却）。
+set -uo pipefail
+
+# ---- 推送频率保护（防滥用冷却）：同仓库 60s 内禁止重复 push ----
+LOCK="$HOME/.cache/one-news-last-push"
+MIN_INTERVAL=60
+now=$(date +%s)
+if [ -f "$LOCK" ]; then
+  last=$(cat "$LOCK" 2>/dev/null || echo 0)
+  elapsed=$(( now - last ))
+  if [ "$elapsed" -lt "$MIN_INTERVAL" ]; then
+    wait_s=$(( MIN_INTERVAL - elapsed ))
+    echo "⛔ 距上次推送仅 ${elapsed}s（<${MIN_INTERVAL}s）——触发推送频率保护。"
+    echo "   高频 push 会触发 GitHub 滥用冷却（写操作挂起/超时）。"
+    echo "   请攒批提交后推送（3-5 个 commit/次），或 ${wait_s}s 后再试。"
+    echo "   紧急修复可用: bash scripts/git_push.sh --force"
+    exit 1
+  fi
+fi
+
+echo "⚙️  pre-push: 运行 AI 协作门禁检查…"
+if [ -f "$(git rev-parse --show-toplevel)/scripts/check_intel.sh" ]; then
+  bash "$(git rev-parse --show-toplevel)/scripts/check_intel.sh" "$@"
+  code=$?
+  if [ $code -ne 0 ]; then
+    echo "⛔ push 被拦截：门禁检查未通过（见上方）。修复后重试。"
+    exit 1
+  fi
+  echo "✅ pre-push 门禁通过"
+else
+  echo "⚠️ 未找到 scripts/check_intel.sh，跳过门禁"
+fi
+mkdir -p "$(dirname "$LOCK")"
+date +%s > "$LOCK"
+exit 0
