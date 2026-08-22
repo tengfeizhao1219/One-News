@@ -1507,6 +1507,12 @@ Page({
     groups.forEach(function (g, idx) { g.open = (idx === gi && willOpen) })
     this._saveDig(groups)
     this.setData({ digGroups: groups, digScrollTo: 'dig-group-' + gi })
+    // 2026-08-22：展开深挖分组 → 内容变长，重置触底状态——用户必须重新滚到
+    // 新的页面底部才触发翻页（避免"展开后立即上滑就翻页"：展开前的触底标志残留）。
+    if (willOpen) {
+      this._isAtBottom = false
+      this._needsSecondSwipe = true
+    }
     setTimeout(function () { this.setData({ digScrollTo: '' }) }.bind(this), 600)
   },
   /** 展开/收起某次结果的参考来源 */

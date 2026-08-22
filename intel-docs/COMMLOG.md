@@ -361,3 +361,8 @@
 - **③ 搜索中动画**：search-btn.is-loading + search-blue 图标 + searchSweep 摆动动画（1.1s infinite）。
 - **④ 深挖历史在正文底部**：正文 scroll-view 内新增 `#dig-history` 区（始终显示，含空态提示"还没有深挖记录"），与面板内 dig-list 并存（对齐 intel：面板展开看 dig-list，收起看正文 dig-history）。
 - **样式**：搜索样式整段替换为 intel 版完整样式（含 .rest 推上 + nav-light/dark 主题切换）。
+## 2026-08-22 · 深挖历史展开后触底翻页修正
+
+- **问题**：One News 正文底部深挖历史展开时，内容变长但 `_isAtBottom` 标志残留（展开前触底置位）→ 展开后立即上滑就翻页，未滚到新页面底部。
+- **修复**：onToggleDigGroup 展开分组时重置 `_isAtBottom=false` + `_needsSecondSwipe=true`——用户必须重新滚到新的页面底部才触发翻页（遵循"滑到页面底部才翻页"的既有语义）。
+- **说明**：intel 版深挖历史在搜索面板内（面板滚动与正文翻页解耦），无此问题；One News 在正文内需此处理。
