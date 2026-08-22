@@ -404,3 +404,14 @@
   - One News（context）场景：只判断「与当前新闻主题相关」（同一事件/背景延伸/上下游/同类对比/后续发展/相关政策/自然延伸），不预设 AI 相关，不走 AI 快路径；
   - 提示文案区分：One News「你输入的搜索条件和当前新闻关系不大哦…」。
 - **部署**：intelSearch 已更新。
+## 2026-08-22 · 深挖不相关推荐问题落地（对齐线上 demo）
+
+- **需求**：用户搜索与当前新闻不相关时，返回推荐问题供点击直接搜索。
+- **后端 intelSearch**：judgeRelevance 的 prompt 要求不相关时输出 `related`（3 个围绕新闻主题的推荐问题）；主入口不相关返回携带 `related: [...]`；maxTokens 100→200。已部署。
+- **前端 detail**：
+  - data 加 `relatedQuestions`；
+  - _runSearch 不相关分支存 relatedQuestions（相关/新搜索时清空）；
+  - 新增 `onRelatedTap`（点击推荐 → 自动填入输入框直接搜索）；
+  - wxml 面板 search-hint 下加「猜你想搜 ✦」+ 推荐列表；
+  - wxss 加 rel-item/rel-title 样式（复用 dig-group 卡片视觉）。
+- **Demo**：ui-demo/detail-dig-related-demo.html 已上线（https://tengfeizhao1219.github.io/One-News/detail-dig-related-demo.html）。

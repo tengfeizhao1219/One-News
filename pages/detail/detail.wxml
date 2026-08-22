@@ -300,6 +300,16 @@
     <view class="search-status" wx:if="{{searchLoading}}"><text class="search-status-txt">正在为你搜索…</text></view>
     <view class="search-hint" wx:if="{{searchHint}}">{{searchHint}}</view>
 
+    <!-- 2026-08-22：不相关时推荐问题（点击直接搜索） -->
+    <block wx:if="{{relatedQuestions.length}}">
+      <view class="rel-title">猜你想搜 ✦</view>
+      <view class="rel-item" wx:for="{{relatedQuestions}}" wx:key="*this" bindtap="onRelatedTap" data-query="{{item}}" hover-class="rel-item--hover">
+        <view class="rel-icon">➤</view>
+        <text class="rel-text">{{item}}</text>
+        <text class="rel-chev">›</text>
+      </view>
+    </block>
+
     <view class="dig-list" wx:if="{{digGroups.length}}">
       <block wx:for="{{digGroups}}" wx:key="query" wx:for-item="g" wx:for-index="gi">
         <view class="dig-group {{g.open ? 'open' : ''}}" id="dig-group-{{gi}}">

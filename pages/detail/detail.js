@@ -79,6 +79,7 @@ Page({
     searchQuery: '',
     searchLoading: false,       // 搜索中（60s 超时）
     searchHint: '',             // 不相关/失败 hint（当次提示）
+    relatedQuestions: [],       // 2026-08-22：不相关时后端推荐的搜索问题（点击直接搜索）
     searchRestUp: false,        // 内容推上去（面板展开时）
     searchPanelTop: '100%',     // 面板 top
     searchProgress: false,      // 横线进度条动画
@@ -1321,6 +1322,14 @@ Page({
     this._runSearch(query.slice(0, 60))
   },
 
+  /** 2026-08-22：点击推荐问题 → 自动填入输入框并直接搜索 */
+  onRelatedTap: function (e) {
+    var q = String((e.currentTarget.dataset.query) || '').trim()
+    if (!q) return
+    this.setData({ searchQueried: true, searchQuery: q, searchHint: '', relatedQuestions: [] })
+    this._runSearch(q.slice(0, 60))
+  },
+
   /** 调 intelSearch：60s 超时；One News 传 context（新闻标题+摘要），云函数不再依赖 itemId 查库 */
   _runSearch: function (query) {
     var that = this
@@ -1331,7 +1340,7 @@ Page({
     var _anyOpen = false
     _g.forEach(function (x) { if (x.open) { x.open = false; _anyOpen = true } })
     if (_anyOpen) { this._saveDig(_g); this.setData({ digGroups: _g }) }
-    this.setData({ searchLoading: true, searchHint: '' })
+    this.setData({ searchLoading: true, searchHint: '', relatedQuestions: [] })
     var news = this.data.news || {}
     var ctx = {
       title: news.title || '',
@@ -1351,10 +1360,16 @@ Page({
     searchIntelTopic({ context: ctx, query: query, profile: null, history: historyPayload })
       .then(function (d) {
         if (d && d.relevant === false) {
-          that.setData({ searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～' })
+          // 2026-08-22：不相关 → 提示 + 推荐问题（点击直接搜索）
+          that.setData({
+            searchHint: d.hint || '这个话题和这条新闻关系不大哦，换一个试试～',
+            relatedQuestions: Array.isArray(d.related) ? d.related : [],
+          })
           return
         }
         if (d && d.relevant) {
+          // 相关 → 清空推荐问题
+          that.setData({ relatedQuestions: [] })
           var sources = Array.isArray(d.sources) ? d.sources.map(function (x) {
             return { title: x.title || x.url || '', url: x.url || '', source: x.source || '' }
           }).filter(function (x) { return x.url }) : []

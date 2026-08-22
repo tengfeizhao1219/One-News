@@ -1291,3 +1291,42 @@
   position: relative;
   z-index: 1;
 }
+
+/* ===== 不相关推荐问题（2026-08-22，复用 dig-group 卡片视觉） ===== */
+.rel-title {
+  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 16rpx 4rpx 12rpx;
+}
+.rel-title em { font-style: normal; color: var(--primary); }
+.rel-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 24rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 16rpx;
+}
+.rel-item--hover { background-color: var(--bg-subtle); }
+.rel-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: var(--primary-subtle, rgba(10, 124, 235, 0.08));
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  flex-shrink: 0;
+}
+.rel-text {
+  flex: 1;
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale)); }

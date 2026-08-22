@@ -148,24 +148,32 @@ async function judgeRelevance(query, ctx, opts = {}) {
 1. 话题与新闻主题相关（同一事件、背景延伸、上下游、行业影响、同类对比、后续发展、相关政策等）
 2. 话题属于该新闻主题的自然延伸（如台风新闻 → 台风路径/防台措施/受灾情况/天气预警等）
 只有与新闻主题完全无关的（如台风新闻搜"开学时间"）才判不相关。
-只输出 JSON：{"relevant": true|false, "reason": "一句话理由"}，不要输出其它内容。`
+若判不相关，请同时给出 3 个与新闻主题相关的推荐搜索问题（围绕新闻可深挖的方向），用于引导用户。
+只输出 JSON：{"relevant": true|false, "reason": "一句话理由", "related": ["问题1", "问题2", "问题3"]}
+related 仅在不相关时提供；相关时为空数组 []。不要输出其它内容。`
     : `你是情报相关性判断器。判断用户搜索的话题是否与 AI 相关，或与给定新闻的主题相关（宽泛标准）。
 判断规则（满足任一即可判相关）：
 1. 话题属于 AI 相关（AI 技术/模型/产品/行业/应用/工具/论文/公司动态等）
 2. 话题与新闻主题相关（技术上下游、行业影响、同类对比、背景延伸等）
 只有完全不相关的（如房价、美食、娱乐八卦等与 AI 和新闻都无关的）才判不相关。
-只输出 JSON：{"relevant": true|false, "reason": "一句话理由"}，不要输出其它内容。`
+若判不相关，请同时给出 3 个与新闻主题相关的推荐搜索问题（围绕新闻可深挖的方向），用于引导用户。
+只输出 JSON：{"relevant": true|false, "reason": "一句话理由", "related": ["问题1", "问题2", "问题3"]}
+related 仅在不相关时提供；相关时为空数组 []。不要输出其它内容。`
   const user = `当前新闻：${ctx.title}
 新闻内容摘要：${ctx.what}
 用户搜索话题：${query}`
-  const r = await intelChat({ systemPrompt: system, user, minAccept: 10, maxTokens: 100, temperature: 0, tag: 'intelSearch-judge' })
+  const r = await intelChat({ systemPrompt: system, user, minAccept: 10, maxTokens: 200, temperature: 0, tag: 'intelSearch-judge' })
   console.log('[intelSearch][judge] r=', JSON.stringify(r))
   if (!r || !r.text) return { relevant: true, reason: '', _debug: 'LLM-null' }
   // 2026-08-21 修复：LLM 常输出 ```json 包裹 → JSON.parse 失败；先剥代码块再解析
   const rawText = r.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   try {
     const j = JSON.parse(rawText)
-    return { relevant: j.relevant !== false, reason: j.reason || '' }
+    // 2026-08-22：不相关时携带推荐问题（related，最多 3 个，去空）
+    const related = Array.isArray(j.related)
+      ? j.related.map(x => String(x || '').trim()).filter(Boolean).slice(0, 3)
+      : []
+    return { relevant: j.relevant !== false, reason: j.reason || '', related }
   } catch (e) {
     // 解析失败：保守放行（无法确认不相关就允许搜索），避免误拦
     return { relevant: true, reason: '' }
@@ -459,13 +467,14 @@ exports.main = async (event = {}) => {
   if (!judge.relevant) {
     const hint = isIntelScene
       ? '这个话题和这条新闻关系不大哦，可以搜索 AI 相关或本条新闻相关的话题～'
-      : '你输入的搜索条件和当前新闻关系不大哦，换个与这条新闻相关的话题试试～'
+      : '你输入的搜索条件和当前新闻关系不大哦。试试这些相关的问题：'
     return {
       code: 0,
       data: {
         relevant: false,
         hint: hint,
         reason: judge.reason || '',
+        related: Array.isArray(judge.related) ? judge.related : [],
       },
     }
   }
