@@ -88,14 +88,26 @@ async function queryCache(where, pageNum, pageSize) {
     //   - finalScore 由 refreshNews qualityScorer 落库（0-100 整数）；未评分的旧数据 finalScore=null。
     //   - ⚠️ 部署前置：news_cache 需建组合索引 (finalScore desc, createdAt desc)，
     //     否则链式 orderBy 可能查询失败或退化为单字段排序（见 .workbuddy/reports/FS-SSH-push通道修复经验-2026-08-12.md 旁 FS-质量把控 交接）。
-    //     回滚：删除此行注释回到单 orderBy('createdAt','desc') 即可恢复原行为。
-    const res = await db.collection('news_cache')
-      .where(where)
-      .orderBy('finalScore', 'desc')
-      .orderBy('createdAt', 'desc')
-      .skip((pageNum - 1) * pageSize)
-      .limit(pageSize)
-      .get()
+    //     R9（2026-08-22）：组合索引异常/缺失时降级单字段 createdAt 排序，保证首页可用
+    //     （排序精度降级优于整页查询失败——stale 兜底不覆盖"查询抛错"场景）。
+    let res
+    try {
+      res = await db.collection('news_cache')
+        .where(where)
+        .orderBy('finalScore', 'desc')
+        .orderBy('createdAt', 'desc')
+        .skip((pageNum - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    } catch (chainErr) {
+      console.warn('[getNewsList] 组合索引排序失败，降级单字段 createdAt:', (chainErr && chainErr.message) || chainErr)
+      res = await db.collection('news_cache')
+        .where(where)
+        .orderBy('createdAt', 'desc')
+        .skip((pageNum - 1) * pageSize)
+        .limit(pageSize)
+        .get()
+    }
 
     if (res.data && res.data.length > 0) {
       const totalRes = await db.collection('news_cache')

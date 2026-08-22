@@ -330,3 +330,9 @@
 - **问题**：stagePublish 先 wipeNewsCache 全清再 batchInsert——若 batchInsert 抛异常（集合异常等），cache 已空、staging 已删，数据双丢失，前端空首页。
 - **修复**：batchInsert 外包 try/catch——失败时 staging 保留（不 removeStaged）+ trigger('publish') 下一轮用同批 done 重试，避免"cache 空 + staging 丢"。
 - **部署**：newsPipeline 已更新。
+## 2026-08-22 · 【自主迭代 R9】getNewsList 组合索引失败降级单字段排序
+
+- **问题**：queryCache 组合索引（finalScore desc, createdAt desc）缺失/异常时链式 orderBy 抛错 → 整页查询失败；stale 兜底只覆盖"空结果"不覆盖"查询抛错"。
+- **修复**：链式排序包 try/catch，失败降级单字段 createdAt desc（排序精度降级优于整页失败）。
+- **部署**：getNewsList 已更新。
+- **提醒**：news_cache 组合索引需云开发控制台手动建（wx-server-sdk 4.x 不支持 createIndex）；线上实测排序正常（索引已存在）。
