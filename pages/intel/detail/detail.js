@@ -13,6 +13,7 @@ function cleanText(v) {
 
 
 const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
+const { getIntelProfile } = require('../../../utils/intelRequest')
 const { getSafeBottom } = require('../../../utils/intelRender')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 const { recordView } = require('../../../utils/intelHistory')
@@ -80,8 +81,13 @@ Page({
     }
   },
 
-  /** 离开页面（返回首页等）：搜索区/结果自动折叠（bug4：再进不保持展开） */
+  /** 离开页面（返回首页/切后台等）：搜索区/结果自动折叠（bug4：再进不保持展开） */
   onHide() {
+    this._foldAllDig(true)
+  },
+
+  /** 2026-08-22：页面销毁（物理返回键/系统返回手势/关闭）时也折叠——onHide 不覆盖销毁场景 */
+  onUnload() {
     this._foldAllDig(true)
   },
 
@@ -460,8 +466,34 @@ function cleanText(v) {
   _runSearch(query) {
     if (this.data.searchLoading || this._searching) return
     this._searching = true
+    // 2026-08-22：新搜索发起 → 折叠已有展开的深挖历史（边缘条件：排他性延伸到"新搜索"）
+    const _g = this._loadDig()
+    let _anyOpen = false
+    _g.forEach(x => { if (x.open) { x.open = false; _anyOpen = true } })
+    if (_anyOpen) { this._saveDig(_g); this.setData({ digGroups: _g }) }
     this.setData({ searchLoading: true, searchHint: '' })
-    searchIntelTopic({ itemId: this.data.itemId, query })
+    // 意图理解上下文：画像摘要 + 最近历史搜索词（后端 inferIntent 使用）
+    let profilePayload = null
+    let historyPayload = null
+    if (_g.length) historyPayload = _g.slice(0, 5).map(x => x.query)
+    // 画像异步取（不阻塞搜索发起）
+    Promise.resolve()
+      .then(() => getIntelProfile())
+      .then(p => {
+        if (p) {
+          profilePayload = {
+            identitiesSummary: p.identitiesSummary || '',
+            focusTags: Array.isArray(p.focusTags) ? p.focusTags : [],
+          }
+        }
+        return this._doCallSearch(query, profilePayload, historyPayload)
+      })
+      .catch(() => this._doCallSearch(query, profilePayload, historyPayload))
+  },
+
+  /** 实际调 intelSearch（携带意图上下文） */
+  _doCallSearch(query, profile, history) {
+    searchIntelTopic({ itemId: this.data.itemId, query, profile: profile, history: history })
       .then(d => {
         // ① 不相关（当次提示条，不影响已有结果）
         if (d && d.relevant === false) {

@@ -306,20 +306,59 @@ async function buildSearchQuery(query, ctx) {
   return `${String(ctx.title || '').replace(/\s+/g, ' ').slice(0, 40)} ${query}`
 }
 
+// ─── ②.5 真实意图理解（结合文章主题/用户画像/历史搜索）───
+/** 推断用户真实意图：想知道什么、用于什么场景；输出结构化意图供改写搜索词与组织回答 */
+async function inferIntent(query, ctx, profile, history) {
+  const sysProfile = profile && profile.identitiesSummary
+    ? '用户身份：' + String(profile.identitiesSummary).slice(0, 200)
+    : (profile && Array.isArray(profile.focusTags) && profile.focusTags.length
+      ? '用户关注领域：' + profile.focusTags.slice(0, 8).join('、')
+      : '（用户未初始化画像）')
+  const histStr = Array.isArray(history) && history.length
+    ? '用户最近搜索过：' + history.slice(0, 5).join('；')
+    : '（暂无历史搜索）'
+  const system = `你是用户意图理解器。用户在 AI 情报官看到一条新闻，输入了想进一步了解的搜索词。
+请结合「当前新闻 + 用户身份/关注 + 历史搜索」，推断用户最可能的真实意图：
+- 他到底想知道什么（具体信息诉求）
+- 他可能用在什么场景（工作/学习/选型/对比/落地）
+- 该意图对应的精准搜索词（10-25 字，含新闻主体，适合搜索引擎）
+只输出 JSON：{"intent":"一句话意图","scene":"场景","searchQuery":"精准搜索词"}，不要输出其它内容。`
+  const user = `当前新闻：${ctx.title}
+新闻摘要：${ctx.what}
+${sysProfile}
+${histStr}
+用户输入：${query}`
+  const r = await deepseekChat(system, user, { maxTokens: 200, temperature: 0.2 })
+  if (!r || !r.text) return null
+  const raw = r.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+  try {
+    const j = JSON.parse(raw)
+    return {
+      intent: String(j.intent || '').slice(0, 120),
+      scene: String(j.scene || '').slice(0, 40),
+      searchQuery: String(j.searchQuery || '').slice(0, 60),
+    }
+  } catch (e) { return null }
+}
+
 // ─── ③ 总结回答（DeepSeek 为主）───
-async function summarize(query, ctx, search) {
+async function summarize(query, ctx, search, intent) {
   const searchText = (search.sources || [])
     .map((s, i) => `${i + 1}. ${s.title} ${s.url}${s.snippet ? '\n   ' + s.snippet : ''}`).join('\n')
+  const intentStr = intent && intent.intent
+    ? `\n用户真实意图：${intent.intent}（场景：${intent.scene || '未知'}）`
+    : ''
   const system = `你是 AI 情报官，基于联网搜索结果回答用户关于「${query}」的进一步了解需求。
 要求：
 - 客观、基于搜索结果与当前新闻，不编造事实
 - 组织清晰：先直接回答核心，再补充关键细节/影响
+- 贴合用户真实意图与使用场景回答（不要泛泛而谈）
 - 200-450 字
 - 不要输出「参考来源」列表（引用链接由系统另行提供，正文无需罗列）
 - 格式：段落间用空行分隔；小标题独立成行，用 **小标题** 包裹（如 **核心变化**）；
   不要使用其它 markdown 标记（禁 #、-、反引号、[链接](url)、*斜体*）`
   const user = `当前新闻：${ctx.title}
-新闻摘要：${ctx.what}
+新闻摘要：${ctx.what}${intentStr}
 联网搜索结果：
 ${searchText || '（无结构化结果，基于回答内容）'}
 搜索结果回答：${search.answer || ''}
@@ -413,8 +452,16 @@ exports.main = async (event = {}) => {
     }
   }
 
-  // ② 搜索词改写（模糊 query 结合新闻主题，搜得准）
-  const searchQuery = await buildSearchQuery(query, ctx)
+  // ② 真实意图理解（结合画像/历史搜索/新闻）→ 优化搜索词
+  const profile = (event && event.profile) || null
+  const history = (event && event.history) || null
+  const intent = await inferIntent(query, ctx, profile, history)
+  if (intent && intent.searchQuery) {
+    console.log('[intelSearch] 意图理解:', JSON.stringify(intent))
+  }
+
+  // ② 搜索词改写（优先用意图里的精准搜索词；无则退回原改写逻辑）
+  const searchQuery = (intent && intent.searchQuery) || await buildSearchQuery(query, ctx)
 
   // ② 联网搜索（主 Tavily 1-3s → 兜底智谱 web_search）
   const tSearch = Date.now()
@@ -437,7 +484,7 @@ exports.main = async (event = {}) => {
   const tSum = Date.now()
   try {
     sum = await Promise.race([
-      summarize(query, ctx, search),
+      summarize(query, ctx, search, intent),
       new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
     ])
   } catch (e) { sum = null }
