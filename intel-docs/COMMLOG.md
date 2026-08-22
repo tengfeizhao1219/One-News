@@ -370,3 +370,8 @@
 
 - **① 标题固定顶部**：detail-title 移到 detail-body 外（article 内独立），detail-body 加 `.rest` 类——搜索面板推上时标题钉顶不动（对齐 intel 版 .rest 结构）；scroll-view 移除 search-push-up 整体推上（避免标题被一起推走）。
 - **② FAB 高度**：详情页有底部操作栏(80rpx)，fab-search bottom 从 48rpx 抬到 `80rpx+32rpx+safe-bottom`（操作栏上方），保持首页 floating-more 的 96rpx 圆 + floatY 动画形态。
+## 2026-08-22 · 【自主迭代 R9】intelRssPoll disabled 源自动恢复（同 One News R1）
+
+- **问题**：intel 源连续入库 0 → status=disabled 后永久不抓（无恢复机制）；retired（质量退休）本就不该恢复，但 disabled（errorStreak 暂停，网络类临时失败）值得探测恢复。
+- **修复**：暂停时记录 disabledAt；listEnabledFeeds 对 disabled 源 24h 冷却后重置 active+errorStreak=0 重新探测；retired 不动。
+- **部署**：intelRssPoll 已更新。

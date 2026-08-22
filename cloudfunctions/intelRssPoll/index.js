@@ -42,6 +42,7 @@ const INTEL_HEALTH = 'intel_health'
 
 // ─── 阈值（仿 rssFetcher）───
 const ERROR_STREAK_LIMIT = 3   // 连续 N 次入库=0 → 暂停 + 告警
+const DISABLED_RECOVER_COOLDOWN_MS = 24 * 60 * 60 * 1000 // 2026-08-22：暂停超 24h 自动恢复探测（同 One News R1）
 const MAX_BATCH_INSERT = 200   // 单轮入库 ≥ 此值 → 大批量告警
 const MAX_SERIAL_SOURCES = 3   // 无参编排下串行上限，超过则自我分片
 
@@ -1046,7 +1047,7 @@ async function runWorker(feed, now, ctx = {}) {
   // 6. 四类告警（写 intel_health）
   const alerts = []
   if (newStreak >= ERROR_STREAK_LIMIT) {
-    await updateSource(sourceId, { status: 'disabled' })
+    await updateSource(sourceId, { status: 'disabled', disabledAt: new Date().toISOString() })
     await writeHealthRecord({ sourceId, targetTime: ctx.targetTime || '', level: 'error', message: `连续 ${newStreak} 周期入库 0，已自动暂停，请检查源站` })
     alerts.push('disabled-empty')
   }
@@ -1083,7 +1084,19 @@ async function listEnabledFeeds(nowMs) {
   const due = []
   for (const f of feeds) {
     if (f.enabled !== true) continue
-    if (f.status === 'disabled') continue
+    if (f.status === 'disabled') {
+      // 2026-08-22 自动恢复（同 One News R1）：暂停超冷却期 → 重置 active 重新探测。
+      // 仅针对 disabled（errorStreak 暂停）；retired（质量退休）不动（低质内容再抓无益）。
+      const t1 = f.disabledAt ? new Date(f.disabledAt).getTime() : 0
+      const t2 = f.lastFetchedAt ? new Date(f.lastFetchedAt).getTime() : 0
+      const pausedAt = t1 || t2
+      if (!pausedAt || (nowMs - pausedAt) >= DISABLED_RECOVER_COOLDOWN_MS) {
+        await updateSource(f._id || f.key, { status: 'active', errorStreak: 0 })
+        console.warn(`[intelRssPoll] 源 ${f._id || f.key} 暂停超冷却期，自动恢复探测`)
+        due.push(f)
+      }
+      continue
+    }
     // P2 低频源降频：最近一次抓取距现在 < pollSeconds（默认 6h）→ 跳过
     const pollMs = (Number(f.pollSeconds) || 21600) * 1000
     const last = f.lastFetchedAt ? new Date(f.lastFetchedAt).getTime() : 0
