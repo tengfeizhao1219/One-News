@@ -20,7 +20,8 @@
        修复: height 改用 menuTop，让状态栏背景层与 fixed-top-bar 无缝衔接（同色相邻）。
        与详情页/浏览历史页保持一致的两层结构。 -->
   <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-card);"></view>
-  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);"></view>
+  <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
+  </view>
 
   <!-- BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊 — 替换 wx.showToast，
        定位在状态栏区域（胶囊下方），自动 1.5s 淡出，类似 iOS Dynamic Island 风格 -->

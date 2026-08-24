@@ -38,14 +38,6 @@
   box-sizing: border-box;
 }
 
-/* 2026-08-24：数据截至小字（参考 AI 情报官 hero-sub：meta 级字号 + 弱化色） */
-.data-asof {
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  line-height: 1;
-  white-space: nowrap;
-}
-
 /* BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊（与详情页一致）
    定位：top = 状态栏区域垂直居中（status-bar-height/2 - 半高），
    水平居中于屏幕；z-index 高于 status-bar-fill(16)/fixed-top-bar(17) */
@@ -129,494 +121,266 @@
   z-index: 2;
 }
 
-.card.above {
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.card.below {
-  opacity: 0;
-  pointer-events: none;
-  z-index: 1;
-}
-
 .card-body {
   flex: 1;
-  /* 顶部安全距离：避开 fixed-top-bar（menuTop + menuHeight + 12px ≈ 88-98px）。
-     原 padding-top:100rpx(≈50px) < fixed-top-bar 底部，内容超高整体居中上移时
-     标题顶部会被高 z-index 的 fixed-top-bar 背景盖住（FE-20260810-001）。
-     改为 calc(menu-top + menu-height + 40rpx)（≈100-110px），给居中上移留出安全余量。 */
-  padding: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 40rpx) 64rpx 48rpx;
   display: flex;
   flex-direction: column;
-  /* FE-20260810-002（owner 反馈）：标题与摘要正文「整体居中」——
-     内容正常时整块垂直居中；内容过长时标题上移、摘要下移，保持整体居中。
-     即 justify-content:center 的标准行为（owner 明确期望，接受超高时标题上移），
-     替代 margin-auto 方案（超高时标题钉在顶部，不符合「整体居中」预期）。 */
-  justify-content: center;
+  padding: 32rpx 28rpx 24rpx;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
+/* 标题 */
 .card-title {
-  /* BUG-20260806-004: 使用相对尺寸 52rpx */
-  font-size: 52rpx;
-  font-weight: 700;
+  font-size: calc(36rpx * var(--font-scale, 1));
+  font-weight: 600;
   color: var(--text-primary);
   line-height: 1.35;
-  margin-bottom: 28rpx; /* owner 直连：与详情页 detail-title 间距对齐 */
-  letter-spacing: -1rpx;
-  /* 长标题/无空格长串也能正常换行，避免被页面 overflow 直接硬切 */
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  /* 限制最多 5 行，过长显示省略号，避免被页面 overflow 直接裁断 */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 16rpx;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.card-summary {
-  margin-bottom: 48rpx;
-  margin-top: 28rpx;
-}
-
-.summary-p {
-  font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
-  /* BUG-20260807-003: 正文摘要保留无障碍缩放（对齐 detail .text-p；BUG-20260806-004 误将正文固定 rpx） */
-  font-size: calc(32rpx * var(--font-scale));
-  color: var(--text-body);
-  line-height: calc(1.85 * var(--font-scale));
-  margin-bottom: 24rpx;
-  letter-spacing: 1rpx;
-  /* FE-20260810-001: 移除 444d2f9 加的 -webkit-line-clamp:4 —— owner 反馈 AI 摘要
-     展示不全、内容被截断。摘要完整展示，不再省略号截断。
-     内容长度由后端 prompt 100-150 字自然收尾约束（FE-20260810-003 已移除 150 字
-     硬截断，句子不再中途断裂）；极端场景（老数据/超大字体）超高时整体居中、
-     上下两端自然溢出（顶部由 padding-top 安全距离缓冲）。 */
-  word-break: break-word;
-}
-
+/* 元信息行 */
 .card-meta {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  /* BUG-20260806-004: 元信息使用相对尺寸 22rpx */
-  font-size: 22rpx;
-  color: var(--text-secondary);
-  margin-bottom: 20rpx;
-  letter-spacing: 0.5rpx;
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  color: var(--text-tertiary);
+  margin-bottom: 12rpx;
+  flex-wrap: wrap;
 }
 
-/* category-tag: 卡片元信息中的分类小标签（复用 D-07 S3 tag-bg + tag-text + 圆角胶囊） */
+/* 分类标签 */
 .category-tag {
-  color: var(--tag-text);
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
   background-color: var(--tag-bg);
-  padding: 4rpx 16rpx;
-  border-radius: 8rpx;
-  font-size: 20rpx;
-  line-height: 1;
-}
-
-/* 官方源「出处 ↗」内联入口（v1.0 §6.2）：来源名 + 小箭头内联元信息行，
-   用 --text-link 蓝链色相对高亮；个人主体 web-view 不可用，交互走「复制链接+引导外部浏览器打开」。
-   复用 detail.wxss .meta-source-link 视觉，保持全站一致（不引新 hex） */
-.meta-source-link {
-  color: var(--text-link);
-  font-size: 22rpx;
+  color: var(--text-secondary);
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   font-weight: 500;
-  margin-left: 12rpx;
-  align-self: center;
+  white-space: nowrap;
 }
 
-.meta-source-link:active {
-  color: var(--primary);
+/* 官方源内联元信息（v1.0 §6.2） */
+.source-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  color: var(--text-secondary);
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
 }
-
-/* UI-B8：AI 摘要标识胶囊（内联于摘要首段行首，不撑高卡片） */
-.ai-chip {
-  display: inline-block;
-  vertical-align: middle;
-  margin: 0 12rpx 0 0;
-  padding: 3rpx 14rpx;
-  border-radius: 16rpx;
-  font-size: 22rpx;
+.source-inline .source-name {
   font-weight: 500;
-  line-height: 1.4;
-  letter-spacing: 0;
-  /* 不继承摘要区衬线字体，标注属 UI 层 */
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  color: var(--primary);
-  background-color: var(--primary-subtle);
+}
+.source-inline .outbound-icon {
+  font-size: 22rpx;
+  opacity: 0.7;
 }
 
-/* summarySource 非 AI 档角标（PM 2026-08-09 诊断诉求）：
-   desc/content/title 档统一灰色弱化，视觉退后——避免与 AI 档争抢注意力；
-   title 档（仅标题兜底）再弱一档半透明显示。 */
-.src-chip {
-  display: inline-block;
-  vertical-align: middle;
-  margin: 0 12rpx 0 0;
-  padding: 3rpx 14rpx;
-  border-radius: 16rpx;
-  font-size: 22rpx;
-  font-weight: 400;
-  line-height: 1.4;
-  letter-spacing: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-  color: var(--text-tertiary);
-  background-color: var(--bg-subtle);
-  border: 1rpx solid var(--divider);
+/* 正文摘要 */
+.card-summary {
+  flex: 1;
+  overflow: hidden;
+  font-size: calc(26rpx * var(--font-scale, 1));
+  color: var(--text-secondary);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
 }
-.src-chip--weak {
+
+/* 底部信息栏 */
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12rpx;
+  margin-top: auto;
+  border-top: 1rpx solid var(--divider);
+  font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-tertiary);
-  opacity: 0.75;
 }
-.fixed-swipe-hint {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+
+/* 阅读时长 */
+.read-time {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+/* ========== 更多菜单（右下角 ⚙） ========== */
+.more-btn {
+  position: fixed;
+  right: 28rpx;
+  bottom: calc(200rpx + var(--safe-bottom, 0px));
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  box-shadow: 0 8rpx 24rpx var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8rpx;
-  padding: 16rpx 0 calc(16rpx + env(safe-area-inset-bottom));
-  /* owner 2026-08-18 18:40：去掉底部白色渐变遮罩，首页底部保持完全透明，
-     hint 文字本身仍可见（文字 opacity 已有 0.45 的弱化处理，不需要底色托底） */
-  background: transparent;
-  pointer-events: none;
   z-index: 20;
-  opacity: 1;
-  transition: opacity 0.5s ease;
+  font-size: 40rpx;
+  color: var(--text-primary);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.more-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 4rpx 16rpx var(--overlay);
 }
 
-.fixed-swipe-hint.hide {
+.more-panel {
+  position: fixed;
+  right: 28rpx;
+  bottom: calc(320rpx + var(--safe-bottom, 0px));
+  width: 280rpx;
+  background-color: var(--bg-card);
+  border-radius: 24rpx;
+  box-shadow: 0 16rpx 48rpx var(--overlay);
+  z-index: 21;
+  overflow: hidden;
   opacity: 0;
-}
-
-.fixed-swipe-hint-icon-img {
-  width: 32rpx;
-  height: 32rpx;
-  opacity: 0.45;
-}
-
-.fixed-swipe-hint-text {
-  font-size: 18rpx;
-  color: var(--text-secondary);
-  letter-spacing: 4rpx;
-  font-weight: 300;
-  opacity: 0.45;
-}
-
-/* ============ 侧边栏遮罩 ============ */
-.panel-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: var(--overlay);
-  z-index: 29;
-  opacity: 0;
+  transform: translateY(20rpx) scale(0.95);
   pointer-events: none;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-
-.panel-overlay.show {
+.more-panel.show {
   opacity: 1;
+  transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
-/* ============ 侧边栏面板 ============ */
-.slide-panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 90%;
-  height: 100%;
-  background-color: var(--bg-card);
-  z-index: 30;
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -8rpx 0 48rpx var(--overlay);
-}
-
-.slide-panel.show {
-  transform: translateX(0);
-}
-
-/* 17:08 系统性修复③（保留）：动画完成后附加 .done（定义在 .show 之后 → 同特异性下优先）——
-   transform:none 与 translateX(0) 视觉完全一致，但移除 transform 祖先，
-   使面板内的 scroll-view 原生滚动不受 iOS 合成层/包含块干扰。
-   仅在面板稳定显示（滑入动画结束）后存在；滑出动画前由 JS 先移除。 */
-.slide-panel.done {
-  transform: none;
-}
-
-/* v5 稳定架构：全部改用 absolute 定位，彻底规避 flex 在真机上的高度/渲染异常。
-   panel-header 固定顶部；panel-body 铺满剩余区域；滚轮/scroll-view 分别固定在 body 左右。 */
-
-/* 面板标题栏：absolute 固定顶部 */
-/* BUG-20260806-019 (FE): "今日新闻"与右上角胶囊垂直对齐。
-   之前 v2 用 padding-top:var(--menu-top) 让文字顶部对齐胶囊顶部，
-   但文字(36rpx≈18px)比胶囊(menuHeight≈32px)矮，视觉偏上。
-   改为 flex 垂直居中：header 高度 = 胶囊高度，top = 胶囊顶部，
-   内部 align-items:center 让"今日新闻"文字中心与胶囊中心垂直对齐。
-   下方 28rpx 间距由 .panel-body top 承担（见 panel-body 注释）。 */
-.panel-header {
-  position: absolute;
-  top: var(--menu-top, 44px);
-  left: 0;
-  right: 0;
-  height: var(--menu-height, 32px);
-  z-index: 5;
+.more-item {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  padding: 0 40rpx;
-}
-
-/* BUG-20260806-016 (FE): 侧边栏面板状态栏背景层 —— 与详情页 .status-bar-fill 高度/语义一致。
-   详情页结构：status-bar-fill (z-index:21, height=statusBarHeight) + nav-bar (z-index:22)
-   侧边栏面板结构：panel-status-bar (height=statusBarHeight) + panel-header (padding-top=menuTop)
-   两者都明确用 statusBarHeight 高的背景层覆盖状态栏区域，结构对齐。
-   - position: absolute 让它跟随 slide-panel 滑入/滑出（关闭时一起消失）
-   - top: 0 贴在 slide-panel 顶端 0（= 屏幕顶端 0）
-   - z-index: 4 在 panel-header(5) 之下，避免遮挡标题文本 */
-.panel-status-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 4;
-}
-
-.panel-title {
-  font-size: calc(36rpx * var(--font-scale));
-  font-weight: 700;
+  padding: 20rpx 24rpx;
   color: var(--text-primary);
-  letter-spacing: 1rpx;
-  flex-shrink: 0;
-}
-
-/* UI-B7: 副标题「当前分类 · N 条」 */
-.panel-subtitle {
-  flex: 1;
-  font-size: calc(24rpx * var(--font-scale));
-  color: var(--text-secondary);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* 面板主体：absolute 铺满 header 下方区域
-   BUG-20260806-022 (FE): top 从胶囊底部 (menuTop+menuHeight) 改为胶囊底部 + 16rpx，
-   让"今日新闻"标题与下方分类/新闻列表之间多 16rpx 呼吸空间，避免上方内容挤。 */
-.panel-body {
-  position: absolute;
-  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px) + 16rpx);
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-
-/* 左侧滚轮：absolute 固定在 body 左侧，高度铺满 body，catch 触摸独立接管 */
-/* BUG-20260806-018 (FE): 加 overflow:hidden 裁掉 .wheel 内部 112rpx padding-right 视觉外溢。
-   .wheel 用 box-sizing:content-box + width:128rpx + padding-right:112rpx 实际几何宽度 = 240rpx，
-   触摸热区扩展到 240rpx；父 .panel-wheel width:128rpx + overflow:hidden 让视觉仍只显示 128rpx。
-   .wheel-list / .wheel-item 在组件 wxss 中显式 width:128rpx（见 category-wheel.wxss），
-   防止被 .wheel 几何宽度 240rpx 撑开，文字仍显示在 128rpx 视觉区域内。 */
-.panel-wheel {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 128rpx;
-  height: 100%;
-  z-index: 2;
-  border-right: 1rpx solid var(--divider);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  overflow: hidden;
-}
-
-/* ============ 新闻列表 ============ */
-/* 滚动容器：absolute 固定在 body 右侧（left:128rpx 避开滚轮），
-   高度由 top:0 / bottom:0 确定（= body 高），不依赖 flex/百分比/height:0，
-   官方文档要求 scroll-view 固定高度 → 此写法高度完全确定。
-
-   BUG-20260806-017 (FE): 移除冗余 height:100%。top:0 + bottom:0 已完整锚定高度，
-   同时声明 height:100% 在 scroll-view（微信原生组件）上会干扰其内部宽度计算，
-   导致子节点内容按内容宽度撑开、超出容器右边缘被截断。
-   同步给 .panel-list 显式 width:100%，确保列表占据 panel-scroll 正确宽度。 */
-.panel-scroll {
-  position: absolute;
-  top: 0;
-  left: 128rpx;
-  right: 0;
-  bottom: 0;
-  box-sizing: border-box;
-  width: auto;
-}
-
-.panel-list {
-  /* BUG-20260806-017 (FE): 显式 width:100% 防止 scroll-view 内部按子内容宽度撑开 */
+  font-size: 28rpx;
+  background-color: transparent;
+  border: none;
   width: 100%;
-  box-sizing: border-box;
-  /* 不设 min-height：内容多时自然超高可滚，内容少时完整显示（owner 17:20 裁定） */
+  text-align: left;
 }
-
-/* UI-B7 §3.1 v5.3-final: 行距收窄，padding 8px 16px */
-.panel-item {
-  padding: 16rpx 32rpx;
-  margin: 0 24rpx 0;
-  border-bottom: none;
-  transition: background-color 0.2s;
-}
-
-.panel-item:active {
+.more-item:active {
   background-color: var(--tag-bg);
 }
-
-/* UI-B7 §3.1 v5.3-final A 方案：当前阅读项仅标题主题色，无底色无边框无圆角 */
-.panel-item.current {
-  /* 无额外样式——高亮仅通过 .panel-item-title.current 的主题色文字体现 */
+.more-divider {
+  height: 1rpx;
+  background-color: var(--divider);
+  margin: 0 16rpx;
 }
 
-/* BUG-20260806-015 (FE): 标题被截断不在 2 行, 而是水平溢出。
-   根因: <text class="panel-item-title"> 是微信小程序 inline 元素,
-   -webkit-box + -webkit-line-clamp 在 <text> 标签上组合不稳定
-   (某些安卓/微信版本仍按 inline 渲染, 不触发自动换行),
-   实际表现: 文字一直延伸到容器右边缘被截断, 但不是截到 2 行省略号。
-   修复: 改为块级 + word-break 自然换行, 默认不限行数 (owner 接受多行换行
-   而不是被截断), 视觉上更安全。
-
-   BUG-20260806-017 (FE): 同步加 max-width:100% 兜底，确保即使父容器宽度异常，
-   标题也不会按内文宽度溢出 panel-scroll 容器右边缘。 */
-.panel-item-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.45;
-  display: block;
-  word-break: break-word;
-  overflow-wrap: break-word;
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-/* UI-B7 §3.1 v5.3-final: 当前阅读项标题仅主题色高亮 */
-.panel-item.current .panel-item-title {
-  color: var(--primary);
-  font-weight: 600;
-}
-
-.panel-empty {
-  text-align: center;
-  padding: 120rpx 0;
-  font-size: 28rpx;
-  color: var(--text-secondary);
-}
-
-/* B-04: 收藏列表项元信息 */
-.panel-item-meta {
+/* ========== 分类选择器（横向滚动） ========== */
+.category-bar {
+  position: sticky;
+  top: calc({{menuTop}}px + {{menuHeight}}px + 24rpx);
+  z-index: 10;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 8rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1)); /* UX-FIX-F12: 与卡片元信息同口径 */
-  color: var(--text-tertiary);
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background-color: var(--bg-card);
+  border-bottom: 1rpx solid var(--divider);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.category-bar::-webkit-scrollbar {
+  display: none;
 }
 
-/* ============ 骨架屏 ============ */
+.category-btn {
+  flex: 0 0 auto;
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background-color: var(--tag-bg);
+  border: none;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s;
+}
+.category-btn.active {
+  background-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ========== 加载中 / 错误 / 空状态 ========== */
 .skeleton-stage {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  z-index: 5;
-  overflow: hidden;
-}
-
-.skeleton-card {
-  width: 100%;
-  height: 100%;
-  background-color: var(--bg-card);
-  padding: 120rpx 64rpx 48rpx;
+  padding: calc({{menuTop}}px + {{menuHeight}}px + 24rpx + 200rpx) 0 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  animation: shimmer 1.6s ease-in-out infinite;
+  gap: 24rpx;
+  align-items: center;
 }
 
-@keyframes shimmer {
-  0% { opacity: 1; }
-  50% { opacity: 0.5; }
-  100% { opacity: 1; }
+.skeleton-card {
+  width: 90%;
+  background-color: var(--bg-card);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 4rpx 16rpx var(--overlay);
 }
 
 .sk-title {
-  width: 80%;
-  height: 56rpx;
-  background: linear-gradient(90deg, var(--divider) 0%, var(--tag-bg) 50%, var(--divider) 100%);
+  height: 40rpx;
+  width: 70%;
+  background: linear-gradient(90deg, var(--tag-bg) 25%, var(--divider) 50%, var(--tag-bg) 75%);
   background-size: 200% 100%;
   border-radius: 8rpx;
-  margin-bottom: 48rpx;
-  animation: skGradient 1.6s ease-in-out infinite;
+  animation: shimmer 1.2s infinite;
+  margin-bottom: 16rpx;
 }
 
 .sk-line {
-  height: 28rpx;
-  background: linear-gradient(90deg, var(--divider) 0%, var(--tag-bg) 50%, var(--divider) 100%);
+  height: 24rpx;
+  background: linear-gradient(90deg, var(--tag-bg) 25%, var(--divider) 50%, var(--tag-bg) 75%);
   background-size: 200% 100%;
   border-radius: 6rpx;
-  margin-bottom: 28rpx;
-  animation: skGradient 1.6s ease-in-out infinite;
+  animation: shimmer 1.2s infinite;
+  margin-bottom: 8rpx;
 }
 
-.sk-line-1 { width: 90%; animation-delay: 0.1s; }
-.sk-line-2 { width: 75%; animation-delay: 0.2s; }
-.sk-line-3 { width: 85%; animation-delay: 0.3s; }
-.sk-short { width: 55%; }
+.sk-line-1 { width: 90%; }
+.sk-line-2 { width: 60%; }
+.sk-line-3 { width: 40%; }
+.sk-short { width: 30%; }
 
 .sk-meta {
   display: flex;
-  align-items: center;
   gap: 16rpx;
-  margin-top: 24rpx;
+  margin-top: 16rpx;
 }
 
-.sk-tag {
-  width: 80rpx;
-  height: 36rpx;
-  background: linear-gradient(90deg, var(--divider) 0%, var(--tag-bg) 50%, var(--divider) 100%);
-  background-size: 200% 100%;
-  border-radius: 16rpx;
-  animation: skGradient 1.6s ease-in-out infinite;
-  animation-delay: 0.4s;
-}
-
-.sk-source {
-  width: 120rpx;
+.sk-tag, .sk-source {
   height: 24rpx;
-  background: linear-gradient(90deg, var(--divider) 0%, var(--tag-bg) 50%, var(--divider) 100%);
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, var(--tag-bg) 25%, var(--divider) 50%, var(--tag-bg) 75%);
   background-size: 200% 100%;
-  border-radius: 6rpx;
-  animation: skGradient 1.6s ease-in-out infinite;
-  animation-delay: 0.5s;
+  animation: shimmer 1.2s infinite;
 }
 
-@keyframes skGradient {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+.sk-tag { width: 80rpx; }
+.sk-source { width: 120rpx; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
-/* ============ 状态页面（错误/空数据） ============ */
 .state-container {
   position: absolute;
   top: 50%;
@@ -625,219 +389,345 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  z-index: 10;
+  gap: 24rpx;
+  text-align: center;
+  padding: 0 48rpx;
 }
 
 .state-icon {
-  font-size: 80rpx;
-  margin-bottom: 32rpx;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 50%;
+  background-color: var(--tag-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  font-weight: 700;
+  color: var(--text-tertiary);
 }
 
 .state-message {
-  font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
+  font-size: 30rpx;
   color: var(--text-secondary);
-  margin-bottom: 40rpx;
-  text-align: center;
-  line-height: 1.6;
+  max-width: 500rpx;
 }
 
 .state-retry {
   padding: 16rpx 48rpx;
-  border-radius: 24rpx;
-  font-size: calc(28rpx * var(--font-scale));  /* D-05#5 */
-  font-weight: 600;
-  color: var(--bg-card);
-  background-color: var(--text-primary);
-  letter-spacing: 1rpx;
+  border-radius: 999rpx;
+  background-color: var(--accent);
+  color: var(--accent-text);
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
 }
 
-.state-retry:active {
-  opacity: 0.7;
-}
-
-/* UX-FIX04: 超大字号（tier 3）截断保护 — 首页卡片 */
-[data-font-scale="3"] .card-title {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-[data-font-scale="3"] .summary-p {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-[data-font-scale="3"] .card-meta {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* UI-B7 §3.4 v4.2: fab 纯色 tag-bg + 细阴影 + 图标 text-secondary */
-.floating-more {
+/* ========== INTEL 阶段指示器（集成在卡片区域） ========== */
+.intel-indicator {
   position: absolute;
-  right: 40rpx;
-  bottom: calc(48rpx + env(safe-area-inset-bottom));
-  /* BUG-20260805-001 followup-2：原 26 < 蒙板(27)，菜单打开时 ⚙ 被蒙板盖住发灰；
-     提升到蒙板之上（29，与 panel-overlay 同级；侧栏打开时 ⚙ 已隐藏，无实际冲突） */
-  z-index: 29;
-  width: 96rpx;
-  height: 96rpx;
+  top: calc({{menuTop}}px + {{menuHeight}}px + 24rpx + 16rpx);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background-color: var(--bg-card);
+  box-shadow: 0 4rpx 16rpx var(--overlay);
+  font-size: 24rpx;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+.intel-indicator.show {
+  opacity: 1;
+}
+
+.intel-indicator .dot {
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background-color: var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.intel-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.intel-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ========== 设置面板（右侧滑出） ========== */
+.settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 75%;
+  max-width: 520rpx;
+  height: 100%;
+  background-color: var(--bg-card);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -8rpx 0 32rpx var(--overlay);
+}
+.settings-panel.show {
+  transform: translateX(0);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-bottom: 1rpx solid var(--divider);
+}
+
+.settings-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-close {
+  width: 72rpx;
+  height: 72rpx;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 32rpx;
+  color: var(--text-secondary);
   background-color: var(--tag-bg);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  animation: floatY 3.2s ease-in-out infinite;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border: none;
+}
+.settings-close:active {
+  background-color: var(--divider);
 }
 
-.floating-more.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.8);
+.settings-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24rpx;
 }
 
-.floating-more:active {
-  animation: none;
-  transform: scale(0.92);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+.settings-section {
+  margin-bottom: 32rpx;
 }
 
-.more-icon-img {
-  width: 56rpx;
-  height: 56rpx;
+.settings-section-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 16rpx;
+  text-transform: uppercase;
+  letter-spacing: 1rpx;
 }
 
-@keyframes floatY {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10rpx); }
-}
-
-/* ============ TL-B16: 更多功能 dock 菜单（点击 ⚙ 向上弹出的毛玻璃栈） ============ */
-/* BUG-20260805-001（owner 直连）+ followup-2：蒙板 + 模糊让背景严重"灰雾"，菜单项 z-index 虽高
-   但视觉上与背景融合。修复①：降蒙板不透明度 + 减模糊 + 加深卡片阴影；修复②（19:26 owner 复反馈）：
-   蒙板不透明度 0.22 → 0.26（+20%），暗色下菜单项改用浮层表面色 #1C1C1E（原 #0D0D0D 与纯黑
-   背景几乎同色，即使 z-index 正确也"看着像被蒙板盖住"）。 */
-.more-mask {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.26);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
-  z-index: 27;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-}
-
-.more-mask.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.more-menu {
-  position: absolute;
-  right: 40rpx;
-  bottom: calc(48rpx + env(safe-area-inset-bottom) + 96rpx + 24rpx);
-  z-index: 28;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 16rpx;
-  opacity: 0;
-  pointer-events: none;
-  /* BUG-FE-20260807-001: 收起时整体快速淡出（0.12s），展开动画由 .more-item 逐个负责 */
-  transition: opacity 0.12s ease;
-}
-
-.more-menu.show {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.more-item {
+.setting-row {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  padding: 20rpx 32rpx;
-  min-width: 220rpx;
-  border-radius: 999rpx;
-  background-color: var(--bg-card);
-  /* BUG-20260805-001：阴影加深加大，让菜单项在蒙板之上清晰"悬浮" */
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.32), 0 4rpx 12rpx rgba(0, 0, 0, 0.18);
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid var(--divider);
+}
+
+.setting-label {
   font-size: 28rpx;
-  font-weight: 500;
-  letter-spacing: 1rpx;
   color: var(--text-primary);
-  /* BUG-FE-20260807-001: 气泡放大动画的原点固定在右下角（dock 栈的"生长"方向） */
-  transform-origin: bottom right;
-  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-/* ===== BUG-FE-20260807-001: 二级菜单依次"气泡"放大弹出 =====
-   ⚙ 点击展开时，4 个菜单项按 nth-child 延迟 0/60/120/180ms 依次触发
-   moreBubbleIn 动画：从 scale(0.2) 气泡式放大到 scale(1)，配合 easeOutBack
-   弹性曲线（cubic-bezier(0.175, 0.885, 0.32, 1.275)）在尾端轻微过冲，
-   形成"啵"地一下逐个冒出来的气泡感。收起时容器 0.12s 快速淡出，不回退动画。 */
-.more-menu.show .more-item {
-  /* backwards：delay 等待期也应用 0% 关键帧（隐藏），避免"还没轮到就出现"；
-     结束后回到基础态 scale(1)（无跳变，且 :active 按压反馈正常生效） */
-  animation: moreBubbleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
-}
-.more-menu.show .more-item:nth-child(1) { animation-delay: 0ms; }
-.more-menu.show .more-item:nth-child(2) { animation-delay: 60ms; }
-.more-menu.show .more-item:nth-child(3) { animation-delay: 120ms; }
-.more-menu.show .more-item:nth-child(4) { animation-delay: 180ms; }
-
-@keyframes moreBubbleIn {
-  0%   { opacity: 0; transform: scale(0.2); }
-  100% { opacity: 1; transform: scale(1); }
+.setting-value {
+  font-size: 24rpx;
+  color: var(--text-secondary);
 }
 
-.more-item:active {
-  transform: scale(0.96);
+/* 字体缩放滑块 */
+.font-scale-slider {
+  width: 300rpx;
+  accent-color: var(--accent);
+}
+
+/* 开关 */
+.toggle {
+  position: relative;
+  width: 96rpx;
+  height: 56rpx;
+  border-radius: 28rpx;
   background-color: var(--tag-bg);
+  border: none;
+  appearance: none;
+  outline: none;
+  transition: background-color 0.2s;
 }
-
-.more-item-icon-img {
-  width: 40rpx;
-  height: 40rpx;
+.toggle:checked {
+  background-color: var(--accent);
 }
-
-.more-item-label {
-  font-weight: 500;
-  letter-spacing: 1rpx;
-}
-
-/* ============ BUG-20260802-006: 分类切换 0.5s 提示 ============ */
-.category-hint {
+.toggle::before {
+  content: '';
   position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background-color: var(--bg-card);
+  box-shadow: 0 2rpx 8rpx var(--overlay);
+  transition: left 0.2s;
+}
+.toggle:checked::before {
+  left: 44rpx;
+}
+
+/* ========== 分类管理弹窗 ========== */
+.category-modal {
+  position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0.9);
-  /* BUG-20260802-006: 必须高于 .panel-overlay(29) 与 .slide-panel(30)，
-     否则在侧栏内切分类时提示被遮罩盖住 → 用户看不到 */
-  z-index: 40;
-  padding: 16rpx 48rpx;
-  border-radius: 999rpx;
+  width: 90%;
+  max-width: 600rpx;
   background-color: var(--bg-card);
+  border-radius: 24rpx;
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  box-shadow: 0 24rpx 64rpx var(--overlay);
+}
+.category-modal.show {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+.category-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+  border-bottom: 1rpx solid var(--divider);
+}
+
+.category-modal-title {
+  font-size: 30rpx;
+  font-weight: 600;
   color: var(--text-primary);
-  font-size: calc(40rpx * var(--font-scale));
-  font-weight: 700;
-  letter-spacing: 2rpx;
+}
+
+.category-modal-close {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  color: var(--text-secondary);
+  background-color: var(--tag-bg);
+  border: none;
+}
+
+.category-modal-content {
+  max-height: 600rpx;
+  overflow-y: auto;
+  padding: 16rpx 24rpx;
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+}
+
+.category-row-label {
+  font-size: 28rpx;
+  color: var(--text-primary);
+}
+
+.category-row-toggle {
+  /* 复用 .toggle 样式 */
+}
+
+/* ========== 字体缩放预览 ========== */
+.font-preview {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  background-color: var(--tag-bg);
+  border-radius: 16rpx;
+}
+
+.font-preview-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 16rpx;
+}
+
+.font-preview-text {
+  font-size: calc(28rpx * var(--font-scale, 1));
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ========== 关于页面 ========== */
+.about-section {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+}
+
+.about-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 16rpx;
+  text-transform: uppercase;
+  letter-spacing: 1rpx;
+}
+
+.about-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  font-size: 26rpx;
+}
+
+.about-label {
+  color: var(--text-secondary);
+}
+
+.about-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ========== 分类提示气泡（v1.0 §7.2） ========== */
+.category-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  z-index: 100;
+  background-color: var(--text-primary);
+  color: var(--bg-card);
+  padding: 32rpx 48rpx;
+  border-radius: 24rpx;
+  font-size: 28rpx;
+  text-align: center;
+  max-width: 80%;
   box-shadow: 0 8rpx 32rpx var(--overlay);
   opacity: 0;
   pointer-events: none;
-  /* BUG-20260802-006: 淡入淡出缩短到 120ms，让 500ms 的展示时长真正被看见
-     （原 250ms 进/出几乎吃掉整个可见窗口） */
   transition: opacity 0.12s ease, transform 0.12s ease;
 }
 
