@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-24 | I/O | **微信开发者工具 skill-cli（wechatide MCP 通道）打通**。IDE 2.02.0 自带 wechatide-skill v0.3.9（`wechatide -c <client> <tool>`，PATH 有 wechatide.cmd），授权 client `dsh` 后全工具可用：upload(发布体验版)/create_preview_qrcode/auto_preview(直接推送开发者微信)/cloud_fn_deploy/cloud_db_*/simulator_screenshot/get_simulator_console/automation_*(UI 自动化)/compile_wxml|wxss。已验证：状态/项目列表/云环境/云函数列表/模拟器截图。与 CloudBase MCP 双通道互补 | ✅ 已打通 |
 | 2026-08-24 | O/I | **多会话防覆盖机制上线**：① `scripts/file-lock.sh` 文件级锁（编辑前 lock / 改完 unlock / TTL 30 分钟 / force-unlock）② pre-push hook 已在本机安装（check_intel.sh 门禁 + 60s 推送频率保护）③ 协作机制 §三 新增「文件锁纪律」。⚠️ 工作区有 23 个未提交改动（其他会话 WIP：backend/cloudfunctions/pages 多文件）——请各会话尽快 commit+push，避免互相覆盖 | ✅ 已推 |
 | 2026-08-24 | I/O | **One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立**。publish 注入前与现有 cache 比较（URL 归一化 / 标题指纹 / 标题包含关系），重复条目从当前批次剔除后仍全量替换注入；空批保护（剔除后为空 → 不发布保留现有 cache，防 stale 兜底带回旧数据）；commit `6d33404`；经 CloudBase MCP（SCF UpdateFunctionCode）部署上线，线上 ModTime 2026-08-24 09:44 + invoke 验证通过 | ✅ 已部署 |
 | 2026-08-20 | A/I | **中文官方源接入：MiniMax 尝试**。注册 minimax_ai（scrape，urlPattern=/blog/），extractListLinks 加遍3（任意链接+锚文本）+ 上下文日期提取；仍有 filtered（日期提取未完全生效/实例缓存），待续调。**已建立的通用机制**：per-source freshnessDays、JSON API adapter（智谱模式）、富文本提取、列表提取遍3、arxiv 限流 5 条 | 🔄 |
@@ -38,6 +39,16 @@
 | 2026-08-17 | K | 三文档 AI 视角交叉校验 + 导航索引建立 | ✅ |
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
+
+## 2026-08-24 · 微信开发者工具 skill-cli（wechatide MCP 通道）打通——agent 可直接操作 IDE
+
+- **背景**：用户要求研究开发者工具 AI 能力，并希望 agent 直接与 IDE 交互、避免手动参与。
+- **调研结论**：① CodeBuddy 插件（Craft 编码智能体/AI 对话/代码补全/评审/commit message，支持 MCP 协议，Stable 版暂不支持 MCP 市场需 Nightly Build）——面向「人在 IDE 写代码」，我们 AI 协作流程用不上；② 内置 Skills——操作云开发，等价能力已由 CloudBase MCP 实现；③ **skill-cli（wechatide）**——最实用，agent 可直接调用。
+- **打通**：IDE 2.02.0 自带 wechatide-skill v0.3.9，PATH 注册 `wechatide.cmd`；`wechatide -c <client> <tool> [flags]` 直调；首次调用触发 auth（用户 IDE 内授权一次，client=dsh，port 54684，tokenRequired=false）。
+- **工具集**（验证可用）：`check_wechatide_status` / `project_list`（One News 已识别 wx1ccb4d171dd88162）/ `cloud_env_list`（cloud1-1g9313w0bb791de0）/ `cloud_fn_list`（23 函数）/ `simulator_screenshot`（截图成功）/ 另有 upload、create_preview_qrcode、auto_preview、cloud_fn_deploy、cloud_db_*、get_simulator_console、automation_*、compile_wxml/wxss。
+- **验证**：登录用户 TENGFEI 登录态有效；模拟器截图成功生成（591x1280）。
+- **纪律**：① 本通道与 CloudBase MCP 双通道互补（IDE 侧一站式 vs API 直连）；② 上传体验版/发布类操作为真实发布动作，执行前须 owner 确认；③ 注意并行会话 WIP——改动前 git pull + file-lock。
+- **下游**：后续「上传体验版 / 预览推送 / 云函数部署 / 模拟器验证 / UI 自动化测试」均可由 agent 直接执行。
 
 ## 2026-08-24 · One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立
 
