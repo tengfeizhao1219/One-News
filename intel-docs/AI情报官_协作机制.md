@@ -64,6 +64,24 @@ docs/
    ```
    > 注：本沙箱已通过 `/etc/hosts` 修复，`git clone/push github.com` 已验证可用。
 
+### 文件锁纪律（2026-08-24 新增：防多会话并发编辑覆盖）
+
+> 背景：多个 AI 会话 + 微信开发者工具共用同一本地工作目录（单副本编辑模式），
+> 两个会话同时改同一文件 → 后写者静默覆盖先写者。git 只能事后发现，锁是事前拦截。
+
+1. **编辑任何文件前**：
+   ```bash
+   bash scripts/file-lock.sh lock <文件相对路径> <本会话标识>
+   ```
+2. **编辑完成立即**：
+   ```bash
+   bash scripts/file-lock.sh unlock <文件相对路径> <本会话标识>
+   ```
+3. **锁被占用时**：输出会显示持有者——**不要硬编辑**，与持有者协商或等其解锁；
+   确认无人在编辑才可 `force-unlock`（TTL 30 分钟，会话崩溃后锁自动过期）。
+4. **查看活动锁**：`bash scripts/file-lock.sh status`（编辑前先看一眼，避开他人正在改的文件）。
+5. 锁文件位于 `.git-auto/locks/`（已 gitignore，不入库）；本会话标识建议用角色名（如 `session-I` / `session-D` / `devtools`）。
+
 ---
 
 ## 四、任务流转（认领 → 交付 → 下一棒）

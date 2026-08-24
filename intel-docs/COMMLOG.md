@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-24 | O/I | **多会话防覆盖机制上线**：① `scripts/file-lock.sh` 文件级锁（编辑前 lock / 改完 unlock / TTL 30 分钟 / force-unlock）② pre-push hook 已在本机安装（check_intel.sh 门禁 + 60s 推送频率保护）③ 协作机制 §三 新增「文件锁纪律」。⚠️ 工作区有 23 个未提交改动（其他会话 WIP：backend/cloudfunctions/pages 多文件）——请各会话尽快 commit+push，避免互相覆盖 | ✅ 已推 |
 | 2026-08-24 | I/O | **One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立**。publish 注入前与现有 cache 比较（URL 归一化 / 标题指纹 / 标题包含关系），重复条目从当前批次剔除后仍全量替换注入；空批保护（剔除后为空 → 不发布保留现有 cache，防 stale 兜底带回旧数据）；commit `6d33404`；经 CloudBase MCP（SCF UpdateFunctionCode）部署上线，线上 ModTime 2026-08-24 09:44 + invoke 验证通过 | ✅ 已部署 |
 | 2026-08-20 | A/I | **中文官方源接入：MiniMax 尝试**。注册 minimax_ai（scrape，urlPattern=/blog/），extractListLinks 加遍3（任意链接+锚文本）+ 上下文日期提取；仍有 filtered（日期提取未完全生效/实例缓存），待续调。**已建立的通用机制**：per-source freshnessDays、JSON API adapter（智谱模式）、富文本提取、列表提取遍3、arxiv 限流 5 条 | 🔄 |
 | 2026-08-20 | I | **中文官方源首个打通 + 首页数据健康化**。① 智谱 GLM-5.3 全链路进 brief（JSON API + 富文本提取 + per-source freshnessDays=7，high 路由 747 字正文）；② arxiv 修复（Atom content 摘要兜底）+ brief 组装限流 5 条（论文不淹没新闻）；③ Simon Willison 接入（written 3）；④ brief v5 = 15 条：zhipu 1/arxiv 5/simon 3/techcrunch 3/theverge 2/openai 1——来源均衡 | ✅ 已推 |
