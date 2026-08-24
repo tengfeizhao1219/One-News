@@ -658,8 +658,8 @@
   right: 0;
   z-index: 20;
   display: flex;
-  /* 2026-08-24：操作栏压缩 80rpx→68rpx（配合 .bottom-bar-btn padding 8→2），更紧凑 */
-  height: calc(68rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：操作栏二次压缩 68rpx→56rpx（配合内容缩小 icon32/label16/gap2），明显变矮 */
+  height: calc(56rpx + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   /* ⚠️ 临时调试色（owner 2026-08-24 要求，便于看清分层）——确认布局后改回 var(--bottom-bar-bg) */
   background-color: rgba(255, 59, 48, 0.55);
@@ -712,8 +712,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4rpx;
-  padding: 2rpx 0;  /* 2026-08-24: 8rpx→2rpx，配合 bar 68rpx 内容(40+4+20+4=68rpx)恰好放满 */
+  gap: 2rpx;
+  padding: 2rpx 0;  /* 2026-08-24: 8rpx→2rpx，配合 bar 56rpx 内容(32+2+16+4=54rpx)恰好放满 */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
   font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
@@ -752,8 +752,8 @@
    BUG-20260806-021: 44rpx → 40rpx
    BUG-20260806-027: 分享图标由文本 ↗ 改为 share.svg image，与收藏一致避免发灰 */
 .bottom-bar-icon-img {
-  width: 40rpx;
-  height: 40rpx;
+  width: 32rpx;
+  height: 32rpx;
 }
 .bottom-bar-icon-faved {
   font-size: 40rpx;
@@ -762,8 +762,8 @@
 }
 
 .bottom-bar-label {
-  /* UX-FIX-F12（owner 2026-08-02 批准折中） */
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  /* UX-FIX-F12（owner 2026-08-02 批准折中）；2026-08-24 压缩 20→16rpx 配合操作栏变矮 */
+  font-size: calc(16rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
 }
 
@@ -1134,9 +1134,8 @@
      bottom 用 env(safe-area-inset-bottom)（本页根节点未注入 --safe-bottom） */
   position: fixed;
   right: 40rpx;
-  /* 2026-08-24：FAB 下移回合理高度——间距 96rpx→40rpx，配合操作栏压缩(68rpx)后
-     按钮距视口底 108rpx，接近首页 floating-more 高度；仍在操作栏上方、不重叠 */
-  bottom: calc(68rpx + 40rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：FAB 下移配合操作栏变矮——操作栏 56rpx + 间距 40rpx = 距底 96rpx，接近首页 floating-more */
+  bottom: calc(56rpx + 40rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
