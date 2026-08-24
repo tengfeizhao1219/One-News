@@ -21,6 +21,7 @@
        与详情页/浏览历史页保持一致的两层结构。 -->
   <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-card);"></view>
   <view class="fixed-top-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
+    <text class="data-asof" wx:if="{{dataAsOf}}">数据截至 {{dataAsOf}}</text>
   </view>
 
   <!-- BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊 — 替换 wx.showToast，
