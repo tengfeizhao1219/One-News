@@ -1125,10 +1125,12 @@
 /* 搜索悬浮按钮（右下角，自绘放大镜；对齐首页 floating-more 形态） */
 .fab-search {
   /* 对齐首页 floating-more 形态（96rpx 圆 + floatY 动画）；
-     因详情页有底部操作栏(80rpx)，bottom 抬到操作栏上方 + 32rpx 间距 */
+     因详情页有底部操作栏(80rpx)，bottom 抬到操作栏上方 + 32rpx 间距；
+     2026-08-24（owner 拍板 方案A）：bottom 改用 env(safe-area-inset-bottom)——
+     本页根节点未注入 --safe-bottom（var 回退 0px），有底部安全区设备上按钮与操作栏重叠 */
   position: absolute;
   right: 40rpx;
-  bottom: calc(80rpx + 32rpx + var(--safe-bottom, 0px));
+  bottom: calc(80rpx + 32rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
