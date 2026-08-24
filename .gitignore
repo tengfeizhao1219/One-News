@@ -27,3 +27,6 @@ node_modules/
 
 # 微信开发者工具私有配置（本机编译/编辑器设置，避免改写 project.config.json 造成 git 冲突）
 project.private.config.json
+
+.git-auto/
+
