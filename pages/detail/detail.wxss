@@ -653,14 +653,14 @@
    注意：b7de8be 会话曾基于旧代码把 bar 回退到 128rpx，本次为再次压缩。 */
 .detail-bottom-bar {
   position: fixed;
-  bottom: 0;
+  /* 2026-08-24：操作栏本体上移到安全区上方（bottom: env(safe)），背景只覆盖 40rpx 本体、
+     不铺安全区——收藏/分享 icon 在本体居中，不再因下方安全区空白显得偏上 */
+  bottom: env(safe-area-inset-bottom);
   left: 0;
   right: 0;
   z-index: 20;
   display: flex;
-  /* 2026-08-24：操作栏改横排单行后压到 40rpx(icon 28 + label 行高 ≈32 + padding)，明显变矮 */
-  height: calc(40rpx + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  height: 40rpx;
   /* ⚠️ 临时调试色（owner 2026-08-24 要求，便于看清分层）——确认布局后改回 var(--bottom-bar-bg) */
   background-color: rgba(255, 59, 48, 0.55);
   backdrop-filter: var(--setting-panel-blur);
@@ -1134,8 +1134,8 @@
      bottom 用 env(safe-area-inset-bottom)（本页根节点未注入 --safe-bottom） */
   position: fixed;
   right: 40rpx;
-  /* 2026-08-24：FAB 下移配合横排操作栏(40rpx)——间距 40rpx，距视口底 80rpx，接近首页 floating-more */
-  bottom: calc(40rpx + 40rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：FAB 在操作栏(40rpx, 位于安全区上方)上方 40rpx——距视口底 = safe + 40 + 40 = 80rpx + safe */
+  bottom: calc(80rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
