@@ -128,8 +128,9 @@
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  /* BUG-20260806-021: 底部留白同步 128rpx → 80rpx（bar 高度同步） */
-  padding-bottom: calc(80rpx + env(safe-area-inset-bottom) + 48rpx);
+  /* 2026-08-24（owner 拍板 方案A+ 保留悬浮按钮）：底部留白加高，为右下角悬浮搜索按钮(96rpx)让出空间，
+     避免正文滚到底时最后一行被 FAB 盖住。原 48rpx 只留操作栏余量、未留 FAB 避让（FAB 高 96rpx + 间距 32rpx = 128rpx） */
+  padding-bottom: calc(80rpx + env(safe-area-inset-bottom) + 128rpx);
   box-sizing: border-box;
 }
 
