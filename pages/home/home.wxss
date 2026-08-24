@@ -29,21 +29,12 @@
   width: 100%;
   z-index: 17;
   pointer-events: none;
-  /* 2026-08-24：顶栏承载「数据截至」小字（靠右），flex 布局不拦截卡片滑动手势 */
+  /* 2026-08-24：顶栏为空占位（「数据截至」展示已移除，owner 拍板），不拦截卡片滑动手势 */
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  /* 2026-08-24：避让右上角原生胶囊（约 87rpx 宽 + 安全边距），从 32rpx 增加到 120rpx */
   padding-right: 120rpx;
   box-sizing: border-box;
-}
-
-/* 2026-08-24：数据截至小字（参考 AI 情报官 hero-sub：meta 级字号 + 弱化色） */
-.data-asof {
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
-  color: var(--text-tertiary);
-  line-height: 1;
-  white-space: nowrap;
 }
 
 /* BUG-20260806-023 (FE): 跨分类切换状态栏小胶囊（与详情页一致）
