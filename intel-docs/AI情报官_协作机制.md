@@ -81,6 +81,7 @@ docs/
    确认无人在编辑才可 `force-unlock`（TTL 30 分钟，会话崩溃后锁自动过期）。
 4. **查看活动锁**：`bash scripts/file-lock.sh status`（编辑前先看一眼，避开他人正在改的文件）。
 5. 锁文件位于 `.git-auto/locks/`（已 gitignore，不入库）；本会话标识建议用角色名（如 `session-I` / `session-D` / `devtools`）。
+6. **完整规范见 `docs/多会话防覆盖操作规范.md`（全员强制）**——含三步流程、会话标识约定、红线与速查卡。
 
 ---
 

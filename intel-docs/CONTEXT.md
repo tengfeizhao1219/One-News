@@ -36,7 +36,9 @@ One News 仓库（不改原有逻辑）
 - LLM 走独立 `intelProcess` 云函数 + 独立 Key（与 One News 阅读摘要分账）
 
 ## 协作框架（必读文件）
-`CONTEXT.md`(本) · `ROLE_CARDS.md` · `TASK_BOARD.md` · `COMMLOG.md` · `RELAY.md` · `AI情报官_协作机制.md` · `AI情报官_文档导航与交叉引用索引.md`
+`CONTEXT.md`(本) · `ROLE_CARDS.md` · `TASK_BOARD.md` · `COMMLOG.md` · `RELAY.md` · `AI情报官_协作机制.md` · `AI情报官_文档导航与交叉引用索引.md` · **`docs/多会话防覆盖操作规范.md`**（2026-08-24 新增：多会话并发编辑文件锁纪律，全员强制）
+
+> ⚠️ **多会话并发下开工前必做**:① `git pull --rebase` ② `bash scripts/file-lock.sh status` ③ 编辑文件前 `lock`、编辑完 `unlock`(详见 `docs/多会话防覆盖操作规范.md`)。push 前 pre-push 门禁自动检查(本机已装)。
 
 ## 🔑 常用速查
 - **Notion 同步**：后台守护每 60s 运行 `notion_sync.py`（幂等，未变更跳过）
