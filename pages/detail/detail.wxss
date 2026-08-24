@@ -752,8 +752,8 @@
    BUG-20260806-021: 44rpx → 40rpx
    BUG-20260806-027: 分享图标由文本 ↗ 改为 share.svg image，与收藏一致避免发灰 */
 .bottom-bar-icon-img {
-  width: 32rpx;
-  height: 32rpx;
+  width: 36rpx;
+  height: 36rpx;
 }
 .bottom-bar-icon-faved {
   font-size: 40rpx;
