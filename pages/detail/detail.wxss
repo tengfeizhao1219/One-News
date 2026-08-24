@@ -1132,7 +1132,9 @@
      bottom 用 env(safe-area-inset-bottom)（本页根节点未注入 --safe-bottom） */
   position: fixed;
   right: 40rpx;
-  bottom: calc(80rpx + 32rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：操作栏上方间距从 32rpx 增到 48rpx——原 32rpx 在模拟器刻度下视觉过挤，
+     放大镜圆底几乎贴到收藏/分享栏；48rpx 让悬浮按钮明显离开操作栏 */
+  bottom: calc(80rpx + 48rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
