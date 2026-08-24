@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-24 | I/O | **Agent 识图能力（ys365 视觉模型）**。`tools/vision/see-image.mjs` + README（入库 commit `526d113`）；key=YS365_API_KEY（DSH 凭证 `~/.dsh/.credentials.yaml`）；视觉模型 `meta/llama-3.2-11b-vision-instruct`（默认，中文界面识别良好）/ nvidia VL 备选；**DeepSeek 官方视觉模型（V4-Flash-Vision-Exp / VL2）ys365 未接入（503）**。联动 `wechatide simulator_screenshot` → 识图 → agent「看」模拟器（实测读出新闻标题/状态栏）。Notion「03-工具与脚本 → Agent 识图能力」已建 | ✅ 已入库 |
 | 2026-08-24 | I/O | **微信开发者工具 skill-cli（wechatide MCP 通道）打通**。IDE 2.02.0 自带 wechatide-skill v0.3.9（`wechatide -c <client> <tool>`，PATH 有 wechatide.cmd），授权 client `dsh` 后全工具可用：upload(发布体验版)/create_preview_qrcode/auto_preview(直接推送开发者微信)/cloud_fn_deploy/cloud_db_*/simulator_screenshot/get_simulator_console/automation_*(UI 自动化)/compile_wxml|wxss。已验证：状态/项目列表/云环境/云函数列表/模拟器截图。与 CloudBase MCP 双通道互补 | ✅ 已打通 |
 | 2026-08-24 | O/I | **多会话防覆盖机制上线 + 全员强制规范**：① `scripts/file-lock.sh` 文件级锁（lock/unlock/status/force-unlock，TTL 30 分钟）② pre-push hook 已装（check_intel.sh 门禁 + 60s 频率保护）③ **`docs/多会话防覆盖操作规范.md`（全员强制必读）**——编辑前 pull+status+lock、编辑后 unlock+只 add 自己的文件+push、红线（禁 add -A / 禁不锁就编辑 / 禁 --no-verify）④ CONTEXT 必读清单与协作机制 §三已同步。⚠️ 工作区有 23 个未提交改动（其他会话 WIP）——请各会话尽快提交 | ✅ 已推 |
 | 2026-08-24 | I/O | **One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立**。publish 注入前与现有 cache 比较（URL 归一化 / 标题指纹 / 标题包含关系），重复条目从当前批次剔除后仍全量替换注入；空批保护（剔除后为空 → 不发布保留现有 cache，防 stale 兜底带回旧数据）；commit `6d33404`；经 CloudBase MCP（SCF UpdateFunctionCode）部署上线，线上 ModTime 2026-08-24 09:44 + invoke 验证通过 | ✅ 已部署 |
@@ -39,6 +40,16 @@
 | 2026-08-17 | K | 三文档 AI 视角交叉校验 + 导航索引建立 | ✅ |
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
+
+## 2026-08-24 · Agent 识图能力（ys365 视觉模型）——agent 的「眼睛」
+
+- **背景**：当前会话模型（deepseek-v4-flash）不支持图像输入；owner 提供 ys365 API key + 询问 DeepSeek 官方视觉模型可用性。
+- **ys365 配置**：`YS365_API_KEY` 存于 DSH 凭证 `~/.dsh/.credentials.yaml`；`https://api.ys365.cyou/v1`（OpenAI 兼容）。
+- **实测可用视觉模型**：`meta/llama-3.2-11b-vision-instruct`（默认，中文界面识别良好——实测读出模拟器新闻标题「四川宜宾 7.7 级地震」+ 状态栏元素）；`nvidia/llama-3.1-nemotron-nano-vl-8b-v1`、`nvidia/nemotron-nano-12b-v2-vl` 备选。
+- **DeepSeek 官方视觉模型结论**：官方推出 DeepSeek-V4-Flash-Vision-Exp 与 VL2 系列（2026-08），但 **ys365 未接入**（实测 503 No available channel）——目前不能通过 ys365 使用；当前 llama vision 已够用，待 ys365 接入或 DeepSeek 官方 API 直连再切换。
+- **产物**：`tools/vision/see-image.mjs`（图片→base64→视觉模型→中文描述）+ `tools/vision/README.md`（commit `526d113`）；Notion「03-工具与脚本 → Agent 识图能力（ys365 Vision）」页面（`3c66b5eb...`）。
+- **联动**：`wechatide -c dsh simulator_screenshot --project <repo>` → 截图 path → `node tools/vision/see-image.mjs <path>` → agent 可「看」模拟器界面（UI 验收/状态确认）。
+- **注意**：① curl 调 ys365 需 `--ssl-no-revoke`（node fetch 不受影响）② 视觉描述可能不 100% 精确，重要判断结合 get_simulator_console/automation 交叉验证。
 
 ## 2026-08-24 · 微信开发者工具 skill-cli（wechatide MCP 通道）打通——agent 可直接操作 IDE
 
