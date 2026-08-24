@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-24 | I/O | **One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立**。publish 注入前与现有 cache 比较（URL 归一化 / 标题指纹 / 标题包含关系），重复条目从当前批次剔除后仍全量替换注入；空批保护（剔除后为空 → 不发布保留现有 cache，防 stale 兜底带回旧数据）；commit `6d33404`；经 CloudBase MCP（SCF UpdateFunctionCode）部署上线，线上 ModTime 2026-08-24 09:44 + invoke 验证通过 | ✅ 已部署 |
 | 2026-08-20 | A/I | **中文官方源接入：MiniMax 尝试**。注册 minimax_ai（scrape，urlPattern=/blog/），extractListLinks 加遍3（任意链接+锚文本）+ 上下文日期提取；仍有 filtered（日期提取未完全生效/实例缓存），待续调。**已建立的通用机制**：per-source freshnessDays、JSON API adapter（智谱模式）、富文本提取、列表提取遍3、arxiv 限流 5 条 | 🔄 |
 | 2026-08-20 | I | **中文官方源首个打通 + 首页数据健康化**。① 智谱 GLM-5.3 全链路进 brief（JSON API + 富文本提取 + per-source freshnessDays=7，high 路由 747 字正文）；② arxiv 修复（Atom content 摘要兜底）+ brief 组装限流 5 条（论文不淹没新闻）；③ Simon Willison 接入（written 3）；④ brief v5 = 15 条：zhipu 1/arxiv 5/simon 3/techcrunch 3/theverge 2/openai 1——来源均衡 | ✅ 已推 |
 | 2026-08-20 | A/I | **中文官方源接入进展**：✅ 智谱AI（zhipu_ai）打通全链路——JSON API（/api/articles → title_zh/createAt/content_zh 富文本提取），per-source freshnessDays=7 生效（周更源不被 1 天拒），抓取 written ✓ 处理 okCount ✓（GLM-5.3，7026 字正文）；⚠️ staged 写入静默失败待查（upsertStaged add 可能字段/大小问题）。✅ Simon Willison 已接入（written 3）。❌ 聚合 feed 内容滞后停用。待办：智谱 staged 写入修复、其余中文官方源（通义/火山/混元/MiniMax/Kimi JS 渲染 API 探测）、r/LocalLLaMA/V2EX 反爬 | 🔄 继续 |
@@ -36,6 +37,20 @@
 | 2026-08-17 | K | 三文档 AI 视角交叉校验 + 导航索引建立 | ✅ |
 | 2026-08-17 | K | 需求/调研/设计三文档完成，实现任务拆解（7 角色 AI 团队） | ✅ |
 | 2026-08-17 | I | 25 信息源全部实测可用，7 待处理源复测定论 | ✅ |
+
+## 2026-08-24 · One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立
+
+- **背景**：手机反复看到已展示过的新闻——不同源转载同一新闻（URL 不同）被重复注入 `news_cache`，用户多次看到同一内容。
+- **方案（owner 拍板）**：publish 注入前与【现有 news_cache】比较——
+  ① 同 URL（归一化，去协议/尾斜杠/跟踪参数）→ 重复；
+  ② 同标题指纹（跨源同主题：剥「量子位 |」「【重磅】」「独家」等来源/标签前缀 + 去标点空白，取前 20 字符 sha256）→ 重复；
+  ③ 标题包含关系兜底（较长⊃较短且长度比 ≤1.5，如「苹果发布新iPhone」vs「苹果发布新iPhone手机」）→ 重复；
+  命中任一即从当前批次剔除 → 仍按原逻辑全量替换注入（wipe→注入，其他逻辑不变）。
+- **空批保护（owner 拍板）**：剔除后当前批次为空 → 本轮不发布、不清空、保留现有 cache（防全清后 stale 兜底把旧数据带回，反而继续「反复看到」）。
+- **代码**：`cloudfunctions/newsPipeline/index.js`（commit `6d33404`，+130 行）：新增 `normTitleText` / `normTitleFp` / `titleContainsDup` / `dedupAgainstCache`；stagePublish 在 `applyCategoryCaps` 前插入去重；注入 docData 带 `titleFp` 落库供后续判重。
+- **部署（CloudBase MCP 通道建立）**：owner 授权腾讯云 API 密钥（存 `.secrets.env`，仅本机读写）；`C:\Users\zteng\Desktop\Deepseek\mcp\mcp-call.mjs`（官方 Hosted 端点 `tcb-api.cloud.tencent.com/mcp/v1`，MCP 协议）+ `gen-deploy-args.mjs`（zip→base64→SCF `UpdateFunctionCode`）；线上 ModTime 2026-08-24 09:44:44，`invokeFunction` 实测新实例正常（依赖 InstallDependency=TRUE 自动安装）。
+- **踩坑（记 LEARNINGS）**：① `UpdateFunctionCode` 的 `Publish` 参数必须 string（传布尔报类型错）；② `Namespace` 与 `EnvId` 互斥不可同时传（TCB 场景用 EnvId）；③ `getFunctionList` detail 的 CodeInfo 会被截断，验证部署以 ModTime + invoke 为准；④ PowerShell 传 JSON 参数双引号被吞 → 用 @file 方式。
+- **下游**：后续所有云环境部署/操作统一走 CloudBase MCP 通道（云函数代码/配置、触发器、数据库、日志）。
 
 ## 2026-08-21 · UI 基准页（GitHub Pages）建立——UI 改动唯一确认源
 
