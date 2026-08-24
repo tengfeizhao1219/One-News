@@ -473,35 +473,8 @@
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
 }
 
-/* ============ 底部应用来源归属（11:45 新增；15:0x 改为 position:fixed 常驻视口底部）
-   无论内容长短、是否滚动，始终贴在屏幕底部。移出 scroll-view 到 page 级，
-   避开 .article 的 transform 导致 fixed 失效；背景 + 顶部分隔线避免正文透出。
-   scroll-view 已留 128rpx+安全区 底部 padding，正文末段不会被遮挡。 */
-.detail-app-source {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 9;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 18rpx;
-  padding-bottom: calc(18rpx + env(safe-area-inset-bottom));
-  background-color: var(--bg-card);
-  border-top: 1rpx solid var(--divider);
-}
-.app-source-line {
-  width: 64rpx;
-  height: 1rpx;
-  background-color: var(--divider);
-  margin-bottom: 20rpx;
-}
-.app-source-text {
-  font-size: 22rpx;
-  color: var(--text-tertiary);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
-}
+/* 2026-08-24：底部应用来源归属已移除（owner 拍板）——原 position:fixed bottom:0 与上移到安全区上方
+   的底部操作栏错位，操作栏上方露出其背景横条。若需恢复应用来源，可换其他呈现方式 */
 
 /* ============ app_intro 占位欢迎介绍：系统蓝 hero + 分段标题卡片 ============ */
 .app-intro-hero {

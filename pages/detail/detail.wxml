@@ -190,13 +190,13 @@
               <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
                 <view class="dig-group-info">
                   <text class="dig-group-q">「{{g.query}}」</text>
-                  <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+                  <text class="dig-group-meta">第 {{g.entries[0].seq}} 次深挖 · 最近 {{g.entries[0].time}}</text>
                 </view>
                 <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
               </view>
               <view class="dig-group-body" wx:if="{{g.open}}">
                 <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
-                  <text class="dig-entry-time">{{en.time}}</text>
+                  <text class="dig-entry-time">第 {{en.seq}} 次深挖 · {{en.time}}</text>
                   <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
                     <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
                     <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
@@ -225,13 +225,6 @@
       </view>
     </view>
   </scroll-view>
-
-  <!-- 底部应用来源归属：固定常驻视口底部，内容与长短/是否滚动无关（11:45 新增，15:0x 改为 position:fixed） -->
-  <view class="detail-app-source">
-    <view class="app-source-line"></view>
-    <text class="app-source-text">{{news.contentSource === 'official_rss' ? '内容整理自官方源 · 一页 One News' : (news.contentSource === 'app_intro' ? '一页 One News · 关于本小程序' : '内容由 AI 整理生成 · 一页 One News')}}</text>
-  </view>
-
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
@@ -316,13 +309,13 @@
           <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
             <view class="dig-group-info">
               <text class="dig-group-q">「{{g.query}}」</text>
-              <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+              <text class="dig-group-meta">第 {{g.entries[0].seq}} 次深挖 · 最近 {{g.entries[0].time}}</text>
             </view>
             <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
           </view>
           <view class="dig-group-body" wx:if="{{g.open}}">
             <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
-              <text class="dig-entry-time">{{en.time}}</text>
+              <text class="dig-entry-time">第 {{en.seq}} 次深挖 · {{en.time}}</text>
               <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
                 <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
                 <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
