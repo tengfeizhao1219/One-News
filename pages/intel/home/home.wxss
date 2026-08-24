@@ -84,6 +84,8 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
+/* 2026-08-24：隐藏侧边滚动条（对齐 intel detail 既有做法，owner 拍板） */
+.content::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .page--dark .content { background-color: #000000; } /* 暗色兜底 */
 /* dark 由 var(--bg-page) 自动切换 */
 
