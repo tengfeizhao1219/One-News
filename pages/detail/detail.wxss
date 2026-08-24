@@ -660,7 +660,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  height: 40rpx;
+  height: 44rpx;
   background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
   -webkit-backdrop-filter: var(--setting-panel-blur);
@@ -751,8 +751,8 @@
    BUG-20260806-021: 44rpx → 40rpx
    BUG-20260806-027: 分享图标由文本 ↗ 改为 share.svg image，与收藏一致避免发灰 */
 .bottom-bar-icon-img {
-  width: 36rpx;
-  height: 36rpx;
+  width: 40rpx;
+  height: 40rpx;
 }
 .bottom-bar-icon-faved {
   font-size: 40rpx;
@@ -1133,8 +1133,8 @@
      bottom 用 env(safe-area-inset-bottom)（本页根节点未注入 --safe-bottom） */
   position: fixed;
   right: 40rpx;
-  /* 2026-08-24：FAB 在操作栏(40rpx, 位于安全区上方)上方 40rpx——距视口底 = safe + 40 + 40 = 80rpx + safe */
-  bottom: calc(80rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：FAB 在操作栏(44rpx, 位于安全区上方)上方 40rpx——距视口底 = safe + 44 + 40 = 84rpx + safe */
+  bottom: calc(84rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
