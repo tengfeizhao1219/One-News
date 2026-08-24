@@ -661,8 +661,7 @@
   z-index: 20;
   display: flex;
   height: 40rpx;
-  /* ⚠️ 临时调试色（owner 2026-08-24 要求，便于看清分层）——确认布局后改回 var(--bottom-bar-bg) */
-  background-color: rgba(255, 59, 48, 0.55);
+  background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
   -webkit-backdrop-filter: var(--setting-panel-blur);
   /* BUG-20260806-004: 底部分割线收窄为 0.5rpx */
