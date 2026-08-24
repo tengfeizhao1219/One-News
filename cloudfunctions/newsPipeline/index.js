@@ -23,6 +23,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+const crypto = require('crypto')
+
 const rawStore = require('./newsRawStore')
 const stagingStore = require('./utils/newsStagingStore')
 const { fetchContentForItem, enrichNewsList, isInvalidDesc } = require('./utils/contentFetcher')
@@ -548,6 +550,7 @@ async function batchInsert(newsList) {
       const docData = {
         id: item.id,
         dedupKey: dk,
+        titleFp: normTitleFp(item.title || ''), // 2026-08-24：跨源同主题指纹，随注入落库供后续判重
         title: item.title,
         summary,
         summarySource,
@@ -592,6 +595,119 @@ async function batchInsert(newsList) {
   }, 10)
 
   return { inserted, failed }
+}
+
+// ====================================================================
+// 注入前与现有 cache 比较去重（owner 2026-08-24 拍板）
+// --------------------------------------------------------------------
+// 背景：多源转载同一新闻（URL 不同）会以多条注入 news_cache，用户反复看到同一内容。
+// 做法：publish 注入前，把当前批次与【现有 news_cache】数据比较——
+//   同 URL（归一化）或同标题指纹（跨源同主题）命中 → 从当前批次剔除（本次不注入）；
+//   然后仍按原逻辑全量替换注入。剔除后为空 → 本轮不发布、保留现有 cache
+//   （避免全清后 stale 兜底把旧数据带回，反而继续「反复看到」旧新闻）。
+// 判重双键（owner 拍板）：标题归一化指纹 + 归一化 URL，任一命中即视为重复。
+// ====================================================================
+
+function sha256(s) {
+  return crypto.createHash('sha256').update(String(s)).digest('hex')
+}
+
+/** URL 归一化：去协议/尾斜杠/常见跟踪参数（与 newsFetcher fingerprint 同构），用于跨源同文判重 */
+function normalizeUrl(url) {
+  if (!url) return ''
+  let u = String(url).trim()
+  u = u.replace(/^(https?:\/\/)?/i, '').replace(/\/+$/, '')
+  u = u.replace(/([?&])(utm_[a-z]+|spm|from|from_|source|ref)=[^&]*(&|$)/gi, '$1').replace(/[?&]+$/, '')
+  return u
+}
+
+/** 标题归一化文本：保留中英文/数字，剥来源/标签前缀 + 去标点空白 + 常见噪音词。
+ *  不同源对同一新闻的标题差异（「量子位 | xxx」「【重磅】xxx」「独家 xxx」等）不影响判重。 */
+function normTitleText(title) {
+  let n = String(title || '').toLowerCase().trim()
+  // 剥【】/[] 括号块（媒体名/标签，如【重磅】）
+  n = n.replace(/^[【\[][^】\]]*[】\]]\s*/, '')
+  // 剥 "来源名 | 标题" 管道符来源段（全角｜统一，取最右侧段）
+  n = n.replace(/[|｜]/g, '|')
+  const pipeIdx = n.lastIndexOf('|')
+  if (pipeIdx > 0 && pipeIdx < n.length - 1) n = n.slice(pipeIdx + 1).trim()
+  // 去标点空白（保留中英文/数字）
+  n = n.replace(/[^\u4e00-\u9fa5a-z0-9]+/g, '')
+  // 去常见噪音词前缀
+  n = n.replace(/^(独家|快讯|最新|今日|热点|早报|晚报|日报|重磅|ainews|breaking|update)/, '')
+  return n
+}
+
+/** 标题归一化指纹（跨源同主题）：normTitleText 前 20 字符 → sha256 */
+function normTitleFp(title) {
+  const n = normTitleText(title).slice(0, 20)
+  return n ? sha256(n).slice(0, 24) : ''
+}
+
+/** 归一化标题包含关系判重：较长标题完整包含较短标题（且长度比 ≤1.5）视为同一新闻。
+ *  例：「苹果发布新iphone手机」⊃「苹果发布新iphone」→ 重复；
+ *      「苹果发布新iphone」 vs 「苹果发布新ipad」互不包含 → 不重复（比字符 Jaccard 更准）。 */
+function titleContainsDup(a, b) {
+  if (a.length < 8 || b.length < 8) return false // 过短不判，防误伤
+  const [longer, shorter] = a.length >= b.length ? [a, b] : [b, a]
+  return longer.length <= shorter.length * 1.5 && longer.includes(shorter)
+}
+
+/**
+ * 当前批次 vs 现有 news_cache 去重：命中现有判重键的条目从本批剔除。
+ * @param {Array} items 当前待注入批次（已 done 的 staging 条目）
+ * @returns {Promise<{items:Array, removed:number}>}
+ */
+async function dedupAgainstCache(items) {
+  if (!items || !items.length) return { items, removed: 0 }
+  const urlSet = new Set()
+  const fpSet = new Set()
+  const normTitles = [] // 现有 cache 的归一化标题，供包含关系兜底
+  // 读现有 cache 的判重键（cache 总量受分类 cap 约束 ≤47，通常 1 页；分页兜底）
+  try {
+    for (let rounds = 0; rounds < MAX_PAGE_ROUNDS; rounds++) {
+      const res = await db.collection('news_cache')
+        .field({ sourceUrl: true, title: true })
+        .limit(100)
+        .get()
+      const list = (res && res.data) || []
+      if (!list.length) break
+      for (const d of list) {
+        const u = normalizeUrl(d.sourceUrl || '')
+        if (u) urlSet.add(u)
+        const fp = normTitleFp(d.title || '')
+        if (fp) fpSet.add(fp)
+        const nt = normTitleText(d.title || '')
+        if (nt) normTitles.push(nt)
+      }
+      if (list.length < 100) break
+    }
+  } catch (e) {
+    console.warn('[newsPipeline][publish] 读现有 cache 判重键失败（降级为仅批内去重）:', e.message)
+    return { items, removed: 0 }
+  }
+  if (!urlSet.size && !fpSet.size && !normTitles.length) return { items, removed: 0 }
+
+  const kept = []
+  let removed = 0
+  for (const it of items) {
+    const u = normalizeUrl(it.sourceUrl || it.url || '')
+    const fp = normTitleFp(it.title || '')
+    const nt = normTitleText(it.title || '')
+    let dup = Boolean(u && urlSet.has(u)) || Boolean(fp && fpSet.has(fp))
+    if (!dup && nt) {
+      dup = normTitles.some((ex) => titleContainsDup(ex, nt))
+    }
+    if (dup) {
+      removed++
+      continue
+    }
+    kept.push(it)
+  }
+  if (removed) {
+    console.log(`[newsPipeline][publish] 与现有 cache 比较去重剔除 ${removed} 条（同 URL/同主题已在展示库），保留 ${kept.length} 条待注入`)
+  }
+  return { items: kept, removed }
 }
 
 // 注入前分类上限：评分后仍超量才按「质量分+新鲜度衰减分」从低到高淘汰；低于上限有多少展示多少。
@@ -653,7 +769,20 @@ async function stagePublish(deadline) {
     return { stage: 'publish', skipped: true, reason: 'no qualified data — keep cache' }
   }
 
-  const capped = applyCategoryCaps(collected)
+  // 2026-08-24 owner 拍板：注入前先与【现有 news_cache】比较去重——
+  // 同 URL / 同标题指纹（跨源同主题）的重复条目从当前批次剔除，
+  // 避免多源转载同一新闻被反复注入、用户反复看到旧内容。
+  const dedupRes = await dedupAgainstCache(collected)
+  if (!dedupRes.items.length) {
+    // 空批保护：本批全部与现有 cache 重复 → 不发布、不清空、保留现有展示数据。
+    // 被剔除条目的数据已在展示库，staging 消费删除（不堆积、不反复重试）。
+    await stagingStore.removeStaged(collected.map((i) => i._id))
+    console.log(`[newsPipeline][publish] 当前批次 ${collected.length} 条全部与现有 cache 重复，本轮不发布、保留现有 cache`)
+    trigger('run')
+    return { stage: 'publish', skipped: true, reason: 'all-duplicate-with-cache', removed: dedupRes.removed, from: collected.length }
+  }
+
+  const capped = applyCategoryCaps(dedupRes.items)
   try {
     await wipeNewsCache()
   } catch (e) {
