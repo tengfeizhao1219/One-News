@@ -633,7 +633,8 @@
   right: 0;
   z-index: 20;
   display: flex;
-  height: 44rpx;
+  /* 2026-08-24：操作栏加高到 56rpx + icon 上方留 14rpx 呼吸空间（配合下方 padding 6rpx） */
+  height: 56rpx;
   background-color: var(--bottom-bar-bg);
   backdrop-filter: var(--setting-panel-blur);
   -webkit-backdrop-filter: var(--setting-panel-blur);
@@ -641,42 +642,8 @@
   border-top: 0.5rpx solid var(--divider);
 }
 
-/* UI-B7 §3.5: 详情页底部固定滑动提示条（位于操作栏上方，不响应点击）
-   BUG-20260806-021: bottom 同步 128rpx → 80rpx */
-.fixed-swipe-hint {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(80rpx + env(safe-area-inset-bottom));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8rpx;
-  padding: 12rpx 0;
-  pointer-events: none;
-  z-index: 19;
-  opacity: 1;
-  transition: opacity 0.5s ease;
-}
-
-.fixed-swipe-hint.hide {
-  opacity: 0;
-}
-
-.fixed-swipe-hint-icon-img {
-  width: 32rpx;
-  height: 32rpx;
-  opacity: 0.55;
-}
-
-.fixed-swipe-hint-text {
-  /* UI-B11: 滑动提示字号/字间距/透明度与 demo 对齐 */
-  font-size: 22rpx;
-  color: var(--text-secondary);
-  letter-spacing: 6rpx;
-  font-weight: 300;
-  opacity: 0.55;
-}
+/* 2026-08-24：底部固定滑动提示条已移除（owner 拍板）——原 bottom 旧值(80rpx)与上移后的操作栏错位，
+   在操作栏上方露出浅色横条且部分遮挡正文。如需恢复滑动引导，可换其他呈现方式 */
 
 .bottom-bar-btn {
   flex: 1;
@@ -685,7 +652,7 @@
   align-items: center;
   justify-content: center;
   gap: 8rpx;
-  padding: 2rpx 0;
+  padding: 14rpx 0 6rpx;  /* 2026-08-24: icon 上方留 14rpx 呼吸空间（原 2rpx 顶到栏顶） */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
   font-size: calc(20rpx * var(--font-scale-meta, 1));
   color: var(--text-secondary);
@@ -1106,8 +1073,8 @@
      bottom 用 env(safe-area-inset-bottom)（本页根节点未注入 --safe-bottom） */
   position: fixed;
   right: 40rpx;
-  /* 2026-08-24：FAB 在操作栏(44rpx, 位于安全区上方)上方 40rpx——距视口底 = safe + 44 + 40 = 84rpx + safe */
-  bottom: calc(84rpx + env(safe-area-inset-bottom));
+  /* 2026-08-24：FAB 在操作栏(56rpx, 位于安全区上方)上方 40rpx——距视口底 = safe + 56 + 40 = 96rpx + safe */
+  bottom: calc(96rpx + env(safe-area-inset-bottom));
   z-index: 300;
   width: 96rpx;
   height: 96rpx;
