@@ -15,10 +15,11 @@
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
       <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
     </view>
-    <!-- 顶部阅读进度条（2026-08-24 对齐 One News detail：nav 底部 3rpx 浅蓝进度线，无底槽） -->
-    <view class="nav-progress" wx:if="{{!loading && !empty}}">
-      <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
-    </view>
+  </view>
+
+  <!-- 顶部阅读进度条（2026-08-24 对齐 One News detail：固定在顶部状态区域底部、内容区上方那条线） -->
+  <view class="nav-progress" wx:if="{{!loading && !empty}}">
+    <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 
   <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll">

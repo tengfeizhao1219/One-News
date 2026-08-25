@@ -44,14 +44,15 @@
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
 
-/* 2026-08-24：顶部阅读进度条（对齐 One News detail：nav 底部 3rpx 浅蓝进度线，无底槽） */
+/* 2026-08-24：顶部阅读进度条（对齐 One News detail）——固定在顶部状态区域底部(导航行底/内容区上方) */
 .nav-progress {
-  position: absolute;
+  position: fixed;
+  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px));
   left: 0;
   right: 0;
-  bottom: 0;
   height: 3rpx;
   background: transparent;
+  z-index: 18;
 }
 .nav-progress-bar {
   height: 100%;
