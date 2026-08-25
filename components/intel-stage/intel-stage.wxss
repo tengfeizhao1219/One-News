@@ -125,7 +125,7 @@
 }
 .card-desc {
   display: block;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(30rpx * var(--font-scale));  /* 2026-08-24: 摘要调大一号 26→30(owner 反馈) */
   color: var(--text-tertiary);
   line-height: 1.6;
   margin-top: 12rpx;
