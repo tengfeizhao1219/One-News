@@ -17,8 +17,8 @@
     </view>
   </view>
 
-  <!-- 顶部阅读进度条（2026-08-24 对齐 One News detail：固定在顶部状态区域底部、内容区上方那条线） -->
-  <view class="nav-progress" wx:if="{{!loading && !empty}}">
+  <!-- 顶部阅读进度条（2026-08-24 对齐 One News detail：动态定位到导航行底部/内容区上方那条线） -->
+  <view class="nav-progress" wx:if="{{!loading && !empty}}" style="top: {{progressTop}}px;">
     <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 

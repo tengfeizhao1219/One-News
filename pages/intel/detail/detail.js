@@ -69,6 +69,7 @@ Page({
     relatedQuestions: [],       // 2026-08-22：不相关时后端推荐的搜索问题（点击直接搜索，对齐 One News）
     digGroups: [],              // 深挖历史（同话题折叠）：[{query, open, entries:[{time, sections, sources}]}]
     progressPercent: 0,         // 2026-08-24：顶部阅读进度条（对齐 One News）——正文滚动百分比
+    progressTop: 0,             // 2026-08-24：进度条 top(px)——动态测量 .nav 底部(顶部状态区域底)
 
   },
 
@@ -81,6 +82,14 @@ Page({
         isDark: g.effectiveTheme === 'dark'
       })
     }
+  },
+
+  /** 页面就绪：测量 .nav 底部 → 进度条 top（精确对齐顶部状态区域底 / 内容区上方） */
+  onReady() {
+    var that = this
+    wx.createSelectorQuery().in(this).select('.nav').boundingClientRect().exec(function (res) {
+      if (res && res[0] && res[0].bottom > 0) that.setData({ progressTop: res[0].bottom })
+    })
   },
 
   /** 顶部阅读进度条（2026-08-24 对齐 One News detail）：正文滚动百分比 */

@@ -44,10 +44,9 @@
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
 
-/* 2026-08-24：顶部阅读进度条（对齐 One News detail）——固定在顶部状态区域底部(导航行底/内容区上方) */
+/* 2026-08-24：顶部阅读进度条（对齐 One News detail）——top 由 JS 动态测 .nav 底部注入(progressTop) */
 .nav-progress {
   position: fixed;
-  top: calc(var(--menu-top, 44px) + var(--menu-height, 32px));
   left: 0;
   right: 0;
   height: 3rpx;
