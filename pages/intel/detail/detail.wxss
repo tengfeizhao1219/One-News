@@ -137,11 +137,12 @@
 
 /* 正文（发生了什么 / 可以怎么做 / 最小行动）*/
 .prose {
-  /* 2026-08-20: 各模块正文字号统一为 28rpx（以"试试看"正文为准） */
-  font-size: calc(28rpx * var(--font-scale));
+  /* 2026-08-24: 正文字号对齐「欢迎使用 One News」正文(summary-p)——32rpx/行高 1.85(原 28rpx 偏小) */
+  font-size: calc(32rpx * var(--font-scale));
   color: var(--text-body);
-  line-height: 1.75;
+  line-height: calc(1.85 * var(--font-scale));
   margin-bottom: 8rpx;
+  letter-spacing: 1rpx;
 }
 .prose-2 { margin-top: 4rpx; }
 
