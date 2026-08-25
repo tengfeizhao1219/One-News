@@ -169,7 +169,7 @@
   z-index: 25;
   background: var(--color-warning-subtle);
   color: var(--color-warning);
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: calc(24rpx * var(--font-scale) * var(--page-fs, 1));
   padding: 16rpx 32rpx;
   border-radius: 16rpx;
   opacity: 0;
@@ -193,7 +193,7 @@
   max-width: 560rpx;
   background: rgba(0, 0, 0, 0.78);
   color: var(--chip-text);
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   line-height: 1.5;
   padding: 28rpx 40rpx;
   border-radius: 24rpx;
@@ -270,7 +270,7 @@
 .detail-source-link text {
   display: inline-flex;
   align-items: center;
-  font-size: calc(20rpx * var(--font-scale));
+  font-size: calc(20rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-link);
   padding: 8rpx 16rpx;
   border-radius: 8rpx;
@@ -283,7 +283,7 @@
 }
 
 .text-p {
-  font-size: calc(32rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-body);
   /* UI-B11: 正文行高 1.9、段间距 36rpx、两端对齐，长解读更透气易读 */
   line-height: calc(1.9 * var(--font-scale));
@@ -368,7 +368,7 @@
 
 .yiyieshuo-text {
   display: block;
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   line-height: 1.65;
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
@@ -652,7 +652,7 @@
   gap: 8rpx;
   padding: 14rpx 0 6rpx;  /* 2026-08-24: icon 上方留 14rpx 呼吸空间（原 2rpx 顶到栏顶） */
   /* UX-FIX-F12（owner 2026-08-02 批准折中）：操作栏文字由锁死 22rpx 改为跟涨但封顶 1.15 */
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-secondary);
   transition: transform 0.15s ease;
   background: transparent;
@@ -673,7 +673,7 @@
   margin: 0;
   padding: 8rpx 0;  /* BUG-20260806-021: 与 .bottom-bar-btn 同步 22rpx → 8rpx */
   /* UX-FIX-F12（owner 2026-08-02 批准折中） */
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-secondary);
   background: transparent;
   border: none;
@@ -700,7 +700,7 @@
 
 .bottom-bar-label {
   /* UX-FIX-F12（owner 2026-08-02 批准折中）；2026-08-24 压缩 20→16rpx 配合操作栏变矮 */
-  font-size: calc(16rpx * var(--font-scale-meta, 1));
+  font-size: calc(16rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-secondary);
 }
 
@@ -785,7 +785,7 @@
 
 /* D-04 v0.2 §4.1：首段前弱提示（不做满屏大字，不抢正文） */
 .detail-skeleton .skeleton-ai-tip {
-  font-size: calc(24rpx * var(--font-scale));
+  font-size: calc(24rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-tertiary);
   margin-bottom: 20rpx;
   line-height: 1.5;
@@ -820,7 +820,7 @@
 }
 
 .state-title {
-  font-size: calc(34rpx * var(--font-scale));
+  font-size: calc(34rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 600;
   color: var(--text-primary);
   text-align: center;
@@ -829,7 +829,7 @@
 }
 
 .state-sub {
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-secondary);
   text-align: center;
   line-height: 1.6;
@@ -895,7 +895,7 @@
 .deep-quick--hover { background-color: var(--bg-subtle); }
 .quick-t {
   display: block;
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(30rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.5;
@@ -903,7 +903,7 @@
 .quick-s {
   display: block;
   margin-top: 8rpx;
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-size: calc(24rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
   line-height: 1.5;
 }
@@ -922,7 +922,7 @@
 .search-input {
   display: block;
   width: 100%;
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-primary);
   /* 输入区高度 1.5 倍：padding 8→12rpx, 行高 1.4→2.1（owner 2026-08-21） */
   padding: 12rpx 0;
@@ -990,7 +990,7 @@
 /* 结果区 */
 .search-status { padding: 36rpx 0; text-align: center; }
 .search-status-txt {
-  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  font-size: calc(26rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-secondary);
 }
 .search-hint {
@@ -998,7 +998,7 @@
   border: 1rpx solid var(--divider);
   border-radius: 24rpx;
   padding: 24rpx 28rpx;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-secondary);
   line-height: 1.6;
 }
@@ -1008,7 +1008,7 @@
 .search-sec-head {
   position: relative;
   padding-left: 18rpx;
-  font-size: calc(30rpx * var(--font-scale));
+  font-size: calc(30rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.5;
@@ -1027,7 +1027,7 @@
 }
 .search-sec-head:first-child { margin-top: 4rpx; }
 .search-sec-para {
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-body);
   line-height: 1.75;
   text-align: justify;
@@ -1051,7 +1051,7 @@
 }
 .search-sec-btext {
   flex: 1;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-body);
   line-height: 1.7;
   word-break: break-word;
@@ -1110,13 +1110,13 @@
   border-top: 1rpx solid var(--divider);
 }
 .dig-title {
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 700;
   color: var(--text-secondary);
   margin-bottom: 16rpx;
 }
 .dig-empty {
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-size: calc(24rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
   padding: 8rpx 4rpx;
 }
@@ -1137,7 +1137,7 @@
 .dig-group-info { flex: 1; min-width: 0; }
 .dig-group-q {
   display: block;
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.5;
@@ -1145,11 +1145,11 @@
 .dig-group-meta {
   display: block;
   margin-top: 6rpx;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(22rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
 }
 .dig-group-arrow {
-  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  font-size: calc(26rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
   margin-left: 20rpx;
   transition: transform 0.2s;
@@ -1166,7 +1166,7 @@
 .dig-entry:last-child { border-bottom: none; }
 .dig-entry-time {
   display: block;
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
   margin-bottom: 10rpx;
 }
@@ -1186,12 +1186,12 @@
 }
 .dig-sources-head--hover { opacity: 0.7; }
 .dig-sources-title {
-  font-size: calc(24rpx * var(--font-scale-meta, 1));
+  font-size: calc(24rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   font-weight: 600;
   color: var(--text-secondary);
 }
 .dig-sources-arrow {
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(22rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-link);
 }
 .dig-src {
@@ -1200,7 +1200,7 @@
 .dig-src--hover { opacity: 0.7; }
 .dig-src-title {
   display: block;
-  font-size: calc(26rpx * var(--font-scale));
+  font-size: calc(26rpx * var(--font-scale) * var(--page-fs, 1));
   font-weight: 600;
   color: var(--text-link);
   line-height: 1.5;
@@ -1208,7 +1208,7 @@
 .dig-src-url {
   display: block;
   margin-top: 4rpx;
-  font-size: calc(20rpx * var(--font-scale-meta, 1));
+  font-size: calc(20rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   color: var(--text-tertiary);
   word-break: break-all;
 }
@@ -1242,7 +1242,7 @@
 
 /* ===== 不相关推荐问题（2026-08-22，复用 dig-group 卡片视觉） ===== */
 .rel-title {
-  font-size: calc(26rpx * var(--font-scale-meta, 1));
+  font-size: calc(26rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   font-weight: 700;
   color: var(--text-secondary);
   margin: 16rpx 4rpx 12rpx;
@@ -1268,13 +1268,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-size: calc(22rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
   flex-shrink: 0;
 }
 .rel-text {
   flex: 1;
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-primary);
   line-height: 1.5;
 }
-.rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale)); }
+.rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1)); }

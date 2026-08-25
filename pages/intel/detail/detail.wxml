@@ -5,7 +5,7 @@
   注：2026-08-21 移除「可以怎么做」独立区块（demo 无此区块；实操并入试试看 fold）；
       状态条 8-21 恢复（v6 重构时删过，owner 拍板完整对齐 demo）。
 -->
-<view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};">
+<view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-fs: 0.875;">
   <!-- 顶部条带（对齐原生胶囊） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 

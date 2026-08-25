@@ -3,7 +3,7 @@
 <view
   class="page {{themeClass}}"
   data-font-scale="{{fontScaleTier}}"
-  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px; --status-bar-height: {{statusBarHeight}}px;">
+  style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-fs: 0.875; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px; --status-bar-height: {{statusBarHeight}}px;">
 
   <!-- 顶部导航栏：返回（左）+ 进度指示（右）· D-09 v1.2（BUG-20260806-007）
        top=menuTop（无上呼吸）；height=menuHeight+24rpx（仅下扩展 12px） -->
