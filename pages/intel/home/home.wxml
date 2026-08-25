@@ -7,12 +7,8 @@
   <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
-  <!-- 自定义导航：‹ 返回 / 标题 -->
+  <!-- 自定义导航（Home 图标已移除，owner 2026-08-24 拍板） -->
   <view class="nav">
-    <view class="nav-home" bindtap="goBack" hover-class="nav-home--hover">
-      <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
-      <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
-    </view>
   </view>
 
   <!-- 摘要：重点前置（今日条数 + 数据截至/源健康） -->
