@@ -44,9 +44,10 @@
 .content {
   flex: 1;
   height: 0;
-  padding: 24rpx 32rpx 0;
+  /* 2026-08-24: scroll-view 的 padding-right 对内容可能失效(右贴边)→ 去水平 padding,改用卡片左右 margin */
+  padding: 24rpx 0 0;
   background-color: var(--bg-page);
-  overflow-x: hidden;   /* 2026-08-24: 防水平溢出 */
+  overflow-x: hidden;
 }
 
 /* 卡片（对齐 intel-home .card） */
@@ -58,10 +59,10 @@
   border: 1rpx solid var(--divider);
   border-radius: 32rpx;
   padding: 28rpx;
-  margin-bottom: 24rpx;
-  width: 100%;                 /* 2026-08-24: 占满内容宽,防卡片自身超出 */
-  box-sizing: border-box;      /* 2026-08-24: padding 计入宽度,防溢出容器 */
-  overflow: hidden;            /* 2026-08-24: 内容溢出裁掉 */
+  /* 2026-08-24: 左右各留 32rpx → 卡片左右对称、完整(不再右贴屏幕边) */
+  margin: 0 32rpx 24rpx;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 .card-main { flex: 1; min-width: 0; overflow: hidden; }
 .card-title {
