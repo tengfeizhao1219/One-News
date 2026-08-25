@@ -128,8 +128,8 @@
      子项被内容撑开导致滚动失效（当前 enhanced 模式正常，防御性对齐） */
   min-height: 0;
   overflow-y: auto;
-  /* BUG-20260806-021: 底部留白同步 128rpx → 80rpx（bar 高度同步） */
-  padding-bottom: calc(80rpx + env(safe-area-inset-bottom) + 48rpx);
+  /* 2026-08-24：底部留白缩小——正文滚动到底贴近操作栏(56rpx+16rpx 余量)，不再有大片不透明白条 */
+  padding-bottom: calc(56rpx + env(safe-area-inset-bottom) + 16rpx);
   box-sizing: border-box;
 }
 
@@ -633,13 +633,11 @@
   right: 0;
   z-index: 20;
   display: flex;
-  /* 2026-08-24：操作栏加高到 56rpx + icon 上方留 14rpx 呼吸空间（配合下方 padding 6rpx） */
+  /* 2026-08-24：操作栏背景与正文一致(--bg-card)、去掉顶部分割线与毛玻璃——与正文融为一体，
+     不再有白色横条/分隔感；收藏分享只在右下角悬浮显示 */
   height: 56rpx;
-  background-color: var(--bottom-bar-bg);
-  backdrop-filter: var(--setting-panel-blur);
-  -webkit-backdrop-filter: var(--setting-panel-blur);
-  /* BUG-20260806-004: 底部分割线收窄为 0.5rpx */
-  border-top: 0.5rpx solid var(--divider);
+  background-color: var(--bg-card);
+  border-top: none;
 }
 
 /* 2026-08-24：底部固定滑动提示条已移除（owner 拍板）——原 bottom 旧值(80rpx)与上移后的操作栏错位，
