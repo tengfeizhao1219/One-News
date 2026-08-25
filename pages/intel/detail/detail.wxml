@@ -15,9 +15,13 @@
       <image class="nav-home-icon-img nav-light" src="/assets/icons/home.svg" mode="aspectFit"></image>
       <image class="nav-home-icon-img nav-dark" src="/assets/icons/home-dark.svg" mode="aspectFit"></image>
     </view>
+    <!-- 顶部阅读进度条（2026-08-24 对齐 One News detail：nav 底部 3rpx 浅蓝进度线，无底槽） -->
+    <view class="nav-progress" wx:if="{{!loading && !empty}}">
+      <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
+    </view>
   </view>
 
-  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}">
+  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll">
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
@@ -130,13 +134,13 @@
             <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
               <view class="dig-group-info">
                 <text class="dig-group-q">「{{g.query}}」</text>
-                <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+                <text class="dig-group-meta">第 {{g.entries[0].seq}} 次深挖 · 最近 {{g.entries[0].time}}</text>
               </view>
               <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
             </view>
             <view class="dig-group-body" wx:if="{{g.open}}">
               <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
-                <text class="dig-entry-time">{{en.time}}</text>
+                <text class="dig-entry-time">第 {{en.seq}} 次深挖 · {{en.time}}</text>
                 <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
                   <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
                   <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">
@@ -213,13 +217,13 @@
           <view class="dig-group-head" bindtap="onToggleDigGroup" data-gi="{{gi}}" hover-class="dig-group-head--hover">
             <view class="dig-group-info">
               <text class="dig-group-q">「{{g.query}}」</text>
-              <text class="dig-group-meta">{{g.entries.length}} 次深挖 · 最近 {{g.entries[0].time}}</text>
+              <text class="dig-group-meta">第 {{g.entries[0].seq}} 次深挖 · 最近 {{g.entries[0].time}}</text>
             </view>
             <text class="dig-group-arrow">{{g.open ? '▾' : '▸'}}</text>
           </view>
           <view class="dig-group-body" wx:if="{{g.open}}">
             <view class="dig-entry" wx:for="{{g.entries}}" wx:key="index" wx:for-item="en">
-              <text class="dig-entry-time">{{en.time}}</text>
+              <text class="dig-entry-time">第 {{en.seq}} 次深挖 · {{en.time}}</text>
               <block wx:for="{{en.sections}}" wx:key="index" wx:for-item="sec">
                 <view class="search-sec-head" wx:if="{{sec.type === 'heading'}}">{{sec.text}}</view>
                 <view class="search-sec-bullet" wx:elif="{{sec.type === 'bullet'}}">

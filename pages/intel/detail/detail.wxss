@@ -44,6 +44,22 @@
 .nav-home--hover { background-color: var(--bg-subtle); }
 .nav-home-icon-img { width: 44rpx; height: 44rpx; }
 
+/* 2026-08-24：顶部阅读进度条（对齐 One News detail：nav 底部 3rpx 浅蓝进度线，无底槽） */
+.nav-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3rpx;
+  background: transparent;
+}
+.nav-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--progress);
+  transition: width 0.08s linear;
+}
+
 .nav-dark { display: none; }
 .page--dark .nav-light { display: none; }
 .page--dark .nav-dark { display: block; }
@@ -89,6 +105,8 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
+/* 2026-08-24：隐藏侧边滚动条（对齐 intel 首页既有做法；进度信息改由顶部 nav-progress 呈现） */
+.content::-webkit-scrollbar { display: none; width: 0; height: 0; }
 /* 内容容器：不足一屏时撑满（页脚贴底），超一屏随内容滚动、滚到底停底 */
 .scroll-inner {
   min-height: 100%;
