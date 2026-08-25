@@ -59,13 +59,15 @@
   padding: 28rpx;
   margin-bottom: 24rpx;
 }
-.card-main { flex: 1; min-width: 0; }
+.card-main { flex: 1; min-width: 0; overflow: hidden; }
 .card-title {
   display: block;
   font-size: calc(30rpx * var(--font-scale));
   font-weight: 700;
   color: var(--text-primary);
   line-height: 1.5;
+  word-break: break-word;       /* 2026-08-24: 长英文标题换行，防溢出卡片右侧 */
+  overflow-wrap: anywhere;
 }
 .card-meta {
   display: flex;
@@ -81,6 +83,8 @@
   color: var(--text-tertiary);
   line-height: 1.6;
   margin-top: 12rpx;
+  word-break: break-word;     /* 2026-08-24: 摘要长文本换行 */
+  overflow-wrap: anywhere;
 }
 
 /* 2026-08-24：红心取消收藏按钮已移除（owner 拍板——本页即已收藏列表，无需逐个提醒） */
