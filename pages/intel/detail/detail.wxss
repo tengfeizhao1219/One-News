@@ -105,9 +105,9 @@
   box-sizing: border-box;
   overflow-y: auto;
 }
-/* 2026-08-24：隐藏侧边滚动条（对齐 intel 首页既有做法；进度信息改由顶部 nav-progress 呈现；
-   加 scrollbar-width:none 增强首次渲染也隐藏） */
-.content::-webkit-scrollbar { display: none; width: 0; height: 0; }
+/* 2026-08-24：隐藏侧边滚动条（对齐 intel 首页做法；作用到 scroll-view 自身及内部滚动容器，覆盖所有层级） */
+.content::-webkit-scrollbar,
+.content ::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .content { scrollbar-width: none; -ms-overflow-style: none; }
 /* 内容容器：不足一屏时撑满（页脚贴底），超一屏随内容滚动、滚到底停底 */
 .scroll-inner {
