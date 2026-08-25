@@ -83,18 +83,7 @@
   margin-top: 12rpx;
 }
 
-/* 红心取消收藏 */
-.card-fav {
-  width: 56rpx;
-  height: 56rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.card-fav--hover { background-color: var(--bg-subtle); }
-.card-fav-img { width: 40rpx; height: 40rpx; }
+/* 2026-08-24：红心取消收藏按钮已移除（owner 拍板——本页即已收藏列表，无需逐个提醒） */
 
 /* 状态提示（对齐 intel-home .state-hint） */
 .state-hint {

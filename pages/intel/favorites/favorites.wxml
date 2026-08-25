@@ -37,10 +37,7 @@
           </view>
           <text class="card-desc" wx:if="{{item.desc}}">{{item.desc}}</text>
         </view>
-        <!-- 红心取消收藏 -->
-        <view class="card-fav" catchtap="onUnfavorite" data-id="{{item.id}}" hover-class="card-fav--hover">
-          <image class="card-fav-img" src="/assets/icons/favorite-fill.svg" mode="aspectFit"></image>
-        </view>
+        <!-- 2026-08-24：移除右侧「已收藏」红心标识（owner 拍板）——本页即已收藏列表，无需逐个提醒 -->
       </view>
     </block>
 
