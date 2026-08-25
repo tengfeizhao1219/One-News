@@ -90,6 +90,15 @@ Page({
     wx.createSelectorQuery().in(this).select('.nav').boundingClientRect().exec(function (res) {
       if (res && res[0] && res[0].bottom > 0) that.setData({ progressTop: res[0].bottom })
     })
+    // 数据加载后(标题区 title-block 渲染)会再 _measureProgressTop 用 title-block 底部覆盖,更准
+  },
+
+  /** 进度条 top = .title-block(标题区,不透明) 底部——贴"顶部不透明区域"底(首次进入未滚动时) */
+  _measureProgressTop() {
+    var that = this
+    wx.createSelectorQuery().in(this).select('.title-block').boundingClientRect().exec(function (res) {
+      if (res && res[0] && res[0].bottom > 0) that.setData({ progressTop: res[0].bottom })
+    })
   },
 
   /** 顶部阅读进度条（2026-08-24 对齐 One News detail）：正文滚动百分比 */
@@ -312,6 +321,8 @@ function cleanText(v) {
       empty: false,
       searchQuickTitle: (cleanText(d.title) || this.data.title || '').slice(0, 60),
     })
+    // 2026-08-24：进度条 top = 标题区(title-block)底部——贴"顶部不透明区域"底(owner 反馈要贴标题区底而非导航行底)
+    this._measureProgressTop()
     // 内存缓存：同一 id 重复进入直接展示，不再调云函数
     if (d && d.title) {
       if (!app.globalData.intelDetailCache) app.globalData.intelDetailCache = {}
