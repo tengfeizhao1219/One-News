@@ -92,14 +92,20 @@ Page({
     })
   },
 
-  /** 顶部阅读进度条（2026-08-24 对齐 One News detail）：正文滚动百分比 */
+  /** 顶部阅读进度条（2026-08-24 对齐 One News detail）：正文滚动百分比——节流 setData 防卡顿 */
   onContentScroll(e) {
     var st = e.detail.scrollTop
     var sh = e.detail.scrollHeight
     if (!this._clientHeight) this._measureContentHeight()
     var max = sh - (this._clientHeight || 500)
     var pct = max > 0 ? Math.min(100, parseFloat((st / max * 100).toFixed(1))) : 0
-    this.setData({ progressPercent: pct })
+    // 2026-08-26：bindscroll 高频触发 → 仅当进度值变化且距上次>60ms 才 setData,避免每帧重渲染卡死模拟器
+    var now = Date.now()
+    if (pct !== this._lastPct && (!this._pctTs || now - this._pctTs > 60)) {
+      this._lastPct = pct
+      this._pctTs = now
+      this.setData({ progressPercent: pct })
+    }
   },
   _measureContentHeight() {
     var that = this
