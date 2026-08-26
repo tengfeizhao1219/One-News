@@ -349,6 +349,14 @@
   border-bottom: 1rpx solid var(--divider);
 }
 .contact-modal-item:last-of-type { border-bottom: none; }
+.contact-modal-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;   /* 内容向左对齐 */
+  gap: 8rpx;
+  flex: 1;
+  min-width: 0;
+}
 .contact-modal-name {
   font-size: 26rpx;
   color: var(--text-tertiary);
@@ -358,8 +366,6 @@
   font-size: 28rpx;
   color: var(--text-primary);
   font-weight: 500;
-  flex: 1;
-  text-align: right;
   word-break: break-word;
 }
 .contact-modal-copy {

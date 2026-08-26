@@ -197,6 +197,11 @@ Page({
     this._copy('ztengfei@hotmail.com', '邮箱')
   },
 
+  // 2026-08-26: 点击邮箱——复制并提示可在邮件 App 粘贴发送(小程序无直接调起系统邮件接口,故用复制引导)
+  onEmailTap: function () {
+    this._copy('ztengfei@hotmail.com', '邮箱')
+  },
+
   /**
    * UI-B9: 复制微信
    */

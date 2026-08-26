@@ -119,13 +119,17 @@
     <view class="contact-modal" catchtap="noop">
       <view class="contact-modal-title">联系开发者</view>
       <view class="contact-modal-item">
-        <text class="contact-modal-name">邮箱</text>
-        <text class="contact-modal-key">ztengfei@hotmail.com</text>
+        <view class="contact-modal-info">
+          <text class="contact-modal-name">邮箱</text>
+          <text class="contact-modal-key" bindtap="onEmailTap">ztengfei@hotmail.com</text>
+        </view>
         <view class="contact-modal-copy" bindtap="copyEmail">复制</view>
       </view>
       <view class="contact-modal-item">
-        <text class="contact-modal-name">微信</text>
-        <text class="contact-modal-key">jiaowotengfei</text>
+        <view class="contact-modal-info">
+          <text class="contact-modal-name">微信</text>
+          <text class="contact-modal-key">jiaowotengfei</text>
+        </view>
         <view class="contact-modal-copy" bindtap="copyWechat">复制</view>
       </view>
       <view class="contact-modal-btn" bindtap="closeContactModal">关闭</view>
