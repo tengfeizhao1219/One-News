@@ -27,7 +27,7 @@
   display: flex;
   align-items: center;
   gap: 12rpx;
-  padding: 0 32rpx;
+  padding: 0 32rpx 26rpx;   /* 2026-08-26: 顶部状态区域往下扩展 26rpx(≈原内容顶部留白 44rpx 的 60%) */
   /* ⚠️ 临时调试色(owner 2026-08-25 要求,识别页面顶部状态区域边界)——确认后改回 */
   background-color: rgba(255, 59, 48, 0.2);
 }
@@ -103,9 +103,8 @@
   background-color: #F5F3F0;
   flex: 1;
   height: 0;
-  /* owner 2026-08-19：标题与顶部导航保留呼吸空间（16rpx → 44rpx） */
-  /* 底部 padding 仅保留安全区（safe-bottom），内容底部留白由 foot-note 自身 padding 控制 */
-  padding: 44rpx 32rpx var(--safe-bottom, 0px);
+  /* 2026-08-26：删除顶部 44rpx 留白(标题与导航间的空隙);顶部状态区域往下扩展补偿(见 .nav padding-bottom) */
+  padding: 0 32rpx var(--safe-bottom, 0px);
   box-sizing: border-box;
   overflow-y: auto;
 }
