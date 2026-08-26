@@ -1,4 +1,4 @@
-# One News · Release Note v2.0
+# One News · Release Note v2.0.0
 
 > 发布日期：2026-08-26 ｜ 上一版本：v1.0.2
 
