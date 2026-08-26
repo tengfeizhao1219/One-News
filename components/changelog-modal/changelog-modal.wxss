@@ -41,21 +41,18 @@
   opacity: 1;
 }
 
-/* 左右布局：logo 左 + 版本号/日志 右（2026-08-26 节省空间） */
-.cm-layout {
-  padding: 36rpx 40rpx 8rpx;
+/* 顶部横向 header：logo 左 + 版本号/日期 右（2026-08-26 用户确认） */
+.cm-header {
+  padding: 36rpx 40rpx 0;
   display: flex;
   align-items: flex-start;
-  gap: 24rpx;
+  justify-content: space-between;
 }
 .cm-logo {
   flex-shrink: 0;
-  /* 2026-08-26: 左侧上下轻微留白,不与右侧内容顶对齐贴死 */
-  padding-top: 10rpx;
 }
-.cm-main {
-  flex: 1;
-  min-width: 0;
+.cm-header-right {
+  text-align: right;
 }
 .cm-version {
   font-size: 30rpx;
@@ -74,7 +71,7 @@
 .cm-progress {
   height: 3rpx;
   background: transparent;
-  margin-top: 12rpx;
+  margin: 12rpx 40rpx 0;   /* 左右 40rpx 与 header 内容对齐 */
 }
 .cm-progress-bar {
   width: 0%;

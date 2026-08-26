@@ -4,21 +4,22 @@
 <view class="cm-overlay {{visible ? 'cm-show' : ''}} {{animShow ? 'cm-fade' : ''}}" bindtap="onOverlayTap">
   <view class="cm-card" catchtap="onCardTap">
 
-    <!-- logo 左 + 版本号/日期/日志 右（2026-08-26 节省空间） -->
-    <view class="cm-layout">
+    <!-- 顶部横向 header：logo 左 + 版本号/日期 右（2026-08-26 用户确认） -->
+    <view class="cm-header">
       <view class="cm-logo">
         <logo id="modal-logo" mode="wordmark" size="240"></logo>
       </view>
-
-      <view class="cm-main">
+      <view class="cm-header-right">
         <view class="cm-version">{{version}}</view>
         <view class="cm-date" wx:if="{{date}}">{{date}}</view>
+      </view>
+    </view>
 
-        <!-- 顶部横条进度(2026-08-26 家族化,替代侧边滚动条) -->
-        <view class="cm-progress"><view class="cm-progress-bar" style="width: {{progressPercent}}%;"></view></view>
+    <!-- 顶部横条进度(2026-08-26 家族化,替代侧边滚动条) -->
+    <view class="cm-progress"><view class="cm-progress-bar" style="width: {{progressPercent}}%;"></view></view>
 
-        <!-- 滚动日志内容 -->
-        <scroll-view scroll-y class="cm-body" enhanced show-scrollbar="{{false}}" bindscroll="onScroll">
+    <!-- 滚动日志内容（下方区域） -->
+    <scroll-view scroll-y class="cm-body" enhanced show-scrollbar="{{false}}" bindscroll="onScroll">
           <block wx:for="{{sections}}" wx:key="label" wx:for-item="section">
             <view class="cm-section-title cm-{{section.type}}">{{section.label}}</view>
             <view class="cm-item" wx:for="{{section.items}}" wx:key="title" wx:for-item="item">
@@ -29,9 +30,7 @@
               </view>
             </view>
           </block>
-        </scroll-view>
-      </view>
-    </view>
+    </scroll-view>
 
     <!-- 底部：知道了按钮 -->
     <view class="cm-footer">
