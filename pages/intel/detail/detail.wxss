@@ -16,8 +16,6 @@
   right: 0;
   width: 100%;
   z-index: 16;
-  /* ⚠️ 临时调试色(owner 2026-08-25 要求,识别页面顶部状态区域边界)——确认后改回,由 wxml inline 控制 */
-  background-color: rgba(255, 59, 48, 0.35) !important;
 }
 .nav {
   /* 与原生胶囊垂直居中对齐：容器 top=胶囊顶(menu-top)、height=胶囊高(menu-height)、内部 flex 居中（对齐 One News panel-header 做法） */
@@ -28,8 +26,6 @@
   align-items: center;
   gap: 12rpx;
   padding: 0 32rpx 26rpx;   /* 2026-08-26: 顶部状态区域往下扩展 26rpx(≈原内容顶部留白 44rpx 的 60%) */
-  /* ⚠️ 临时调试色(owner 2026-08-25 要求,识别页面顶部状态区域边界)——确认后改回 */
-  background-color: rgba(255, 59, 48, 0.2);
 }
 
 .nav-home {
@@ -128,18 +124,6 @@
   background-color: var(--bg-page);
   padding-bottom: 8rpx;
 }
-
-/* ==================== ⚠️ 临时调色板(owner 2026-08-26 要求,标记详情页各部分,便于识别) ==================== */
-/* 状态栏=红 · 导航行=橙红 · 标题区(title-block)=黄 · 正文(rest)=绿 · 区块标题(block-label)=橙
-   AI预测(wh-panel)=蓝 · 落到你这里(for-card)=紫 · 了解更多/试试看(fold)=青 · 搜索面板=灰 */
-.title-block { background: rgba(255, 214, 0, 0.35); }
-.rest { background: rgba(0, 200, 0, 0.12); }
-.block-label { background: rgba(255, 120, 0, 0.35); }
-.wh-panel { background: rgba(0, 130, 255, 0.22); }
-.for-card { background: rgba(160, 0, 255, 0.18); }
-.fold { background: rgba(0, 190, 190, 0.18); }
-.search-panel { background: rgba(128, 128, 128, 0.2); }
-/* ==================== 临时调色板结束 ==================== */
 
 /* 结论式标题 + 来源 */
 .detail-title {
