@@ -58,6 +58,10 @@ Page({
     isDark: false,
     _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
     intelActive: false,        // INTEL-BRIDGE: AI 情报屏是否覆盖显示（true=情报屏在屏，false=藏在左侧）
+    // 关注后续：首页长按进入「我的关注」——按压进度环
+    lpRing: false,
+    lpX: 0,
+    lpY: 0,
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
@@ -696,9 +700,22 @@ Page({
     this._touchStartY = e.touches[0].clientY
     this._touchStartX = e.touches[0].clientX
     this._touchStartT = Date.now()
+    // 关注后续：长按进入「我的关注」（仅 One News 首页本体、面板/情报屏未展开时）
+    this._startFollowPress(e)
+  },
+
+  onTouchMove(e) {
+    // 关注后续：长按期间若手指移动超过阈值，取消长按（让位给翻页/右滑/面板手势）
+    if (this._touchActive && e.touches && e.touches[0]) {
+      var dx = e.touches[0].clientX - (this._touchStartX || 0)
+      var dy = e.touches[0].clientY - (this._touchStartY || 0)
+      if (Math.abs(dx) > 20 || Math.abs(dy) > 20) this._cancelLongPress()
+    }
   },
 
   onTouchEnd(e) {
+    // 关注后续：松手即清除长按计时（任何情况都清，含动画中）
+    this._cancelLongPress()
     if (this._isAnimating) return
 
     var dy = e.changedTouches[0].clientY - this._touchStartY
@@ -736,6 +753,35 @@ Page({
       if (dy < 0) this._animateSwipeNext()
       else this._animateSwipePrev()
     }
+  },
+
+  // ============ 关注后续：长按进入「我的关注」 ============
+  // 规则：按住不动 500ms = 触发；一滚动/移动就取消（与详情页一致，无冲突）
+  _startFollowPress(e) {
+    if (this._destroyed || this.data.showPanel || this.data.intelActive) return
+    var t = (e.touches && e.touches[0]) || {}
+    this._touchActive = true
+    this.setData({
+      lpRing: true,
+      lpX: t.clientX || 0,
+      lpY: t.clientY || 0,
+    })
+    var that = this
+    if (this._lpTimer) clearTimeout(this._lpTimer)
+    this._lpTimer = setTimeout(function () { that._enterFollow() }, 500)
+  },
+  _cancelLongPress() {
+    this._touchActive = false
+    if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null }
+    if (this.data.lpRing) this.setData({ lpRing: false })
+  },
+  _enterFollow() {
+    this._touchActive = false
+    this._lpTimer = null
+    this.setData({ lpRing: false })
+    // 记录按压点，供目标页圆形绽放过场（clip-path 从按压点 0%→150%）
+    app.globalData.followEnterPoint = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
+    wx.navigateTo({ url: '/pages/followup/followup' })
   },
 
   // ============ INTEL-BRIDGE (START): AI 情报模块——同屏横滑（内嵌面板，最小可摘除） ============

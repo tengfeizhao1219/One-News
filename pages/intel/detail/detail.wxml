@@ -22,7 +22,7 @@
     <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 
-  <scroll-view class="content" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll">
+  <scroll-view class="content {{lpShake ? 'lpshake' : ''}} no-select" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
@@ -42,7 +42,12 @@
 
       <!-- 结论式标题（仅标题行钉顶；meta 移入 rest 随内容上滑，2026-08-26 owner 要求） -->
       <view class="title-block">
-        <text class="detail-title">{{title}}</text>
+        <text class="detail-title {{isFollowed ? 'detail-title--b' : ''}}">{{title}}</text>
+        <!-- 关注后续：已关注常驻小标（长按内容区触发） -->
+        <view class="follow-badge" wx:if="{{isFollowed}}">
+          <text class="follow-badge-ic">🔔</text>
+          <text class="follow-badge-txt">已关注 · 每天 12:00 追踪</text>
+        </view>
       </view>
 
       <!-- 其余内容（title 钉顶；meta 随内容上滑——owner 2026-08-26） -->
@@ -167,6 +172,9 @@
     </block>
     </view>
   </scroll-view>
+
+  <!-- 关注后续：长按进度环（0.5s 充满后触发关注） -->
+  <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
 
   <!-- 话题搜索覆盖面板（FAB 点击：面板从底部升起，把其余内容顶上去；结果展开展示，下滑到顶或退出收起） -->
   <scroll-view class="search-panel {{searchOpen ? 'open' : ''}}" id="search-area" style="top: {{searchPanelTop}};" scroll-y scroll-into-view="{{digScrollTo}}" enhanced show-scrollbar="{{false}}" bindscroll="onSearchScroll" bindtouchstart="onPanelTouchStart" bindtouchmove="onPanelTouchMove" bindtouchend="onPanelTouchEnd">

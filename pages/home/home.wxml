@@ -57,7 +57,8 @@
 
   <!-- ========== 正常卡片流 ========== -->
   <view class="card-stage {{showPanel ? 'hidden' : ''}}" wx:if="{{pageState === 'ready'}}"
-    bindtouchstart="onTouchStart" 
+    bindtouchstart="onTouchStart"
+    bindtouchmove="onTouchMove"
     bindtouchend="onTouchEnd">
     <block wx:for="{{cards}}" wx:key="id">
       <view 
@@ -218,5 +219,8 @@
     bind:reqback="onIntelReqBack">
   </intel-stage>
   <!-- ========== INTEL-BRIDGE (END) ========== -->
+
+  <!-- 关注后续：长按进度环（0.5s 充满后进入「我的关注」） -->
+  <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
 
 </view>

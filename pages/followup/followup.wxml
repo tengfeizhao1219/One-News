@@ -1,0 +1,61 @@
+<!-- 我的关注 — 跨模块聚合 Feed（One News + 情报官） -->
+<view class="page {{themeClass}}" style="{{revealStyle}} --nav-offset: {{navOffset}}px;">
+
+  <!-- 状态栏占位 -->
+  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+
+  <!-- 导航栏：返回（左）+ 标题（中）+ 全部标已读（右） -->
+  <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
+    <view class="nav-back" bindtap="goBack" hover-class="nav-back--hover" style="top: calc({{menuHeight}}px / 2 - 32rpx);">
+      <text class="nav-back-arrow">‹</text>
+    </view>
+    <view class="nav-title">我的关注</view>
+    <view class="nav-markall" wx:if="{{unreadCount > 0}}" bindtap="onMarkAllRead">全部标为已读</view>
+  </view>
+
+  <!-- 空态 -->
+  <view class="empty-wrap" wx:if="{{isEmpty}}">
+    <view class="empty-icon">🔔</view>
+    <view class="empty-text">还没有关注任何话题</view>
+    <view class="empty-hint">在资讯或情报详情页，长按正文即可「关注后续」</view>
+    <view class="empty-btn" bindtap="goHome">去首页看看</view>
+  </view>
+
+  <!-- 列表：四态卡片 -->
+  <scroll-view class="list-scroll" scroll-y wx:if="{{!isEmpty}}">
+    <view class="fu-item {{item.status}}" wx:for="{{list}}" wx:key="itemId"
+      data-id="{{item.itemId}}" data-module="{{item.module}}"
+      bindtap="onItemTap" bindlongpress="onItemLongPress">
+
+      <view class="fu-head">
+        <view class="fu-module {{item.module}}">{{item.module === 'intel' ? '情报官' : '资讯'}}</view>
+        <view class="fu-title">{{item.title}}</view>
+      </view>
+
+      <view class="fu-meta">
+        <view class="fu-dot"></view>
+        <text class="fu-status">{{item.statusText}}</text>
+        <text class="fu-track">· 每天 {{item.trackTime}} 追踪</text>
+      </view>
+
+      <!-- 每日更新时间线（点击展开） -->
+      <view class="fu-timeline" wx:if="{{expanded[item.itemId]}}">
+        <block wx:if="{{item.timeline.length > 0}}">
+          <view class="fu-tl" wx:for="{{item.timeline}}" wx:for-item="tl" wx:key="date">
+            <view class="fu-tl-date">{{tl.date}} · AI 全网追踪</view>
+            <view class="fu-tl-summary">{{tl.summary}}</view>
+            <view class="fu-tl-src">来源数 {{tl.sourcesCount}}</view>
+          </view>
+        </block>
+        <view class="fu-tl-empty" wx:else>暂无更新记录</view>
+      </view>
+    </view>
+
+    <view class="brand-footer">
+      <view class="brand-card">
+        <logo id="fu-logo" mode="splash" fluid></logo>
+      </view>
+      <view class="brand-text">一页 · 简单到极致</view>
+    </view>
+  </scroll-view>
+</view>

@@ -138,6 +138,35 @@
   line-height: 1.5;
   padding-bottom: 8rpx;
 }
+/* 关注后续：已关注标题态（情报官紫呼应，不改版式） */
+.detail-title--b {
+  color: var(--flash-world, #5856D6);
+}
+
+/* 关注后续：标题下常驻小标（情报官紫） */
+.follow-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  background-color: rgba(88, 86, 214, 0.12);
+  align-self: flex-start;
+}
+.follow-badge-ic { font-size: 22rpx; line-height: 1; }
+.follow-badge-txt {
+  font-size: 22rpx;
+  color: var(--flash-world, #5856D6);
+  letter-spacing: 0.2rpx;
+}
+.page--dark .follow-badge { background-color: rgba(88, 86, 214, 0.22); }
+
+/* 关注后续：内容区禁用系统长按选择（避免与「长按关注」手势冲突弹复制菜单） */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
 .meta {
   margin-top: 16rpx;
   font-size: calc(24rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));

@@ -2,7 +2,7 @@
   INTEL-MODULE: AI 情报官模块 · 情报首页（UI 重构 v6 落地：卡片流 · 轻高亮 · 少图标）
   变更要点：去"今日关注"标题；卡片去掉来源/时间（挪详情页）；rank 1 重点卡带"对你最重要"tag + 浅蓝底"对你"行；FAB 未动。
 -->
-<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --page-h: {{pageH}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchend="onSlideTouchEnd">
+<view class="page {{themeClass}} intel-home" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --page-h: {{pageH}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}};" bindtouchstart="onSlideTouchStart" bindtouchmove="onSlideTouchMove" bindtouchend="onSlideTouchEnd">
 
   <!-- 状态栏背景层（对齐胶囊顶部 menuTop，与 One News 首页一致） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
@@ -53,4 +53,7 @@
     <image class="more-icon-img more-light" src="/assets/icons/settings.svg" mode="aspectFit"></image>
     <image class="more-icon-img more-dark" src="/assets/icons/settings-dark.svg" mode="aspectFit"></image>
   </view>
+
+  <!-- 关注后续：长按进度环（0.5s 充满后进入「我的关注」） -->
+  <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
 </view>

@@ -18,6 +18,8 @@ var cloud = require('../../utils/cloud')
 var app = getApp()
 // 2026-08-22：话题搜索深挖（intelSearch 云函数，从 intel 详情页平移）
 var searchIntelTopic = require('../../utils/intelApi').searchIntelTopic
+// 「关注后续」关注关系本地存储（纯本地，对齐 favorites / intelFavorites 模式）
+var followUp = require('../../utils/followUp')
 
 // 全局缓存单例（引擎内部复用，favorites / browseHistory 同源存储为数组）
 var _cache = localCache
@@ -53,6 +55,12 @@ Page({
     // 收藏
     isFavorited: false,
     heartAnim: false,
+    // 关注后续：长按关注
+    isFollowed: false,
+    lpRing: false,
+    lpX: 0,
+    lpY: 0,
+    lpShake: false,
     // BUG-FS-20260805-001: 深色模式下收藏星星 icon 切换白色版（image 渲染 SVG 时 currentColor 不生效，固定为黑色）
     isDark: false,
     // 字体档位（UX-FIX04 截断保护用）
@@ -414,6 +422,7 @@ Page({
     that._bottomScrollTop = null
     if (news && news.id) {
       that._checkFavorite(news.id)
+      that._checkFollow(news.id) // 关注后续：加载即同步已关注常驻小标
       that._recordBrowse(news) // DG-02/TL-B14：浏览记录写入（纯本地）
     }
     // FS-02: news 就绪 → 预生成当前新闻的 AI 摘要分享图（翻页到新新闻也会重新生成）
@@ -462,7 +471,7 @@ Page({
           pageState: 'ready',
         })
         that._startSwipeHintTimer()
-        if (news && news.id) that._checkFavorite(news.id)
+        if (news && news.id) { that._checkFavorite(news.id); that._checkFollow(news.id) }
     }).catch(function () {
       var msg = isExpiredEntry ? '该新闻已失效' : '新闻详情暂不可用，请返回重试'
       that.setData({ pageState: 'error', errorMessage: msg })
@@ -475,9 +484,13 @@ Page({
   onTouchStart: function (e) {
     this._touchStartY = e.touches[0].clientY
     this._touchStartT = Date.now()
+    // 关注后续：长按内容区 500ms 触发关注（已关注则跳过）
+    this._startFollowPress(e)
   },
 
   onTouchEnd: function (e) {
+    // 关注后续：松手即清除长按计时（任何情况都清，含搜索面板/翻页）
+    this._cancelLongPress()
     var that = this
     // 2026-08-22：搜索面板展开时，滑动只收起面板，不触发翻页（面板内滚动事件已独立处理）
     if (this.data.searchOpen) {
@@ -545,6 +558,10 @@ Page({
     var scrollHeight = e.detail.scrollHeight
     var clientHeight = this._clientHeight || 500
     this._lastScrollTop = scrollTop
+    // 关注后续：长按期间若内容滚动（用户移动/滑动），取消长按计时
+    if (this._touchActive && Math.abs(scrollTop - (this._lpStartScrollTop || 0)) > 12) {
+      this._cancelLongPress()
+    }
     // UI-B11: 实时更新进度条百分比（保留一位小数，进度条连续平滑）
     var progressMax = scrollHeight - clientHeight
     var pct = progressMax > 0 ? Math.min(100, parseFloat((scrollTop / progressMax * 100).toFixed(1))) : 0
@@ -1096,6 +1113,75 @@ Page({
     } catch (e) {
       this.setData({ isFavorited: false })
     }
+  },
+
+  // ============ 关注后续：长按关注（纯本地，对齐收藏） ============
+
+  /**
+   * 检查当前新闻是否已关注（从 localCache 读取），同步常驻小标
+   */
+  _checkFollow: function (newsId) {
+    if (!newsId) return
+    try {
+      var followed = followUp.isFollowed('onenews', newsId)
+      this.setData({ isFollowed: followed })
+    } catch (e) {
+      this.setData({ isFollowed: false })
+    }
+  },
+
+  /**
+   * 开启长按关注计时：记录按压点、显示进度环、500ms 后触发
+   * 已关注则直接跳过（详情页长按=只关注一次）
+   */
+  _startFollowPress: function (e) {
+    if (this._destroyed || this.data.isFollowed) return
+    var t = (e.touches && e.touches[0]) || {}
+    this._touchActive = true
+    this._lpStartScrollTop = this._lastScrollTop || 0
+    this.setData({
+      lpRing: true,
+      lpX: t.clientX || 0,
+      lpY: t.clientY || 0,
+    })
+    var that = this
+    if (this._lpTimer) clearTimeout(this._lpTimer)
+    this._lpTimer = setTimeout(function () { that._fireFollow() }, 500)
+  },
+
+  /** 取消长按计时（滚动/移动/松手时调用） */
+  _cancelLongPress: function () {
+    this._touchActive = false
+    if (this._lpTimer) {
+      clearTimeout(this._lpTimer)
+      this._lpTimer = null
+    }
+    if (this.data.lpRing) this.setData({ lpRing: false })
+  },
+
+  /** 触发关注：写入关注关系 + 三重反馈（抖动/居中提示/常驻小标） */
+  _fireFollow: function () {
+    this._touchActive = false
+    this._lpTimer = null
+    var news = this.data.news
+    if (!news || !news.id) { this.setData({ lpRing: false }); return }
+    var res = followUp.addFollow('onenews', {
+      itemId: news.id,
+      title: news.title || '',
+      source: news.source || '',
+      category: news.category || '',
+      categoryName: news.categoryName || '',
+      picUrl: news.picUrl || '',
+    })
+    if (res.full) {
+      this.setData({ lpRing: false })
+      wx.showToast({ title: '关注已达上限，请先清理', icon: 'none' })
+      return
+    }
+    var that = this
+    this.setData({ lpRing: false, lpShake: true, isFollowed: true })
+    setTimeout(function () { that.setData({ lpShake: false }) }, 420)
+    wx.showToast({ title: '🔔 已关注，每天 12:00 为你追踪', icon: 'none', duration: 1500 })
   },
 
   /**

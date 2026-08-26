@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One News · 关注后续 功能 UI Demo</title>
+<style>
+  :root{
+    --bg-page:#F5F3F0; --bg-card:#FAF9F7; --bg-subtle:#F0EEEA;
+    --text-primary:#1C1C1E; --text-secondary:#6B6B70; --text-body:#5E5E60; --text-tertiary:#8A8A8E;
+    --divider:#E8E6E1; --tag-bg:#EEECE8; --bottom-bar-bg:rgba(250,249,247,.92);
+    --primary:#007AFF; --primary-tint:rgba(0,122,255,.10); --warning:#F59E0B; --danger:#FF3B30;
+    --intel:#5856D6; --intel-tint:rgba(88,86,214,.10); --success:#34C759;
+  }
+  body.dark{
+    --bg-page:#000; --bg-card:#0D0D0D; --bg-subtle:#1A1A1C;
+    --text-primary:#FFF; --text-secondary:#999; --text-body:#D4D4D4; --text-tertiary:#666;
+    --divider:#1C1C1E; --tag-bg:#1C1C1E; --bottom-bar-bg:rgba(13,13,13,.94);
+    --primary:#0A84FF; --primary-tint:rgba(10,132,255,.18); --warning:#FBBF24; --danger:#FF453A;
+    --intel:#818CF8; --intel-tint:rgba(129,140,248,.16); --success:#30D158;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro SC","PingFang SC",sans-serif;background:#d9d4cc;padding:24px 16px 56px;color:var(--text-primary);transition:background .3s;}
+  body.dark{background:#1a1a1c;}
+  .controls{max-width:1240px;margin:0 auto 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .btn{border:1px solid #bbb;background:#fff;color:#333;padding:7px 14px;border-radius:9px;font-size:13px;cursor:pointer;}
+  .btn.active{border-color:var(--primary);color:var(--primary);}
+  .page-title{max-width:1240px;margin:0 auto 4px;font-size:18px;font-weight:800;}
+  .page-sub{max-width:1240px;margin:0 auto 18px;font-size:12.5px;color:#666;line-height:1.7;}
+  body.dark .page-sub{color:#999;}
+  .part{max-width:1240px;margin:34px auto 8px;padding-top:14px;border-top:1px dashed #c9c3ba;font-size:15px;font-weight:800;display:flex;align-items:center;gap:10px;}
+  body.dark .part{border-color:#333;}
+  .part .pill{font-size:11px;font-weight:700;color:#fff;background:var(--primary);padding:3px 10px;border-radius:99px;}
+  .part .pill.best{background:var(--success);}
+  .stage{max-width:1240px;margin:0 auto 26px;}
+  .stage-label{font-size:13px;font-weight:700;color:#444;margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  body.dark .stage-label{color:#ccc;}
+  .stage-label .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;color:#fff;}
+  .tag.now{background:var(--danger);}
+  .tag.best{background:var(--success);}
+  .tag.dual{background:var(--intel);}
+  .stage-label .note{font-size:11.5px;font-weight:400;color:#888;margin-left:4px;}
+  .phones{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .phone{width:390px;min-height:760px;border-radius:42px;background:var(--bg-page);overflow:hidden;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.28);border:8px solid #2c2c2e;display:flex;flex-direction:column;transition:background .3s;}
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:15px;font-weight:600;flex-shrink:0;}
+  .capsule{width:92px;height:28px;background:#000;border-radius:18px;opacity:.9;margin-left:auto;}
+  .nav{display:flex;align-items:center;gap:10px;padding:6px 22px 2px;flex-shrink:0;}
+  .nav-home{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:18px;color:var(--text-primary);flex-shrink:0;}
+  .nav-title{flex:1;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .scroll{flex:1;overflow-y:auto;padding:8px 24px 130px;position:relative;}
+  .detail-title{font-size:19px;font-weight:800;line-height:1.5;}
+  .meta{margin-top:8px;font-size:12px;color:var(--text-tertiary);display:flex;gap:10px;align-items:center;}
+  .src-tag{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:99px;background:var(--tag-bg);color:var(--text-secondary);}
+  .src-tag.intel{background:var(--intel-tint);color:var(--intel);}
+  .prose{font-size:13.5px;color:var(--text-body);line-height:1.8;margin-top:14px;}
+  .prose p{margin-bottom:12px;}
+  .prose .ai-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--primary);background:var(--primary-tint);padding:2px 8px;border-radius:99px;margin-bottom:8px;}
+  .prose .ai-badge.intel{background:var(--intel-tint);color:var(--intel);}
+  /* ---- 底部操作栏（收藏 / 分享，不含关注按钮） ---- */
+  .bottom-bar{position:absolute;left:0;right:0;bottom:0;height:calc(42px + 34px);padding-bottom:34px;display:flex;background:var(--bottom-bar-bg);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:.5px solid var(--divider);z-index:20;transition:background .3s;}
+  .bottom-bar .bb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--text-secondary);cursor:pointer;user-select:none;}
+  .bottom-bar .bb svg{width:22px;height:22px;}
+  .bottom-bar .bb.fav.on{color:var(--danger);}
+  /* ---- 关注聚合 feed ---- */
+  .feed-head{padding:4px 2px 10px;display:flex;align-items:center;justify-content:space-between;}
+  .feed-head .t{font-size:17px;font-weight:800;}
+  .feed-head .c{font-size:12px;color:var(--text-tertiary);}
+  .follow-card{background:var(--bg-card);border-radius:16px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);cursor:pointer;border:.5px solid var(--divider);}
+  .fc-top{display:flex;align-items:flex-start;gap:10px;}
+  .fc-title{font-size:14.5px;font-weight:700;line-height:1.45;flex:1;}
+  .fc-badge{font-size:10.5px;font-weight:700;color:#fff;background:var(--danger);padding:2px 8px;border-radius:99px;white-space:nowrap;}
+  .fc-badge.read{background:var(--tag-bg);color:var(--text-tertiary);}
+  .fc-badge.fresh{background:var(--success);}
+  .fc-meta{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:11px;color:var(--text-tertiary);flex-wrap:wrap;}
+  .fc-meta .dot{width:3px;height:3px;border-radius:50%;background:var(--text-tertiary);opacity:.6;}
+  .fc-summary{margin-top:10px;font-size:12.5px;color:var(--text-body);line-height:1.7;background:var(--bg-subtle);border-radius:10px;padding:9px 11px;}
+  .fc-summary b{color:var(--primary);font-weight:700;}
+  .tl{margin-top:10px;border-left:2px solid var(--divider);padding-left:14px;}
+  .tl-item{position:relative;padding:0 0 14px;}
+  .tl-item::before{content:"";position:absolute;left:-20px;top:4px;width:9px;height:9px;border-radius:50%;background:var(--primary);border:2px solid var(--bg-card);}
+  .tl-date{font-size:11px;font-weight:700;color:var(--primary);}
+  .tl-body{font-size:12.5px;color:var(--text-body);line-height:1.7;margin-top:3px;}
+  .tl-src{font-size:11px;color:var(--text-tertiary);margin-top:3px;}
+  .link-row{margin-top:10px;font-size:12px;color:var(--primary);font-weight:600;display:flex;align-items:center;gap:4px;}
+  .read-all{margin:2px 0 14px;font-size:12px;color:var(--primary);font-weight:600;text-align:right;cursor:pointer;}
+  /* ---- 空状态 ---- */
+  .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:0 40px;text-align:center;color:var(--text-tertiary);}
+  .empty svg{width:88px;height:88px;opacity:.5;margin-bottom:18px;}
+  .empty .et{font-size:15px;font-weight:700;color:var(--text-secondary);margin-bottom:8px;}
+  .empty .es{font-size:12.5px;line-height:1.7;}
+  .empty .ecta{margin-top:18px;padding:10px 20px;border-radius:99px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .home-indicator{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.35);z-index:60;}
+  body.dark .home-indicator{background:rgba(255,255,255,.3);}
+  .rec-flag{position:absolute;top:54px;left:18px;z-index:25;font-size:10.5px;font-weight:700;color:#fff;background:var(--success);padding:3px 9px;border-radius:99px;box-shadow:0 3px 10px rgba(52,199,89,.4);}
+  .desc{max-width:390px;margin-top:12px;font-size:12px;color:#666;line-height:1.7;padding:10px 12px;background:var(--bg-subtle);border-radius:12px;}
+  body.dark .desc{color:#aaa;}
+  .desc b{color:var(--text-primary);}
+  .desc .k{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--primary-tint);color:var(--primary);margin-right:4px;}
+  /* ---- 方案④ 长按直接关注 ---- */
+  .scroll.lp-active{transform:scale(.985);transition:transform .15s;filter:brightness(.98);}
+  .scroll.shake{animation:lpshake .42s cubic-bezier(.36,.07,.19,.97);}
+  @keyframes lpshake{10%{transform:translateX(-8px) rotate(-.6deg);}20%{transform:translateX(8px) rotate(.6deg);}35%{transform:translateX(-6px) rotate(-.4deg);}50%{transform:translateX(6px) rotate(.4deg);}65%{transform:translateX(-4px);}80%{transform:translateX(4px);}100%{transform:translateX(0);}}
+  .lp-toast{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) scale(.9);background:rgba(28,28,30,.92);color:#fff;font-size:13px;font-weight:600;padding:11px 18px;border-radius:14px;z-index:450;opacity:0;pointer-events:none;transition:all .2s;white-space:nowrap;box-shadow:0 8px 30px rgba(0,0,0,.25);display:flex;align-items:center;gap:7px;}
+  .lp-toast.show{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  .lp-toast .ico{font-size:16px;}
+  .lp-indicator{display:none;align-items:center;gap:5px;margin-top:12px;padding:6px 12px;border-radius:99px;background:var(--primary-tint);color:var(--primary);font-size:12px;font-weight:700;}
+  .lp-indicator svg{width:15px;height:15px;}
+  .lp-press-ring{position:absolute;width:18px;height:18px;border:3px solid var(--primary);border-radius:50%;transform:translate(-50%,-50%) scale(.4);opacity:0;pointer-events:none;z-index:300;}
+  .lp-press-ring.go{animation:lpRing .5s linear forwards;}
+  @keyframes lpRing{0%{opacity:.9;transform:translate(-50%,-50%) scale(.4);}100%{opacity:0;transform:translate(-50%,-50%) scale(2.4);}}
+  /* ---- Part 3：关注入口候选 ---- */
+  .mini-card{background:var(--bg-card);border-radius:14px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);border:.5px solid var(--divider);}
+  .mini-card .t{font-size:14px;font-weight:700;line-height:1.4;}
+  .mini-card .m{font-size:11px;color:var(--text-tertiary);margin-top:5px;}
+  .red-dot{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--danger);color:#fff;font-size:10px;font-weight:700;margin-left:6px;vertical-align:middle;}
+  .floating-more{position:absolute;right:20px;bottom:calc(76px + 34px);width:48px;height:48px;border-radius:50%;background:var(--tag-bg);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 12px rgba(0,0,0,.14);z-index:90;font-size:20px;color:var(--text-secondary);cursor:pointer;}
+  .more-mask{position:absolute;inset:0;background:rgba(0,0,0,.25);z-index:95;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .more-mask.show{opacity:1;pointer-events:auto;}
+  .more-dock{position:absolute;right:20px;bottom:calc(134px + 34px);z-index:96;display:flex;flex-direction:column;gap:8px;align-items:flex-end;opacity:0;transform:translateY(10px) scale(.96);pointer-events:none;transition:all .22s cubic-bezier(.2,.8,.2,1);}
+  .more-dock.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+  .dock-item{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--bg-card);color:var(--text-primary);font-size:13px;font-weight:600;padding:10px 14px;border-radius:12px;box-shadow:0 3px 12px rgba(0,0,0,.12);min-width:130px;cursor:pointer;}
+  .dock-item.on{background:var(--primary);color:#fff;box-shadow:0 4px 16px rgba(0,122,255,.4);}
+  .sect-head{font-size:12px;font-weight:700;color:var(--text-tertiary);margin:14px 2px 8px;}
+  .mine-card{background:var(--bg-card);border-radius:14px;padding:13px 15px;margin-bottom:10px;border:.5px solid var(--divider);display:flex;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);cursor:pointer;}
+  .mine-card.on{border-color:var(--primary);background:var(--primary-tint);}
+  .mine-card .mc-body{flex:1;}
+  .mine-card .mc-title{font-size:14px;font-weight:700;display:flex;align-items:center;}
+  .mine-card .mc-desc{font-size:11.5px;color:var(--text-tertiary);margin-top:3px;}
+  .mine-card.on .mc-desc{color:var(--primary);}
+  .mine-card .mc-chev{color:var(--text-tertiary);font-size:18px;}
+  .mine-card.on .mc-chev{color:var(--primary);}
+  .seg-tab{display:flex;background:var(--bg-subtle);border-radius:12px;padding:3px;margin-bottom:14px;}
+  .seg-item{flex:1;text-align:center;font-size:13px;font-weight:600;color:var(--text-secondary);padding:8px 0;border-radius:9px;cursor:pointer;}
+  .seg-item.on{background:var(--bg-card);color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .top-entry{display:flex;align-items:center;gap:8px;margin:6px 2px 12px;padding:11px 14px;border-radius:14px;background:var(--primary-tint);color:var(--primary);font-size:13px;font-weight:700;cursor:pointer;}
+  .top-entry .te-sub{font-size:11px;font-weight:500;color:var(--text-secondary);margin-left:auto;}
+  /* ---- Part 4：长按首页进入「我的关注」过场动画 ---- */
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg-page);overflow:hidden;transition:background .3s;}
+  .screen.home{z-index:10;}
+  .screen.follow{z-index:30;}
+  .hp-back{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:24px;color:var(--text-primary);cursor:pointer;flex-shrink:0;}
+  /* 过场A（推荐）：圆形绽放——按压点扩散 */
+  .screen.follow.bloom{clip-path:circle(0% at var(--cx,50%) var(--cy,50%));transition:clip-path .55s cubic-bezier(.32,.72,0,1);}
+  .screen.follow.bloom.open{clip-path:circle(150% at var(--cx,50%) var(--cy,50%));}
+  .screen.home.dim{transform:scale(.96);transform-origin:center top;filter:brightness(.95) saturate(.96);transition:all .42s cubic-bezier(.2,.8,.2,1);}
+  /* ---- 设计定稿汇总框 ---- */
+  .spec-box{max-width:1240px;margin:0 auto 22px;background:var(--bg-subtle);border:1px solid var(--divider);border-radius:16px;padding:16px 18px;}
+  .spec-box h2{font-size:14px;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .spec-box h2 .pill{font-size:10.5px;font-weight:700;color:#fff;background:var(--success);padding:2px 9px;border-radius:99px;}
+  .spec-item{display:flex;gap:10px;padding:6px 0;border-top:1px solid var(--divider);font-size:12.5px;line-height:1.65;}
+  .spec-item:first-of-type{border-top:none;}
+  .spec-item .k{flex-shrink:0;font-weight:700;color:var(--primary);min-width:84px;}
+  .spec-item .v{color:var(--text-body);}
+  .spec-item .v b{color:var(--text-primary);}
+  /* ---- 区域分界横幅（定稿 / 探索） ---- */
+  .region-banner{max-width:1240px;margin:0 auto 18px;padding:13px 18px;border-radius:14px;font-size:13px;font-weight:700;line-height:1.6;display:flex;align-items:center;gap:9px;}
+  .region-banner .b-tag{font-size:11px;font-weight:800;color:#fff;padding:2px 10px;border-radius:99px;flex-shrink:0;}
+  .region-banner.final{background:rgba(52,199,89,.10);border:1px solid rgba(52,199,89,.4);color:#1c7a36;}
+  .region-banner.final .b-tag{background:var(--success);}
+  .region-banner.explored{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.45);color:#9a6200;}
+  .region-banner.explored .b-tag{background:var(--warning);}
+  .region-banner b{color:inherit;}
+  /* 已探索方案容器：整块灰调 + 斜纹边，与定稿区强区分 */
+  .explored-zone{max-width:1240px;margin:0 auto;padding:6px 0 0;border-top:2px dashed rgba(245,158,11,.5);}
+  .explored-zone .part{border-top:none;margin-top:24px;}
+  .tag.explore{background:var(--warning);}
+  .pill.explore{background:var(--warning);}
+  .explored-zone .stage-label .note{color:#b07a1e;}
+</style>
+</head>
+<body>
+<!--
+  ===========================================================================
+  ⚠️ AI 阅读须知（重要，避免误读）
+  本文件刻意分为两个互不混淆的区域：
+  ①【最终定稿方案】—— 文件中上方 Part 1 / Part 2 / Part 4，以及顶部「设计定稿」汇总框。
+     这是已拍板、将据此实现的设计依据，所有交互/视觉均为最终决定。
+  ②【已探索方案】—— 文件底部「已探索方案」区域（原 Part 3 入口候选 A/B/C）。
+     仅为决策过程中的备选方案，标记为「非定稿 · 仅供参考 · 不作为实现依据」。
+     ❗ 请勿将已探索方案误读为最终方案；实现时一律以①为准。
+  ===========================================================================
+-->
+<div class="controls">
+  <button class="btn" id="toggleDark">🌙 切换暗色</button>
+  <span style="font-size:12px;color:#888;margin-left:auto;">模拟 iPhone 底部安全区(34px) · 复用仓库 theme.json 设计令牌</span>
+</div>
+<h1 class="page-title">One News · 「关注后续」功能 UI Demo</h1>
+<p class="page-sub">通用能力，同时服务 <b>One News</b> 与 <b>AI 情报官</b> 两个模块：详情页<b>长按内容区 ≥0.5s</b>即关注该条 → 首页<b>长按</b>进入「我的关注」→ 每天指定时间由 AI 全网检索最新进展并聚合反馈。最终方案：圆形「绽放」过场 + 跨模块聚合 feed，已移除所有提示气泡。</p>
+
+<div class="region-banner final"><span class="b-tag">最终定稿</span> 以下 Part 1 / Part 2 / Part 4 为<b>已拍板的最终方案</b>，是后续实现（小程序代码 + 后端）的<b>唯一依据</b>。</div>
+
+<div class="spec-box">
+  <h2><span class="pill">设计定稿</span> 「关注后续」最终方案</h2>
+  <div class="spec-item"><span class="k">关注动作</span><span class="v">详情页<b>长按内容区 ≥0.5s</b> 直接关注，<b>无确认弹窗</b>；画面抖动 + 「🔔 已关注」轻提示 + 标题下「已关注 · 每天 12:00 追踪」小标。</span></div>
+  <div class="spec-item"><span class="k">通用性</span><span class="v">One News 与 情报官详情页<b>共用同一长按手势</b>，仅模块配色（情报官紫）随主题。</span></div>
+  <div class="spec-item"><span class="k">入口分工</span><span class="v"><b>首页长按 → 进入「我的关注」</b>；<b>详情页长按 → 关注该条</b>；两场景不重叠、互不打架。</span></div>
+  <div class="spec-item"><span class="k">过场动画</span><span class="v">圆形「<b>绽放</b>」(Circular Reveal)：按压点浮现进度环，满 0.5s 后从手指位置扩散圆铺满屏，露出「我的关注」页；左上角返回反向动画。</span></div>
+  <div class="spec-item"><span class="k">我的关注页</span><span class="v">跨模块<b>聚合 feed</b>（One News + 情报官同列），四状态：有更新(红标)/无更新(灰标)/已读(绿标)/空状态；红点提醒 + 全部标为已读。</span></div>
+  <div class="spec-item"><span class="k">设计令牌</span><span class="v">复用仓库 <code>theme.json</code>：<b>--primary</b> 蓝(关注) / <b>--intel</b> 紫(情报官)。</span></div>
+  <div class="spec-item"><span class="k">提示气泡</span><span class="v">已<b>移除</b>（首页与详情页均不显示），靠手势本身 + 状态小标传达。</span></div>
+</div>
+
+<!-- ============ PART 1：关注入口（已选定：长按直接关注） ============ -->
+<div class="part"><span class="pill best">Part 1</span> 关注入口 — 选定「长按页面直接关注」（方案四）</div>
+
+<!-- 现状 -->
+<div class="stage">
+  <div class="stage-label"><span class="tag now">现状</span> 详情页无「关注后续」入口<span class="note">— 仅有 收藏 / 分享，无法标记"持续跟踪"</span></div>
+  <div class="phones"><div>
+    <div class="phone">
+      <div class="statusbar">9:41 <div class="capsule"></div></div>
+      <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">国产大模型密集开源</div></div>
+      <div class="scroll">
+        <div class="detail-title">国产大模型密集开源，行业进入"拼生态"阶段</div>
+        <div class="meta"><span class="src-tag">科技</span> 机器之心 · 08-25 21:10</div>
+        <div class="prose"><p class="ai-badge">✦ AI 解读</p><p>近一周多家厂商相继开源主力模型，社区生态成为新的竞争焦点。开发者可零成本微调，但长尾维护与商业化路径仍待验证……</p></div>
+      </div>
+      <div class="bottom-bar">
+        <div class="bb fav on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.5C.6 9.2 2.4 5.5 6 5c2-.4 4 .6 5.2 2.2h1.6C14 5.6 16 4.6 18 5c3.6.5 5.4 4.2 3.3 7.5C18.7 16.7 12 21 12 21z"/></svg>已收藏</div>
+        <div class="bb"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v6h-2V6H6v12h6v2H4z"/><path d="M20 18v-4h2v6h-6v-2h4z"/></svg>分享</div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+    <div class="desc"><b>缺口：</b>用户想"持续跟进这条话题"，但现有 收藏 只是存着以后读，无法触发<b>每日 AI 检索更新</b>。需要独立的"关注后续"动作。<br><b>为何选长按：</b>微信原生右上胶囊（···/⊙）占约 87px，顶部铃铛必重叠；底部栏已放收藏/分享。长按手势<b>零占位</b>，彻底绕开两者，且契合"长按唤出菜单"的用户心智。</div>
+  </div></div>
+</div>
+
+<!-- 选定方案④：长按直接关注 -->
+<div class="stage">
+  <div class="stage-label"><span class="tag best">选定</span> 长按内容区 ≥0.5s → 直接关注（画面抖动 + 已关注提示）<span class="note">— One News 与 情报官 共用同一手势</span></div>
+  <div class="phones">
+
+    <!-- Alt 4：长按直接关注（One News） -->
+    <div>
+      <div class="phone" data-detail data-lp>
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">国产大模型密集开源</div></div>
+        <div class="scroll" data-longpress>          <div class="detail-title">国产大模型密集开源，行业进入"拼生态"阶段</div>
+          <div class="meta"><span class="src-tag">科技</span> 机器之心 · 08-25 21:10</div>
+          <div class="lp-indicator" data-lpind><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a1 1 0 011 1V5c3 .4 5 2.8 5 6v3.2l1.3 2.6a.9.9 0 01-.8 1.3H5.5a.9.9 0 01-.8-1.3L6 14.2V11c0-3.2 2-5.6 5-6V3.5a1 1 0 011-1z"/><path d="M9.8 17.6a2.2 2.2 0 004.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span data-lptext>已关注 · 每天 12:00 追踪</span></div>
+          <div class="prose" style="user-select:none;-webkit-user-select:none;"><p class="ai-badge">✦ AI 解读</p><p>近一周多家厂商相继开源主力模型，社区生态成为新的竞争焦点。开发者可零成本微调，但长尾维护与商业化路径仍待验证……（演示：在此区域按住 0.5 秒，画面抖动即表示已关注）</p></div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bb fav on"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.5C.6 9.2 2.4 5.5 6 5c2-.4 4 .6 5.2 2.2h1.6C14 5.6 16 4.6 18 5c3.6.5 5.4 4.2 3.3 7.5C18.7 16.7 12 21 12 21z"/></svg>已收藏</div>
+          <div class="bb"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v6h-2V6H6v12h6v2H4z"/><path d="M20 18v-4h2v6h-6v-2h4z"/></svg>分享</div>
+        </div>
+        <div class="lp-toast" data-lptoast><span class="ico">🔔</span><span data-lptext2>已关注，每天 12:00 为你追踪</span></div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="desc"><span class="k">方案 4</span><b>长按直接关注（已选定）</b>：在内容区<b>按住 ≥0.5s</b> → 无需任何确认弹窗，画面直接<b>抖动</b>并浮出"🔔 已关注"提示，标题下方出现"🔔 已关注 · 每天 12:00 追踪"小标做持续状态反馈。<br><b>关键取舍：</b>长按区<b>禁用文本选择</b>避免与微信"复制"菜单冲突。</div>
+    </div>
+
+    <!-- Alt 4：长按直接关注（情报官，跨模块验证） -->
+    <div>
+      <div class="phone" data-detail data-lp>
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">AI Agents 重塑工作流</div></div>
+        <div class="scroll" data-longpress>          <div class="detail-title">AI Agents 正在重塑企业工作流</div>
+          <div class="meta"><span class="src-tag intel">情报官</span> 综合 6 源 · 08-25</div>
+          <div class="lp-indicator" data-lpind><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5a1 1 0 011 1V5c3 .4 5 2.8 5 6v3.2l1.3 2.6a.9.9 0 01-.8 1.3H5.5a.9.9 0 01-.8-1.3L6 14.2V11c0-3.2 2-5.6 5-6V3.5a1 1 0 011-1z"/><path d="M9.8 17.6a2.2 2.2 0 004.4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span data-lptext>已关注 · 每天 12:00 追踪</span></div>
+          <div class="prose" style="user-select:none;-webkit-user-select:none;"><p class="ai-badge intel">✦ AI 情报官解读</p><p>落到你这里：你关注的"自动化"方向，本月新增 3 个可用开源框架，落地门槛显著下降……（演示：在此区域按住 0.5 秒，画面抖动即表示已关注）</p></div>
+        </div>
+        <div class="bottom-bar">
+          <div class="bb fav"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-6.7-4.3-9.3-8.5C.6 9.2 2.4 5.5 6 5c2-.4 4 .6 5.2 2.2h1.6C14 5.6 16 4.6 18 5c3.6.5 5.4 4.2 3.3 7.5C18.7 16.7 12 21 12 21z"/></svg>收藏</div>
+          <div class="bb"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v6h-2V6H6v12h6v2H4z"/><path d="M20 18v-4h2v6h-6v-2h4z"/></svg>分享</div>
+        </div>
+        <div class="lp-toast" data-lptoast><span class="ico">🔔</span><span data-lptext2>已关注，每天 12:00 为你追踪</span></div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="desc"><b>通用性：</b>情报官详情页复用完全一致的<b>长按手势</b>与抖动+已关注反馈（此处预置已关注态），仅模块配色（情报官紫）随主题走。后端按 <code>module + itemId</code> 统一存储关注关系即可，前端零额外改造。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ PART 2：更新查看多状态 ============ -->
+<div class="part"><span class="pill">Part 2</span> 更新查看 — 跨模块「关注」Feed 与四种状态</div>
+
+<!-- 多状态 feed -->
+<div class="stage">
+  <div class="stage-label"><span class="tag best">Feed</span> 一处看全部关注话题（One News + 情报官）<span class="note">— 有更新 / 无更新 / 已读 / 空状态 全覆盖</span></div>
+  <div class="phones"><div>
+    <div class="phone" data-feed>
+      <div class="statusbar">9:41 <div class="capsule"></div></div>
+      <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">我的关注</div></div>
+      <div class="scroll" style="padding-top:6px;">
+        <div class="feed-head"><div class="t">我的关注</div><div class="c">4 个话题 · 2 条新进展</div></div>
+        <div class="read-all" data-readall>全部标为已读</div>
+
+        <!-- 状态1：有更新（红标） -->
+        <div class="follow-card" data-card>
+          <div class="fc-top">
+            <div class="fc-title">国产大模型密集开源，行业进入"拼生态"阶段</div>
+            <div class="fc-badge" data-badge>1 条新更新</div>
+          </div>
+          <div class="fc-meta"><span class="src-tag">One News</span><span class="dot"></span>每天 12:00 追踪<span class="dot"></span>已关注 3 天</div>
+          <div class="tl" data-tl style="display:none;">
+            <div class="tl-item">
+              <div class="tl-date">今天 12:00 · AI 全网追踪</div>
+              <div class="tl-body">某厂商发布 7B 开源模型，主打端侧部署；另有社区推出统一微调工具链，降低多模型切换成本。</div>
+              <div class="tl-src">来源：3 篇报道 · 含 1 篇官方公告</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-date">昨天 12:00 · AI 全网追踪</div>
+              <div class="tl-body">上周开源的模型释出 v0.2，修复长上下文退化问题。</div>
+              <div class="tl-src">来源：2 篇报道</div>
+            </div>
+          </div>
+          <div class="fc-summary" data-summary><b>今天 12:00 更新：</b>某厂商发布 7B 端侧开源模型，社区推出统一微调工具链。</div>
+          <div class="link-row" data-toggle>展开历史更新 ▾</div>
+        </div>
+
+        <!-- 状态2：无更新（灰标 已是最新） -->
+        <div class="follow-card" data-card>
+          <div class="fc-top">
+            <div class="fc-title">低空经济政策落地进展</div>
+            <div class="fc-badge read" data-badge>已是最新</div>
+          </div>
+          <div class="fc-meta"><span class="src-tag">One News</span><span class="dot"></span>每天 20:00 追踪<span class="dot"></span>已关注 1 天</div>
+          <div class="fc-summary" style="color:var(--text-tertiary);">今天 20:00 已检索，暂无新的公开进展，已为你持续关注。</div>
+        </div>
+
+        <!-- 状态3：有更新 + 已读（绿标 已读完） -->
+        <div class="follow-card" data-card>
+          <div class="fc-top">
+            <div class="fc-title">AI Agents 正在重塑企业工作流</div>
+            <div class="fc-badge fresh" data-badge>已读完</div>
+          </div>
+          <div class="fc-meta"><span class="src-tag intel">情报官</span><span class="dot"></span>每天 08:00 追踪<span class="dot"></span>已关注 5 天</div>
+          <div class="tl" data-tl>
+            <div class="tl-item">
+              <div class="tl-date">今天 08:00 · AI 全网追踪</div>
+              <div class="tl-body">新增 2 个企业级 Agent 编排框架进入 GA，均与主流办公套件打通。</div>
+              <div class="tl-src">来源：4 篇报道</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-date">前天 08:00 · AI 全网追踪</div>
+              <div class="tl-body">某咨询报告：Agent 落地 ROI 转正周期缩短至 3 个月。</div>
+              <div class="tl-src">来源：1 篇报告</div>
+            </div>
+          </div>
+          <div class="fc-summary" data-summary><b>今天 08:00 更新：</b>2 个企业级 Agent 编排框架 GA，打通主流办公套件。</div>
+          <div class="link-row" data-toggle>收起 ▴</div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+    <div class="desc"><b>状态设计：</b><br>
+      <span class="k">有更新</span>红标「N 条新更新」，点开看每日 AI 时间线，读完标绿「已读完」消红。<br>
+      <span class="k">无更新</span>灰标「已是最新」，说明检索过但无新进展，避免用户误以为漏跟。<br>
+      <span class="k">已读</span>时间线保留供回看，红标变绿。顶部「全部标为已读」一键清标。</div>
+  </div></div>
+</div>
+
+<!-- 空状态 -->
+<div class="stage">
+  <div class="stage-label"><span class="tag now">空状态</span> 尚未关注任何话题时<span class="note">— 引导用户从详情页长按发起第一次关注</span></div>
+  <div class="phones"><div>
+    <div class="phone" data-feed-empty>
+      <div class="statusbar">9:41 <div class="capsule"></div></div>
+      <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">我的关注</div></div>
+      <div class="scroll">
+        <div class="empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 22a2.5 2.5 0 002.45-2h-4.9A2.5 2.5 0 0012 22zm7-6v-1l-1.6-1.6V10a5.4 5.4 0 00-4.4-5.3V4a1 1 0 10-2 0v.7A5.4 5.4 0 006.6 10v3.4L5 15v1z"/><path d="M9 9.5a3 3 0 016 0" stroke-linecap="round"/></svg>
+          <div class="et">还没有关注任何话题</div>
+          <div class="es">在资讯或情报详情页<b>长按页面</b>，<br>每天 AI 会帮你追踪最新进展并回到这里。</div>
+          <div class="ecta">去发现感兴趣的话题</div>
+        </div>
+      </div>
+      <div class="home-indicator"></div>
+    </div>
+    <div class="desc"><b>空状态：</b>避免空白页的冷启动尴尬。文案点明"长按页面"入口在哪、价值是什么，CTA 引导进入推荐流。</div>
+  </div></div>
+</div>
+
+<!-- ============ PART 4：长按首页进入「我的关注」过场动画 ============ -->
+<div class="part"><span class="pill best">Part 4</span> 过场动画 — 长按首页 → 进入「我的关注」（最终方案）</div>
+
+<!-- 过场 A：圆形绽放（推荐） -->
+<div class="stage">
+  <div class="stage-label"><span class="tag best">最终</span> 圆形「绽放」展开<span class="note">— 从你按下的位置扩散开，像推开一扇门进入关注空间</span></div>
+  <div class="phones"><div>
+    <div class="phone" data-lphpone>
+      <div class="screen home" data-lphome>
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">今日新闻</div></div>
+        <div class="scroll" style="padding-top:6px;">          <div class="mini-card"><div class="t">国产大模型密集开源，行业进入"拼生态"阶段</div><div class="m">科技 · 机器之心 · 08-25</div></div>
+          <div class="mini-card"><div class="t">低空经济政策落地进展</div><div class="m">政策 · 08-24</div></div>
+          <div class="mini-card"><div class="t">AI Agents 正在重塑企业工作流</div><div class="m">情报 · 08-25</div></div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="screen follow bloom" data-followscreen>
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="hp-back" data-hpback>‹</div><div class="nav-title">我的关注</div></div>
+        <div class="scroll" style="padding-top:6px;">
+          <div class="feed-head"><div class="t">我的关注</div><div class="c">4 个话题 · 2 条新进展</div></div>
+          <div class="read-all" data-readall>全部标为已读</div>
+          <div class="follow-card" data-card>
+            <div class="fc-top"><div class="fc-title">国产大模型密集开源，行业进入"拼生态"阶段</div><div class="fc-badge" data-badge>1 条新更新</div></div>
+            <div class="fc-meta"><span class="src-tag">One News</span><span class="dot"></span>每天 12:00 追踪</div>
+            <div class="tl" data-tl style="display:none;"><div class="tl-item"><div class="tl-date">今天 12:00 · AI 全网追踪</div><div class="tl-body">某厂商发布 7B 端侧开源模型，社区推出统一微调工具链。</div><div class="tl-src">来源：3 篇报道</div></div></div>
+            <div class="fc-summary" data-summary><b>今天 12:00 更新：</b>某厂商发布 7B 端侧开源模型。</div>
+            <div class="link-row" data-toggle>展开历史更新 ▾</div>
+          </div>
+          <div class="follow-card" data-card>
+            <div class="fc-top"><div class="fc-title">低空经济政策落地进展</div><div class="fc-badge read" data-badge>已是最新</div></div>
+            <div class="fc-meta"><span class="src-tag">One News</span><span class="dot"></span>每天 20:00 追踪</div>
+            <div class="fc-summary" style="color:var(--text-tertiary);">今天 20:00 已检索，暂无新的公开进展。</div>
+          </div>
+          <div class="follow-card" data-card>
+            <div class="fc-top"><div class="fc-title">AI Agents 正在重塑企业工作流</div><div class="fc-badge fresh" data-badge>已读完</div></div>
+            <div class="fc-meta"><span class="src-tag intel">情报官</span><span class="dot"></span>每天 08:00 追踪</div>
+            <div class="tl" data-tl><div class="tl-item"><div class="tl-date">今天 08:00 · AI 全网追踪</div><div class="tl-body">2 个企业级 Agent 编排框架 GA，打通主流办公套件。</div><div class="tl-src">来源：4 篇报道</div></div></div>
+            <div class="fc-summary" data-summary><b>今天 08:00 更新：</b>2 个企业级 Agent 编排框架 GA。</div>
+            <div class="link-row" data-toggle>收起 ▴</div>
+          </div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+    </div>
+    <div class="desc"><span class="k">最终</span><b>圆形绽放（Circular Reveal）</b>：按住时按压点浮现<b>进度环</b>（与"长按关注"同一套视觉语言），满 0.5s 后，<b>从你手指位置扩散出一个圆</b>，圆扩大铺满整屏，露出底下「我的关注」页——从哪按就从哪开，像推开一扇门走进关注空间。<br><b>为何选定：</b>① 复用已建立的按压环词汇，整套交互语言统一；② iOS/Android 都验证过的顺滑过场，性能好（仅 clip-path 动画）；③ 手指位置即入口，直觉、有掌控感。</div>
+  </div></div>
+</div>
+
+
+<!-- ============ 已探索方案区域（非定稿 · 仅供参考 · 不作为实现依据） ============ -->
+<div class="explored-zone">
+  <div class="region-banner explored"><span class="b-tag">非定稿</span> 以下为<b>决策过程中探索过的备选方案</b>，仅作参考；<b>未采纳，不作为实现依据</b>。最终方案一律以本文件上方「最终定稿方案」区域（Part 1 / 2 / 4）为准。</div>
+<!-- ============ PART 3：关注入口（从哪进「我的关注」） ============ -->
+<div class="part"><span class="pill explore">Part 3</span> 已探索 · 入口候选（非定稿）</div>
+
+<!-- 候选 A：跟随现有导航（推荐） -->
+<div class="stage">
+  <div class="stage-label"><span class="tag explore">非定稿</span> 候选 A：挂在现有导航上（零新增结构）<span class="note">— 两模块共用同一聚合 feed，有更新带红点</span></div>
+  <div class="phones">
+
+    <!-- A-1：One News 首页 ⚙ dock 菜单 -->
+    <div>
+      <div class="phone" data-dock>
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">今日新闻</div></div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="mini-card"><div class="t">国产大模型密集开源，行业进入"拼生态"阶段</div><div class="m">科技 · 机器之心 · 08-25</div></div>
+          <div class="mini-card"><div class="t">低空经济政策落地进展</div><div class="m">政策 · 08-24</div></div>
+        </div>
+        <div class="floating-more">⚙</div>
+        <div class="more-mask show"></div>
+        <div class="more-dock show">
+          <div class="dock-item">关于一页</div>
+          <div class="dock-item">浏览记录</div>
+          <div class="dock-item on">我的关注<span class="red-dot">2</span></div>
+          <div class="dock-item">我的收藏</div>
+          <div class="dock-item">设置</div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="desc"><b>One News 侧：</b>首页 ⚙ 浮动按钮 → dock 菜单新增「我的关注」项（与 我的收藏/浏览记录 并列），点它进入聚合 feed。有更新时该项带红点，在 dock 里一眼可见。（演示：点 ⚙ 可收起/展开菜单）</div>
+    </div>
+
+    <!-- A-2：情报官 mine 页卡片 -->
+    <div>
+      <div class="phone">
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">我的</div></div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="sect-head">你的身份画像</div>
+          <div class="mine-card"><div class="mc-body"><div class="mc-title">我的身份画像</div><div class="mc-desc">关注：AI Agent / 开源模型</div></div><div class="mc-chev">›</div></div>
+          <div class="sect-head">浏览历史</div>
+          <div class="mine-card"><div class="mc-body"><div class="mc-title">浏览历史</div><div class="mc-desc">最近看过 12 条情报</div></div><div class="mc-chev">›</div></div>
+          <div class="sect-head">关注</div>
+          <div class="mine-card on"><div class="mc-body"><div class="mc-title">我的关注<span class="red-dot">2</span></div><div class="mc-desc">已关注 4 个话题 · 2 条新进展</div></div><div class="mc-chev">›</div></div>
+          <div class="sect-head">收藏</div>
+          <div class="mine-card"><div class="mc-body"><div class="mc-title">我的收藏</div><div class="mc-desc">已收藏 6 条情报</div></div><div class="mc-chev">›</div></div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="desc"><b>情报官侧：</b>mine（我的）页新增「我的关注」卡片（与 浏览历史/我的收藏 并列），点进同一聚合 feed。两模块数据同源（<code>module+itemId</code>），入口位置不同但看到的内容一致。</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 候选 B / C：备选入口形态 -->
+<div class="stage">
+  <div class="stage-label"><span class="tag explore">非定稿</span> 两种入口形态对比<span class="note">— 收藏页内 Tab vs 首页常驻横条</span></div>
+  <div class="phones">
+
+    <!-- B：收藏页 Segment Tab -->
+    <div>
+      <div class="phone">
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">我的收藏</div></div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="seg-tab">
+            <div class="seg-item">收藏</div>
+            <div class="seg-item on">关注<span class="red-dot">2</span></div>
+            <div class="seg-item">历史</div>
+          </div>
+          <div class="follow-card">
+            <div class="fc-top"><div class="fc-title">国产大模型密集开源，行业进入"拼生态"阶段</div><div class="fc-badge">1 条新更新</div></div>
+            <div class="fc-meta"><span class="src-tag">One News</span><span class="dot"></span>每天 12:00 追踪</div>
+          </div>
+          <div class="follow-card">
+            <div class="fc-top"><div class="fc-title">AI Agents 正在重塑企业工作流</div><div class="fc-badge">1 条新更新</div></div>
+            <div class="fc-meta"><span class="src-tag intel">情报官</span><span class="dot"></span>每天 08:00 追踪</div>
+          </div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+      <div class="desc"><span class="k">候选 B</span><b>收藏页内 Segment Tab（收藏/关注/历史）</b>：在现有「我的收藏」页顶部加分段切换。语义相邻、顺手；但<b>情报官侧关注是跨模块</b>的，放进其收藏页会割裂体验，需两模块各维护一份 Tab。</div>
+    </div>
+
+    <!-- C：首页常驻横条 + 红点 -->
+    <div>
+      <div class="phone">
+        <div class="statusbar">9:41 <div class="capsule"></div></div>
+        <div class="nav"><div class="nav-home">⌂</div><div class="nav-title">今日新闻</div></div>
+        <div class="top-entry">🔔 我的关注<span class="red-dot">2</span><span class="te-sub">2 条新进展 · 点击查看</span></div>
+        <div class="scroll" style="padding-top:8px;">
+          <div class="mini-card"><div class="t">国产大模型密集开源，行业进入"拼生态"阶段</div><div class="m">科技 · 机器之心 · 08-25</div></div>
+          <div class="mini-card"><div class="t">低空经济政策落地进展</div><div class="m">政策 · 08-24</div></div>
+        </div>
+        <div class="home-indicator"></div>
+      </div>
+        <div class="desc"><span class="k">候选 C</span><b>首页常驻入口 + 红点</b>：One News 首页固定顶栏（现为空白占位）放「我的关注」横条，有更新直接红点强提醒，发现性最强；但<b>占用首页顶部空间</b>，且情报官首页需另做一套。</div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<script>
+  // 深浅色切换
+  const darkBtn = document.getElementById('toggleDark')
+  darkBtn.addEventListener('click', () => {
+    document.body.classList.toggle('dark')
+    darkBtn.textContent = document.body.classList.contains('dark') ? '☀️ 切换浅色' : '🌙 切换暗色'
+  })
+
+  // 方案④：长按页面直接关注（按住 ≥500ms 触发，无确认弹窗）
+  document.querySelectorAll('[data-longpress]').forEach(zone => {
+    const phone = zone.closest('.phone')
+    let timer = null, ring = null
+    const fire = () => {
+      zone.classList.remove('lp-active')
+      // 1) 画面抖动反馈
+      zone.classList.add('shake')
+      setTimeout(() => zone.classList.remove('shake'), 460)
+      // 2) 已关注状态：内容区小标 + 中央轻提示
+      const t = '12:00'
+      const ind = phone.querySelector('[data-lpind]')
+      if (ind) { ind.style.display = 'inline-flex'; ind.querySelector('[data-lptext]').textContent = ` 已关注 · 每天 ${t} 追踪` }
+      const toast = phone.querySelector('[data-lptoast]')
+      if (toast) { toast.querySelector('[data-lptext2]').textContent = `已关注，每天 ${t} 为你追踪`; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1500) }
+    }
+    const start = (e) => {
+      zone.classList.add('lp-active')
+      const r = zone.getBoundingClientRect()
+      const px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left
+      const py = (e.touches ? e.touches[0].clientY : e.clientY) - r.top
+      ring = document.createElement('div'); ring.className = 'lp-press-ring go'
+      ring.style.left = px + 'px'; ring.style.top = py + 'px'
+      zone.appendChild(ring)
+      timer = setTimeout(fire, 500)
+    }
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null } zone.classList.remove('lp-active'); if (ring) { ring.remove(); ring = null } }
+    zone.addEventListener('mousedown', start)
+    zone.addEventListener('touchstart', start, { passive: true })
+    zone.addEventListener('mouseup', cancel)
+    zone.addEventListener('mouseleave', cancel)
+    zone.addEventListener('touchend', cancel)
+    zone.addEventListener('touchmove', cancel)
+    zone.addEventListener('touchcancel', cancel)
+  })
+
+  // Part 3：dock 菜单展开/收起（One News 首页 ⚙）
+  document.querySelectorAll('.floating-more').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const phone = btn.closest('.phone')
+      phone.querySelector('.more-dock')?.classList.toggle('show')
+      phone.querySelector('.more-mask')?.classList.toggle('show')
+    })
+  })
+  document.querySelectorAll('.more-mask').forEach(m => m.addEventListener('click', () => {
+    const p = m.closest('.phone')
+    p.querySelector('.more-dock')?.classList.remove('show')
+    m.classList.remove('show')
+  }))
+
+  // Part 4：长按首页 → 进入「我的关注」（过场动画对比）
+  document.querySelectorAll('[data-lphome]').forEach(zone => {
+    const phone = zone.closest('.phone')
+    const follow = phone.querySelector('[data-followscreen]')
+    const back = phone.querySelector('[data-hpback]')
+    const home = phone.querySelector('.screen.home')
+    let timer = null, ring = null
+    const open = (e) => {
+      const r = zone.getBoundingClientRect()
+      const px = (e && e.touches ? e.touches[0].clientX : e && e.clientX ? e.clientX : r.width / 2) - r.left
+      const py = (e && e.touches ? e.touches[0].clientY : e && e.clientY ? e.clientY : r.top ? r.top : r.height / 2) - r.top
+      follow.style.setProperty('--cx', (px / r.width * 100) + '%')
+      follow.style.setProperty('--cy', (py / r.height * 100) + '%')
+      follow.classList.add('open')
+      home.classList.add('dim')
+      if (back) back.classList.add('show')
+      if (ring) { ring.remove(); ring = null }
+    }
+    const start = (e) => {
+      const r = zone.getBoundingClientRect()
+      const px = (e.touches ? e.touches[0].clientX : e.clientX) - r.left
+      const py = (e.touches ? e.touches[0].clientY : e.clientY) - r.top
+      ring = document.createElement('div'); ring.className = 'lp-press-ring go'
+      ring.style.left = px + 'px'; ring.style.top = py + 'px'
+      zone.appendChild(ring)
+      timer = setTimeout(() => open(e), 500)
+    }
+    const cancel = () => { if (timer) { clearTimeout(timer); timer = null } if (ring) { ring.remove(); ring = null } }
+    zone.addEventListener('mousedown', start)
+    zone.addEventListener('touchstart', start, { passive: true })
+    zone.addEventListener('mouseup', cancel)
+    zone.addEventListener('mouseleave', cancel)
+    zone.addEventListener('touchend', cancel)
+    zone.addEventListener('touchmove', cancel)
+    zone.addEventListener('touchcancel', cancel)
+    if (back) back.addEventListener('click', () => {
+      follow.classList.remove('open')
+      home.classList.remove('dim')
+      back.classList.remove('show')
+    })
+  })
+
+  // 更新查看：卡片展开/收起 + 标记已读
+  document.querySelectorAll('[data-card]').forEach(card => {
+    const toggle = card.querySelector('[data-toggle]')
+    const tl = card.querySelector('[data-tl]')
+    const badge = card.querySelector('[data-badge]')
+    const summary = card.querySelector('[data-summary]')
+    if (toggle) toggle.addEventListener('click', () => {
+      const open = tl.style.display !== 'none'
+      tl.style.display = open ? 'none' : 'block'
+      toggle.textContent = open ? '展开历史更新 ▾' : '收起 ▴'
+      if (!open && badge && badge.dataset.badge !== '已读完' && badge.dataset.badge !== '已是最新') {
+        badge.textContent = '已读完'; badge.className = 'fc-badge fresh'
+        if (summary) { const head = summary.querySelector('b'); if (head) head.style.color = 'var(--success)' }
+      }
+    })
+  })
+  // 全部标为已读（每个 feed 独立生效）
+  document.querySelectorAll('[data-readall]').forEach(ra => ra.addEventListener('click', () => {
+    const scope = ra.closest('.scroll') || ra.parentElement
+    scope.querySelectorAll('[data-badge]').forEach(b => {
+      if (b.dataset.badge !== '已是最新') { b.textContent = '已读完'; b.className = 'fc-badge fresh' }
+    })
+    const c = scope.querySelector('.feed-head .c'); if (c) c.textContent = '4 个话题 · 全部已读'
+  }))
+</script>
+</body>
+</html>

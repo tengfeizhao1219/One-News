@@ -36,6 +36,10 @@ Page({
     // 本周可试用清单（云函数返回后填充）
     tryable: [],
     refreshing: false,       // 下拉刷新中
+    // 关注后续：长按进入「我的关注」——按压进度环
+    lpRing: false,
+    lpX: 0,
+    lpY: 0,
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -226,6 +230,15 @@ Page({
     this._slideX = e.touches[0].clientX
     this._slideY = e.touches[0].clientY
     this._slideT = Date.now()
+    // 关注后续：长按进入「我的关注」（按住不动 500ms；移动/滚动则取消）
+    this._startFollowPress(e)
+  },
+  onSlideTouchMove(e) {
+    if (this._touchActive && e.touches && e.touches[0]) {
+      var dx = e.touches[0].clientX - (this._slideX || 0)
+      var dy = e.touches[0].clientY - (this._slideY || 0)
+      if (Math.abs(dx) > 20 || Math.abs(dy) > 20) this._cancelLongPress()
+    }
   },
   onSlideTouchEnd(e) {
     if (this._slideX === undefined || this._slideLock) return
@@ -239,5 +252,32 @@ Page({
       setTimeout(function () { that._slideLock = false }, 1000)
       this.goBack()
     }
-  }
+  },
+
+  // ============ 关注后续：长按进入「我的关注」 ============
+  _startFollowPress(e) {
+    if (this._destroyed) return
+    var t = (e.touches && e.touches[0]) || {}
+    this._touchActive = true
+    this.setData({
+      lpRing: true,
+      lpX: t.clientX || 0,
+      lpY: t.clientY || 0,
+    })
+    var that = this
+    if (this._lpTimer) clearTimeout(this._lpTimer)
+    this._lpTimer = setTimeout(function () { that._enterFollow() }, 500)
+  },
+  _cancelLongPress() {
+    this._touchActive = false
+    if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null }
+    if (this.data.lpRing) this.setData({ lpRing: false })
+  },
+  _enterFollow() {
+    this._touchActive = false
+    this._lpTimer = null
+    this.setData({ lpRing: false })
+    app.globalData.followEnterPoint = { x: this._slideX || 0, y: this._slideY || 0 }
+    wx.navigateTo({ url: '/pages/followup/followup' })
+  },
 })

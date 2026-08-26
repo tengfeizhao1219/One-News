@@ -17,6 +17,8 @@ const { getIntelProfile } = require('../../../utils/intelRequest')
 const { getSafeBottom } = require('../../../utils/intelRender')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 const { recordView } = require('../../../utils/intelHistory')
+// 「关注后续」关注关系本地存储（情报官 module='intel'，对齐 One News detail）
+const followUp = require('../../../utils/followUp')
 
 Page({
   data: {
@@ -52,6 +54,12 @@ Page({
     itemId: '',
     isFavorited: false,
     heartAnim: false,
+    // 关注后续：长按关注
+    isFollowed: false,
+    lpRing: false,
+    lpX: 0,
+    lpY: 0,
+    lpShake: false,
     // 话题搜索（2026-08-21：intelSearch 云函数，三种结果路径）
     searchOpen: false,          // 搜索面板展开态
     searchPanelTop: '100%',     // 面板 top（展开时注入 px：标题下+呼吸间距）
@@ -95,6 +103,11 @@ Page({
   /** 顶部阅读进度条（2026-08-24 对齐 One News detail）：正文滚动百分比——节流 setData 防卡顿 */
   onContentScroll(e) {
     var st = e.detail.scrollTop
+    this._lastScrollTop = st
+    // 关注后续：长按期间若内容滚动（用户移动/滑动），取消长按计时
+    if (this._touchActive && Math.abs(st - (this._lpStartScrollTop || 0)) > 12) {
+      this._cancelLongPress()
+    }
     var sh = e.detail.scrollHeight
     if (!this._clientHeight) this._measureContentHeight()
     var max = sh - (this._clientHeight || 500)
@@ -176,6 +189,7 @@ Page({
       itemId: id,
     })
     if (id) this._checkFavorite(id)
+    if (id) this._checkFollow(id) // 关注后续：加载即同步常驻小标
     // 深挖历史：退出再进保留（本地持久化，按 itemId 隔离）
     this.setData({ digGroups: this._loadDig() })
 
@@ -245,6 +259,80 @@ Page({
       icon: 'none',
       duration: 1200,
     })
+  },
+
+  // ============ 关注后续：长按关注（纯本地，对齐收藏） ============
+
+  /** 检查当前情报是否已关注（从 localCache 读取），同步常驻小标 */
+  _checkFollow(id) {
+    if (!id) return
+    try {
+      const followed = followUp.isFollowed('intel', id)
+      this.setData({ isFollowed: followed })
+    } catch (e) {
+      this.setData({ isFollowed: false })
+    }
+  },
+
+  /** 开启长按关注计时：记录按压点、显示进度环、500ms 后触发（已关注则跳过） */
+  _startFollowPress(e) {
+    if (this._destroyed || this.data.isFollowed) return
+    const t = (e.touches && e.touches[0]) || {}
+    this._touchActive = true
+    this._lpStartScrollTop = this._lastScrollTop || 0
+    this.setData({
+      lpRing: true,
+      lpX: t.clientX || 0,
+      lpY: t.clientY || 0,
+    })
+    const that = this
+    if (this._lpTimer) clearTimeout(this._lpTimer)
+    this._lpTimer = setTimeout(function () { that._fireFollow() }, 500)
+  },
+
+  /** 取消长按计时（滚动/移动/松手时调用） */
+  _cancelLongPress() {
+    this._touchActive = false
+    if (this._lpTimer) {
+      clearTimeout(this._lpTimer)
+      this._lpTimer = null
+    }
+    if (this.data.lpRing) this.setData({ lpRing: false })
+  },
+
+  /** 触发关注：写入关注关系 + 三重反馈（抖动/居中提示/常驻小标） */
+  _fireFollow() {
+    this._touchActive = false
+    this._lpTimer = null
+    const id = this.data.itemId || this.data.id || ''
+    if (!id) { this.setData({ lpRing: false }); return }
+    const res = followUp.addFollow('intel', {
+      itemId: id,
+      title: this.data.title || '',
+      source: this.data.srcName || '',
+      category: '',
+      categoryName: this.data.srcName || '',
+      picUrl: '',
+    })
+    if (res.full) {
+      this.setData({ lpRing: false })
+      wx.showToast({ title: '关注已达上限，请先清理', icon: 'none' })
+      return
+    }
+    const that = this
+    this.setData({ lpRing: false, lpShake: true, isFollowed: true })
+    setTimeout(function () { that.setData({ lpShake: false }) }, 420)
+    wx.showToast({ title: '🔔 已关注，每天 12:00 为你追踪', icon: 'none', duration: 1500 })
+  },
+
+  /** 长按手势：touchstart 起计时 */
+  onTouchStart(e) {
+    this._startFollowPress(e)
+  },
+
+  /** 长按手势：touchend 清除计时 */
+  onTouchEnd() {
+    this._cancelLongPress()
   },
 
   /** 拉取真实详情（云函数 intelGetDetail）；无数据/失败时展示空态友好提示
