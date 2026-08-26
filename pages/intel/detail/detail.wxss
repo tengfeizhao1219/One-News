@@ -16,6 +16,8 @@
   right: 0;
   width: 100%;
   z-index: 16;
+  /* ⚠️ 临时调试色(owner 2026-08-25 要求,识别页面顶部状态区域边界)——确认后改回,由 wxml inline 控制 */
+  background-color: rgba(255, 59, 48, 0.35) !important;
 }
 .nav {
   /* 与原生胶囊垂直居中对齐：容器 top=胶囊顶(menu-top)、height=胶囊高(menu-height)、内部 flex 居中（对齐 One News panel-header 做法） */
@@ -26,6 +28,8 @@
   align-items: center;
   gap: 12rpx;
   padding: 0 32rpx;
+  /* ⚠️ 临时调试色(owner 2026-08-25 要求,识别页面顶部状态区域边界)——确认后改回 */
+  background-color: rgba(255, 59, 48, 0.2);
 }
 
 .nav-home {
@@ -122,8 +126,7 @@
 .title-block {
   position: relative;
   z-index: 230;
-  /* ⚠️ 临时调试色(owner 2026-08-24 要求,便于识别顶部不透明区域边界)——确认后改回 var(--bg-page) */
-  background-color: rgba(255, 59, 48, 0.35);
+  background-color: var(--bg-page);
   padding-bottom: 8rpx;
 }
 
