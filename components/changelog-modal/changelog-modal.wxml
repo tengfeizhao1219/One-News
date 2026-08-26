@@ -14,8 +14,11 @@
         <view class="cm-version">{{version}}</view>
         <view class="cm-date" wx:if="{{date}}">{{date}}</view>
 
+        <!-- 顶部横条进度(2026-08-26 家族化,替代侧边滚动条) -->
+        <view class="cm-progress"><view class="cm-progress-bar" style="width: {{progressPercent}}%;"></view></view>
+
         <!-- 滚动日志内容 -->
-        <scroll-view scroll-y class="cm-body" enhanced show-scrollbar="{{false}}">
+        <scroll-view scroll-y class="cm-body" enhanced show-scrollbar="{{false}}" bindscroll="onScroll">
           <block wx:for="{{sections}}" wx:key="label" wx:for-item="section">
             <view class="cm-section-title cm-{{section.type}}">{{section.label}}</view>
             <view class="cm-item" wx:for="{{section.items}}" wx:key="title" wx:for-item="item">

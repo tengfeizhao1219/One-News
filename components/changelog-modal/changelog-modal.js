@@ -30,6 +30,7 @@ Component({
     date: '',
     sections: [],
     isDark: false,
+    progressPercent: 0,   // 2026-08-26: 顶部横条进度(版本日志滚动),替代侧边滚动条
     // 动画
     animShow: false,
   },
@@ -105,6 +106,24 @@ Component({
 
     onKnowTap: function () {
       this.triggerEvent('close')
+    },
+
+    // 顶部横条进度(2026-08-26 家族化:替代侧边滚动条)
+    onScroll: function (e) {
+      if (!this._cmClient) {
+        var self = this
+        wx.createSelectorQuery().in(this).select('.cm-body').boundingClientRect().exec(function (res) {
+          if (res && res[0] && res[0].height > 0) self._cmClient = res[0].height
+        })
+      }
+      var st = e.detail.scrollTop
+      var sh = e.detail.scrollHeight
+      var max = sh - (this._cmClient || 520)
+      var pct = max > 0 ? Math.min(100, parseFloat((st / max * 100).toFixed(1))) : 0
+      if (pct !== this._lastPct) {
+        this._lastPct = pct
+        this.setData({ progressPercent: pct })
+      }
     },
 
     // 刷新主题（页面从设置页返回时调用）

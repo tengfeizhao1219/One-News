@@ -68,6 +68,19 @@
   letter-spacing: 1rpx;
 }
 
+/* 顶部横条进度(2026-08-26 家族化,替代侧边滚动条) */
+.cm-progress {
+  height: 3rpx;
+  background: transparent;
+  margin-top: 12rpx;
+}
+.cm-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--progress);
+  transition: width 0.08s linear;
+}
+
 /* 滚动正文 */
 .cm-body {
   flex: 1;
@@ -78,6 +91,10 @@
   box-sizing: border-box;
   overflow-x: hidden;
 }
+/* 2026-08-26: 隐藏侧边滚动条(家族化:改用顶部横条),覆盖所有渲染引擎 */
+.cm-body::-webkit-scrollbar,
+.cm-body ::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.cm-body { scrollbar-width: none; -ms-overflow-style: none; }
 
 /* 区块标题（新功能=品牌蓝 / 优化=副标灰 / 修复=副标灰） */
 .cm-section-title {
