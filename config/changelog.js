@@ -6,9 +6,30 @@
 module.exports = {
   // 当前线上版本号（与小程序后台提交审核时填写的版本号保持一致）
   // 全版本统一加 v 前缀（关于页/设置页/分享文案/弹窗头部均显示 vX.Y.Z）
-  currentVersion: 'v1.0.2',
+  currentVersion: 'v2.0',
 
   versions: [
+    {
+      version: 'v2.0',
+      date: '2026-08-26',
+      sections: [
+        {
+          type: 'feature',
+          label: '新增功能',
+          items: [
+            { title: '新增 AI 情报官模块', desc: '可对感兴趣的资讯实时全网深挖，重要情报随手沉淀' },
+            { title: '实时全网深挖', desc: '对关注资讯一键全网深挖，汇聚多角度信息' },
+          ],
+        },
+        {
+          type: 'optimization',
+          label: '优化',
+          items: [
+            { title: '进一步提升用户体验', desc: 'AI 情报官阅读 / 深挖 / 收藏交互与 One News 详情页打磨' },
+          ],
+        },
+      ],
+    },
     {
       version: 'v1.0.2',
       date: '2026-08-16',
