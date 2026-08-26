@@ -122,7 +122,8 @@
 .title-block {
   position: relative;
   z-index: 230;
-  background-color: var(--bg-page);
+  /* ⚠️ 临时调试色(owner 2026-08-24 要求,便于识别顶部不透明区域边界)——确认后改回 var(--bg-page) */
+  background-color: rgba(255, 59, 48, 0.35);
   padding-bottom: 8rpx;
 }
 
