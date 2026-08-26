@@ -7,7 +7,7 @@
     <!-- logo 左 + 版本号/日期/日志 右（2026-08-26 节省空间） -->
     <view class="cm-layout">
       <view class="cm-logo">
-        <logo id="modal-logo" mode="wordmark" size="200"></logo>
+        <logo id="modal-logo" mode="wordmark" size="240"></logo>
       </view>
 
       <view class="cm-main">

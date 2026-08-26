@@ -50,6 +50,8 @@
 }
 .cm-logo {
   flex-shrink: 0;
+  /* 2026-08-26: 左侧上下轻微留白,不与右侧内容顶对齐贴死 */
+  padding-top: 10rpx;
 }
 .cm-main {
   flex: 1;
@@ -86,7 +88,7 @@
   flex: 1;
   min-height: 0;
   max-height: 520rpx;
-  padding: 8rpx 40rpx 8rpx;
+  padding: 20rpx 40rpx 8rpx;   /* 2026-08-26: 顶部 20rpx 呼吸,第一条标题不顶到版本号/日期 */
   width: 100%;
   box-sizing: border-box;
   overflow-x: hidden;
