@@ -299,3 +299,87 @@
   letter-spacing: 2rpx;
   text-align: center;
 }
+
+/* ========== 联系开发者弹窗（2026-08-26 owner 要求） ========== */
+.contact-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background-color: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+.contact-modal-backdrop.show {
+  opacity: 1;
+  visibility: visible;
+}
+.contact-modal {
+  width: 600rpx;
+  background-color: var(--bg-card);
+  border-radius: 24rpx;
+  padding: 44rpx 40rpx 36rpx;
+  transform: scale(0.92);
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+.contact-modal-backdrop.show .contact-modal {
+  transform: scale(1);
+  opacity: 1;
+}
+.contact-modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+.contact-modal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid var(--divider);
+}
+.contact-modal-item:last-of-type { border-bottom: none; }
+.contact-modal-name {
+  font-size: 26rpx;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.contact-modal-key {
+  font-size: 28rpx;
+  color: var(--text-primary);
+  font-weight: 500;
+  flex: 1;
+  text-align: right;
+  word-break: break-word;
+}
+.contact-modal-copy {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--primary);
+  padding: 6rpx 20rpx;
+  border: 1rpx solid var(--primary);
+  border-radius: 24rpx;
+}
+.contact-modal-btn {
+  margin-top: 32rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background-color: var(--primary);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

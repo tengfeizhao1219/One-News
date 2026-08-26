@@ -17,7 +17,7 @@ Page({
     followSystem: true,
     darkMode: false,
     manualDark: false,
-    contactOpen: false,
+    contactModalVisible: false,   // 2026-08-26: 联系开发者弹窗
     // BUG-20260806-003（owner 07:44 追加裁定）: 第 2 层页面统一主页按钮，home icon 按深色切换白色版
     isDark: false,
     // 2026-08-09：从 changelog.js 读当前版本，点击弹出日志弹窗
@@ -180,11 +180,15 @@ Page({
   },
 
   /**
-   * UI-B9: 展开/收起联系开发者
+   * 2026-08-26: 打开/关闭联系开发者弹窗
    */
-  toggleContact: function () {
-    this.setData({ contactOpen: !this.data.contactOpen })
+  openContactModal: function () {
+    this.setData({ contactModalVisible: true })
   },
+  closeContactModal: function () {
+    this.setData({ contactModalVisible: false })
+  },
+  noop: function () {},
 
   /**
    * UI-B9: 复制邮箱

@@ -94,25 +94,9 @@
           <view class="row-label">意见反馈</view>
           <text class="row-chev">›</text>
         </view>
-        <view class="row" bindtap="toggleContact">
+        <view class="row" bindtap="openContactModal">
           <view class="row-label">联系开发者</view>
-          <text class="row-chev {{contactOpen ? 'row-chev--open' : ''}}">›</text>
-        </view>
-      </view>
-      <view class="contact {{contactOpen ? 'show' : ''}}">
-        <view class="contact-item">
-          <view>
-            <view>邮箱</view>
-            <view class="contact-key">ztengfei@hotmail.com</view>
-          </view>
-          <view class="contact-copy" bindtap="copyEmail">复制</view>
-        </view>
-        <view class="contact-item">
-          <view>
-            <view>微信</view>
-            <view class="contact-key">jiaowotengfei</view>
-          </view>
-          <view class="contact-copy" bindtap="copyWechat">复制</view>
+          <text class="row-chev">›</text>
         </view>
       </view>
     </view>
@@ -129,4 +113,22 @@
 
   <!-- 更新日志弹窗（2026-08-09） -->
   <changelog-modal visible="{{showChangelog}}" latest="{{latestChangelog}}" bind:close="onCloseChangelog"></changelog-modal>
+
+  <!-- 联系开发者弹窗（2026-08-26 owner 要求） -->
+  <view class="contact-modal-backdrop {{contactModalVisible ? 'show' : ''}}" bindtap="closeContactModal">
+    <view class="contact-modal" catchtap="noop">
+      <view class="contact-modal-title">联系开发者</view>
+      <view class="contact-modal-item">
+        <text class="contact-modal-name">邮箱</text>
+        <text class="contact-modal-key">ztengfei@hotmail.com</text>
+        <view class="contact-modal-copy" bindtap="copyEmail">复制</view>
+      </view>
+      <view class="contact-modal-item">
+        <text class="contact-modal-name">微信</text>
+        <text class="contact-modal-key">jiaowotengfei</text>
+        <view class="contact-modal-copy" bindtap="copyWechat">复制</view>
+      </view>
+      <view class="contact-modal-btn" bindtap="closeContactModal">关闭</view>
+    </view>
+  </view>
 </view>
