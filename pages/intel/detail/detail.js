@@ -114,6 +114,14 @@ Page({
     })
   },
 
+  /** 任务跟踪（2026-08-26：进度条 top = .title-block(标题区) 底部——贴顶部状态区域下标题区底、正文上方那条线） */
+  _measureProgressTop() {
+    var that = this
+    wx.createSelectorQuery().in(this).select('.title-block').boundingClientRect().exec(function (res) {
+      if (res && res[0] && res[0].bottom > 0) that.setData({ progressTop: res[0].bottom })
+    })
+  },
+
   /** 离开页面（返回首页/切后台等）：搜索区/结果自动折叠（bug4：再进不保持展开） */
   onHide() {
     this._foldAllDig(true)
@@ -317,6 +325,9 @@ function cleanText(v) {
       loading: false,
       empty: false,
       searchQuickTitle: (cleanText(d.title) || this.data.title || '').slice(0, 60),
+    }, () => {
+      // 2026-08-26：数据渲染完成后测 .title-block 底部 → 进度条 top(贴标题区底部, owner 确认)
+      this._measureProgressTop()
     })
     // 内存缓存：同一 id 重复进入直接展示，不再调云函数
     if (d && d.title) {
