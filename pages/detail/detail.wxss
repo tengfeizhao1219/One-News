@@ -223,10 +223,10 @@
 }
 
 .detail-title {
-  /* 2026-08-26：默认标题无底色(与页面融合)；点深挖(searchOpen)时加 .is-search 背景不透明(防正文透过重叠) */
+  /* 2026-08-26：标题平时/深挖都保持不透明,背景=页面色(var--bg-card,与正文一致),无额外底色块 */
   position: relative;
   z-index: 230;
-  background-color: transparent;
+  background-color: var(--bg-card);
   /* BUG-20260806-004: 标题使用相对尺寸 44rpx（不再跟随字体缩放） */
   font-size: 44rpx;
   font-weight: 700;
@@ -1231,15 +1231,12 @@
   transform: translateY(-100%);
 }
 /* 标题移出 detail-body 后：保持与正文一致的 64rpx 左右 padding + 顶部呼吸；
-   默认无底色(与页面融合)；搜索面板展开(searchOpen)时 .is-search 背景不透明防正文透过标题重叠 */
+   背景=页面色(var--bg-card)与正文一致,平时/深挖都不透明(防正文透过重叠/无额外底色) */
 .article > .detail-title {
   padding: 24rpx 64rpx 0;
-  background-color: transparent;
+  background-color: var(--bg-card);
   position: relative;
   z-index: 1;
-}
-.article > .detail-title.is-search {
-  background-color: var(--bg-page);
 }
 
 /* ===== 不相关推荐问题（2026-08-22，复用 dig-group 卡片视觉） ===== */
