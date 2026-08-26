@@ -96,6 +96,58 @@
       {
         "value": "\\.sh$",
         "type": "regexp"
+      },
+      {
+        "value": "cloudfunctions",
+        "type": "folder"
+      },
+      {
+        "value": "backend",
+        "type": "folder"
+      },
+      {
+        "value": "tools",
+        "type": "folder"
+      },
+      {
+        "value": "tests",
+        "type": "folder"
+      },
+      {
+        "value": "intel-docs",
+        "type": "folder"
+      },
+      {
+        "value": "ui-demo",
+        "type": "folder"
+      },
+      {
+        "value": "one-news-bridge",
+        "type": "folder"
+      },
+      {
+        "value": ".git-auto",
+        "type": "folder"
+      },
+      {
+        "value": ".workbuddy",
+        "type": "folder"
+      },
+      {
+        "value": "package-lock.json",
+        "type": "file"
+      },
+      {
+        "value": "cloudbaserc.json",
+        "type": "file"
+      },
+      {
+        "value": ".eslintrc.json",
+        "type": "file"
+      },
+      {
+        "value": ".ai-collab.json",
+        "type": "file"
       }
     ],
     "include": []
