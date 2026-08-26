@@ -429,13 +429,14 @@ function interpretNews(content, title, references, signals) {
   if (zhipuCfg.apiKey) {
     engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 8000 })
   }
-  const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
-  if (dashKey) {
-    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen3.7-flash', timeout: 8000 })
-  }
   const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+  }
+  // ys365（New API 中转网关 · 2026-08-24 接入）：官方 key 全挂后的最后 AI 兜底（解读/摘要共用）
+  const ysKey = process.env.YS365_API_KEY || (config.ys365 && config.ys365.apiKey) || ''
+  if (ysKey) {
+    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
   }
   // 解读输入门槛：正文太短（< 50 字）不值得解读
   if (!content || content.trim().length < 50) return Promise.resolve(null)
@@ -646,16 +647,17 @@ function summarizeWithZhipu(content, title) {
   if (zhipuCfg.apiKey) {
     engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
   }
-  const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
-  if (dashKey) {
-    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen-turbo', timeout: 8000 })
-  }
   // FS-04：DeepSeek 摘要引擎（OpenAI 兼容协议，与 search 链共用同一个 Key + base）
   // 8/9 凌晨根因：搜索阶段能降级到 DeepSeek，但摘要函数未挂 → AI 摘要永远走不到 DeepSeek。
   // 现补上：DeepSeek 在前两个都失败时接管，避免再次出现"AI 摘要无结果"。
   const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
+  }
+  // ys365（New API 中转网关 · 2026-08-24 接入）：官方 key 全挂后的最后 AI 兜底（解读/摘要共用）
+  const ysKey = process.env.YS365_API_KEY || (config.ys365 && config.ys365.apiKey) || ''
+  if (ysKey) {
+    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
   }
   // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)

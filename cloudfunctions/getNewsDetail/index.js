@@ -525,25 +525,21 @@ function fetchJuheContent(uniquekey, options = {}) {
  */
 function summarizeWithZhipu(content, title) {
     const config = require('./config')
-  // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
+  // 2026-08-24：移除 Qwen 引擎（owner 决策），摘要链仅剩智谱
   const engines = []
   const zhipuCfg = (config.zhipuSummary || {})
   if (zhipuCfg.apiKey) {
     engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
   }
-  const dashKey = process.env.DASHSCOPE_API_KEY || (config.qwen && config.qwen.apiKey) || ''
-  if (dashKey) {
-    engines.push({ name: 'Qwen', apiKey: dashKey, baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', model: (config.qwen && config.qwen.model) || 'qwen-turbo', timeout: 8000 })
-  }
   if (engines.length === 0) {
-    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU/DASHSCOPE），跳过 AI 摘要')
+    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU），跳过 AI 摘要')
     return Promise.resolve(null)
   }
   // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)
   const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
 
-  // 顺序尝试各引擎（智谱 → Qwen），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
+  // 顺序尝试各引擎（智谱），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
   function tryEngine(idx) {
     return new Promise((resolve) => {
       if (idx >= engines.length) { resolve(null); return }

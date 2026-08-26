@@ -28,7 +28,6 @@ const ZHIPU_MODEL = 'glm-4-flash'  // 永久免费，128K 上下文
 const ZHIPU_TIMEOUT = 15000  // DG-11（2026-08-06 23:3x）：20s→15s。智谱 web_search 成功多在 3s 内，
                              // 三连日志（22:04/23:04/23:31）均为 1301 或 20s 超时——15s 仍远超健康耗时，
                              // 全引擎故障时少白耗 5s/分类
-const QWEN_SEARCH_TIMEOUT = 12000   // DG-11：15s→12s。正常联网 ~10s，故障超时（23:31 实测 15s 白耗）压缩到 12s
 const DEEPSEEK_SEARCH_TIMEOUT = 10000 // DG-11：15s→10s。DeepSeek 当前 402/超时基本不可用，短超时避免拖垮预算
 // DG-04+DG-11：单分类 AI 搜索阶段「硬预算」——无论几级引擎，搜索总耗时不得超过此值，
 // 超出立即转聚合/天行兜底，确保整函数 60s 内必有写入（根治 17:03 life 整函数 60s 超时 0 写入）。
@@ -42,6 +41,14 @@ const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || config.deepseek?.apiKey
 const DEEPSEEK_BASE = 'api.deepseek.com'
 const DEEPSEEK_PATH = '/v1/chat/completions'
 const DEEPSEEK_MODEL = 'deepseek-chat'
+
+// ─── ys365（New API 中转）配置（DeepSeek 之后的最后 AI 兜底 · 2026-08-24 接入）───────
+
+const YS365_API_KEY = process.env.YS365_API_KEY || config.ys365?.apiKey || ''
+const YS365_BASE = 'api.ys365.cyou'
+const YS365_PATH = '/v1/chat/completions'
+const YS365_MODEL = config.ys365?.model || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash'
+const YS365_TIMEOUT = config.ys365?.timeout || 10000
 
 // ─── 限流配置快捷引用 ──────────────────────────────
 
@@ -408,85 +415,15 @@ async function searchWithZhipu(category, maxTimeout = ZHIPU_TIMEOUT) {
   throw lastErr
 }
 
-// ─── 通义千问 Qwen API 降级搜索（DG-03 接入 2026-08-06）─────────────────
-
-const QWEN_API_KEY = process.env.DASHSCOPE_API_KEY || config.qwen?.apiKey || ''
-const QWEN_BASE_HOST = 'dashscope.aliyuncs.com'
-const QWEN_PATH = '/compatible-mode/v1/chat/completions'
-const QWEN_MODEL = config.qwen?.model || 'qwen3.7-flash'
-const QWEN_TIMEOUT = config.qwen?.timeout || QWEN_SEARCH_TIMEOUT
-
-/**
- * 通义千问 API 作为智谱失败时的降级搜索（OpenAI 兼容模式 + enable_search 联网）
- * 使用 qwen3.7-flash：免费额度 100 万 token/模型（截图所示），支持 enable_search 联网搜索
- * @param {string} category 分类名
- * @returns {Promise<Array>} 新闻列表
- */
-async function searchWithQwen(category, maxTimeout = QWEN_TIMEOUT) {
-  const prompt = CATEGORY_PROMPTS[category]
-  if (!prompt) throw new Error(`未知分类: ${category}`)
-  if (!QWEN_API_KEY) throw new Error('未配置 DASHSCOPE_API_KEY')
-
-  const requestBody = JSON.stringify({
-    model: QWEN_MODEL,
-    messages: [
-      {
-        role: 'system',
-        content: '你是一个专业的新闻解读编辑。使用联网搜索从指定可信新闻源搜索信息，基于事实进行独立的分析解读，而非复述原文。严格按要求输出 JSON 格式。每条新闻必须包含：content 字段（AI 解读，100-600字，第一段先把新闻讲清楚——发生了什么、核心事实与背景；后续段落为独立解读，形式自由，根据新闻内容自选最合适的角度深入（如深层原因剖析、对相关领域或普通人的影响、专业视角评判、历史背景或同类事件对比、未来走向判断等），选最有价值的1-2个角度即可，不必面面俱到；解读长度与新闻信息量匹配，信息量大可写长、信息量小则写短，禁止用固定模板套用所有文章，禁止"总而言之/关键有两点/接下来最重要的是"等固定句式收尾）和 url 字段（真实网页链接，以 http/https 开头）。禁止事项：禁止逐字复述或高度相似地改写单一来源的原文段落；禁止编造不存在的事实或数据；不得使用占位符 URL；解读中不要出现"据报道""据悉""记者了解到"等新闻通讯社套话。'
-      },
-      { role: 'user', content: prompt }
-    ],
-    enable_search: true,  // 通义千问 OpenAI 兼容模式联网搜索
-    temperature: 0.1,
-    max_tokens: 12000,
-  })
-
-  let lastErr = null
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const result = await httpsRequest({
-        hostname: QWEN_BASE_HOST,
-        path: QWEN_PATH,
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${QWEN_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: requestBody,
-        timeout: Math.min(QWEN_TIMEOUT, maxTimeout),
-      })
-
-      const content = result.choices?.[0]?.message?.content || ''
-      // 复用 zhipu 的 JSON 解析；id 前缀替换为 qwen_ 避免与智谱/DeepSeek 冲突
-      return parseNewsFromContent(content, category).map(item => ({
-        ...item,
-        id: item.id.replace('zhipu_', 'qwen_'),
-      }))
-    } catch (err) {
-      lastErr = err
-      if (err.errorCode === config.errorCodes.API_RATE_LIMIT) {
-        if (attempt < MAX_RETRIES) {
-          const delay = err.retryAfterMs || backoffWithJitter(attempt)
-          console.warn(`[zhipuSearch] Qwen ${category} 限流，第 ${attempt + 1}/${MAX_RETRIES} 次重试，等待 ${delay}ms`)
-          await sleep(delay)
-          continue
-        }
-        console.warn(`[zhipuSearch] Qwen ${category} 限流重试耗尽（${MAX_RETRIES} 次）`)
-      }
-      break
-    }
-  }
-  throw lastErr
-}
-
 // ─── DeepSeek API 降级搜索（DG-07 已重新接入搜索链，作为最后 AI 兜底）─────────
 
 /**
- * DeepSeek API 搜索（智谱+Qwen 均失败时的最后 AI 兜底）
+ * DeepSeek API 搜索（智谱 失败后的 AI 兜底）
  * DG-07（2026-08-06）：应 owner 要求重新接入。注意实测 DeepSeek enable_search 不联网
  * （模型回复"知识截止2025年5月、无自动联网搜索"），故仅作尽力兜底——返回可解析新闻 JSON 才采用，
  * 否则 parseNewsFromContent 返空/抛错，由 searchNewsByCategory 转聚合/天行。
  * B-12 策略3: 429 限流时指数退避重试（≤3 次）
+ * 2026-08-24：移除 Qwen 引擎（owner 决策）。
  */
 async function searchWithDeepSeek(category, maxTimeout = DEEPSEEK_SEARCH_TIMEOUT) {
   const prompt = CATEGORY_PROMPTS[category]
@@ -549,6 +486,71 @@ async function searchWithDeepSeek(category, maxTimeout = DEEPSEEK_SEARCH_TIMEOUT
   throw lastErr
 }
 
+/**
+ * ys365（New API 中转网关）搜索 —— 2026-08-24 接入，DeepSeek 之后的最后 AI 兜底。
+ * 统一 OpenAI 兼容端点；enable_search 取决于该站上游模型能力（同 DeepSeek 语义：
+ * 尽力兜底——返回可解析新闻 JSON 才采用，否则由 searchNewsByCategory 转聚合/天行）。
+ */
+async function searchWithYs365(category, maxTimeout = YS365_TIMEOUT) {
+  const prompt = CATEGORY_PROMPTS[category]
+  if (!prompt) throw new Error(`未知分类: ${category}`)
+  if (!YS365_API_KEY) throw new Error('未配置 YS365_API_KEY')
+
+  const requestBody = JSON.stringify({
+    model: YS365_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: '你是一个专业的新闻解读编辑。使用联网搜索从指定可信新闻源搜索信息，基于事实进行独立的分析解读，而非复述原文。严格按要求输出 JSON 格式。每条新闻必须包含：content 字段（AI 解读，100-600字，第一段先把新闻讲清楚——发生了什么、核心事实与背景；后续段落为独立解读，形式自由，根据新闻内容自选最合适的角度深入（如深层原因剖析、对相关领域或普通人的影响、专业视角评判、历史背景或同类事件对比、未来走向判断等），选最有价值的1-2个角度即可，不必面面俱到；解读长度与新闻信息量匹配，信息量大可写长、信息量小则写短，禁止用固定模板套用所有文章，禁止"总而言之/关键有两点/接下来最重要的是"等固定句式收尾）和 url 字段（真实网页链接，以 http/https 开头）。禁止事项：禁止逐字复述或高度相似地改写单一来源的原文段落；禁止编造不存在的事实或数据；不得使用占位符 URL；解读中不要出现"据报道""据悉""记者了解到"等新闻通讯社套话。'
+      },
+      { role: 'user', content: prompt }
+    ],
+    enable_search: true,
+    temperature: 0.1,
+    max_tokens: 12000,
+  })
+
+  let lastErr = null
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await httpsRequest({
+        hostname: YS365_BASE,
+        path: YS365_PATH,
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${YS365_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: requestBody,
+        timeout: Math.min(YS365_TIMEOUT, maxTimeout),
+      })
+
+      const content = result.choices?.[0]?.message?.content || ''
+      const news = parseNewsFromContent(content, category)
+      // 标记来源为 ys365 兜底
+      return news.map(item => ({
+        ...item,
+        id: item.id.replace('zhipu_', 'ys_'),
+      }))
+    } catch (err) {
+      lastErr = err
+      if (err.errorCode === config.errorCodes.API_RATE_LIMIT) {
+        if (attempt < MAX_RETRIES) {
+          const delay = err.retryAfterMs || backoffWithJitter(attempt)
+          console.warn(`[zhipuSearch] ys365 ${category} 限流，第 ${attempt + 1}/${MAX_RETRIES} 次重试，等待 ${delay}ms`)
+          await sleep(delay)
+          continue
+        }
+        console.warn(`[zhipuSearch] ys365 ${category} 限流重试耗尽（${MAX_RETRIES} 次）`)
+      }
+      break
+    }
+  }
+
+  throw lastErr
+}
+
 // ─── 单分类搜索（智谱优先 → DeepSeek 降级）─────────
 
 /**
@@ -577,9 +579,9 @@ async function searchNewsByCategory(category, db, quotaRef) {
   } catch (zhipuErr) {
     console.warn(`[zhipuSearch] 智谱 ${category} 失败: ${zhipuErr.message}`)
     // DG-09：确定性失败短路 —— 1301 内容安全 / 账户欠费等本次无法恢复，
-    // 同 prompt 换引擎大概率同样失败或产出被拦内容 → 跳过 Qwen/DeepSeek 直转聚合/天行
+    // 同 prompt 换引擎大概率同样失败或产出被拦内容 → 跳过 DeepSeek 直转聚合/天行
     if (isFatalSearchError(zhipuErr)) {
-      console.error(`[zhipuSearch] ⚠️ ${category} 智谱确定性失败（${String(zhipuErr.message).slice(0, 60)}）→ 跳过 Qwen/DeepSeek，直接聚合/天行兜底`)
+      console.error(`[zhipuSearch] ⚠️ ${category} 智谱确定性失败（${String(zhipuErr.message).slice(0, 60)}）→ 跳过 DeepSeek，直接聚合/天行兜底`)
       return { news: [], engine: 'none' }
     }
     // 预算不足，放弃后续 AI 引擎，直接聚合/天行兜底
@@ -588,30 +590,8 @@ async function searchNewsByCategory(category, db, quotaRef) {
       return { news: [], engine: 'none' }
     }
 
-    // 降级①：通义千问 Qwen（DG-03 接入，免费额度，qwen-turbo 永久免费）
-    try {
-      console.log(`[zhipuSearch] 降级到 Qwen 搜索 ${category}...`)
-      const news = await searchWithQwen(category, budgetLeft())
-      console.log(`[zhipuSearch] Qwen ${category}: ${news.length} 条`)
-      return { news, engine: 'qwen' }
-    } catch (qwenErr) {
-      console.warn(`[zhipuSearch] Qwen ${category} 失败: ${qwenErr.message}`)
-      if (isAccountBlocked(qwenErr)) {
-        console.error(`[zhipuSearch] ⚠️ Qwen 账户欠费/封禁(Arrearage) — 请到阿里云百炼缴清欠费后重试（免费额度需账户状态正常）`)
-      }
-      // DG-09：Qwen 确定性失败同样短路（欠费/1301），不再尝试 DeepSeek 白耗预算
-      if (isFatalSearchError(qwenErr)) {
-        console.error(`[zhipuSearch] ⚠️ ${category} Qwen 确定性失败 → 跳过 DeepSeek，直接聚合/天行兜底`)
-        return { news: [], engine: 'none' }
-      }
-      // 不在此 return —— 继续降级到 DeepSeek（DG-07 应 owner 要求重新接入）
-      if (budgetLeft() < 3000) {
-        console.warn(`[zhipuSearch] ${category} 搜索预算耗尽，转聚合/天行兜底`)
-        return { news: [], engine: 'none' }
-      }
-    }
-
-    // 降级②：DeepSeek（DG-07 应 owner 要求重新接入，作为智谱+Qwen 之后的最后 AI 兜底）
+    // 降级①：DeepSeek（DG-07 应 owner 要求重新接入，作为智谱失败后的 AI 兜底；
+    // 2026-08-24 移除 Qwen 引擎，降级链：智谱 → DeepSeek → ys365 → 聚合/天行）
     // 注意：DeepSeek API 的 enable_search 实测不联网（模型回复"知识截止2025年5月、无自动联网搜索"），
     // 故仅作尽力兜底——若返回可解析的新闻 JSON 则采用，否则 parseNewsFromContent 返空/抛错，
     // 由下方 catch 转聚合/天行。受 DG-04 预算护栏约束（实际超时=min(DEEPSEEK_SEARCH_TIMEOUT, 剩余预算)）。
@@ -629,8 +609,21 @@ async function searchNewsByCategory(category, db, quotaRef) {
       return { news, engine: 'deepseek' }
     } catch (dsErr) {
       console.error(`[zhipuSearch] DeepSeek ${category} 也失败: ${dsErr.message}`)
-      return { news: [], engine: 'none' }
     }
+
+    // 降级②：ys365（New API 中转，2026-08-24 接入）——官方 key 全挂后的最后 AI 兜底；
+    // 未配置 YS365_API_KEY 时 searchWithYs365 直接抛"未配置"，同样落这里转聚合/天行。
+    if (YS365_API_KEY && budgetLeft() >= 3000) {
+      try {
+        console.log(`[zhipuSearch] 降级到 ys365 搜索 ${category}...`)
+        const news = await searchWithYs365(category, budgetLeft())
+        console.log(`[zhipuSearch] ys365 ${category}: ${news.length} 条`)
+        return { news, engine: 'ys365' }
+      } catch (ysErr) {
+        console.error(`[zhipuSearch] ys365 ${category} 也失败: ${ysErr.message}`)
+      }
+    }
+    return { news: [], engine: 'none' }
   }
 }
 
@@ -659,7 +652,7 @@ async function searchAllCategories(categories = null, db = null) {
     console.log(`[zhipuSearch] 当日配额: 智谱=${quota.zhipuCalls}, DeepSeek=${quota.deepseekCalls}/${DEEPSEEK_DAILY_CAP}`)
   }
   // 启动自检：打印双引擎 key 就位状态（不打印 key 明文），便于排查 401 / 降级失效
-  console.log(`[zhipuSearch] 引擎配置: 智谱=${ZHIPU_API_KEY ? '✅' : '❌'}, Qwen=${QWEN_API_KEY ? '✅' : '❌'}, DeepSeek=${DEEPSEEK_API_KEY ? '✅' : '❌'}（搜索链：智谱 → Qwen → DeepSeek → 聚合/天行）`)
+  console.log(`[zhipuSearch] 引擎配置: 智谱=${ZHIPU_API_KEY ? '✅' : '❌'}, DeepSeek=${DEEPSEEK_API_KEY ? '✅' : '❌'}, ys365=${YS365_API_KEY ? '✅' : '❌'}（搜索链：智谱 → DeepSeek → ys365 → 聚合/天行）`)
 
   // 可变引用，供各分类递增
   const quotaRef = {
@@ -712,7 +705,6 @@ async function searchAllCategories(categories = null, db = null) {
 module.exports = {
   searchNewsByCategory,
   searchAllCategories,
-  searchWithQwen,
   CATEGORY_PROMPTS,
   readDailyQuota,
   writeDailyQuota,

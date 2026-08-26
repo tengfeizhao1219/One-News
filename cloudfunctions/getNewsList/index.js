@@ -121,6 +121,8 @@ async function queryCache(where, pageNum, pageSize) {
         list: listData.map(item => ({
           id: item.id, _id: item._id,
           title: cleanTitle(item.title || ''), summary: item.summary,
+          // 2026-08-24：透传落库时刻（批次时间），供首页「数据截至」展示
+          createdAt: item.createdAt || null,
           // 2026-08-21 方案A：透传完整 AI 解读正文 + 独立观点，
           // 详情页首帧即可用完整解读渲染（不再"先摘要 0.5s 再刷新"）。
           content: item.content || '',
@@ -138,6 +140,8 @@ async function queryCache(where, pageNum, pageSize) {
           heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
           eventId: item.eventId || '',
         })),
+        // 2026-08-24：本批数据落库时刻（news_cache 同批 createdAt 相同，取最大即批次时间）
+        batchTime: listData.reduce(function (m, it) { return Math.max(m, it.createdAt || 0) }, 0) || null,
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,
       }
@@ -259,6 +263,7 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
           id: item.id, _id: item._id,
           title: cleanTitle(item.title || ''), summary: item.summary,
           summarySource: item.summarySource || '', // v6.2：'ai' | 'desc' | 'title'
+          createdAt: item.createdAt || null, // 2026-08-24：透传落库时刻（首页「数据截至」）
           category: item.category,
           categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
           source: item.source, sourceUrl: item.sourceUrl || '',
@@ -270,6 +275,7 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
           heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
           eventId: item.eventId || '',
         })),
+        batchTime: listData.reduce(function (m, it) { return Math.max(m, it.createdAt || 0) }, 0) || null,
         total: totalRes.total,
         hasMore: (pageNum * pageSize) < totalRes.total,
       }

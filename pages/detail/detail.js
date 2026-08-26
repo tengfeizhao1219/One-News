@@ -1279,8 +1279,9 @@ Page({
     if (!t) return
     var dy = t.clientY - this._panelTouch.y
     var dx = Math.abs(t.clientX - this._panelTouch.x)
-    var overflows = (this.data.searchPanelContentHeight || 0) > (this.data.searchPanelClientHeight || 0)
-    if (this.data.searchOpen && overflows && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
+    // 2026-08-23：深挖结果页下滑退出——不再要求内容必须溢出：面板已到顶（内容不足一屏时恒为顶）
+    // 继续下滑即收起面板回退正常详情页；内容溢出时先自然向上滚，滚到顶再下滑才退出（不打断面板内滚动）
+    if (this.data.searchOpen && dy > 24 && dy > dx && (this._panelScrollTop || 0) <= 0) {
       if (!this._panelTouch.moved) {
         this._panelTouch.moved = true
         this._collapseSearch()
@@ -1460,6 +1461,19 @@ Page({
         if (entries.length !== (g.entries || []).length) { cleaned = true; g.entries = entries }
         return g
       }.bind(this)).filter(function (g) { return g && g.query && (g.entries || []).length })
+      // 2026-08-23：深挖次序号迁移——旧数据无 seq 时按存储顺序补全局连续序号（entries 最新在前，
+      // 逆序补号：最旧(数组尾)先拿小号、最新(数组头)拿大号，与新条目 seq 语义一致且不重排，
+      // 保证次序号连续不跳号、展示序(最新在前)与序号(越大越新)自洽）
+      var maxSeq = 0
+      groups.forEach(function (g) {
+        (g.entries || []).forEach(function (en) { if (en.seq > maxSeq) maxSeq = en.seq })
+      })
+      groups.forEach(function (g) {
+        var es = g.entries || []
+        for (var i = es.length - 1; i >= 0; i--) {
+          if (!es[i].seq) { maxSeq++; es[i].seq = maxSeq; cleaned = true }
+        }
+      })
       if (cleaned) { try { wx.setStorageSync(k, groups) } catch (e) {} }
       return groups
     } catch (e) { return [] }
@@ -1506,7 +1520,13 @@ Page({
       this._measureSearchPanel()
       return
     }
-    var entry = { time: time, sections: sections, sources: sources, sourcesExpanded: false }
+    // 2026-08-23：全局深挖次序号连续（第1次深挖/第2次深挖…）：新条目 seq = 当前最大 + 1，
+    // 去重/容量清理只删条目不重排序号，保证历史次序号连续不断号
+    var nextSeq = 0
+    groups.forEach(function (g) {
+      (g.entries || []).forEach(function (en) { if (en.seq > nextSeq) nextSeq = en.seq })
+    })
+    var entry = { seq: nextSeq + 1, time: time, sections: sections, sources: sources, sourcesExpanded: false }
     if (g) { g.entries.unshift(entry) } else { groups.unshift({ query: query, open: false, entries: [entry] }) }
     groups.forEach(function (x) { x.open = (x.query === query) })
     while (groups.length > 10) groups.pop()

@@ -37,6 +37,7 @@ Page({
     filteredNewsList: [],   // 侧边栏过滤后的列表
     panelSubtitle: '',      // UI-B7：面板头部副标题「当前分类 · N 条」
     lastUpdated: '',        // 2026-08-21：列表数据最新一条的发布时间（HH:MM），用于「更新于」提示
+    dataAsOf: '',           // 2026-08-24：本批数据落库时间（HH:MM，跨天含 MM/DD），顶栏「数据截至」展示
     favList: [],             // 已废弃：收藏入口已迁移至 dock 菜单独立页
     // 页面状态
     pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
@@ -342,6 +343,31 @@ Page({
   },
 
   /**
+   * 2026-08-24：首页「数据截至」——本批数据落库时刻（batchTime），参考 AI 情报官首页。
+   * 优先用云函数返回的 batchTime（同批 createdAt 相同，即批次写入时刻）；
+   * 缺失时回退取列表内 createdAt 最大值（all 聚合等场景）。格式化：当天 HH:MM，跨天 MM/DD HH:MM。
+   * @param {Array} list 新闻列表（含 createdAt 毫秒时间戳）
+   * @param {number} [batchTime] 云函数返回的本批落库时刻
+   * @returns {string} "HH:MM" 或 "MM/DD HH:MM" 或 ''
+   */
+  _computeDataAsOf(list, batchTime) {
+    var bt = batchTime || 0
+    if (!bt && list && list.length) {
+      for (var i = 0; i < list.length; i++) {
+        var t = list[i].createdAt || 0
+        if (t > bt) bt = t
+      }
+    }
+    if (!bt) return ''
+    var d = new Date(bt)
+    var now = new Date()
+    var hh = ('0' + d.getHours()).slice(-2)
+    var mm = ('0' + d.getMinutes()).slice(-2)
+    var sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+    return (sameDay ? '' : (d.getMonth() + 1) + '/' + d.getDate() + ' ') + hh + ':' + mm
+  },
+
+  /**
    * BUG-20260802-006: 分类切换 ~0.5s 分类名提示
    * 在卡片页可见区域中央短暂展示分类名（面板关闭后/选中卡片时触发）
    * v6.2 增强：双重 hideToast 确保原生浮层关闭；延长展示到 600ms 提高可见性
@@ -461,9 +487,14 @@ Page({
       this.setData({ pageState: 'loading', errorMessage: '' })
 
       // RQ-20：'all'（全部）→ 并行聚合各分类首页，一次性展示所有分类数据
-      const list = this.data.currentCategory === 'all'
-        ? await this._loadAllAggregated()
-        : (await getNewsList({ category: this.data.currentCategory })).list || []
+      let res = null
+      let list = []
+      if (this.data.currentCategory === 'all') {
+        list = await this._loadAllAggregated()
+      } else {
+        res = await getNewsList({ category: this.data.currentCategory })
+        list = (res && res.list) || []
+      }
 
       if (list.length === 0) {
         this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试' })
@@ -475,7 +506,8 @@ Page({
       const idx = typeof resolveIndex === 'function' ? resolveIndex(list) : undefined
       // DG-03: 首次加载/切分类重置 loadMoreCount（方案 5 改动 B：每次 loadCategory 重置为 0）
       const lastUpdated = this._computeLastUpdated(list)
-      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0, lastUpdated })
+      const dataAsOf = this._computeDataAsOf(list, res && res.batchTime)
+      this.setData({ newsList: list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0, lastUpdated, dataAsOf })
       this._startSwipeHintTimer()
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
@@ -525,16 +557,22 @@ Page({
     try {
       wx.showToast({ title: '正在刷新…', icon: 'loading', duration: 800 })
       // 读库：与 loadNews 同一路径，拉取已在 DB 中、展示给前端的数据
-      const list = target === 'all'
-        ? await this._loadAllAggregated()
-        : (await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target) })).list || []
+      let res = null
+      let list = []
+      if (target === 'all') {
+        list = await this._loadAllAggregated()
+      } else {
+        res = await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target) })
+        list = (res && res.list) || []
+      }
       if (this._destroyed) return
       if (list.length === 0) {
         this.setData({ newsList: [], cards: [], pageState: 'empty', errorMessage: '暂无新闻，下拉刷新试试', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
         this._syncPanelList([], 0)
       } else {
         const lastUpdated = this._computeLastUpdated(list)
-        this.setData({ newsList: list, pageState: 'ready', currentPage: 1, currentIndex: 0, loadingMore: false, loadMoreCount: 0, lastUpdated })
+        const dataAsOf = this._computeDataAsOf(list, res && res.batchTime)
+        this.setData({ newsList: list, pageState: 'ready', currentPage: 1, currentIndex: 0, loadingMore: false, loadMoreCount: 0, lastUpdated, dataAsOf })
         this.renderCards(list, 0)
         this._syncPanelList(list, 0)
       }

@@ -18,13 +18,7 @@ module.exports = {
   },
 
   // 智谱 GLM-4-Flash AI 摘要（v6.2：从百炼 DashScope 切换为智谱）
-  // 通义千问 Qwen（DG-03：摘要双引擎兜底，DASHSCOPE_API_KEY）
-  // 使用 qwen3.7-flash：免费额度 100 万 token，作为智谱摘要失败后的免费兜底
-  qwen: {
-    apiKey: process.env.DASHSCOPE_API_KEY || '',
-    model: 'qwen3.7-flash',
-  },
-
+  // 2026-08-24：移除 Qwen 摘要引擎（owner 决策，DASHSCOPE_API_KEY 不再使用）
   zhipuSummary: {
     apiKey: process.env.ZHIPU_API_KEY || '',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',

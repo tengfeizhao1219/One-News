@@ -32,15 +32,14 @@ module.exports = {
     timeout: 45000,
   },
 
-  // 通义千问 Qwen API（refreshNews 智谱降级兜底数据源 · DG-03 接入 2026-08-06）
-  // 优先读环境变量 DASHSCOPE_API_KEY（阿里云百炼申请）；
-  // 选用 qwen3.7-flash：免费额度 100 万 token（2026/10/23 过期），支持 enable_search 联网搜索，
-  // 速度快、成本低，作为智谱失败后的免费二级兜底足够。降级链：智谱 → Qwen → 聚合/天行
-  qwen: {
-    apiKey: process.env.DASHSCOPE_API_KEY || '',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-    model: 'qwen3.7-flash',
-    timeout: 12000,  // DG-11: 15000→12000，与 zhipuSearch.QWEN_SEARCH_TIMEOUT 对齐（此前 config 遮蔽常量导致 15s 未生效）
+
+  // ys365（New API 中转网关 · 2026-08-24 接入）：统一 OpenAI 兼容端点，官方 key 全挂后的最后 AI 兜底。
+  // 启用：云函数环境变量 YS365_API_KEY（模型名用 YS365_MODEL 或本段 model 覆盖，默认 deepseek-chat）。
+  ys365: {
+    apiKey: process.env.YS365_API_KEY || '',
+    baseUrl: 'https://api.ys365.cyou/v1/chat/completions',
+    model: process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash',
+    timeout: 10000,
   },
 
   // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
