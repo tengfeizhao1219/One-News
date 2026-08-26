@@ -130,6 +130,18 @@
   padding-bottom: 8rpx;
 }
 
+/* ==================== ⚠️ 临时调色板(owner 2026-08-26 要求,标记详情页各部分,便于识别) ==================== */
+/* 状态栏=红 · 导航行=橙红 · 标题区(title-block)=黄 · 正文(rest)=绿 · 区块标题(block-label)=橙
+   AI预测(wh-panel)=蓝 · 落到你这里(for-card)=紫 · 了解更多/试试看(fold)=青 · 搜索面板=灰 */
+.title-block { background: rgba(255, 214, 0, 0.35); }
+.rest { background: rgba(0, 200, 0, 0.12); }
+.block-label { background: rgba(255, 120, 0, 0.35); }
+.wh-panel { background: rgba(0, 130, 255, 0.22); }
+.for-card { background: rgba(160, 0, 255, 0.18); }
+.fold { background: rgba(0, 190, 190, 0.18); }
+.search-panel { background: rgba(128, 128, 128, 0.2); }
+/* ==================== 临时调色板结束 ==================== */
+
 /* 结论式标题 + 来源 */
 .detail-title {
   /* 搜索展开时 rest 上移会滑过标题区：背景不透明 + 高 z-index 盖住，避免重合 */
