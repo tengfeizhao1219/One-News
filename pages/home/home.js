@@ -58,10 +58,6 @@ Page({
     isDark: false,
     _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
     intelActive: false,        // INTEL-BRIDGE: AI 情报屏是否覆盖显示（true=情报屏在屏，false=藏在左侧）
-    // 关注后续：首页长按进入「我的关注」——按压进度环
-    lpRing: false,
-    lpX: 0,
-    lpY: 0,
     // 关注后续：纯圆形绽放 overlay（不 navigateTo，避免系统右滑）
     showFollow: false,
     followEnterPoint: null,
@@ -765,13 +761,7 @@ Page({
   _startFollowPress(e) {
     if (this._destroyed || this.data.showPanel || this.data.intelActive) return
     this._lpJustFired = false
-    var t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
-    this.setData({
-      lpRing: true,
-      lpX: t.clientX || 0,
-      lpY: t.clientY || 0,
-    })
     var that = this
     if (this._lpTimer) clearTimeout(this._lpTimer)
     this._lpTimer = setTimeout(function () { that._enterFollow() }, 500)
@@ -779,13 +769,15 @@ Page({
   _cancelLongPress() {
     this._touchActive = false
     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null }
-    if (this.data.lpRing) this.setData({ lpRing: false })
   },
   _enterFollow() {
     this._touchActive = false
     this._lpTimer = null
     this._lpJustFired = true
-    this.setData({ lpRing: false })
+    // 触发提示：震动（替代原进度环倒计时动画）
+    if (wx.vibrateShort) {
+      try { wx.vibrateShort({ type: 'medium' }) } catch (err) {}
+    }
     // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
     const p = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
     app.globalData.followEnterPoint = p

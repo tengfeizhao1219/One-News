@@ -114,110 +114,159 @@
   padding: calc(var(--nav-offset) + 16rpx) 0 40rpx;
 }
 
-.fu-item {
-  margin: 0 32rpx;
-  padding: 28rpx 0;
-  border-bottom: 1rpx solid var(--divider);
-  background-color: var(--bg-card);
-  transition: opacity 0.2s;
+/* 汇总计数行（对齐 demo feed-head .c） */
+.feed-head {
+  padding: 4rpx 32rpx 16rpx;
 }
-.fu-item:active {
-  background-color: rgba(0, 0, 0, 0.04);
-}
-.page--dark .fu-item:active {
-  background-color: rgba(255, 255, 255, 0.06);
-}
-
-.fu-head {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-}
-.fu-module {
-  flex-shrink: 0;
-  font-size: 22rpx;
-  padding: 2rpx 12rpx;
-  border-radius: 8rpx;
-  background: var(--tag-bg);
-  color: var(--tag-text);
-}
-.fu-module.intel {
-  color: var(--flash-world); /* 情报官紫 #5856D6 */
-}
-.fu-module.onenews {
-  color: var(--primary); /* One News 蓝 */
-}
-.fu-title {
-  flex: 1;
-  font-size: 34rpx;
-  color: var(--text-primary);
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.fu-meta {
-  margin-top: 12rpx;
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
+.fh-count {
   font-size: 24rpx;
-  color: var(--text-secondary);
-  flex-wrap: wrap;
-}
-.fu-dot {
-  width: 14rpx;
-  height: 14rpx;
-  border-radius: 50%;
-  background: var(--text-tertiary);
-  flex-shrink: 0;
-}
-.fu-item.hasUpdate .fu-dot {
-  background: var(--color-favorite); /* 红 #FF3B30 */
-}
-.fu-item.read .fu-dot {
-  background: #34C759; /* 绿 --success */
-}
-.fu-item.hasUpdate .fu-status {
-  color: var(--color-favorite);
-  font-weight: 500;
-}
-.fu-item.read .fu-status {
-  color: #34C759;
-}
-.fu-track {
   color: var(--text-tertiary);
 }
 
-/* 时间线 */
-.fu-timeline {
-  margin-top: 20rpx;
-  padding-top: 20rpx;
-  border-top: 1rpx dashed var(--divider);
+/* 关注卡片（对齐 demo .follow-card：圆角卡 + 细描边 + 轻投影） */
+.follow-card {
+  margin: 0 32rpx 24rpx;
+  padding: 28rpx 32rpx;
+  background-color: var(--bg-card);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--divider);
+  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.04);
+  transition: opacity 0.2s;
+}
+.follow-card:active {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+.page--dark .follow-card:active {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* 抬头：标题 + 状态徽标 */
+.fc-top {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   gap: 20rpx;
 }
-.fu-tl-date {
-  font-size: 24rpx;
+.fc-title {
+  flex: 1;
+  font-size: 30rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.fc-badge {
+  flex-shrink: 0;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-favorite); /* 有更新：红 */
+  padding: 4rpx 16rpx;
+  border-radius: 99rpx;
+  white-space: nowrap;
+}
+.fc-badge.status-read { /* 已读完：绿 */
+  background: #34C759;
+}
+.fc-badge.status-none { /* 已是最新：灰 */
+  background: var(--tag-bg);
+  color: var(--text-tertiary);
+}
+
+/* 元信息：来源标签 · 追踪时间 · 已关注天数 */
+.fc-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  flex-wrap: wrap;
+}
+.src-tag {
+  font-size: 21rpx;
+  font-weight: 600;
+  padding: 2rpx 14rpx;
+  border-radius: 99rpx;
+  background: var(--tag-bg);
   color: var(--text-secondary);
-  margin-bottom: 6rpx;
 }
-.fu-tl-summary {
-  font-size: 28rpx;
+.src-tag.intel { /* 情报官紫 */
+  background: var(--flash-world-tint, rgba(88, 86, 214, 0.12));
+  color: var(--flash-world, #5856D6);
+}
+.dot {
+  width: 6rpx;
+  height: 6rpx;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+/* 最新更新高亮框（对齐 demo .fc-summary：浅底圆角卡） */
+.fc-summary {
+  margin-top: 20rpx;
+  font-size: 25rpx;
   color: var(--text-body);
-  line-height: 1.6;
+  line-height: 1.7;
+  background: var(--bg-subtle);
+  border-radius: 20rpx;
+  padding: 18rpx 22rpx;
 }
-.fu-tl-src {
+.fc-summary.muted {
+  color: var(--text-tertiary);
+}
+.fc-summary-date {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* 历史时间线（对齐 demo .tl：左侧竖线 + 圆点） */
+.tl {
+  margin-top: 20rpx;
+  border-left: 4rpx solid var(--divider);
+  padding-left: 28rpx;
+}
+.tl-item {
+  position: relative;
+  padding-bottom: 28rpx;
+}
+.tl-item:last-child {
+  padding-bottom: 0;
+}
+.tl-item::before {
+  content: "";
+  position: absolute;
+  left: -38rpx;
+  top: 8rpx;
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 4rpx solid var(--bg-card);
+}
+.tl-date {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--primary);
+}
+.tl-body {
+  font-size: 25rpx;
+  color: var(--text-body);
+  line-height: 1.7;
+  margin-top: 6rpx;
+}
+.tl-src {
   font-size: 22rpx;
   color: var(--text-tertiary);
   margin-top: 6rpx;
 }
-.fu-tl-empty {
-  font-size: 26rpx;
-  color: var(--text-tertiary);
+
+/* 展开/收起历史 */
+.link-row {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: var(--primary);
+  font-weight: 600;
 }
 
 /* 底部品牌 */

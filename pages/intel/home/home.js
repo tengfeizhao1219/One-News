@@ -36,10 +36,6 @@ Page({
     // 本周可试用清单（云函数返回后填充）
     tryable: [],
     refreshing: false,       // 下拉刷新中
-    // 关注后续：长按进入「我的关注」——按压进度环
-    lpRing: false,
-    lpX: 0,
-    lpY: 0,
     // 关注后续：纯圆形绽放 overlay（不 navigateTo，避免系统右滑）
     showFollow: false,
     followEnterPoint: null,
@@ -265,13 +261,7 @@ Page({
   _startFollowPress(e) {
     if (this._destroyed) return
     this._lpJustFired = false
-    var t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
-    this.setData({
-      lpRing: true,
-      lpX: t.clientX || 0,
-      lpY: t.clientY || 0,
-    })
     var that = this
     if (this._lpTimer) clearTimeout(this._lpTimer)
     this._lpTimer = setTimeout(function () { that._enterFollow() }, 500)
@@ -279,13 +269,15 @@ Page({
   _cancelLongPress() {
     this._touchActive = false
     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null }
-    if (this.data.lpRing) this.setData({ lpRing: false })
   },
   _enterFollow() {
     this._touchActive = false
     this._lpTimer = null
     this._lpJustFired = true
-    this.setData({ lpRing: false })
+    // 触发提示：震动（替代原进度环倒计时动画）
+    if (wx.vibrateShort) {
+      try { wx.vibrateShort({ type: 'medium' }) } catch (err) {}
+    }
     // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
     const p = { x: this._slideX || 0, y: this._slideY || 0 }
     app.globalData.followEnterPoint = p
