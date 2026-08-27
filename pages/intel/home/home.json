@@ -2,6 +2,6 @@
   "navigationStyle": "custom",
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "followup-card": "../../components/followup-card/followup-card"
+    "followup-card": "../../../components/followup-card/followup-card"
   }
 }
