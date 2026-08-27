@@ -62,6 +62,9 @@ Page({
     lpRing: false,
     lpX: 0,
     lpY: 0,
+    // 关注后续：纯圆形绽放 overlay（不 navigateTo，避免系统右滑）
+    showFollow: false,
+    followEnterPoint: null,
     // 首页底部滑动提示：进入 ready 即显示，3.5s 后自动淡出；首次有效滑动即消失（与详情页 UI-B11 一致）
     showSwipeHint: true,
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
@@ -779,9 +782,15 @@ Page({
     this._touchActive = false
     this._lpTimer = null
     this.setData({ lpRing: false })
-    // 记录按压点，供目标页圆形绽放过场（clip-path 从按压点 0%→150%）
-    app.globalData.followEnterPoint = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
-    wx.navigateTo({ url: '/pages/followup/followup' })
+    // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
+    const p = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
+    app.globalData.followEnterPoint = p
+    this.setData({ showFollow: true, followEnterPoint: p })
+  },
+
+  // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
+  onFollowBack() {
+    this.setData({ showFollow: false })
   },
 
   // ============ INTEL-BRIDGE (START): AI 情报模块——同屏横滑（内嵌面板，最小可摘除） ============

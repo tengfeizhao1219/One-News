@@ -1,6 +1,7 @@
 {
   "navigationStyle": "custom",
   "usingComponents": {
-    "logo": "/components/logo/logo"
+    "logo": "/components/logo/logo",
+    "followup-card": "/components/followup-card/followup-card"
   }
 }

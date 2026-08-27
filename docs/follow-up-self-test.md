@@ -34,19 +34,22 @@
 - [ ] 长按期间**滚动内容** → 长按被取消（无小标、无提示、无抖动）
 - [ ] 长按**不足 0.5s 松手** → 不触发（不冲突翻页/右滑手势）
 - [ ] 退出再进入该详情 → 小标仍在（关注关系持久化）
-- [ ] 已关注状态再长按 → 不再重复触发（幂等保护）
+- [ ] **已关注状态再长按 ≥0.5s** → 弹「取消关注」确认框，确认后移除关注、常驻小标消失
+- [ ] 确认框点「取消」→ 不取消关注（防误触保护）
 
 ### 2.2 情报官详情页 —— 长按关注（对齐 One News）
-- [ ] 同上 9 项，模块为 `intel`，常驻小标配色为情报官紫（`--flash-world`）
+- [ ] 同上，模块为 `intel`，常驻小标配色为情报官紫（`--flash-world`）
 - [ ] 内容区 `user-select:none`，长按不弹出微信「复制」菜单
+- [ ] 已关注状态长按 ≥0.5s → 同样弹「取消关注」确认框（module=`intel`）
 
-### 2.3 首页 —— 长按进入「我的关注」（圆形绽放）
-- [ ] One News 首页**空白处按住不动 ≥0.5s** → 进度环 → 圆形绽放进入聚合页（clip-path 从按压点 0%→150%）
-- [ ] 情报官首页**同款长按** → 进入聚合页
+### 2.3 首页 —— 长按进入「我的关注」（纯圆形绽放 overlay）
+- [ ] One News 首页**空白处按住不动 ≥0.5s** → 进度环 → **覆盖层从按压点 clip-path 0%→150% 炸开**（无系统右滑转场）
+- [ ] 情报官首页**同款长按** → 覆盖层炸开进入
 - [ ] 长按期间**移动 >20px** → 取消，让位给翻页/右滑/呼出面板
-- [ ] 进入后 `app.globalData.followEnterPoint` 已记录按压坐标，过场从按压点展开
+- [ ] 进入后 `app.globalData.followEnterPoint` 已记录按压坐标，过场圆心为按压点
+- [ ] 返回：覆盖层**反向圆形收回**按压点后收起（无 `navigateBack` 系统转场）
 
-### 2.4 「我的关注」聚合页 —— 四态与操作
+### 2.4 「我的关注」聚合页（followup-card 覆盖层组件）—— 四态与操作
 - [ ] 空状态：无关注时显示空态 + 「去首页看看」
 - [ ] 四态配色：有更新(红 dot) / 无更新(灰 dot) / 已读(绿 dot)
 - [ ] 点击卡片：**展开时间线**，且自动 `"标记已读"`（红→绿）
@@ -55,7 +58,7 @@
 - [ ] 「改追踪时间」→ 子菜单 08:00/12:00/18:00/21:00 生效
 - [ ] 「取消关注」→ 从列表移除
 - [ ] 顶部「全部标为已读」（仅未读>0 显示）→ 所有红转绿、未读清零
-- [ ] 返回：反向圆形收回按压点，再 `navigateBack`
+- [ ] 返回：覆盖层反向圆形收回按压点，再 `triggerEvent('back')` 收起（宿主 `onFollowBack` 置 `showFollow=false`）
 
 ### 2.5 跨模块聚合
 - [ ] One News 与情报官各自关注后，聚合页**并列**展示，来源标签分别标注「资讯」/「情报官」
@@ -69,13 +72,14 @@
 | --- | --- | --- | --- | --- | --- |
 | One News 详情 | `onTouchStart`→`_startFollowPress` | `onContentScroll`(>12px) | `onTouchEnd`→`_cancelLongPress` | `_fireFollow` | 与翻页手势共存 |
 | 情报官详情 | `onTouchStart`→`_startFollowPress` | `onContentScroll`(>12px) | `onTouchEnd`→`_cancelLongPress` | `_fireFollow` | 补齐了原本缺失的 touch 绑定 |
-| One News 首页 | `onTouchStart`→`_startFollowPress` | `onTouchMove`(>20px) | `onTouchEnd`→`_cancelLongPress` | `_enterFollow` | 与翻页/右滑/面板共存 |
-| 情报官首页 | `onSlideTouchStart`→`_startFollowPress` | `onSlideTouchMove`(>20px) | `onSlideTouchEnd`→`_cancelLongPress` | `_enterFollow` | 与左滑返回共存 |
+| One News 首页 | `onTouchStart`→`_startFollowPress` | `onTouchMove`(>20px) | `onTouchEnd`→`_cancelLongPress` | `_enterFollow`(置 `showFollow` 展开 overlay) | 与翻页/右滑/面板共存 |
+| 情报官首页 | `onSlideTouchStart`→`_startFollowPress` | `onSlideTouchMove`(>20px) | `onSlideTouchEnd`→`_cancelLongPress` | `_enterFollow`(置 `showFollow` 展开 overlay) | 与左滑返回共存 |
+| followup-card 组件 | `visible` 属性 observer | — | — | `_enterReveal`(clip-path 0%→150%) / `goBack`(150%→0% + `triggerEvent('back')`) | fixed 覆盖层，无系统转场 |
 
 - `app.wxss`：`.lp-ring` / `.lpshake` / `@keyframes lpShake` 关键帧齐备
 - `detail.wxss` / `intel/detail.wxss`：`.follow-badge` + `.no-select { user-select:none }` 齐备
-- `followup.wxml`：卡片 `data-id` / `data-module` + `bindtap` / `bindlongpress` 绑定正确
-- 全量 JS `node --check` 通过：followUp / followup / detail×2 / home×2 / test
+- `followup-card.wxml`：卡片 `data-id` / `data-module` + `bindtap` / `bindlongpress` 绑定正确；根 `.page` 初始 `clip-path: circle(0%)` 且不拦截触摸
+- 全量 JS `node --check` 通过：followUp / followup-card / followup / detail×2 / home×2 / test
 
 ---
 

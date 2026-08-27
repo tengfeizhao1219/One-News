@@ -223,4 +223,7 @@
   <!-- 关注后续：长按进度环（0.5s 充满后进入「我的关注」） -->
   <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
 
+  <!-- 关注后续：纯圆形绽放 overlay（fixed 覆盖层，由长按挂载） -->
+  <followup-card visible="{{showFollow}}" enter-point="{{followEnterPoint}}" bind:back="onFollowBack" />
+
 </view>

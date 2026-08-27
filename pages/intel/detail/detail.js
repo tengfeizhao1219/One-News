@@ -274,9 +274,9 @@ Page({
     }
   },
 
-  /** 开启长按关注计时：记录按压点、显示进度环、500ms 后触发（已关注则跳过） */
+  /** 开启长按关注计时：记录按压点、显示进度环、500ms 后触发（已关注也继续 → 走取消） */
   _startFollowPress(e) {
-    if (this._destroyed || this.data.isFollowed) return
+    if (this._destroyed) return
     const t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
     this._lpStartScrollTop = this._lastScrollTop || 0
@@ -300,10 +300,11 @@ Page({
     if (this.data.lpRing) this.setData({ lpRing: false })
   },
 
-  /** 触发关注：写入关注关系 + 三重反馈（抖动/居中提示/常驻小标） */
+  /** 触发：已关注则走取消关注，否则关注（写入关注关系 + 三重反馈） */
   _fireFollow() {
     this._touchActive = false
     this._lpTimer = null
+    if (this.data.isFollowed) { this._fireUnfollow(); return }
     const id = this.data.itemId || this.data.id || ''
     if (!id) { this.setData({ lpRing: false }); return }
     const res = followUp.addFollow('intel', {
@@ -323,6 +324,29 @@ Page({
     this.setData({ lpRing: false, lpShake: true, isFollowed: true })
     setTimeout(function () { that.setData({ lpShake: false }) }, 420)
     wx.showToast({ title: '🔔 已关注，每天 12:00 为你追踪', icon: 'none', duration: 1500 })
+  },
+
+  /** 取消关注：二次确认后移除关注关系，隐藏常驻小标 */
+  _fireUnfollow() {
+    const that = this
+    const id = this.data.itemId || this.data.id || ''
+    if (!id) { this.setData({ lpRing: false }); return }
+    wx.showModal({
+      title: '取消关注',
+      content: '确定不再追踪「' + (this.data.title || '该内容') + '」的后续更新吗？',
+      confirmText: '取消关注',
+      confirmColor: '#FF3B30',
+      success: function (r) {
+        if (r.confirm) {
+          followUp.removeFollow('intel', id)
+          that.setData({ lpRing: false, isFollowed: false })
+          wx.showToast({ title: '已取消关注', icon: 'none' })
+        } else {
+          that.setData({ lpRing: false })
+        }
+      },
+      fail: function () { that.setData({ lpRing: false }) },
+    })
   },
 
   /** 长按手势：touchstart 起计时 */

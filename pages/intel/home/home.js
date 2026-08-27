@@ -40,6 +40,9 @@ Page({
     lpRing: false,
     lpX: 0,
     lpY: 0,
+    // 关注后续：纯圆形绽放 overlay（不 navigateTo，避免系统右滑）
+    showFollow: false,
+    followEnterPoint: null,
   },
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
@@ -277,7 +280,14 @@ Page({
     this._touchActive = false
     this._lpTimer = null
     this.setData({ lpRing: false })
-    app.globalData.followEnterPoint = { x: this._slideX || 0, y: this._slideY || 0 }
-    wx.navigateTo({ url: '/pages/followup/followup' })
+    // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
+    const p = { x: this._slideX || 0, y: this._slideY || 0 }
+    app.globalData.followEnterPoint = p
+    this.setData({ showFollow: true, followEnterPoint: p })
+  },
+
+  // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
+  onFollowBack() {
+    this.setData({ showFollow: false })
   },
 })
