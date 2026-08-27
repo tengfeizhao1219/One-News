@@ -180,6 +180,8 @@ Page({
   },
 
   goDetail(e) {
+    // 关注后续：若本次触摸刚触发过长按进入关注页，忽略由同一次触摸产生的 tap，防止误进详情
+    if (this._lpJustFired) return
     const id = e.currentTarget.dataset.id
     // 方案A：把选中卡片的完整数据透传给详情页（经 app.globalData，与 One News detailContext 同模式），
     // 详情页据此渲染匹配的标题/来源角标/正文，避免「点 arXiv 卡却进 Claude 详情」的内容错配。
@@ -245,6 +247,8 @@ Page({
   },
   onSlideTouchEnd(e) {
     if (this._slideX === undefined || this._slideLock) return
+    // 关注后续：若本次触摸刚触发过长按进入关注页，忽略同一次触摸产生的左滑返回/点击副作用
+    if (this._lpJustFired) return
     var dx = e.changedTouches[0].clientX - this._slideX
     var dy = e.changedTouches[0].clientY - this._slideY
     var dt = Date.now() - this._slideT
@@ -260,6 +264,7 @@ Page({
   // ============ 关注后续：长按进入「我的关注」 ============
   _startFollowPress(e) {
     if (this._destroyed) return
+    this._lpJustFired = false
     var t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
     this.setData({
@@ -279,11 +284,16 @@ Page({
   _enterFollow() {
     this._touchActive = false
     this._lpTimer = null
+    this._lpJustFired = true
     this.setData({ lpRing: false })
     // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
     const p = { x: this._slideX || 0, y: this._slideY || 0 }
     app.globalData.followEnterPoint = p
     this.setData({ showFollow: true, followEnterPoint: p })
+    // 400ms 后清除标志，动画期间及之后不影响正常点击/滑动
+    var that = this
+    if (this._lpClearTimer) clearTimeout(this._lpClearTimer)
+    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 400)
   },
 
   // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）

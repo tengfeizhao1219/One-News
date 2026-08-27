@@ -112,10 +112,11 @@ Component({
       this.setData({ revealStyle: zero })
       this._load()
       const that = this
+      // 稍延迟一帧再切到 150%，确保浏览器已应用 0% 初始态，transition 能被触发
       setTimeout(function () {
         if (that._destroyed) return
         that.setData({ revealStyle: 'clip-path: circle(150% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(150% at ' + pt.x + ' ' + pt.y + ');' })
-      }, 50)
+      }, 80)
     },
 
     // 点击卡片：展开/收起时间线；展开即标记已读（读完转绿）
@@ -175,10 +176,11 @@ Component({
       const pt = this._point()
       this.setData({ revealStyle: 'clip-path: circle(0% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(0% at ' + pt.x + ' ' + pt.y + ');' })
       const that = this
+      // 等待 0.64s 反向收回动画完成后再通知宿主隐藏
       setTimeout(function () {
         if (that._destroyed) return
         that.triggerEvent('back')
-      }, 320)
+      }, 640)
     },
 
     // 空态/兜底：回首页

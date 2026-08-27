@@ -43,11 +43,13 @@
 - [ ] 已关注状态长按 ≥0.5s → 同样弹「取消关注」确认框（module=`intel`）
 
 ### 2.3 首页 —— 长按进入「我的关注」（纯圆形绽放 overlay）
-- [ ] One News 首页**空白处按住不动 ≥0.5s** → 进度环 → **覆盖层从按压点 clip-path 0%→150% 炸开**（无系统右滑转场）
+- [ ] One News 首页**空白处按住不动 ≥0.5s** → 进度环 → **覆盖层从按压点 clip-path 0%→150% 炸开**（无系统右滑转场，**绽放时长约 0.64s**）
 - [ ] 情报官首页**同款长按** → 覆盖层炸开进入
 - [ ] 长按期间**移动 >20px** → 取消，让位给翻页/右滑/呼出面板
 - [ ] 进入后 `app.globalData.followEnterPoint` 已记录按压坐标，过场圆心为按压点
-- [ ] 返回：覆盖层**反向圆形收回**按压点后收起（无 `navigateBack` 系统转场）
+- [ ] **长按进入关注页后，不应再触发卡片 tap 进入详情页**；手指松开后只应停留在关注页
+- [ ] 返回：覆盖层**反向圆形收回**按压点后收起（无 `navigateBack` 系统转场，**收回时长约 0.64s**）
+- [ ] 返回首页后，正常点击卡片仍可进入详情页
 
 ### 2.4 「我的关注」聚合页（followup-card 覆盖层组件）—— 四态与操作
 - [ ] 空状态：无关注时显示空态 + 「去首页看看」
@@ -59,6 +61,7 @@
 - [ ] 「取消关注」→ 从列表移除
 - [ ] 顶部「全部标为已读」（仅未读>0 显示）→ 所有红转绿、未读清零
 - [ ] 返回：覆盖层反向圆形收回按压点，再 `triggerEvent('back')` 收起（宿主 `onFollowBack` 置 `showFollow=false`）
+- [ ] 关注页首条卡片/空态文字**不被状态栏/导航栏遮挡**
 
 ### 2.5 跨模块聚合
 - [ ] One News 与情报官各自关注后，聚合页**并列**展示，来源标签分别标注「资讯」/「情报官」
@@ -79,6 +82,8 @@
 - `app.wxss`：`.lp-ring` / `.lpshake` / `@keyframes lpShake` 关键帧齐备
 - `detail.wxss` / `intel/detail.wxss`：`.follow-badge` + `.no-select { user-select:none }` 齐备
 - `followup-card.wxml`：卡片 `data-id` / `data-module` + `bindtap` / `bindlongpress` 绑定正确；根 `.page` 初始 `clip-path: circle(0%)` 且不拦截触摸
+- `followup-card.wxss`：clip-path transition 0.64s（约原 0.32s 两倍）；`.list-scroll` / `.empty-wrap` 已预留 `--nav-offset` 顶部间距
+- `home.js` / `intel/home.js`：`_enterFollow` 设置 `_lpJustFired` 标志并在 `onCardTap` / `goDetail` / `onTouchEnd` / `onSlideTouchEnd` 中拦截，防止长按后误触 tap/翻页/返回
 - 全量 JS `node --check` 通过：followUp / followup-card / followup / detail×2 / home×2 / test
 
 ---

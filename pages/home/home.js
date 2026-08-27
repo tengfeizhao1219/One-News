@@ -719,6 +719,8 @@ Page({
   onTouchEnd(e) {
     // 关注后续：松手即清除长按计时（任何情况都清，含动画中）
     this._cancelLongPress()
+    // 若本次触摸已触发长按进入关注页，则阻止同一次触摸产生的 tap/翻页/面板等副作用
+    if (this._lpJustFired) return
     if (this._isAnimating) return
 
     var dy = e.changedTouches[0].clientY - this._touchStartY
@@ -762,6 +764,7 @@ Page({
   // 规则：按住不动 500ms = 触发；一滚动/移动就取消（与详情页一致，无冲突）
   _startFollowPress(e) {
     if (this._destroyed || this.data.showPanel || this.data.intelActive) return
+    this._lpJustFired = false
     var t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
     this.setData({
@@ -781,11 +784,16 @@ Page({
   _enterFollow() {
     this._touchActive = false
     this._lpTimer = null
+    this._lpJustFired = true
     this.setData({ lpRing: false })
     // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
     const p = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
     app.globalData.followEnterPoint = p
     this.setData({ showFollow: true, followEnterPoint: p })
+    // 400ms 后清除标志，覆盖层动画期间及之后不影响正常点击
+    var that = this
+    if (this._lpClearTimer) clearTimeout(this._lpClearTimer)
+    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 400)
   },
 
   // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
@@ -1151,6 +1159,8 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
+    // 关注后续：若本次触摸刚触发过长按进入关注页，忽略由同一次触摸产生的 tap，防止误进详情
+    if (this._lpJustFired) return
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) {
       return
     }
