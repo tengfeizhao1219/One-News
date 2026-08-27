@@ -15,13 +15,17 @@ const { formatAbsoluteTime } = require('./util')
  * @param {string} params.category 分类ID，默认'recommend'（DG-03: all → recommend）
  * @param {number} params.pageNum   页码，默认1
  * @param {number} params.pageSize  每页条数；不传时按分类默认：recommend→15（对齐落库 cap），其余→8（PAGE_SIZE）
+ * @param {boolean} [params.includeContent=false] 是否透传完整正文 content/aiOpinion。
+ *        默认 false（瘦包）：首页卡片流只用 summary，无需长正文。
+ *        详情页首屏按需传 true（或走 getNewsDetail 后台拉取）。
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
-function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
+function getNewsList({ category = 'recommend', pageNum = 1, pageSize, includeContent = false } = {}) {
   const size = pageSize || (category === 'recommend' ? RECOMMEND_PAGE_SIZE : PAGE_SIZE)
   return wx.cloud.callFunction({
     name: 'getNewsList',
-    data: { category, pageNum, pageSize: size }
+    // 2026-08-28 优化：首页高频列表默认不拉长正文，减小响应包（详情页按需 includeContent=true / getNewsDetail）
+    data: { category, pageNum, pageSize: size, includeContent }
   }).then(res => {
     if (res.result.code !== 0) {
       const err = new Error(res.result.message || '获取新闻列表失败')
@@ -30,9 +34,9 @@ function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
     }
     const data = res.result.data
     return {
-      // 2026-08-21 方案A：列表透传完整 AI 解读正文 content（详情页首帧完整渲染，
-      // 不再"先摘要 0.5s 再刷新"）。列表量 42 条 × ~500 字 ≈ 20KB，可接受。
-      list: (data.list || []).map(item => formatNewsItem(item, true)),
+      // includeContent=true 时透传完整 AI 解读正文 content（详情页首帧完整渲染）；
+      // false 时列表项不含 content，靠 getNewsDetail 按需补全。
+      list: (data.list || []).map(item => formatNewsItem(item, !!includeContent)),
       total: data.total,
       hasMore: data.hasMore,
       meta: res.result.meta,  // 透传 source 信息

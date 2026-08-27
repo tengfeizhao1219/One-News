@@ -259,8 +259,8 @@ ReadingEngine.prototype._fetchCategoryWithCache = function (categoryId) {
     } catch (e) { /* 缓存读取失败，继续网络请求 */ }
   }
 
-  // 2) 网络请求
-  return getNewsList({ category: categoryId, pageNum: 1, pageSize: PAGE_SIZE })
+  // 2) 网络请求（详情页跨分类补拉：includeContent=true 保留完整正文，保证首屏渲染）
+  return getNewsList({ category: categoryId, pageNum: 1, pageSize: PAGE_SIZE, includeContent: true })
     .then(function (res) {
       var list = res.list || []
       // 写入缓存（TTL 10 分钟）

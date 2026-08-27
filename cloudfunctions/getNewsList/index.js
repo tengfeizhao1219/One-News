@@ -43,7 +43,7 @@ const CATEGORY_NAMES = {
 /**
  * 从云数据库 news_cache 读取（智谱/DeepSeek refreshNews 每小时写入）
  */
-async function getFromDbCache(category, pageNum, pageSize) {
+async function getFromDbCache(category, pageNum, pageSize, includeContent) {
   try {
     const now = Date.now()
 
@@ -55,7 +55,7 @@ async function getFromDbCache(category, pageNum, pageSize) {
     let where = freshWhere
     let stale = false
 
-    const res = await queryCache(where, pageNum, pageSize)
+    const res = await queryCache(where, pageNum, pageSize, includeContent)
 
     // 2. stale 兜底（owner 2026-08-06 09:48 决策：仅 fresh 完全为空时启动，兜底不加时间上限）
     //    DG-01：条件从 res.list.length === 0 收紧为 res.total === 0——
@@ -82,7 +82,7 @@ async function getFromDbCache(category, pageNum, pageSize) {
 /**
  * 执行 news_cache 查询并格式化
  */
-async function queryCache(where, pageNum, pageSize) {
+async function queryCache(where, pageNum, pageSize, includeContent = true) {
   try {
     // FS-质量把控 v2（2026-08-12）：排序 FinalScore 优先（质量+热度），同分按发布时间。
     //   - finalScore 由 refreshNews qualityScorer 落库（0-100 整数）；未评分的旧数据 finalScore=null。
@@ -118,28 +118,35 @@ async function queryCache(where, pageNum, pageSize) {
       const listData = dedupItems(res.data)
 
       return {
-        list: listData.map(item => ({
-          id: item.id, _id: item._id,
-          title: cleanTitle(item.title || ''), summary: item.summary,
-          // 2026-08-24：透传落库时刻（批次时间），供首页「数据截至」展示
-          createdAt: item.createdAt || null,
-          // 2026-08-21 方案A：透传完整 AI 解读正文 + 独立观点，
-          // 详情页首帧即可用完整解读渲染（不再"先摘要 0.5s 再刷新"）。
-          content: item.content || '',
-          aiOpinion: item.aiOpinion || '',
-          summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
-          category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
-          source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
-          // v1.2 路线1：透传 contentSource（前端识别官方源「出处 ↗」）+ sourceName（官方源来源名）
-          contentSource: item.contentSource || '',
-          sourceName: item.sourceName || '',
-          isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态
-          // FS-质量把控 v2：附加评分字段（前端可选，用于排序标识/后续展示评分）
-          finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
-          qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
-          heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
-          eventId: item.eventId || '',
-        })),
+        list: listData.map(item => {
+          // 列表瘦包（2026-08-28 优化）：includeContent=false 时不透传长正文 content / aiOpinion，
+          // 详情页按需走 getNewsDetail 拉取。首页卡片流只用 summary，无需 content。
+          const base = {
+            id: item.id, _id: item._id,
+            title: cleanTitle(item.title || ''), summary: item.summary,
+            // 2026-08-24：透传落库时刻（批次时间），供首页「数据截至」展示
+            createdAt: item.createdAt || null,
+            summarySource: item.summarySource || '', // v6.1：'ai' | 'desc' | 'title'（前端胶囊提示）
+            category: item.category, categoryName: item.categoryName || CATEGORY_NAMES[item.category] || '',
+            source: item.source, sourceUrl: item.sourceUrl || '', publishTime: item.publishTime,
+            // v1.2 路线1：透传 contentSource（前端识别官方源「出处 ↗」）+ sourceName（官方源来源名）
+            contentSource: item.contentSource || '',
+            sourceName: item.sourceName || '',
+            isRetained: item.isRetained === true, // v7/TL-B12：供前端判断收藏/分享态
+            // FS-质量把控 v2：附加评分字段（前端可选，用于排序标识/后续展示评分）
+            finalScore: typeof item.finalScore === 'number' ? item.finalScore : null,
+            qualityScore: typeof item.qualityScore === 'number' ? item.qualityScore : null,
+            heatScore: typeof item.heatScore === 'number' ? item.heatScore : null,
+            eventId: item.eventId || '',
+          }
+          if (includeContent) {
+            // 2026-08-21 方案A：透传完整 AI 解读正文 + 独立观点，
+            // 详情页首帧即可用完整解读渲染（不再"先摘要 0.5s 再刷新"）。
+            base.content = item.content || ''
+            base.aiOpinion = item.aiOpinion || ''
+          }
+          return base
+        }),
         // 2026-08-24：本批数据落库时刻（news_cache 同批 createdAt 相同，取最大即批次时间）
         batchTime: listData.reduce(function (m, it) { return Math.max(m, it.createdAt || 0) }, 0) || null,
         total: totalRes.total,
@@ -293,11 +300,14 @@ exports.main = async (event) => {
   const category = event.category || 'all'
   const pageNum = Math.max(1, parseInt(event.pageNum) || 1)
   const pageSize = Math.min(config.pagination.maxPageSize, Math.max(1, parseInt(event.pageSize) || config.pagination.defaultPageSize))
+  // 2026-08-28 优化：includeContent 默认 true（保持兼容，详情页/后台按需取正文）；
+  // 首页高频列表场景传 false，跳过长正文 content/aiOpinion，显著减小响应包。
+  const includeContent = event.includeContent !== false
 
-  console.log(`[getNewsList] v7.2 category=${category} page=${pageNum} size=${pageSize}`)
+  console.log(`[getNewsList] v7.3 category=${category} page=${pageNum} size=${pageSize} includeContent=${includeContent}`)
 
   // ── L1：云数据库 news_cache（正常路径 + stale 兜底）──
-  const dbCached = await getFromDbCache(category, pageNum, pageSize)
+  const dbCached = await getFromDbCache(category, pageNum, pageSize, includeContent)
   if (dbCached && dbCached.list.length > 0) {
     console.log(`[getNewsList] L1 news_cache 命中，返回 ${dbCached.list.length} 条${dbCached.stale ? '（历史兜底）' : ''}`)
     return {
