@@ -26,10 +26,8 @@
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
-    <!-- 加载态 -->
-    <block wx:if="{{loading}}">
-      <view class="state-hint"><text class="state-t">情报官正在梳理详情…</text></view>
-    </block>
+    <!-- 加载态内容由 scroll-view 外 .detail-loading 全屏覆盖层展示，此处仅占位以保持 if/elif/else 配对 -->
+    <block wx:if="{{loading}}"></block>
 
     <!-- 空态 -->
     <block wx:elif="{{empty}}">
@@ -172,6 +170,15 @@
     </block>
     </view>
   </scroll-view>
+
+  <!-- 首屏加载：logo 加载动画（等待 getIntelDetail 完成再渲染，避免空内容闪现；对齐 One News detail） -->
+  <view class="detail-loading" wx:if="{{loading}}">
+    <view class="loading-logo-wrap">
+      <view class="loading-ring"></view>
+      <logo mode="avatar-circle" size="92" />
+    </view>
+    <view class="loading-text">情报官正在梳理详情…</view>
+  </view>
 
   <!-- 关注后续：长按进度环（0.5s 充满后触发关注） -->
   <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>

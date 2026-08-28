@@ -1,5 +1,7 @@
 {
   "navigationStyle": "custom",
   "backgroundTextStyle": "dark",
-  "usingComponents": {}
+  "usingComponents": {
+    "logo": "/components/logo/logo"
+  }
 }
