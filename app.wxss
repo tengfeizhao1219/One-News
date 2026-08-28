@@ -172,38 +172,4 @@ page {
 }
 
 /* ============ 长按手势反馈（关注后续） ============ */
-/* 按压进度环：长按内容区时出现，0.5s 内旋转指示「按住中」；触发关注/进页后由 JS 隐藏 */
-.lp-ring {
-  position: fixed;
-  width: 88rpx;
-  height: 88rpx;
-  margin-left: -44rpx;
-  margin-top: -44rpx;
-  border-radius: 50%;
-  border: 4rpx solid rgba(0, 122, 255, 0.25);
-  border-top-color: var(--primary);
-  box-sizing: border-box;
-  pointer-events: none;
-  z-index: 999;
-  animation: lpSpin 0.5s linear infinite;
-}
-.page--dark .lp-ring {
-  border-color: rgba(10, 132, 255, 0.3);
-  border-top-color: var(--primary);
-}
-@keyframes lpSpin {
-  to { transform: rotate(360deg); }
-}
-
-/* 内容区左右轻晃（关注成功反馈，~0.42s） */
-.lpshake {
-  animation: lpShake 0.42s ease;
-}
-@keyframes lpShake {
-  0%, 100% { transform: translateX(0); }
-  18% { transform: translateX(-10rpx); }
-  36% { transform: translateX(10rpx); }
-  54% { transform: translateX(-7rpx); }
-  72% { transform: translateX(7rpx); }
-  90% { transform: translateX(-3rpx); }
-}
+/* 2026-08-28 owner 裁定：移除长按进度环与内容轻晃动画——关注状态改由元信息行末尾铃铛 icon 指示 */

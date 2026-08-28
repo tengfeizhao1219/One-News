@@ -242,33 +242,12 @@
   font-weight: 400;
 }
 
-/* 关注后续：已关注标题态（轻微蓝色呼应，不改变版式） */
-.detail-title--followed {
-  color: var(--primary);
-}
-
-/* 关注后续：标题下常驻小标 */
-.follow-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-bottom: 24rpx;
-  padding: 6rpx 16rpx;
-  border-radius: 999rpx;
-  background-color: rgba(0, 122, 255, 0.10);
-  align-self: flex-start;
-}
-.follow-badge-ic {
-  font-size: 22rpx;
-  line-height: 1;
-}
-.follow-badge-txt {
-  font-size: 22rpx;
-  color: var(--primary);
-  letter-spacing: 0.2rpx;
-}
-.page--dark .follow-badge {
-  background-color: rgba(10, 132, 255, 0.18);
+/* 关注后续：元信息行末尾铃铛 icon（已关注时显示） */
+.follow-meta-ic {
+  width: 28rpx;
+  height: 28rpx;
+  margin-left: 2rpx;
+  flex-shrink: 0;
 }
 
 /* 关注后续：内容区禁用系统长按选择（避免与「长按关注」手势冲突弹复制菜单） */

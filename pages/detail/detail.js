@@ -57,10 +57,6 @@ Page({
     heartAnim: false,
     // 关注后续：长按关注
     isFollowed: false,
-    lpRing: false,
-    lpX: 0,
-    lpY: 0,
-    lpShake: false,
     // BUG-FS-20260805-001: 深色模式下收藏星星 icon 切换白色版（image 渲染 SVG 时 currentColor 不生效，固定为黑色）
     isDark: false,
     // 字体档位（UX-FIX04 截断保护用）
@@ -1131,7 +1127,7 @@ Page({
   },
 
   /**
-   * 开启长按计时：记录按压点、显示进度环、500ms 后触发。
+   * 开启长按计时：记录按压点，500ms 后触发。
    * 已关注时也继续（长按 → 取消关注，由 _fireFollow 按 isFollowed 分流）。
    */
   _startFollowPress: function (e) {
@@ -1139,11 +1135,6 @@ Page({
     var t = (e.touches && e.touches[0]) || {}
     this._touchActive = true
     this._lpStartScrollTop = this._lastScrollTop || 0
-    this.setData({
-      lpRing: true,
-      lpX: t.clientX || 0,
-      lpY: t.clientY || 0,
-    })
     var that = this
     if (this._lpTimer) clearTimeout(this._lpTimer)
     this._lpTimer = setTimeout(function () { that._fireFollow() }, 500)
@@ -1156,16 +1147,15 @@ Page({
       clearTimeout(this._lpTimer)
       this._lpTimer = null
     }
-    if (this.data.lpRing) this.setData({ lpRing: false })
   },
 
-  /** 触发：已关注则走取消关注，否则关注（写入关注关系 + 三重反馈） */
+  /** 触发：已关注则走取消关注，否则关注（写入关注关系 + 元信息行末尾铃铛 icon） */
   _fireFollow: function () {
     this._touchActive = false
     this._lpTimer = null
     if (this.data.isFollowed) { this._fireUnfollow(); return }
     var news = this.data.news
-    if (!news || !news.id) { this.setData({ lpRing: false }); return }
+    if (!news || !news.id) return
     var res = followUp.addFollow('onenews', {
       itemId: news.id,
       title: news.title || '',
@@ -1175,37 +1165,20 @@ Page({
       picUrl: news.picUrl || '',
     })
     if (res.full) {
-      this.setData({ lpRing: false })
       wx.showToast({ title: '关注已达上限，请先清理', icon: 'none' })
       return
     }
-    var that = this
-    this.setData({ lpRing: false, lpShake: true, isFollowed: true })
-    setTimeout(function () { that.setData({ lpShake: false }) }, 420)
-    wx.showToast({ title: '🔔 已关注，每天 12:00 为你追踪', icon: 'none', duration: 1500 })
+    this.setData({ isFollowed: true })
+    wx.showToast({ title: '已关注，将为你追踪后续', icon: 'none', duration: 1500 })
   },
 
-  /** 取消关注：二次确认后移除关注关系，隐藏常驻小标 */
+  /** 取消关注：直接移除关注关系，隐藏元信息行铃铛 icon */
   _fireUnfollow: function () {
-    var that = this
     var news = this.data.news
-    if (!news || !news.id) { this.setData({ lpRing: false }); return }
-    wx.showModal({
-      title: '取消关注',
-      content: '确定不再追踪「' + (news.title || '该内容') + '」的后续更新吗？',
-      confirmText: '取消关注',
-      confirmColor: '#FF3B30',
-      success: function (r) {
-        if (r.confirm) {
-          followUp.removeFollow('onenews', news.id)
-          that.setData({ lpRing: false, isFollowed: false })
-          wx.showToast({ title: '已取消关注', icon: 'none' })
-        } else {
-          that.setData({ lpRing: false })
-        }
-      },
-      fail: function () { that.setData({ lpRing: false }) },
-    })
+    if (!news || !news.id) return
+    followUp.removeFollow('onenews', news.id)
+    this.setData({ isFollowed: false })
+    wx.showToast({ title: '已取消关注', icon: 'none', duration: 1500 })
   },
 
   /**

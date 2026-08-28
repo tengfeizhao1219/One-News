@@ -59,7 +59,7 @@
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view
     wx:if="{{pageState === 'ready'}}"
-    class="content {{animClass}} {{lpShake ? 'lpshake' : ''}} no-select"
+    class="content {{animClass}} no-select"
     scroll-y
     scroll-top="{{scrollTop}}"
     enhanced
@@ -74,13 +74,7 @@
 
     <view class="article">
       <!-- 标题（2026-08-22：移到 detail-body 外固定，搜索面板推上时标题钉顶不动，对齐 intel 版） -->
-      <view class="detail-title {{isFollowed ? 'detail-title--followed' : ''}} {{searchOpen ? 'is-search' : ''}} {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
-
-      <!-- 关注后续：已关注常驻小标（长按内容区触发） -->
-      <view class="follow-badge" wx:if="{{isFollowed}}">
-        <text class="follow-badge-ic">🔔</text>
-        <text class="follow-badge-txt">已关注 · 每天 12:00 追踪</text>
-      </view>
+      <view class="detail-title {{searchOpen ? 'is-search' : ''}} {{news.title ? '' : 'detail-title--empty'}}">{{news.title || '无标题'}}</view>
 
       <view class="detail-body rest {{searchOpen ? 'up' : ''}}">
         <!-- 元信息 -->
@@ -90,6 +84,8 @@
           <text wx:if="{{news.source && news.contentSource !== 'official_rss'}}">{{news.source}}</text>
           <text wx:if="{{news.source && news.contentSource !== 'official_rss' && news.time}}">·</text>
           <text>{{news.time}}</text>
+          <!-- 关注后续：已关注时元信息行末尾显示铃铛 icon（长按内容区触发） -->
+          <image wx:if="{{isFollowed}}" class="follow-meta-ic" src="/assets/icons/follow{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
         </view>
 
         <!-- 正文 -->
@@ -223,9 +219,6 @@
       </view>
     </view>
   </scroll-view>
-
-  <!-- 关注后续：长按进度环（0.5s 充满后触发关注） -->
-  <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
 
   <!-- 网络兜底 Toast -->
   <view class="network-toast {{networkToastVisible ? 'show' : ''}}" wx:if="{{networkToastVisible}}">
