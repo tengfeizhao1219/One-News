@@ -200,12 +200,19 @@ Page({
 
   // BUG-004: 页面销毁标记，防止回调中 setData
   onHide: function () {
+    // BUG-20260828-001：侧滑返回/切后台时取消长按关注计时——
+    // 系统侧滑返回手势可能拦截 touchmove，onTouchMove 位移保护不触发，
+    // onHide 兜底保证计时器必被清除，避免返回首页瞬间误触发取消关注。
+    this._cancelLongPress()
     // 2026-08-22：切后台/被覆盖时折叠深挖历史（与 intel 详情页行为一致）
     if (this._foldAllDig && !this._destroyed) this._foldAllDig(false)
   },
 
   onUnload: function () {
     this._destroyed = true
+    // BUG-20260828-001：页面销毁（系统返回手势/物理返回键）时取消长按计时——
+    // 防止计时器回调在页面销毁后仍执行 _fireFollow 误取消关注。
+    this._cancelLongPress()
     // BUG-20260806-025: 清理浏览完毕 toast 计时器，防止异步 setData 在已销毁页面执行
     if (this._finishToastTimer) {
       clearTimeout(this._finishToastTimer)
@@ -479,9 +486,33 @@ Page({
 
   onTouchStart: function (e) {
     this._touchStartY = e.touches[0].clientY
+    this._touchStartX = e.touches[0].clientX
     this._touchStartT = Date.now()
     // 关注后续：长按内容区 500ms 触发关注（已关注则跳过）
     this._startFollowPress(e)
+  },
+
+  /**
+   * BUG-20260828-001（owner 反馈）：侧滑返回首页时被自动取消关注。
+   * 根因：onTouchStart 无条件启动 500ms 长按计时，侧滑返回（水平边缘手势）
+   *       期间手指按住屏幕而 scroll-y 内容不动 → onContentScroll 位移保护不触发
+   *       → 500ms 计时到期 → _fireFollow → 已关注则取消关注。
+   * 修复：touchmove 实时追踪手指位移，任意方向位移超过阈值（12px）立即取消长按计时；
+   *       与详情页翻页阈值（70px）解耦，保证正常翻页滑动不误触发取消。
+   */
+  onTouchMove: function (e) {
+    if (!this._touchActive || !this._lpTimer) return
+    var t = (e.touches && e.touches[0]) || {}
+    var dx = Math.abs((t.clientX || 0) - (this._touchStartX || 0))
+    var dy = Math.abs((t.clientY || 0) - (this._touchStartY || 0))
+    if (Math.max(dx, dy) > 12) {
+      this._cancelLongPress()
+    }
+  },
+
+  /** 触摸被系统打断（如侧滑返回、来电）时兜底取消长按计时 */
+  onTouchCancel: function () {
+    this._cancelLongPress()
   },
 
   onTouchEnd: function (e) {
@@ -1151,6 +1182,8 @@ Page({
 
   /** 触发：已关注则走取消关注，否则关注（写入关注关系 + 元信息行末尾铃铛 icon） */
   _fireFollow: function () {
+    // BUG-20260828-001：页面已销毁（返回/关闭）时忽略——防止销毁后的计时器回调误取消关注
+    if (this._destroyed) return
     this._touchActive = false
     this._lpTimer = null
     if (this.data.isFollowed) { this._fireUnfollow(); return }

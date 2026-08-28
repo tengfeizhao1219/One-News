@@ -141,11 +141,16 @@ Page({
 
   /** 离开页面（返回首页/切后台等）：搜索区/结果自动折叠（bug4：再进不保持展开） */
   onHide() {
+    // BUG-20260828-001：侧滑返回/切后台时取消长按关注计时（兜底，与 One News detail 一致）
+    this._cancelLongPress()
     this._foldAllDig(true)
   },
 
   /** 2026-08-22：页面销毁（物理返回键/系统返回手势/关闭）时也折叠——onHide 不覆盖销毁场景 */
   onUnload() {
+    this._destroyed = true
+    // BUG-20260828-001：页面销毁时取消长按计时，防止销毁后回调误取消关注
+    this._cancelLongPress()
     this._foldAllDig(true)
   },
 
@@ -308,6 +313,8 @@ Page({
 
   /** 触发：已关注则走取消关注，否则关注（写入关注关系 + meta 行末尾铃铛 icon） */
   _fireFollow() {
+    // BUG-20260828-001：页面已销毁（返回/关闭）时忽略——防止销毁后的计时器回调误取消关注
+    if (this._destroyed) return
     this._touchActive = false
     this._lpTimer = null
     if (this.data.isFollowed) { this._fireUnfollow(); return }
@@ -340,11 +347,34 @@ Page({
 
   /** 长按手势：touchstart 起计时 */
   onTouchStart(e) {
+    const t = (e.touches && e.touches[0]) || {}
+    this._touchStartX = t.clientX || 0
+    this._touchStartY = t.clientY || 0
     this._startFollowPress(e)
+  },
+
+  /**
+   * BUG-20260828-001（owner 反馈）：侧滑返回首页时被自动取消关注。
+   * 根因/修复同 One News detail：touchmove 实时追踪位移，任意方向超 12px
+   * 立即取消长按计时，防止侧滑返回手势误触发 _fireFollow（已关注→取消关注）。
+   */
+  onTouchMove(e) {
+    if (!this._touchActive || !this._lpTimer) return
+    const t = (e.touches && e.touches[0]) || {}
+    const dx = Math.abs((t.clientX || 0) - (this._touchStartX || 0))
+    const dy = Math.abs((t.clientY || 0) - (this._touchStartY || 0))
+    if (Math.max(dx, dy) > 12) {
+      this._cancelLongPress()
+    }
   },
 
   /** 长按手势：touchend 清除计时 */
   onTouchEnd() {
+    this._cancelLongPress()
+  },
+
+  /** 触摸被系统打断（侧滑返回等）兜底取消长按计时 */
+  onTouchCancel() {
     this._cancelLongPress()
   },
 

@@ -22,7 +22,7 @@
     <view class="nav-progress-bar" style="width: {{progressPercent}}%;"></view>
   </view>
 
-  <scroll-view class="content no-select" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll" bindtouchstart="onTouchStart" bindtouchend="onTouchEnd">
+  <scroll-view class="content no-select" scroll-y scroll-into-view="{{searchIntoView}}" enhanced show-scrollbar="{{false}}" bindscroll="onContentScroll" bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd" bindtouchcancel="onTouchCancel">
 
     <!-- 内容容器：min-height 100% + flex，页脚内容不足一屏时贴底 -->
     <view class="scroll-inner">
