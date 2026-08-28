@@ -62,12 +62,6 @@
   line-height: 1;
   margin-top: -8rpx;
 }
-.nav-markall {
-  position: absolute;
-  right: 24rpx;
-  font-size: 26rpx;
-  color: var(--primary);
-}
 
 /* 空态 */
 .empty-wrap {
@@ -115,13 +109,22 @@
   padding: calc(var(--nav-offset) + 16rpx) 0 40rpx;
 }
 
-/* 汇总计数行（对齐 demo feed-head .c） */
+/* 汇总计数行（对齐 demo feed-head .c；BUG-20260828-007：flex 两端对齐，右侧放「全部标为已读」） */
 .feed-head {
   padding: 4rpx 32rpx 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .fh-count {
   font-size: 24rpx;
   color: var(--text-tertiary);
+}
+.fh-markall {
+  font-size: 24rpx;
+  color: var(--primary);
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
 /* 关注卡片（对齐 demo .follow-card：圆角卡 + 细描边 + 轻投影） */
