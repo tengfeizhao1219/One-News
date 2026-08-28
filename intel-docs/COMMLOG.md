@@ -1,4 +1,4 @@
-# COMMLOG · AI 情报官沟通交接记录
+﻿# COMMLOG · AI 情报官沟通交接记录
 
 > 倒序（最新在上）。每条：日期 | 角色 | 事项 | 状态/去向。子 Agent 交付后必须在此留痕。
 > 详细过程留痕于各交付文档；这里只记「交接点」。
@@ -7,9 +7,13 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
 | 2026-08-24 | I/O | **Agent 识图能力（ys365 视觉模型）**。`tools/vision/see-image.mjs` + README（入库 commit `526d113`）；key=YS365_API_KEY（DSH 凭证 `~/.dsh/.credentials.yaml`）；视觉模型 `meta/llama-3.2-11b-vision-instruct`（默认，中文界面识别良好）/ nvidia VL 备选；**DeepSeek 官方视觉模型（V4-Flash-Vision-Exp / VL2）ys365 未接入（503）**。联动 `wechatide simulator_screenshot` → 识图 → agent「看」模拟器（实测读出新闻标题/状态栏）。Notion「03-工具与脚本 → Agent 识图能力」已建 | ✅ 已入库 |
+| 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
 | 2026-08-24 | I/O | **微信开发者工具 skill-cli（wechatide MCP 通道）打通**。IDE 2.02.0 自带 wechatide-skill v0.3.9（`wechatide -c <client> <tool>`，PATH 有 wechatide.cmd），授权 client `dsh` 后全工具可用：upload(发布体验版)/create_preview_qrcode/auto_preview(直接推送开发者微信)/cloud_fn_deploy/cloud_db_*/simulator_screenshot/get_simulator_console/automation_*(UI 自动化)/compile_wxml|wxss。已验证：状态/项目列表/云环境/云函数列表/模拟器截图。与 CloudBase MCP 双通道互补 | ✅ 已打通 |
+| 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
 | 2026-08-24 | O/I | **多会话防覆盖机制上线 + 全员强制规范**：① `scripts/file-lock.sh` 文件级锁（lock/unlock/status/force-unlock，TTL 30 分钟）② pre-push hook 已装（check_intel.sh 门禁 + 60s 频率保护）③ **`docs/多会话防覆盖操作规范.md`（全员强制必读）**——编辑前 pull+status+lock、编辑后 unlock+只 add 自己的文件+push、红线（禁 add -A / 禁不锁就编辑 / 禁 --no-verify）④ CONTEXT 必读清单与协作机制 §三已同步。⚠️ 工作区有 23 个未提交改动（其他会话 WIP）——请各会话尽快提交 | ✅ 已推 |
+| 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
 | 2026-08-24 | I/O | **One News news_cache 注入前跨源去重（owner 拍板）+ CloudBase MCP 部署链路建立**。publish 注入前与现有 cache 比较（URL 归一化 / 标题指纹 / 标题包含关系），重复条目从当前批次剔除后仍全量替换注入；空批保护（剔除后为空 → 不发布保留现有 cache，防 stale 兜底带回旧数据）；commit `6d33404`；经 CloudBase MCP（SCF UpdateFunctionCode）部署上线，线上 ModTime 2026-08-24 09:44 + invoke 验证通过 | ✅ 已部署 |
 | 2026-08-20 | A/I | **中文官方源接入：MiniMax 尝试**。注册 minimax_ai（scrape，urlPattern=/blog/），extractListLinks 加遍3（任意链接+锚文本）+ 上下文日期提取；仍有 filtered（日期提取未完全生效/实例缓存），待续调。**已建立的通用机制**：per-source freshnessDays、JSON API adapter（智谱模式）、富文本提取、列表提取遍3、arxiv 限流 5 条 | 🔄 |
 | 2026-08-20 | I | **中文官方源首个打通 + 首页数据健康化**。① 智谱 GLM-5.3 全链路进 brief（JSON API + 富文本提取 + per-source freshnessDays=7，high 路由 747 字正文）；② arxiv 修复（Atom content 摘要兜底）+ brief 组装限流 5 条（论文不淹没新闻）；③ Simon Willison 接入（written 3）；④ brief v5 = 15 条：zhipu 1/arxiv 5/simon 3/techcrunch 3/theverge 2/openai 1——来源均衡 | ✅ 已推 |
@@ -457,3 +461,4 @@
 
 - **需求**：把 One News 的"不相关推荐问题"逻辑复用到 intel 详情页（后端已支持 related，前端此前未接入）。
 - **复用**：intel detail.js data 加 relatedQuestions；_runSearch reset 清空；_doCallSearch 不相关分支存推荐、相关清空；新增 onRelatedTap（点击推荐直接搜索）；wxml 面板加「猜你想搜 ✦」推荐列表；wxss 加 rel-* 样式（与 One News 同款，复用 dig-group 视觉）。
+

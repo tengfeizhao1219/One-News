@@ -10,10 +10,11 @@
 #       也可本脚本经 mcporter 批量部署。无需任何预处理/打包步骤。
 #
 # 注意：修改共享逻辑时，需同步改到各函数根目录下的对应文件
-#       （getNewsList/config.js、refreshNews/zhipuSearch.js 等），它们是各自独立的副本。
+#       （getNewsList/config.js、newsPipeline/zhipuSearch.js 等），它们是各自独立的副本。
+#       ⚠️ refreshNews 已于 2026-08-28 退役删除（被 newsFetcher + newsPipeline 替代），不要再引用。
 #
 # 用法：bash scripts/deploy-cloudfunctions.sh [函数名 ...]
-#   不带参数：部署全部（getNewsList getNewsDetail refreshNews searchNews）
+#   不带参数：部署全部（getNewsList getNewsDetail searchNews）
 #
 set -euo pipefail
 
@@ -22,7 +23,7 @@ CONFIG="$ROOT/config/mcporter.json"
 CLIENT=$(command -v mcporter || echo "npx --yes mcporter")
 
 # 要部署的函数（顺序无所谓）
-ALL_FUNCS=(getNewsList getNewsDetail refreshNews searchNews)
+ALL_FUNCS=(getNewsList getNewsDetail searchNews)   # refreshNews 已退役(2026-08-28)，勿加回
 FUNCS=("${@:-${ALL_FUNCS[@]}}")
 
 BUILD="$(mktemp -d)"
