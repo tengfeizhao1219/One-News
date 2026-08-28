@@ -82,9 +82,14 @@ fi
 git add "$COMMLOG"
 if git commit -m "docs(auto): 每日同步结论 $DATE_TAG（$COMMIT_CNT 个文件）" >/dev/null 2>&1; then
   echo "✅ 结论已提交"
-  # 推送（复用 git_push.sh，含频率保护）
+  # 推送（复用 git_push.sh，--force 跳过间隔保护；失败则等待 60s 重试一次，
+  # 因为 GitHub 写操作有 60s 冷却窗口）
   if [ -f "$REPO_ROOT/scripts/git_push.sh" ]; then
-    bash "$REPO_ROOT/scripts/git_push.sh" --force 2>&1 | tail -3
+    if ! bash "$REPO_ROOT/scripts/git_push.sh" --force 2>&1 | tail -3; then
+      echo "⚠️ 首次推送失败，60s 后重试（GitHub 写冷却窗口）…"
+      sleep 60
+      bash "$REPO_ROOT/scripts/git_push.sh" --force 2>&1 | tail -3
+    fi
   else
     git push origin main 2>&1 | tail -3
   fi
