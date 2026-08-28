@@ -420,10 +420,10 @@ Page({
    * 单分类失败不阻塞整体（catch 返回空数组）。
    * @returns {Promise<Array>} 合并去重后的新闻列表
    */
-  async _loadAllAggregated() {
+  async _loadAllAggregated(forceRefresh) {
     var that = this
     var fetches = CONTENT_CATEGORIES.map(function (c) {
-      return getNewsList({ category: c.id, pageNum: 1, pageSize: firstPageSize(c.id) })
+      return getNewsList({ category: c.id, pageNum: 1, pageSize: firstPageSize(c.id), forceRefresh: !!forceRefresh })
         .then(function (res) { return res.list || [] })
         .catch(function (err) {
           console.warn('[home] 全部聚合分类拉取失败:', c.id, err)
@@ -485,7 +485,8 @@ Page({
     return newItems
   },
 
-  async loadNews(resolveIndex) {
+  async loadNews(resolveIndex, opts) {
+    const forceRefresh = !!(opts && opts.forceRefresh)
     try {
       this.setData({ pageState: 'loading', errorMessage: '' })
 
@@ -493,9 +494,9 @@ Page({
       let res = null
       let list = []
       if (this.data.currentCategory === 'all') {
-        list = await this._loadAllAggregated()
+        list = await this._loadAllAggregated(forceRefresh)
       } else {
-        res = await getNewsList({ category: this.data.currentCategory })
+        res = await getNewsList({ category: this.data.currentCategory, forceRefresh })
         list = (res && res.list) || []
       }
 
@@ -541,7 +542,7 @@ Page({
 
   // 重试加载
   onRetry() {
-    this.loadNews()
+    this.loadNews(null, { forceRefresh: true })
   },
 
   /**
@@ -563,9 +564,9 @@ Page({
       let res = null
       let list = []
       if (target === 'all') {
-        list = await this._loadAllAggregated()
+        list = await this._loadAllAggregated(true)
       } else {
-        res = await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target) })
+        res = await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target), forceRefresh: true })
         list = (res && res.list) || []
       }
       if (this._destroyed) return

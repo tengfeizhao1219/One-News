@@ -12,6 +12,10 @@
 
 const SYNC_QUEUE_KEY = 'cloudSyncQueue'
 const MAX_QUEUE = 50
+// 2026-08-28 优化：flushQueue 重放离线堆积的收藏/浏览上报时，限制并发与单次条数，
+// 避免长期断网导致队列膨胀后，应用启动/联网瞬间打一批请求触发 -501003 配额。
+const FLUSH_CONCURRENCY = 3     // 最大并发重放数
+const FLUSH_MAX_PER_RUN = 20    // 单次启动最多重放条数，其余留待下次 flush
 
 /**
  * 基础云函数调用（Promise 化）
@@ -59,15 +63,27 @@ function enqueue(op) {
 async function flushQueue() {
   const q = loadQueue()
   if (!q.length) return
-  const remaining = []
-  for (const op of q) {
-    try {
-      await callCloudFunction(op.name, op.data)
-    } catch (e) {
-      remaining.push(op) // 仍失败，保留下次重试
+  // 单次最多重放 FLUSH_MAX_PER_RUN 条，其余留队列下次（避免一次排空 50 条打爆配额）
+  const batch = q.slice(0, FLUSH_MAX_PER_RUN)
+  const rest = q.slice(FLUSH_MAX_PER_RUN)
+  const failed = []
+  let cursor = 0
+  // 并发池：最多 FLUSH_CONCURRENCY 个 worker 同时重放，避免瞬时密集调用
+  const worker = async () => {
+    while (cursor < batch.length) {
+      const op = batch[cursor++]
+      try {
+        await callCloudFunction(op.name, op.data)
+      } catch (e) {
+        failed.push(op) // 仍失败，下次重试
+      }
     }
   }
-  saveQueue(remaining)
+  const workers = []
+  const n = Math.min(FLUSH_CONCURRENCY, batch.length)
+  for (let w = 0; w < n; w++) workers.push(worker())
+  await Promise.all(workers)
+  saveQueue(rest.concat(failed))
 }
 
 /**
