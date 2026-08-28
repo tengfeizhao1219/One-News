@@ -485,18 +485,44 @@ Page({
     return newItems
   },
 
+  /** 2026-08-24 分类列表本地缓存(读):切换分类时先用缓存秒开,消除网络延迟;后续刷新覆盖 */
+  _readCatCache(cat) {
+    try {
+      const v = localCache.get('news_cat_' + cat)
+      return (v && Array.isArray(v.list) && v.list.length) ? { list: v.list } : null
+    } catch (e) { return null }
+  },
+
+  /** 2026-08-24 分类列表本地缓存(写):loadNews 成功后写入,供下次切换秒开 */
+  _writeCatCache(cat, list) {
+    try {
+      if (list && list.length) localCache.set('news_cat_' + cat, { list }, { ttl: 24 * 60 * 60 * 1000 })
+    } catch (e) { /* 缓存失败不影响主流程 */ }
+  },
+
   async loadNews(resolveIndex, opts) {
     const forceRefresh = !!(opts && opts.forceRefresh)
+    const cat = this.data.currentCategory
+    // 2026-08-24 切分类秒开:本地缓存命中则先用缓存渲染,后台再刷新(消除切换网络延迟)
+    if (!forceRefresh && cat !== 'all') {
+      const cached = this._readCatCache(cat)
+      if (cached) {
+        this.setData({ newsList: cached.list, pageState: 'ready', currentPage: 1, loadingMore: false, loadMoreCount: 0 })
+        this.renderCards(cached.list)
+        this._syncPanelList(cached.list)
+      }
+    }
     try {
-      this.setData({ pageState: 'loading', errorMessage: '' })
+      // 已有缓存数据时保持 ready(秒开不闪 loading);否则 loading
+      this.setData({ pageState: (this.data.newsList && this.data.newsList.length) ? 'ready' : 'loading', errorMessage: '' })
 
       // RQ-20：'all'（全部）→ 并行聚合各分类首页，一次性展示所有分类数据
       let res = null
       let list = []
-      if (this.data.currentCategory === 'all') {
+      if (cat === 'all') {
         list = await this._loadAllAggregated(forceRefresh)
       } else {
-        res = await getNewsList({ category: this.data.currentCategory, forceRefresh })
+        res = await getNewsList({ category: cat, forceRefresh })
         list = (res && res.list) || []
       }
 
@@ -516,6 +542,8 @@ Page({
       this.renderCards(list, idx)
       // BUG-20260802-004: 卡片渲染后由同一份 newsList 派生侧栏，保证刷新后两侧一致
       this._syncPanelList(list)
+      // 2026-08-24: 拉取成功 → 写分类缓存,供下次切换秒开
+      if (cat !== 'all') this._writeCatCache(cat, list)
 
       // B-07: 若 onShow 时暂存了详情页返回状态，数据就绪后立即定位
       if (this._pendingReturnState) {
