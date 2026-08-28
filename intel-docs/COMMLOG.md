@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-08-28 | Auto | **每日自动同步 2026-08-28 21:39：提交 0 个文件；— 无推送（无改动）；—；⚠️ 有未提交改动（1 个）。详情见 .git-auto/auto.log** | ✅ 已同步 |
 | 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
 | 2026-08-24 | I/O | **Agent 识图能力（ys365 视觉模型）**。`tools/vision/see-image.mjs` + README（入库 commit `526d113`）；key=YS365_API_KEY（DSH 凭证 `~/.dsh/.credentials.yaml`）；视觉模型 `meta/llama-3.2-11b-vision-instruct`（默认，中文界面识别良好）/ nvidia VL 备选；**DeepSeek 官方视觉模型（V4-Flash-Vision-Exp / VL2）ys365 未接入（503）**。联动 `wechatide simulator_screenshot` → 识图 → agent「看」模拟器（实测读出新闻标题/状态栏）。Notion「03-工具与脚本 → Agent 识图能力」已建 | ✅ 已入库 |
 | 2026-08-28 | I/O | **One News refreshNews 退役删除**（被 newsFetcher + newsPipeline 替代;cloudbaserc/部署脚本已同步;test/ 引用 refreshNews 的 7 个旧测试需同步调整）| ✅ 已删 |
