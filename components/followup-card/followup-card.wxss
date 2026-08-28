@@ -77,8 +77,9 @@
   align-items: center;
   justify-content: center;
   padding: 0 64rpx;
-  /* 空态同样预留导航栏高度，避免被 fixed 导航栏遮挡 */
-  padding-top: var(--nav-offset);
+  /* BUG-20260828-004：去掉 padding-top: var(--nav-offset)——
+     flex:1 已占满导航栏下方区域且垂直居中，再加 padding-top 会把内容下推约 100px，
+     导致空态图标/文字/按钮整体偏下不居中（像素采样实测偏移）。 */
 }
 .empty-icon {
   font-size: 96rpx;
@@ -269,19 +270,21 @@
   font-weight: 600;
 }
 
-/* 底部品牌 */
+/* 底部品牌（BUG-20260828-006：紧凑居中，非全宽横幅） */
 .brand-footer {
-  margin-top: 24rpx;
-  padding: 0 32rpx 40rpx;
+  margin-top: 8rpx;
+  padding: 0 32rpx 60rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .brand-card {
-  width: 100%;
-  background: var(--bg-card);
-  border-radius: 18rpx;
+  width: 200rpx;
+  border-radius: 14rpx;
   overflow: hidden;
 }
 .brand-text {
-  margin-top: 20rpx;
+  margin-top: 16rpx;
   font-size: 22rpx;
   color: var(--text-tertiary);
   letter-spacing: 2rpx;

@@ -208,6 +208,38 @@ Component({
       }, 960)
     },
 
+    // ============ 右滑返回手势（BUG-20260828-003） ============
+    // 背景：覆盖层无触摸处理时，右滑被微信系统手势拦截 → 栈底首页直接退出小程序。
+    // 修复：组件内捕获触摸，右滑（横向为主且位移 > 60px）→ goBack() 返回首页。
+    onTouchStart(e) {
+      if (!this.data.visible) return
+      const t = (e.touches && e.touches[0]) || {}
+      this._slideX = t.clientX || 0
+      this._slideY = t.clientY || 0
+      this._slideT = Date.now()
+      this._slideLock = false
+    },
+    onTouchMove(e) {
+      // 仅跟踪，不实时拦截（避免影响列表滚动）
+    },
+    onTouchEnd(e) {
+      if (!this.data.visible || this._slideLock || this._slideX === undefined) return
+      const t = (e.changedTouches && e.changedTouches[0]) || {}
+      const dx = (t.clientX || 0) - this._slideX
+      const dy = (t.clientY || 0) - this._slideY
+      const dt = Date.now() - this._slideT
+      // 右滑返回：dx>60px 且横向为主且快速（对称于进入关注页的判定）
+      if (dx > 60 && Math.abs(dx) > Math.abs(dy) && dt < 800) {
+        this._slideLock = true
+        const that = this
+        setTimeout(function () { that._slideLock = false }, 1000)
+        this.goBack()
+      }
+    },
+    onTouchCancel() {
+      this._slideLock = false
+    },
+
     // 空态/兜底：回首页
     goHome() {
       wx.reLaunch({ url: '/pages/home/home' })

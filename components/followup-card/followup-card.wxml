@@ -1,8 +1,11 @@
 <!-- 我的关注 — 跨模块聚合 Feed 覆盖层组件（One News + 情报官），UI 对齐 ui-demo/follow-up-demo.html -->
-<view class="page {{themeClass}} {{visible ? 'is-open' : ''}}" style="{{revealStyle}} --nav-offset: {{navOffset}}px;">
+<view class="page {{themeClass}} {{visible ? 'is-open' : ''}}" style="{{revealStyle}} --nav-offset: {{navOffset}}px;"
+  bindtouchstart="onTouchStart" bindtouchmove="onTouchMove" bindtouchend="onTouchEnd" bindtouchcancel="onTouchCancel">
 
-  <!-- 状态栏占位 -->
-  <view class="status-bar-fill" style="height: {{statusBarHeight}}px; background-color: var(--bg-card);"></view>
+  <!-- 状态栏占位（BUG-20260828-005：高度用 menuTop 而非 statusBarHeight——
+       胶囊顶部 menuTop 通常比 statusBarHeight 大 3~6px，用 statusBarHeight 会
+       在状态栏背景与导航栏之间露出 9px 白色缝隙（与 home BUG-20260806-020 同类）） -->
+  <view class="status-bar-fill" style="height: {{menuTop}}px; background-color: var(--bg-card);"></view>
 
   <!-- 导航栏：返回（左）+ 标题（中）+ 全部标已读（右） -->
   <view class="nav-bar" style="top: {{menuTop}}px; height: calc({{menuHeight}}px + 24rpx); background-color: var(--bg-card);">
@@ -13,7 +16,7 @@
     <view class="nav-markall" wx:if="{{unreadCount > 0}}" bindtap="onMarkAllRead">全部标为已读</view>
   </view>
 
-  <!-- 空态 -->
+  <!-- 空态（BUG-20260828-004：flex 居中，无 padding-top 下推） -->
   <view class="empty-wrap" wx:if="{{isEmpty}}">
     <view class="empty-icon">🔔</view>
     <view class="empty-text">还没有关注任何话题</view>
@@ -64,9 +67,10 @@
       <view class="link-row" wx:if="{{item.timeline.length > 0}}">{{expanded[item.itemId] ? '收起 ▴' : '展开历史更新 ▾'}}</view>
     </view>
 
+    <!-- BUG-20260828-006：品牌页脚紧凑居中（splash 全宽横幅→200rpx 小 logo） -->
     <view class="brand-footer">
       <view class="brand-card">
-        <logo id="fu-logo" mode="splash" fluid></logo>
+        <logo id="fu-logo" mode="splash" size="200"></logo>
       </view>
       <view class="brand-text">一页 · 简单到极致</view>
     </view>
