@@ -38,6 +38,9 @@ const CATEGORY_NAMES = {
   international: '国际', life: '社会',
 }
 
+// 复合索引缺失告警节流：仅在首次降级时打醒目 console.error，避免日志刷屏（见 docs/COMPOSITE_INDEX_CHECK.md）
+let _indexWarnLogged = false
+
 // ─── 缓存查询 ────────────────────────────────────────
 
 /**
@@ -97,25 +100,35 @@ async function queryCache(where, pageNum, pageSize, includeContent = true) {
         .orderBy('finalScore', 'desc')
         .orderBy('createdAt', 'desc')
         .skip((pageNum - 1) * pageSize)
-        .limit(pageSize)
+        .limit(pageSize + 1)
         .get()
     } catch (chainErr) {
-      console.warn('[getNewsList] 组合索引排序失败，降级单字段 createdAt:', (chainErr && chainErr.message) || chainErr)
+      // 组合索引 (finalScore, createdAt) 排序失败 → 多半是 news_cache 集合缺失该复合索引。
+      // 索引缺失会让「同一次列表请求」静默翻倍 DB 读（主路径报错 + 降级重试各一次），
+      // 是 -501003 DB 读配额的典型黑洞。请在云开发控制台确认索引存在（见 docs/COMPOSITE_INDEX_CHECK.md）。
+      if (!_indexWarnLogged) {
+        _indexWarnLogged = true
+        console.error('[getNewsList][⚠ 复合索引缺失/异常] news_cache 需组合索引 (finalScore desc, createdAt desc)，' +
+          '缺失时每次列表请求会多打一次 DB 读并降级单字段排序。详见 docs/COMPOSITE_INDEX_CHECK.md。',
+          (chainErr && chainErr.message) || chainErr)
+      } else {
+        console.warn('[getNewsList] 组合索引排序失败，降级单字段 createdAt:', (chainErr && chainErr.message) || chainErr)
+      }
       res = await db.collection('news_cache')
         .where(where)
         .orderBy('createdAt', 'desc')
         .skip((pageNum - 1) * pageSize)
-        .limit(pageSize)
+        .limit(pageSize + 1)
         .get()
     }
 
     if (res.data && res.data.length > 0) {
-      const totalRes = await db.collection('news_cache')
-        .where(where)
-        .count()
-
-      // 服务端去重：同 sourceUrl/同标题只保留一条，斩断用户可见的重复
-      const listData = dedupItems(res.data)
+      // 2026-08-28 优化：去掉每次列表的 .count() 查询（省 1 次 DB 读/次，直接降低 -501003 的 DB 读配额）。
+      //   多取 1 条（limit pageSize+1）：原始返回条数 > pageSize 即 hasMore=true，多出的那条在去重后截断丢弃，
+      //   不泄漏到列表、也不计入 total。hasMore 用「原始未去重长度」判断，去重导致本页 < pageSize+1 也不会误判。
+      const hasMore = res.data.length > pageSize
+      // 服务端去重：同 sourceUrl/同标题只保留一条，斩断用户可见的重复；再截断多取的那条
+      const listData = dedupItems(res.data).slice(0, pageSize)
 
       return {
         list: listData.map(item => {
@@ -149,8 +162,9 @@ async function queryCache(where, pageNum, pageSize, includeContent = true) {
         }),
         // 2026-08-24：本批数据落库时刻（news_cache 同批 createdAt 相同，取最大即批次时间）
         batchTime: listData.reduce(function (m, it) { return Math.max(m, it.createdAt || 0) }, 0) || null,
-        total: totalRes.total,
-        hasMore: (pageNum * pageSize) < totalRes.total,
+        // total 不再依赖 .count()：用「本页实际条数 +（有下一页则 +1）」估算，前端仅消费 hasMore，不依赖精确 total
+        total: listData.length + (hasMore ? 1 : 0),
+        hasMore,
       }
     }
     return null
@@ -260,11 +274,12 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
       .where(where)
       .orderBy('createdAt', 'desc')
       .skip((pageNum - 1) * pageSize)
-      .limit(pageSize)
+      .limit(pageSize + 1)
       .get()
     if (res.data && res.data.length > 0) {
-      const totalRes = await db.collection('news_cache_backup').where(where).count()
-      const listData = dedupItems(res.data)
+      // 2026-08-28 优化：同 queryCache，去掉 .count()，改用 limit+1 判定 hasMore
+      const hasMore = res.data.length > pageSize
+      const listData = dedupItems(res.data).slice(0, pageSize)
       return {
         list: listData.map(item => ({
           id: item.id, _id: item._id,
@@ -283,8 +298,8 @@ async function getFromCacheBackup(category, pageNum, pageSize) {
           eventId: item.eventId || '',
         })),
         batchTime: listData.reduce(function (m, it) { return Math.max(m, it.createdAt || 0) }, 0) || null,
-        total: totalRes.total,
-        hasMore: (pageNum * pageSize) < totalRes.total,
+        total: listData.length + (hasMore ? 1 : 0),
+        hasMore,
       }
     }
     return null
