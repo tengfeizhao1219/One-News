@@ -16,8 +16,8 @@
   /* 未展开时收为 0% 且不拦截触摸，避免盖住首页手势 */
   pointer-events: none;
   /* 圆形绽放 reveal 过渡（进入 clip-path 0%→150%；返回 150%→0%）
-     0.64s 约为原先 0.32s 的两倍，避免视觉上“划过去”的廉价感 */
-  transition: clip-path 0.64s ease, -webkit-clip-path 0.64s ease;
+     0.96s = 原 0.64s 的 1.5 倍（owner 2026-08-28 要求放慢，避免视觉上“划过去”的廉价感） */
+  transition: clip-path 0.96s ease, -webkit-clip-path 0.96s ease;
 }
 /* 展开态才接收触摸事件 */
 .page.is-open {

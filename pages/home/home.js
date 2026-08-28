@@ -811,10 +811,11 @@ Page({
     const p = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
     app.globalData.followEnterPoint = p
     this.setData({ showFollow: true, followEnterPoint: p })
-    // 400ms 后清除标志，覆盖层动画期间及之后不影响正常点击
+    // BUG-20260828-002：清除窗口与绽放动画时长（0.96s）一致——
+    // 覆盖层完全展开前，同一触摸产生的 tap 必须被忽略（防误进详情页）
     var that = this
     if (this._lpClearTimer) clearTimeout(this._lpClearTimer)
-    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 400)
+    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 960)
   },
 
   // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
@@ -1180,6 +1181,10 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
+    // BUG-20260828-002：长按进入关注页后，同一次触摸产生的 tap 仍派发给
+    // touchstart 时的卡片（小程序 tap 目标由触摸起点决定），若按住超过
+    // _lpJustFired 清除窗口才松手 → 误进详情页。覆盖层展开期间一律忽略卡片点击。
+    if (this.data.showFollow) return
     // 关注后续：若本次触摸刚触发过长按进入关注页，忽略由同一次触摸产生的 tap，防止误进详情
     if (this._lpJustFired) return
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) {

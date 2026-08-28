@@ -201,11 +201,11 @@ Component({
       const pt = this._point()
       this.setData({ revealStyle: 'clip-path: circle(0% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(0% at ' + pt.x + ' ' + pt.y + ');' })
       const that = this
-      // 等待 0.64s 反向收回动画完成后再通知宿主隐藏
+      // 等待 0.96s 反向收回动画完成后再通知宿主隐藏（与 clip-path transition 时长一致）
       setTimeout(function () {
         if (that._destroyed) return
         that.triggerEvent('back')
-      }, 640)
+      }, 960)
     },
 
     // 空态/兜底：回首页

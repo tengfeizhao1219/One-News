@@ -176,6 +176,8 @@ Page({
   },
 
   goDetail(e) {
+    // BUG-20260828-002：长按进入关注页后，同一次触摸的 tap 仍派发给起点卡片——覆盖层展开期间忽略
+    if (this.data.showFollow) return
     // 关注后续：若本次触摸刚触发过长按进入关注页，忽略由同一次触摸产生的 tap，防止误进详情
     if (this._lpJustFired) return
     const id = e.currentTarget.dataset.id
@@ -282,10 +284,10 @@ Page({
     const p = { x: this._slideX || 0, y: this._slideY || 0 }
     app.globalData.followEnterPoint = p
     this.setData({ showFollow: true, followEnterPoint: p })
-    // 400ms 后清除标志，动画期间及之后不影响正常点击/滑动
+    // BUG-20260828-002：清除窗口与绽放动画时长（0.96s）一致，防同一次触摸误进详情
     var that = this
     if (this._lpClearTimer) clearTimeout(this._lpClearTimer)
-    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 400)
+    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 960)
   },
 
   // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
