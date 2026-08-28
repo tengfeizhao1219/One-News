@@ -147,6 +147,9 @@ function ReadingEngine(options) {
   this._initializing = false
   // BUG-20260806-002：入口新闻未命中标记（收藏/历史旧新闻已失效时禁止回退展示他条）
   this._entryNotFound = false
+  // 2026-08-28：首屏渲染控制——首屏等待 getNewsDetail 完成再渲染（展示 logo 加载动画），
+  // 避免「先摘要后补全」跳变；翻页保持「秒出本地 + 后台升级」的丝滑体验（仅首次为 true）。
+  this._firstLoadPending = true
 }
 
 /**
@@ -259,8 +262,8 @@ ReadingEngine.prototype._fetchCategoryWithCache = function (categoryId) {
     } catch (e) { /* 缓存读取失败，继续网络请求 */ }
   }
 
-  // 2) 网络请求
-  return getNewsList({ category: categoryId, pageNum: 1, pageSize: PAGE_SIZE })
+  // 2) 网络请求（详情页跨分类补拉：includeContent=true 保留完整正文，保证首屏渲染）
+  return getNewsList({ category: categoryId, pageNum: 1, pageSize: PAGE_SIZE, includeContent: true })
     .then(function (res) {
       var list = res.list || []
       // 写入缓存（TTL 10 分钟）
@@ -539,12 +542,7 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   // 预取窗口 ±2
   that._prefetchWindow()
 
-  // 优化（owner 2026-08-16）：内容已存在本地（库/缓存），翻页不应等云端——
-  // ① 立即用本地数据渲染（本地缓存 > 列表条目摘要），Promise 立即 resolve，翻页零等待；
-  // ② 后台拉取 getNewsDetail 刷新合规字段/全文（写缓存 + 回写 mergedList，
-  //    仍在当前页则通过 onDetailRefresh 升级渲染）。
-  // 2026-08-21 方案A：getNewsList 已透传完整 AI 解读正文 content——
-  // 列表数据直接含全文，首帧即完整解读；aiOpinion 一并带入（详情页观点卡可用）。
+  // 准备本地/缓存基线（翻页即时渲染 & 首屏失败兜底共用）
   var local = null
   if (that._cache) {
     try { local = that._cache.get('newsDetail:' + cur.id) } catch (e) { local = null }
@@ -573,6 +571,40 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
     normalized.introBlocks = buildIntroBlocks(text)
   }
   var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
+
+  // 首屏：等待 getNewsDetail 完成再渲染（详情页展示 logo 加载动画，避免「先摘要后补全」跳变）。
+  // 翻页：保持「秒出本地 + 后台升级」的丝滑体验（_firstLoadPending 仅在首次为 true）。
+  if (that._firstLoadPending) {
+    that._firstLoadPending = false
+    return getNewsDetail(cur.id).then(function (detail) {
+      var fresh = normalizeDetail(detail)
+      // 回写 mergedList 合规字段（后续翻页/返回/分享图一致）
+      if (that._mergedList[that._globalIndex] && that._mergedList[that._globalIndex].id === cur.id) {
+        that._mergedList[that._globalIndex].contentSource = fresh.contentSource
+        that._mergedList[that._globalIndex].references = fresh.references
+        that._mergedList[that._globalIndex].sourceUrl = fresh.sourceUrl || that._mergedList[that._globalIndex].sourceUrl
+        that._mergedList[that._globalIndex].content = fresh.content || that._mergedList[that._globalIndex].content
+        that._mergedList[that._globalIndex].aiOpinion = fresh.aiOpinion || ''
+      }
+      if (that._cache) {
+        try { that._cache.set('newsDetail:' + cur.id, fresh, { ttl: 24 * 60 * 60 * 1000 }) } catch (e) { /* 忽略 */ }
+      }
+      var t2 = resolveContentText(fresh)
+      var p2 = t2.split('\n').filter(function (p) { return p.trim() })
+      if (fresh.contentSource === 'app_intro') {
+        fresh.isAppIntro = true
+        fresh.introBlocks = buildIntroBlocks(t2)
+      }
+      that._onDetailReady(fresh, p2)
+      return { news: fresh, paragraphs: p2, fromCache: false }
+    }).catch(function () {
+      // 网络失败：回退本地/摘要数据渲染，避免永远卡在加载态
+      that._onDetailReady(normalized, paragraphs)
+      return { news: normalized, paragraphs: paragraphs, fromCache: !!local }
+    })
+  }
+
+  // —— 翻页路径：立即用本地数据渲染（Promise 立即 resolve，零等待），后台 getNewsDetail 升级 ——
   that._onDetailReady(normalized, paragraphs)
 
   // 后台刷新（网络失败静默，不影响已展示内容）

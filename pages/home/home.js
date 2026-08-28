@@ -58,10 +58,6 @@ Page({
     isDark: false,
     _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
     intelActive: false,        // INTEL-BRIDGE: AI 情报屏是否覆盖显示（true=情报屏在屏，false=藏在左侧）
-    // 关注后续：首页长按进入「我的关注」——按压进度环
-    lpRing: false,
-    lpX: 0,
-    lpY: 0,
     // 关注后续：纯圆形绽放 overlay（不 navigateTo，避免系统右滑）
     showFollow: false,
     followEnterPoint: null,
@@ -424,10 +420,10 @@ Page({
    * 单分类失败不阻塞整体（catch 返回空数组）。
    * @returns {Promise<Array>} 合并去重后的新闻列表
    */
-  async _loadAllAggregated() {
+  async _loadAllAggregated(forceRefresh) {
     var that = this
     var fetches = CONTENT_CATEGORIES.map(function (c) {
-      return getNewsList({ category: c.id, pageNum: 1, pageSize: firstPageSize(c.id) })
+      return getNewsList({ category: c.id, pageNum: 1, pageSize: firstPageSize(c.id), forceRefresh: !!forceRefresh })
         .then(function (res) { return res.list || [] })
         .catch(function (err) {
           console.warn('[home] 全部聚合分类拉取失败:', c.id, err)
@@ -489,7 +485,8 @@ Page({
     return newItems
   },
 
-  async loadNews(resolveIndex) {
+  async loadNews(resolveIndex, opts) {
+    const forceRefresh = !!(opts && opts.forceRefresh)
     try {
       this.setData({ pageState: 'loading', errorMessage: '' })
 
@@ -497,9 +494,9 @@ Page({
       let res = null
       let list = []
       if (this.data.currentCategory === 'all') {
-        list = await this._loadAllAggregated()
+        list = await this._loadAllAggregated(forceRefresh)
       } else {
-        res = await getNewsList({ category: this.data.currentCategory })
+        res = await getNewsList({ category: this.data.currentCategory, forceRefresh })
         list = (res && res.list) || []
       }
 
@@ -545,7 +542,7 @@ Page({
 
   // 重试加载
   onRetry() {
-    this.loadNews()
+    this.loadNews(null, { forceRefresh: true })
   },
 
   /**
@@ -567,9 +564,9 @@ Page({
       let res = null
       let list = []
       if (target === 'all') {
-        list = await this._loadAllAggregated()
+        list = await this._loadAllAggregated(true)
       } else {
-        res = await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target) })
+        res = await getNewsList({ category: target, pageNum: 1, pageSize: firstPageSize(target), forceRefresh: true })
         list = (res && res.list) || []
       }
       if (this._destroyed) return
@@ -719,6 +716,8 @@ Page({
   onTouchEnd(e) {
     // 关注后续：松手即清除长按计时（任何情况都清，含动画中）
     this._cancelLongPress()
+    // 若本次触摸已触发长按进入关注页，则阻止同一次触摸产生的 tap/翻页/面板等副作用
+    if (this._lpJustFired) return
     if (this._isAnimating) return
 
     var dy = e.changedTouches[0].clientY - this._touchStartY
@@ -762,13 +761,8 @@ Page({
   // 规则：按住不动 500ms = 触发；一滚动/移动就取消（与详情页一致，无冲突）
   _startFollowPress(e) {
     if (this._destroyed || this.data.showPanel || this.data.intelActive) return
-    var t = (e.touches && e.touches[0]) || {}
+    this._lpJustFired = false
     this._touchActive = true
-    this.setData({
-      lpRing: true,
-      lpX: t.clientX || 0,
-      lpY: t.clientY || 0,
-    })
     var that = this
     if (this._lpTimer) clearTimeout(this._lpTimer)
     this._lpTimer = setTimeout(function () { that._enterFollow() }, 500)
@@ -776,16 +770,23 @@ Page({
   _cancelLongPress() {
     this._touchActive = false
     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null }
-    if (this.data.lpRing) this.setData({ lpRing: false })
   },
   _enterFollow() {
     this._touchActive = false
     this._lpTimer = null
-    this.setData({ lpRing: false })
+    this._lpJustFired = true
+    // 触发提示：震动（替代原进度环倒计时动画）
+    if (wx.vibrateShort) {
+      try { wx.vibrateShort({ type: 'medium' }) } catch (err) {}
+    }
     // 纯圆形绽放 overlay：记录按压点，展开覆盖层（clip-path 从按压点 0%→150%）
     const p = { x: this._touchStartX || 0, y: this._touchStartY || 0 }
     app.globalData.followEnterPoint = p
     this.setData({ showFollow: true, followEnterPoint: p })
+    // 400ms 后清除标志，覆盖层动画期间及之后不影响正常点击
+    var that = this
+    if (this._lpClearTimer) clearTimeout(this._lpClearTimer)
+    this._lpClearTimer = setTimeout(function () { that._lpJustFired = false }, 400)
   },
 
   // 覆盖层返回：收起 overlay（反向圆形收回由组件内部完成）
@@ -1151,6 +1152,8 @@ Page({
   // ============ 卡片点击 ============
 
   onCardTap(e) {
+    // 关注后续：若本次触摸刚触发过长按进入关注页，忽略由同一次触摸产生的 tap，防止误进详情
+    if (this._lpJustFired) return
     if (this._lastSwipeTime && Date.now() - this._lastSwipeTime < 500) {
       return
     }

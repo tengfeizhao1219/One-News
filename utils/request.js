@@ -8,6 +8,12 @@
 
 const { PAGE_SIZE, RECOMMEND_PAGE_SIZE, CATEGORY_MAP } = require('./constants')
 const { formatAbsoluteTime } = require('./util')
+const { localCache } = require('./localCache')
+
+// 列表本地缓存 TTL（2026-08-28 优化）：新闻整点更新，90s 内重复访问（onLoad / 切分类 / 返回重进 / 翻页）
+// 命中即 0 云调用——直接返回缓存快照，不做后台静默刷新（否则每次命中都额外打云，抵消缓存收益，甚至反效果）。
+// 数据新鲜度由 LIST_CACHE_TTL 兜底；用户主动下拉刷新走 forceRefresh 强制更新。
+const LIST_CACHE_TTL = 90 * 1000
 
 /**
  * 获取新闻列表
@@ -15,13 +21,42 @@ const { formatAbsoluteTime } = require('./util')
  * @param {string} params.category 分类ID，默认'recommend'（DG-03: all → recommend）
  * @param {number} params.pageNum   页码，默认1
  * @param {number} params.pageSize  每页条数；不传时按分类默认：recommend→15（对齐落库 cap），其余→8（PAGE_SIZE）
+ * @param {boolean} [params.includeContent=false] 是否透传完整正文 content/aiOpinion。
+ *        默认 false（瘦包）：首页卡片流只用 summary，无需长正文。
+ *        详情页首屏按需传 true（或走 getNewsDetail 后台拉取）。
+ * @param {boolean} [params.forceRefresh=false] 强制打云、跳过本地缓存（下拉刷新等需强一致场景）
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
-function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
+function getNewsList({ category = 'recommend', pageNum = 1, pageSize, includeContent = false, forceRefresh = false } = {}) {
   const size = pageSize || (category === 'recommend' ? RECOMMEND_PAGE_SIZE : PAGE_SIZE)
+  const cacheKey = `nl:${category}:${pageNum}:${size}:${includeContent ? 1 : 0}`
+  const hit = !forceRefresh && localCache.get(cacheKey)
+  if (hit) {
+    // 命中缓存：直接返回，0 云调用（数据新鲜度由 LIST_CACHE_TTL 兜底；下拉刷新走 forceRefresh 更新）。
+    // 返回浅拷贝副本，避免调用方修改污染内存缓存引用
+    return Promise.resolve({
+      list: hit.list.map(it => ({ ...it })),
+      total: hit.total,
+      hasMore: hit.hasMore,
+      meta: hit.meta,
+    })
+  }
+  // 缓存 miss 或强制刷新：打云并写回缓存
+  return _fetchList({ category, pageNum, size, includeContent })
+    .then(r => {
+      localCache.set(cacheKey, r, { ttl: LIST_CACHE_TTL })
+      return r
+    })
+}
+
+/**
+ * 实际打云并格式化（供首屏 / 缓存 miss / 后台静默刷新复用）
+ */
+function _fetchList({ category, pageNum, size, includeContent }) {
   return wx.cloud.callFunction({
     name: 'getNewsList',
-    data: { category, pageNum, pageSize: size }
+    // 首页高频列表默认不拉长正文，减小响应包（详情页按需 includeContent=true / getNewsDetail）
+    data: { category, pageNum, pageSize: size, includeContent }
   }).then(res => {
     if (res.result.code !== 0) {
       const err = new Error(res.result.message || '获取新闻列表失败')
@@ -30,9 +65,9 @@ function getNewsList({ category = 'recommend', pageNum = 1, pageSize } = {}) {
     }
     const data = res.result.data
     return {
-      // 2026-08-21 方案A：列表透传完整 AI 解读正文 content（详情页首帧完整渲染，
-      // 不再"先摘要 0.5s 再刷新"）。列表量 42 条 × ~500 字 ≈ 20KB，可接受。
-      list: (data.list || []).map(item => formatNewsItem(item, true)),
+      // includeContent=true 时透传完整 AI 解读正文 content（详情页首帧完整渲染）；
+      // false 时列表项不含 content，靠 getNewsDetail 按需补全。
+      list: (data.list || []).map(item => formatNewsItem(item, !!includeContent)),
       total: data.total,
       hasMore: data.hasMore,
       meta: res.result.meta,  // 透传 source 信息

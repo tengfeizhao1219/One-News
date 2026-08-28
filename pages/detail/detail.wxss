@@ -835,6 +835,52 @@
   100% { background-position: -200% 0; }
 }
 
+/* ============ 首屏 logo 加载动画（2026-08-28） ============
+   居中 logo（avatar-circle）+ 旋转描边环，等待 getNewsDetail 完成再渲染首屏。 */
+.detail-loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 12;
+}
+.loading-logo-wrap {
+  position: relative;
+  width: 156rpx;
+  height: 156rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loading-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 50%;
+  border: 4rpx solid var(--primary-subtle, rgba(10, 124, 235, 0.15));
+  border-top-color: var(--primary, #0a7ceb);
+  box-sizing: border-box;
+  animation: logoSpin 0.9s linear infinite;
+}
+.loading-logo-wrap .logo-img {
+  width: 92rpx;
+  height: 92rpx;
+}
+.loading-text {
+  margin-top: 40rpx;
+  font-size: 26rpx;
+  color: var(--text-tertiary);
+  letter-spacing: 1rpx;
+}
+@keyframes logoSpin {
+  to { transform: rotate(360deg); }
+}
+
 /* ============ 状态页面（错误/空数据）· D-04 v0.2 §4.2 ============
    去按钮、温和文案、居中 logo-avatar-circle。整体只有 logo + 主文案 + 副文案 三元素。 */
 .state-container {

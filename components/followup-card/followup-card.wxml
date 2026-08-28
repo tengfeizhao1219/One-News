@@ -1,4 +1,4 @@
-<!-- 我的关注 — 跨模块聚合 Feed 覆盖层组件（One News + 情报官） -->
+<!-- 我的关注 — 跨模块聚合 Feed 覆盖层组件（One News + 情报官），UI 对齐 ui-demo/follow-up-demo.html -->
 <view class="page {{themeClass}} {{visible ? 'is-open' : ''}}" style="{{revealStyle}} --nav-offset: {{navOffset}}px;">
 
   <!-- 状态栏占位 -->
@@ -21,34 +21,47 @@
     <view class="empty-btn" bindtap="goHome">去首页看看</view>
   </view>
 
-  <!-- 列表：四态卡片 -->
+  <!-- 列表：四态关注卡片（对齐 demo 的 follow-card 设计） -->
   <scroll-view class="list-scroll" scroll-y wx:if="{{!isEmpty}}">
-    <view class="fu-item {{item.status}}" wx:for="{{list}}" wx:key="itemId"
+    <view class="feed-head">
+      <view class="fh-count">{{list.length}} 个话题 · {{unreadCount}} 条新进展</view>
+    </view>
+
+    <view class="follow-card {{item.status}}" wx:for="{{list}}" wx:key="itemId"
       data-id="{{item.itemId}}" data-module="{{item.module}}"
       bindtap="onItemTap" bindlongpress="onItemLongPress">
 
-      <view class="fu-head">
-        <view class="fu-module {{item.module}}">{{item.module === 'intel' ? '情报官' : '资讯'}}</view>
-        <view class="fu-title">{{item.title}}</view>
+      <!-- 抬头：标题 + 状态徽标 -->
+      <view class="fc-top">
+        <view class="fc-title">{{item.title}}</view>
+        <view class="fc-badge status-{{item.status}}">{{item.statusText}}</view>
       </view>
 
-      <view class="fu-meta">
-        <view class="fu-dot"></view>
-        <text class="fu-status">{{item.statusText}}</text>
-        <text class="fu-track">· 每天 {{item.trackTime}} 追踪</text>
+      <!-- 元信息：来源标签 · 追踪时间 · 已关注天数 -->
+      <view class="fc-meta">
+        <text class="src-tag {{item.module}}">{{item.module === 'intel' ? '情报官' : '资讯'}}</text>
+        <view class="dot"></view>
+        <text>每天 {{item.trackTime}} 追踪</text>
+        <view class="dot"></view>
+        <text>已关注 {{item.followDays}} 天</text>
       </view>
 
-      <!-- 每日更新时间线（点击展开） -->
-      <view class="fu-timeline" wx:if="{{expanded[item.itemId]}}">
-        <block wx:if="{{item.timeline.length > 0}}">
-          <view class="fu-tl" wx:for="{{item.timeline}}" wx:for-item="tl" wx:key="date">
-            <view class="fu-tl-date">{{tl.date}} · AI 全网追踪</view>
-            <view class="fu-tl-summary">{{tl.summary}}</view>
-            <view class="fu-tl-src">来源数 {{tl.sourcesCount}}</view>
-          </view>
-        </block>
-        <view class="fu-tl-empty" wx:else>暂无更新记录</view>
+      <!-- 最新更新高亮框：有更新/已读时展示最新一条；无更新时展示检索提示 -->
+      <view class="fc-summary {{item.summaryMuted ? 'muted' : ''}}" wx:if="{{item.latestSummary}}">
+        <text wx:if="{{!item.summaryMuted}}" class="fc-summary-date">{{item.latestDate}} 更新：</text>{{item.latestSummary}}
       </view>
+
+      <!-- 历史时间线（点击展开） -->
+      <view class="tl" wx:if="{{expanded[item.itemId]}}">
+        <view class="tl-item" wx:for="{{item.timeline}}" wx:for-item="tl" wx:key="date">
+          <view class="tl-date">{{tl.date}} · AI 全网追踪</view>
+          <view class="tl-body">{{tl.summary}}</view>
+          <view class="tl-src">来源：{{tl.sourcesCount}} 篇报道</view>
+        </view>
+      </view>
+
+      <!-- 展开/收起历史 -->
+      <view class="link-row" wx:if="{{item.timeline.length > 0}}">{{expanded[item.itemId] ? '收起 ▴' : '展开历史更新 ▾'}}</view>
     </view>
 
     <view class="brand-footer">

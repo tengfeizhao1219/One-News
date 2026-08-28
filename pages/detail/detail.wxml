@@ -34,21 +34,13 @@
     </view>
   </view>
 
-  <!-- 骨架屏（加载中）· D-04 v0.2 §4.1：复用版式骨架三段式——
-       标题区 2 行灰块 + 元信息行细灰条 + 正文 4-5 段灰条，首段前留「AI 解读生成中，请稍后」弱提示 -->
-  <view class="detail-skeleton" wx:if="{{pageState === 'loading'}}">
-    <!-- 标题区：2 行灰块 -->
-    <view class="sk-block sk-title"></view>
-    <view class="sk-block sk-title sk-title--second"></view>
-    <!-- 元信息行占位（代替 科技 | InfoQ · 时间 的 meta 行） -->
-    <view class="sk-block sk-meta"></view>
-    <!-- 正文区：首段前弱提示 + 4 段灰条 -->
-    <view class="skeleton-ai-tip">AI 解读生成中，请稍后</view>
-    <view class="sk-block sk-line" style="width: 100%"></view>
-    <view class="sk-block sk-line" style="width: 92%"></view>
-    <view class="sk-block sk-line" style="width: 96%"></view>
-    <view class="sk-block sk-line" style="width: 78%"></view>
-    <view class="sk-block sk-line" style="width: 88%"></view>
+  <!-- 首屏加载：logo 加载动画（等待 getNewsDetail 完成再渲染，避免「先摘要后补全」跳变） -->
+  <view class="detail-loading" wx:if="{{pageState === 'loading'}}">
+    <view class="loading-logo-wrap">
+      <view class="loading-ring"></view>
+      <logo mode="avatar-circle" size="92" />
+    </view>
+    <view class="loading-text">正在为你准备…</view>
   </view>
 
   <!-- 空态 / 错误态 · D-04 v0.2 §4.2：去按钮、温和文案、居中 logo-avatar-circle。

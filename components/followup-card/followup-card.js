@@ -67,7 +67,7 @@ Component({
       } catch (e) { return false }
     },
 
-    // 计算单条四态
+    // 计算单条四态（对齐 demo：状态徽标 / 来源标签 / 追踪时间 / 已关注天数 / 最新更新高亮框）
     _decorate(item) {
       const updates = item.updates || []
       const unreadCount = updates.filter(function (u) { return !u.read }).length
@@ -75,12 +75,37 @@ Component({
       if (updates.length === 0) status = 'none'
       else if (unreadCount > 0) status = 'hasUpdate'
       else status = 'read'
+
+      // 已关注天数（从创建时刻算到今天，至少 1 天）
+      let followDays = 1
+      if (item.createdAt) {
+        followDays = Math.max(1, Math.round((Date.now() - item.createdAt) / 86400000))
+      }
+
+      // 最新更新：addUpdate 用 unshift，updates[0] 即最新一条
+      const latest = updates.length ? updates[0] : null
+      let latestDate = ''
+      let latestSummary = ''
+      let summaryMuted = false
+      if (latest) {
+        latestDate = latest.date
+        latestSummary = latest.summary
+      } else {
+        // 无更新：展示「已检索但无新进展」提示（对齐 demo 灰态文案）
+        summaryMuted = true
+        latestSummary = '今天 ' + (item.trackTime || '12:00') + ' 已检索，暂无新的公开进展，已为你持续关注。'
+      }
+
       return Object.assign({}, item, {
         unreadCount: unreadCount,
         status: status,
         statusText: status === 'hasUpdate'
           ? (unreadCount + ' 条新更新')
           : (status === 'read' ? '已读完' : '已是最新'),
+        followDays: followDays,
+        latestDate: latestDate,
+        latestSummary: latestSummary,
+        summaryMuted: summaryMuted,
         timeline: updates.map(function (u) {
           return { date: u.date, summary: u.summary, sourcesCount: u.sourcesCount, read: u.read }
         }),
@@ -112,10 +137,11 @@ Component({
       this.setData({ revealStyle: zero })
       this._load()
       const that = this
+      // 稍延迟一帧再切到 150%，确保浏览器已应用 0% 初始态，transition 能被触发
       setTimeout(function () {
         if (that._destroyed) return
         that.setData({ revealStyle: 'clip-path: circle(150% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(150% at ' + pt.x + ' ' + pt.y + ');' })
-      }, 50)
+      }, 80)
     },
 
     // 点击卡片：展开/收起时间线；展开即标记已读（读完转绿）
@@ -175,10 +201,11 @@ Component({
       const pt = this._point()
       this.setData({ revealStyle: 'clip-path: circle(0% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(0% at ' + pt.x + ' ' + pt.y + ');' })
       const that = this
+      // 等待 0.64s 反向收回动画完成后再通知宿主隐藏
       setTimeout(function () {
         if (that._destroyed) return
         that.triggerEvent('back')
-      }, 320)
+      }, 640)
     },
 
     // 空态/兜底：回首页

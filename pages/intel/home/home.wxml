@@ -54,9 +54,6 @@
     <image class="more-icon-img more-dark" src="/assets/icons/settings-dark.svg" mode="aspectFit"></image>
   </view>
 
-  <!-- 关注后续：长按进度环（0.5s 充满后进入「我的关注」） -->
-  <view class="lp-ring {{lpRing ? 'on' : ''}}" style="left: {{lpX}}px; top: {{lpY}}px;" wx:if="{{lpRing}}"></view>
-
-  <!-- 关注后续：纯圆形绽放 overlay（fixed 覆盖层，由长按挂载） -->
+  <!-- 关注后续：纯圆形绽放 overlay（fixed 覆盖层，长按挂载；触发时以震动提示，无进度环） -->
   <followup-card visible="{{showFollow}}" enter-point="{{followEnterPoint}}" bind:back="onFollowBack" />
 </view>

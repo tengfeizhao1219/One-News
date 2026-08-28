@@ -747,3 +747,54 @@
   line-height: 1.5;
 }
 .rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1)); }
+
+/* ============ 首屏 logo 加载动画（2026-08-28 对齐 One News detail） ============
+   居中 logo（avatar-circle）+ 旋转描边环，等待 getIntelDetail 完成再渲染首屏，
+   避免空内容闪现。intel 详情页首屏本就为「等获取完成再渲染」（loading 期间不渲染真实内容），
+   此处仅把纯文字 loading 升级为品牌 logo 动画；本地缓存/卡片命中时秒开、不触发本覆盖层。 */
+.detail-loading {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-page, #ffffff);
+}
+.loading-logo-wrap {
+  position: relative;
+  width: 156rpx;
+  height: 156rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.loading-ring {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 50%;
+  border: 4rpx solid var(--primary-subtle, rgba(10, 124, 235, 0.15));
+  border-top-color: var(--primary, #0a7ceb);
+  box-sizing: border-box;
+  animation: logoSpin 0.9s linear infinite;
+}
+.loading-logo-wrap .logo-img {
+  width: 92rpx;
+  height: 92rpx;
+}
+.loading-text {
+  margin-top: 40rpx;
+  font-size: 26rpx;
+  color: var(--text-tertiary);
+  letter-spacing: 1rpx;
+}
+@keyframes logoSpin {
+  to { transform: rotate(360deg); }
+}
