@@ -192,10 +192,17 @@ async function stageProcess(deadline) {
     // 0.5 新鲜度门禁：日期归一 + 时效过滤。
     //     newsFetcher 写入的是 pubDate（不是 publishTime）；必须两边都读。
     //     URL 路径含明确年月日且已超 48h → 直接丢弃（防「无 pubDate 回填 fetchedAt=今天」的 2007 旧闻）。
+    //     ★ 队列死锁修复（2026-08-28 事故，owner 提供观察通道确认）：被门禁判为"旧闻/未来"的条目此前
+    //       只从本批剔除但【从未从 news_raw 移除】。raw 按 fetchedAt 升序拉取且 pullPending 恒用 skip=0，
+    //       历史残留旧闻（2006 央视早期稿件、已过 48h 的 8-26 条目）永久躺在队头 → 每次 pull 同一批旧闻、
+    //       freshItems 恒空、continue 跳过移除 → 新鲜新闻（8-28）永远轮不到，流水线"假活"。
+    //       现改为：门禁未通过 = 永久丢弃，直接 removeRaw，让队列前进、新鲜条目能到队头。
     const nowGate = Date.now()
-    const freshItems = items.filter((it) => {
+    const freshItems = []
+    const staleItems = []
+    for (const it of items) {
       const urlTs = parseDateFromUrl(it.sourceUrl || it.url || '')
-      if (urlTs != null && (nowGate - urlTs) > FRESH_MAX_AGE_MS) return false
+      if (urlTs != null && (nowGate - urlTs) > FRESH_MAX_AGE_MS) { staleItems.push(it); continue }
       let t = parseTs(it.publishTime) || parseTs(it.pubDate)
       // 2026-08-20 修复：上游 pubDate 仅日期无时分（如 "2026-08-20"）→ new Date 解析为 UTC 0 点
       // → 北京 08:00，导致国际等分类时间全冻在 08:00。检测到日期型后回退用 fetchedAt（真实抓取时间），让时间散开。
@@ -210,10 +217,13 @@ async function stageProcess(deadline) {
       if (t == null) t = nowGate
       it.publishTime = t
       const age = nowGate - t
-      return age >= -FRESH_MAX_FUTURE_MS && age <= FRESH_MAX_AGE_MS
-    })
-    if (freshItems.length < items.length) {
-      console.log(`[newsPipeline][process] 新鲜度过滤丢弃 ${items.length - freshItems.length} 条（旧闻/无日期/未来时间）`)
+      if (age < -FRESH_MAX_FUTURE_MS || age > FRESH_MAX_AGE_MS) { staleItems.push(it); continue }
+      freshItems.push(it)
+    }
+    // 门禁未通过：立即从 news_raw 移除（永久丢弃），避免残留旧闻卡死队头、阻塞新鲜数据。
+    if (staleItems.length) {
+      await Promise.all(staleItems.map((it) => rawStore.removeRaw(it.urlFp)))
+      console.log(`[newsPipeline][process] 新鲜度门禁丢弃并从 raw 移除 ${staleItems.length} 条（旧闻/无日期/未来时间）`)
     }
     if (!freshItems.length) continue
 
