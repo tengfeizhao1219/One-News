@@ -92,6 +92,22 @@ Page({
     }
   },
 
+  /** 分享给朋友(2026-08-27):标题=情报标题;不传 imageUrl → 微信默认用页面截图(展示情报摘要内容)作缩略图 */
+  onShareAppMessage() {
+    return {
+      title: this.data.title || 'AI 情报官',
+      path: '/pages/intel/detail/detail?id=' + (this.data.itemId || ''),
+    }
+  },
+
+  /** 分享到朋友圈(2026-08-27) */
+  onShareTimeline() {
+    return {
+      title: this.data.title || 'AI 情报官',
+      query: 'id=' + (this.data.itemId || ''),
+    }
+  },
+
   /** 页面就绪：测量 .nav 底部 → 进度条 top（精确对齐顶部状态区域底 / 内容区上方） */
   onReady() {
     var that = this
