@@ -172,9 +172,13 @@
 }
 .feedback-scroll {
   height: 100%;
+  /* 2026-08-22 修复：nav-bar 是 fixed 脱离文档流，内容区顶部必须用 --nav-offset 补偿，
+     否则第一条留言被导航栏覆盖（鸿蒙胶囊更高时必现；iPhone 恰好对齐侥幸正常） */
+  padding-top: calc(var(--nav-offset, 88px) + 16rpx);
+  box-sizing: border-box;
 }
 .feedback-list {
-  padding: 16rpx 32rpx 220rpx; /* 底部预留输入区高度 */
+  padding: 0 32rpx 220rpx; /* 底部预留输入区高度（顶部已由 feedback-scroll padding 承担） */
 }
 .msg-card {
   background-color: var(--bg-card);

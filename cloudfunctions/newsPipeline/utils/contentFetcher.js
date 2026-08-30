@@ -676,7 +676,7 @@ async function summarizeWithZhipu(content, title) {
         console.warn('[summarize] 无法加载 wx-server-sdk（本地/沙箱环境），跳过混元引擎：' + e.message)
         resolve(null); return
       }
-      const prompt = '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。'
+      const prompt = '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-200 字的中文摘要，最多不超过 230 字。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。'
       const userContent = `新闻标题：${title || ''}\n\n新闻正文：\n${input}`
       const model = cloud.ai().createModel('cloudbase')
       const timeoutMs = hunyuanCfg.timeout || 8000
@@ -731,7 +731,7 @@ async function summarizeWithZhipu(content, title) {
         messages: [
           {
             role: 'system',
-            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。',
+            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-200 字的中文摘要，最多不超过 230 字。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。',
           },
           {
             role: 'user',

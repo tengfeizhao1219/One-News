@@ -474,3 +474,8 @@
 - **方案 C（owner 拍板）**：STAGE_BATCH.ai 12→8——每条预算更充足，降低批量摘要缺失；并发 3 路不变。
 - **连带**：AI_BACKLOG_LATE_THRESHOLD 36→24（自动跟随 STAGE_BATCH.ai*3）。
 - **部署**：newsPipeline 已更新。预期效果：下一批摘要成功率提升；代价是单轮处理批数增加（总时长略增，selfHeal 兜底）。
+## 2026-08-22 · 反馈页首条被导航栏覆盖 + AI 摘要 230 字上限
+
+- **① 反馈页被状态栏覆盖（鸿蒙必现）**：nav-bar 是 fixed 脱离文档流，.feedback-scroll 内容区未用 --nav-offset 补偿顶部——iPhone 恰好对齐侥幸正常，鸿蒙胶囊更高必现首条被盖。修复：.feedback-scroll 加 `padding-top: calc(var(--nav-offset, 88px) + 16rpx)`（对齐 settings/favorites 的写法）。
+- **② AI 摘要 230 字上限（owner 拍板）**：① newsPipeline summarizeWithZhipu prompt 100-150 字 → "100-200 字，最多不超过 230 字"（两处）；② 前端 home buildCard summary 超 230 字截断+省略号（防历史/兜底数据超长）。
+- **部署**：newsPipeline 已更新（prompt 生效需下一批处理）；前端重编译生效。

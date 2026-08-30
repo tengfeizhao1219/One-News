@@ -706,12 +706,19 @@ Page({
     var isOfficialSource = item.contentSource === 'official_rss'
     var metaSource = isOfficialSource ? (item.sourceName || item.source || '') : (item.source || '')
 
+    // 2026-08-22 owner 拍板：AI 摘要最长 230 字（防超一屏）；超长截断 + 省略号
+    var MAX_SUMMARY_LEN = 230
+    var finalSummary = displaySummary || ''
+    if (finalSummary.length > MAX_SUMMARY_LEN) {
+      finalSummary = finalSummary.slice(0, MAX_SUMMARY_LEN) + '…'
+    }
+
     return {
       ...item,
-      summary: displaySummary,
+      summary: finalSummary,
       // 空字符串 → split 产生 [''] → filter(p.trim) 过滤 → [] → wx:for 不产出节点
-      summaryParagraphs: displaySummary
-        ? displaySummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3)
+      summaryParagraphs: finalSummary
+        ? finalSummary.split(String.fromCharCode(10)).filter(function (p) { return p.trim() }).slice(0, 3)
         : [],
       isAiSummary: summarySource === 'ai',
       summarySource: summarySource,
