@@ -479,3 +479,9 @@
 - **① 反馈页被状态栏覆盖（鸿蒙必现）**：nav-bar 是 fixed 脱离文档流，.feedback-scroll 内容区未用 --nav-offset 补偿顶部——iPhone 恰好对齐侥幸正常，鸿蒙胶囊更高必现首条被盖。修复：.feedback-scroll 加 `padding-top: calc(var(--nav-offset, 88px) + 16rpx)`（对齐 settings/favorites 的写法）。
 - **② AI 摘要 230 字上限（owner 拍板）**：① newsPipeline summarizeWithZhipu prompt 100-150 字 → "100-200 字，最多不超过 230 字"（两处）；② 前端 home buildCard summary 超 230 字截断+省略号（防历史/兜底数据超长）。
 - **部署**：newsPipeline 已更新（prompt 生效需下一批处理）；前端重编译生效。
+## 2026-08-22 · AI 摘要 230 字硬上限（补强：代码截断，prompt 软约束不可靠）
+
+- **问题**：原 prompt 约束 100-150 字是软约束，LLM 常超发——实测全库 max 419 字、23/47 条 >200 字（张汝京条 368 字）。`max_tokens=600` 实际允许 ~300 字+。
+- **修复**：`clampSummary()` 代码强截断——摘要超 230 字时优先在最后一个完整句号/分号处断开（避免句中截断），加省略号；混元+外部引擎两处 resolve 统一应用。前端 home buildCard 同步同样逻辑（防历史/兜底数据超长）。
+- **验证**：张汝京 368 字 → 192 字（完整句号断开）；短摘要不变。
+- **部署**：newsPipeline 已更新（下一批生效）；前端重编译生效（历史数据展示即截断）。

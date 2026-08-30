@@ -710,7 +710,10 @@ Page({
     var MAX_SUMMARY_LEN = 230
     var finalSummary = displaySummary || ''
     if (finalSummary.length > MAX_SUMMARY_LEN) {
-      finalSummary = finalSummary.slice(0, MAX_SUMMARY_LEN) + '…'
+      // 优先在最后一个完整句号/分号处断开（避免句中截断），找不到则硬切
+      var cut = finalSummary.slice(0, MAX_SUMMARY_LEN)
+      var lastPunct = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('；'), cut.lastIndexOf('！'), cut.lastIndexOf('？'))
+      finalSummary = (lastPunct > 20 ? cut.slice(0, lastPunct + 1) : cut) + '…'
     }
 
     return {

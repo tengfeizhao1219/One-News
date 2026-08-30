@@ -630,8 +630,18 @@ async function interpretNews(content, title, references, signals) {
  *  原代码只挂 2 引擎，搜索阶段降级 DeepSeek 但摘要阶段没接 → 现补全为 3 引擎，DeepSeek 补位。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
- * @returns {Promise<string|null>} 100-300 字中文摘要
+ * @returns {Promise<string|null>} 100-230 字中文摘要
  */
+// 2026-08-22 owner 拍板：AI 摘要硬上限 230 字（prompt 约束是软约束，LLM 常超发；此处代码强截断）
+const SUMMARY_MAX_LEN = 230
+function clampSummary(s) {
+  const t = String(s || '').trim()
+  if (t.length <= SUMMARY_MAX_LEN) return t
+  // 优先在最后一个完整句号/分号处断开（避免句中截断），找不到则硬切
+  const cut = t.slice(0, SUMMARY_MAX_LEN)
+  const lastPunct = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('；'), cut.lastIndexOf('！'), cut.lastIndexOf('？'))
+  return (lastPunct > 20 ? cut.slice(0, lastPunct + 1) : cut) + '…'
+}
 async function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
   // owner 2026-08-28：引擎链调整为 ys365 → DeepSeek → 智谱 → 混元兜底；Key 统一走 configStore
@@ -692,7 +702,7 @@ async function summarizeWithZhipu(content, title) {
         const summary = (result && result.text ? result.text : '').trim()
         if (summary && summary.length >= 30) {
           console.log(`[summarize] 混元摘要成功（${summary.length}字）`)
-          resolve(summary)
+          resolve(clampSummary(summary))
         } else {
           console.warn('[summarize] 混元摘要为空/过短，降级下一引擎')
           resolve(null)
@@ -776,7 +786,7 @@ async function summarizeWithZhipu(content, title) {
         let lastReason = '未知'
         for (let attempt = 0; attempt < 3; attempt++) {
           const out = await doRequest()
-          if (out.text && out.text.length >= 30) { resolve(out.text); return }
+          if (out.text && out.text.length >= 30) { resolve(clampSummary(out.text)); return }
           if (out.text) lastReason = `文本过短(${out.text.length}<30)`
           else lastReason = out.reason || '空响应'
           if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
