@@ -1,4 +1,4 @@
-﻿# COMMLOG · AI 情报官沟通交接记录
+# COMMLOG · AI 情报官沟通交接记录
 
 > 倒序（最新在上）。每条：日期 | 角色 | 事项 | 状态/去向。子 Agent 交付后必须在此留痕。
 > 详细过程留痕于各交付文档；这里只记「交接点」。
@@ -468,3 +468,9 @@
 - **需求**：把 One News 的"不相关推荐问题"逻辑复用到 intel 详情页（后端已支持 related，前端此前未接入）。
 - **复用**：intel detail.js data 加 relatedQuestions；_runSearch reset 清空；_doCallSearch 不相关分支存推荐、相关清空；新增 onRelatedTap（点击推荐直接搜索）；wxml 面板加「猜你想搜 ✦」推荐列表；wxss 加 rel-* 样式（与 One News 同款，复用 dig-group 视觉）。
 
+## 2026-08-22 · AI 批处理 12→8（方案C：提每条预算，降摘要缺失率）
+
+- **背景**：调查发现 47 条中 16 条 summarySource='content'（AI 摘要未生成，正文首段兜底）——根因是单实例 110s 预算内 12 条 ×（摘要 12s+解读 40s）导致后批条目预算耗尽跳过摘要。
+- **方案 C（owner 拍板）**：STAGE_BATCH.ai 12→8——每条预算更充足，降低批量摘要缺失；并发 3 路不变。
+- **连带**：AI_BACKLOG_LATE_THRESHOLD 36→24（自动跟随 STAGE_BATCH.ai*3）。
+- **部署**：newsPipeline 已更新。预期效果：下一批摘要成功率提升；代价是单轮处理批数增加（总时长略增，selfHeal 兜底）。

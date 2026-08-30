@@ -34,7 +34,9 @@ const { scoreAll } = require('./utils/qualityScorer')
 const config = require('./config')
 
 const BUDGET_MS = 110000          // 单次实例预算（函数超时已调至 120s，110s 预算充分榨取实例能力，提升 AI 摘要/解读单轮覆盖率）
-const STAGE_BATCH = { process: 20, ai: 12, publish: 10 }
+// 2026-08-22 方案C：ai 批处理 12→8——每条 AI 预算更充足（摘要 12s+解读 40s 组合），
+// 降低"预算耗尽跳过 AI 摘要 → 正文首段兜底(summarySource=content)"的批量发生率。
+const STAGE_BATCH = { process: 20, ai: 8, publish: 10 }
 const FETCH_TIMEOUT_MS = 12000
 const STAGING_TTL_MS = 6 * 60 * 60 * 1000
 const MAX_PAGE_ROUNDS = 50       // C-6：全表翻页循环的迭代上限（防异常数据导致无限循环）
@@ -433,7 +435,7 @@ async function stageAi(deadline) {
     // deadline 给 enrichNewsList 内部守卫留 5s 余量
     const enriched = await enrichNewsList(
       needAi,
-      3,            // concurrency：3 路并行，配合 STAGE_BATCH.ai=12 提升单实例吞吐
+      3,            // concurrency：3 路并行，配合 STAGE_BATCH.ai=8（2026-08-22 12→8 提每条预算）
       true,         // skipFetch
       false,        // skipAiSummary
       Date.now() + (BUDGET_MS - 5000),
@@ -824,7 +826,7 @@ async function stagePublish(deadline) {
 //   - claimablePending 超过 AI 单实例一次能吃的 ~3 倍（36 条）→ 判定 AI 明显落后，
 //     停止 process 进料，先让 AI 消化存量，防止 staging 无限堆积
 // ====================================================================
-const AI_BACKLOG_LATE_THRESHOLD = STAGE_BATCH.ai * 3 // 36：AI 单实例一批 12，连续 3 批都追不上即落后
+const AI_BACKLOG_LATE_THRESHOLD = STAGE_BATCH.ai * 3 // 24：AI 单实例一批 8（2026-08-22 12→8），连续 3 批都追不上即落后
 async function hasDownstreamBacklog() {
   try {
     const sd = await stagingStore.doneCount()
