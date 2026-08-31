@@ -12,6 +12,8 @@
 
 const { cleanNewsContent, validateCleanedContent } = require('./newsCleaner')
 const config = require('../config')
+// 统一密钥配置（DB 为源，env 兜底，60s 缓存）——建 Key 改 Key 不用再改代码/重部署
+const { loadKeys } = require('./configStore')
 // 读法路由（轻量路线，2026-08-12 owner 拍板）：把 qualityScorer 落库信号 → 解读读法 + 是否加【一页说】
 const { resolveInterpretPlan, splitOpinionFromText } = require('./interpretLens')
 
@@ -419,24 +421,24 @@ module.exports = {
  *          成功返回解读对象：text=正文（已剥离【一页说】内联标记），aiOpinion=【一页说】观点独立字段（无观点时为空串），
  *          其余为读法路由元信息，供日志/可观测；失败/过短/无配置返回 null。
  */
-function interpretNews(content, title, references, signals) {
+async function interpretNews(content, title, references, signals) {
+  const keys = await loadKeys()
   const hunyuanCfg = (config.hunyuan || {})
   const engines = []
-  // 复用与摘要一致的引擎链：智谱 → Qwen → DeepSeek → 混元兜底
-  // 2026-08-12 修订：解读超时从 8s 提到 12s——解读 prompt 要求 200-600 字独立成文，
-  // 8s 太短（三引擎全挂日志密集的根因之一），12s 与 ITEM_TIMEOUT_MS 对齐。
-  const zhipuCfg = (config.zhipuSummary || {})
-  if (zhipuCfg.apiKey) {
-    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 8000 })
+  // 引擎降级链（owner 2026-08-28 拍板）：ys365 → DeepSeek → 智谱 → 混元兜底。
+  // 缘由：ys365 中转 Gateway 性价比高且稳定 → 前置优先；混元免费额度留作最后防线。
+  const ysKey = keys.ys365
+  if (ysKey) {
+    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
   }
-  const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
+  const deepseekKey = keys.deepseek
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
   }
-  // ys365（New API 中转网关 · 2026-08-24 接入）：官方 key 全挂后的最后 AI 兜底（解读/摘要共用）
-  const ysKey = process.env.YS365_API_KEY || (config.ys365 && config.ys365.apiKey) || ''
-  if (ysKey) {
-    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
+  // 智谱 GLM（zhipuSummary：baseUrl/model 来自 config；apiKey 走统一密钥库）
+  const zhipuCfg = (config.zhipuSummary || {})
+  if (keys.zhipu) {
+    engines.push({ name: '智谱', apiKey: keys.zhipu, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: 8000 })
   }
   // 解读输入门槛：正文太短（< 50 字）不值得解读
   if (!content || content.trim().length < 50) return Promise.resolve(null)
@@ -523,16 +525,11 @@ function interpretNews(content, title, references, signals) {
     console.warn('[interpret] 未配置任何解读引擎，跳过 AI 独立解读')
     return Promise.resolve(null)
   }
-  // 有序降级链（owner 8/13 选方案①：混元前置）：混元(云开发内置·免费额度·快) → 智谱 → Qwen → DeepSeek
-  // 混元平台托管鉴权、零密钥、免费额度，且中文解读质量稳定、延迟低；置于首位的理由：
-  //  - 25s 预算内优先用免费额度跑通，绝大多数条目首引擎即成，省外部 Key 配额；
-  //  - 混元失败再降智谱→Qwen→DeepSeek（付费外部 Key），任一成功即返回。
+  // 有序降级链（owner 2026-08-28）：ys365 → DeepSeek → 智谱 → 混元兜底
+  // 弱付费/中转引擎前置（ys365 性价比高），混元免费额度留作最后防线。
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
-  const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
   if (hunyuanCfg.enabled) {
-    // 插入到智谱之前（即在整个链首位），实现「混元前置」
-    if (zhipuIdx >= 0) providers.splice(zhipuIdx, 0, { kind: 'hunyuan' })
-    else providers.unshift({ kind: 'hunyuan' })
+    providers.push({ kind: 'hunyuan' }) // 混元放最后兜底
   }
   return (async () => {
     for (const p of providers) {
@@ -577,9 +574,12 @@ function interpretNews(content, title, references, signals) {
           },
           timeout: eng.timeout,
         }, (res) => {
-          let data = ''
-          res.on('data', chunk => { data += chunk })
+          const chunks = []
+          res.on('data', chunk => { chunks.push(chunk) })
           res.on('end', () => {
+            // 2026-08-31 乱码修复：Buffer 累积后整体解码。原 `data += chunk` 逐块把 Buffer
+            // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
+            const data = Buffer.concat(chunks).toString('utf8')
             try {
               const resp = JSON.parse(data)
               const txt = resp.choices && resp.choices[0] && resp.choices[0].message
@@ -633,31 +633,38 @@ function interpretNews(content, title, references, signals) {
  *  原代码只挂 2 引擎，搜索阶段降级 DeepSeek 但摘要阶段没接 → 现补全为 3 引擎，DeepSeek 补位。
  * @param {string} content - 清洗后的正文
  * @param {string} title   - 新闻标题
- * @returns {Promise<string|null>} 100-300 字中文摘要
+ * @returns {Promise<string|null>} 100-230 字中文摘要
  */
-function summarizeWithZhipu(content, title) {
+// 2026-08-22 owner 拍板：AI 摘要硬上限 230 字（prompt 约束是软约束，LLM 常超发；此处代码强截断）
+const SUMMARY_MAX_LEN = 230
+function clampSummary(s) {
+  const t = String(s || '').trim()
+  if (t.length <= SUMMARY_MAX_LEN) return t
+  // 优先在最后一个完整句号/分号处断开（避免句中截断），找不到则硬切
+  const cut = t.slice(0, SUMMARY_MAX_LEN)
+  const lastPunct = Math.max(cut.lastIndexOf('。'), cut.lastIndexOf('；'), cut.lastIndexOf('！'), cut.lastIndexOf('？'))
+  return (lastPunct > 20 ? cut.slice(0, lastPunct + 1) : cut) + '…'
+}
+async function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
-  // DG-03（2026-08-06）：双引擎摘要 —— 智谱（ZHIPU_API_KEY）优先，通义 Qwen（DASHSCOPE_API_KEY）兜底
-  // FS-04（2026-08-09）：补全 DeepSeek 引擎 —— OpenAI 兼容协议，与 Qwen 模式一致
-  // FS-06（2026-08-09）：混元引擎初版前置 —— 云开发内置免费额度（无密钥）
-  // FS-CF1（2026-08-10 owner 指示）：混元降级到最后一位（外部 Key 链 → 混元兜底），省 10亿 免费额度
+  // owner 2026-08-28：引擎链调整为 ys365 → DeepSeek → 智谱 → 混元兜底；Key 统一走 configStore
+  const keys = await loadKeys()
   const hunyuanCfg = (config.hunyuan || {})
   const zhipuCfg = (config.zhipuSummary || {})
   const engines = []
-  if (zhipuCfg.apiKey) {
-    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
+  // ys365（New API 中转网关）前置：性价比高
+  const ysKey = keys.ys365
+  if (ysKey) {
+    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
   }
-  // FS-04：DeepSeek 摘要引擎（OpenAI 兼容协议，与 search 链共用同一个 Key + base）
-  // 8/9 凌晨根因：搜索阶段能降级到 DeepSeek，但摘要函数未挂 → AI 摘要永远走不到 DeepSeek。
-  // 现补上：DeepSeek 在前两个都失败时接管，避免再次出现"AI 摘要无结果"。
-  const deepseekKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
+  // DeepSeek 摘要引擎（OpenAI 兼容协议）
+  const deepseekKey = keys.deepseek
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
   }
-  // ys365（New API 中转网关 · 2026-08-24 接入）：官方 key 全挂后的最后 AI 兜底（解读/摘要共用）
-  const ysKey = process.env.YS365_API_KEY || (config.ys365 && config.ys365.apiKey) || ''
-  if (ysKey) {
-    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
+  // 智谱 GLM（zhipuSummary：baseUrl/model 来自 config；apiKey 走统一密钥库）
+  if (keys.zhipu) {
+    engines.push({ name: '智谱', apiKey: keys.zhipu, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
   }
   // 正文门槛 10 字（提高 AI 摘要覆盖率）
   if (!content || content.trim().length < 10) return Promise.resolve(null)
@@ -682,7 +689,7 @@ function summarizeWithZhipu(content, title) {
         console.warn('[summarize] 无法加载 wx-server-sdk（本地/沙箱环境），跳过混元引擎：' + e.message)
         resolve(null); return
       }
-      const prompt = '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。'
+      const prompt = '你是新闻摘要助手。基于用户提供的新闻正文，生成 50-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。'
       const userContent = `新闻标题：${title || ''}\n\n新闻正文：\n${input}`
       const model = cloud.ai().createModel('cloudbase')
       const timeoutMs = hunyuanCfg.timeout || 8000
@@ -698,7 +705,7 @@ function summarizeWithZhipu(content, title) {
         const summary = (result && result.text ? result.text : '').trim()
         if (summary && summary.length >= 30) {
           console.log(`[summarize] 混元摘要成功（${summary.length}字）`)
-          resolve(summary)
+          resolve(clampSummary(summary))
         } else {
           console.warn('[summarize] 混元摘要为空/过短，降级下一引擎')
           resolve(null)
@@ -716,17 +723,10 @@ function summarizeWithZhipu(content, title) {
     return Promise.resolve(null)
   }
 
-  // 有序降级链（owner 8/13 拍板·摘要同步修复）：混元(云开发内置·免费额度·快) → 智谱 → Qwen → DeepSeek
-  // 混元平台托管鉴权、零密钥、免费额度，且中文摘要质量稳定、延迟低；置于首位：
-  //  - 12s 预算内优先用免费额度跑通，绝大多数条目首引擎即成，省外部 Key 配额；
-  //  - 混元失败再降智谱→Qwen→DeepSeek（付费外部 Key），任一成功即返回。
-  // 此前「智谱打头」+ 12s race 把智谱 8s×3 重试吃满，永远轮不到混元/Qwen/DeepSeek 兜底 → 摘要大面积 null。
+  // 有序降级链（owner 2026-08-28）：ys365 → DeepSeek → 智谱 → 混元兜底
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
-  const zhipuIdx = engines.findIndex((e) => e.name === '智谱')
   if (hunyuanCfg.enabled) {
-    // 插入到智谱之前（即在整个链首位），实现「混元前置」（与 interpretNews 8/13 修复一致）
-    if (zhipuIdx >= 0) providers.splice(zhipuIdx, 0, { kind: 'hunyuan' })
-    else providers.unshift({ kind: 'hunyuan' })
+    providers.push({ kind: 'hunyuan' }) // 混元放最后兜底
   }
   return (async () => {
     for (const p of providers) {
@@ -744,7 +744,7 @@ function summarizeWithZhipu(content, title) {
         messages: [
           {
             role: 'system',
-            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。',
+            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 50-150 字的中文摘要。要求：突出核心事件、关键信息与各方反应，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文，内容完整、以句号自然收尾。',
           },
           {
             role: 'user',
@@ -768,9 +768,12 @@ function summarizeWithZhipu(content, title) {
           },
           timeout: eng.timeout,
         }, (res) => {
-          let data = ''
-          res.on('data', chunk => { data += chunk })
+          const chunks = []
+          res.on('data', chunk => { chunks.push(chunk) })
           res.on('end', () => {
+            // 2026-08-31 乱码修复：Buffer 累积后整体解码。原 `data += chunk` 逐块把 Buffer
+            // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
+            const data = Buffer.concat(chunks).toString('utf8')
             try {
               const resp = JSON.parse(data)
               const summary = resp.choices && resp.choices[0] && resp.choices[0].message
@@ -789,7 +792,7 @@ function summarizeWithZhipu(content, title) {
         let lastReason = '未知'
         for (let attempt = 0; attempt < 3; attempt++) {
           const out = await doRequest()
-          if (out.text && out.text.length >= 30) { resolve(out.text); return }
+          if (out.text && out.text.length >= 30) { resolve(clampSummary(out.text)); return }
           if (out.text) lastReason = `文本过短(${out.text.length}<30)`
           else lastReason = out.reason || '空响应'
           if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))

@@ -57,6 +57,7 @@ const SOURCE_AUTHORITY = {
   '南方都市报': 85, '新京报': 85, '北京青年报': 85, '界面新闻': 85, '观察者网': 85, '中国青年报': 85,
   // 科技/财经垂类 = 80
   '36氪': 80, '虎嗅': 80, 'TechCrunch': 80, 'IT之家': 80, '极客公园': 80,
+  '少数派': 80, '量子位': 80, '爱范儿': 80, 'Solidot': 80, '机器之心': 80,
   '腾讯科技': 80, '新浪科技': 80, '网易科技': 80, '凤凰科技': 80,
   // 省级/地方权威 = 80（域名特征匹配兜底）
   // 聚合/三方数据源 = 60（juhe/tianxing 返回的真实来源未命中以上时）
@@ -117,7 +118,8 @@ function normalizeTitleForMatch(title) {
  * @param {Object} item - { source, sourceUrl }
  */
 function sourceAuthority(item) {
-  const src = (item && item.source || '').trim()
+  // 主读 item.source（news_ingest 写入端已写），兜底读 item.sourceName（rssFetcher 旧版仅写 sourceName）
+  const src = (item && (item.source || item.sourceName) || '').trim()
   if (!src) return SOURCE_AUTHORITY.DEFAULT_UNKNOWN
 
   // 聚合/三方来源 → 60

@@ -77,8 +77,11 @@ COMMON_FILES=(
   "tianxing.js:newsFetcher:sources"
   "tianxing.js:refreshNews:sources"
   # ── 数据文件 ──
-  "seedFeeds.json:newsFetcher:."
-  "seedFeeds.json:rssFetcher:."
+  # seedFeeds.json 2026-08-31 移出强一致校验：它是 feedStore 的【运行时持久化状态】
+  # （enabled/errorStreak/status 会被各函数独立写回），非代码模板，副本必然漂移，
+  # 纳入比对会让 CI 常态误红。仍保留在目录中作为首装种子。
+  # "seedFeeds.json:newsFetcher:."
+  # "seedFeeds.json:rssFetcher:."
 )
 
 changed=0
