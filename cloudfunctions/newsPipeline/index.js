@@ -302,6 +302,14 @@ async function stageProcess(deadline) {
       createdAt: new Date().toISOString(),
       expireAt: new Date(Date.now() + STAGING_TTL_MS).toISOString(),
     }))
+    // publish 锁检查（2026-08-24）：publish 正在 wipe/insert 时暂停进料，
+    // 防止「publish 全量替换后，process 又把旧批次写回 staging」的混写竞态。
+    // 锁有效 → 保留 raw 不消费（下次轮次再处理），本轮直接结束（后续实例在锁释放后接力）
+    if (await isPublishLockActive()) {
+      console.log('[newsPipeline][process] publish 锁有效，本轮跳过（raw 保留待锁释放后处理）')
+      trigger('run')
+      return { stage: 'process', skipped: true, reason: 'publish lock active', pendingRaw: items.length }
+    }
     const wr = await stagingStore.writeStaging(docs)
     written += wr.added + wr.updated
 
@@ -750,6 +758,62 @@ function applyCategoryCaps(list) {
   return { items: out, trimmed }
 }
 
+// ====================================================================
+// publish 跨实例锁（2026-08-24 修复根因：并发 publish/process 竞态导致
+// 全量替换时机不当——wipe 时可能有其他实例正写 staging）
+// --------------------------------------------------------------------
+// 方案：system_kv 存 publish_lock，原子条件获取（仅当锁不存在或已过期）：
+//   - stagePublish 开头获取；wipe+insert 完成释放
+//   - stageProcess 写 staging 前检查：锁有效则跳过本轮（避免 wipe 期间混写）
+// 锁有效期 90s > publish 单轮预算（110s 内 wipe+insert 通常在 10s 内完成）
+// ====================================================================
+const PUBLISH_LOCK_KEY = 'publish_lock'
+const PUBLISH_LOCK_TTL_MS = 90 * 1000
+
+/** 原子获取 publish 锁：成功返回 true（仅当无锁或已过期） */
+async function acquirePublishLock() {
+  const kv = db.collection('system_kv')
+  const now = Date.now()
+  try {
+    // 条件更新：锁不存在(created 失败) 或 已过期 → 尝试 set（覆盖式获取）
+    // 用 doc().set() 无条件写会有竞态——先读后写非原子；
+    // 这里用「条件 update + 失败再 set」实现类原子（云开发单文档操作有原子性保障）
+    const ex = await kv.doc(PUBLISH_LOCK_KEY).get().catch(() => null)
+    if (ex && ex.data) {
+      const ts = Number(ex.data.ts) || 0
+      if (now - ts < PUBLISH_LOCK_TTL_MS) return false  // 锁有效 → 获取失败
+      // 锁过期 → 覆盖获取
+      await kv.doc(PUBLISH_LOCK_KEY).set({ data: { ts: now, owner: 'publish' } })
+      return true
+    }
+    // 锁不存在 → 创建
+    await kv.doc(PUBLISH_LOCK_KEY).set({ data: { ts: now, owner: 'publish' } })
+    return true
+  } catch (e) {
+    // 创建冲突（并发同时 set）→ 视为获取失败，保守暂缓
+    console.warn('[newsPipeline][publish] 锁获取异常(视为失败暂缓):', (e && e.message) || e)
+    return false
+  }
+}
+
+/** 检查 publish 锁是否有效（process 写 staging 前用） */
+async function isPublishLockActive() {
+  try {
+    const kv = db.collection('system_kv')
+    const d = await kv.doc(PUBLISH_LOCK_KEY).get()
+    const ts = (d && d.data && Number(d.data.ts)) || 0
+    return ts > 0 && (Date.now() - ts) < PUBLISH_LOCK_TTL_MS
+  } catch (e) { return false }
+}
+
+/** 释放 publish 锁 */
+async function releasePublishLock() {
+  try {
+    const kv = db.collection('system_kv')
+    await kv.doc(PUBLISH_LOCK_KEY).remove()
+  } catch (e) { /* 忽略 */ }
+}
+
 async function wipeNewsCache() {
   let removed = 0
   let rounds = 0
@@ -773,6 +837,13 @@ async function stagePublish(deadline) {
     console.log(`[newsPipeline][publish] 本轮仍有 ${inflight} 条 pending/processing，暂缓清 cache`)
     trigger('ai')
     return { stage: 'publish', deferred: true, reason: 'batch inflight', inflight }
+  }
+  // publish 跨实例锁（2026-08-24）：并发 publish 竞态根因修复——
+  // 获取锁失败 = 已有 publish 在跑 → 本轮暂缓，避免双实例同时 wipe/insert
+  const lockOk = await acquirePublishLock()
+  if (!lockOk) {
+    console.log('[newsPipeline][publish] 已有 publish 实例持有锁，本轮暂缓')
+    return { stage: 'publish', deferred: true, reason: 'publish lock busy' }
   }
 
   const collected = await stagingStore.listDone()
@@ -799,6 +870,7 @@ async function stagePublish(deadline) {
     await wipeNewsCache()
   } catch (e) {
     console.warn('[newsPipeline][publish] 全量清理失败，暂缓注入以免新旧混写:', e.message)
+    await releasePublishLock()
     trigger('publish')
     return { stage: 'publish', deferred: true, reason: 'wipe failed' }
   }
@@ -809,10 +881,12 @@ async function stagePublish(deadline) {
     // 2026-08-22：注入失败（如集合异常）→ cache 已空，staging 未删（保留数据）。
     // 下一轮 selfHeal/publish 会用同批 done 重试，避免"cache 空 + staging 也丢"双丢失。
     console.error('[newsPipeline][publish] batchInsert 异常，staging 保留待重试:', (e && e.message) || e)
+    await releasePublishLock()
     trigger('publish')
     return { stage: 'publish', deferred: true, reason: 'insert failed, staging kept', error: (e && e.message) || '' }
   }
   await stagingStore.removeStaged(collected.map((i) => i._id))
+  await releasePublishLock()
   trigger('run')
   console.log(`[newsPipeline][publish] 批次替换完成 inserted=${r.inserted} trimmed=${capped.trimmed} from=${collected.length}`)
   return { stage: 'publish', published: r.inserted || 0, trimmed: capped.trimmed, from: collected.length }
