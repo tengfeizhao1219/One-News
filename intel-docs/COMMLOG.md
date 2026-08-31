@@ -499,3 +499,8 @@
   ② 严格窗口修复：pubDate 仅日期型（无时分）→ 回退用抓取时间（同 One News newsPipeline 逻辑），避免 00:00 被 24h 窗口边缘滤掉；
   ③ 手动触发验证：14 分片 → ingest 出现 08-31 新数据（Hugging Face/NASA/IT之家 等），链路恢复。
 - **效果**：下一轮 11:10 定时批次起 intel 正常抓取；brief 将在处理完成后更新。
+## 2026-08-31 · ① sceneTags 固定 work_rcbc 修复 ② 删除 IT之家源
+
+- **① 命中场景固定 work_rcbc 根因**：intelProcess prompt 示例硬编码 `"sceneTags": ["work_rcbc"]`，LLM 照抄示例 → 每篇都命中"工作"。修复：示例改空数组 []，约束改为"从 sceneMapping 文本推导（含工作/合规→work，产品→product，生活→life，未命中为空）"；解析端（500 行）改为从 sceneMapping 关键词推导，不再信任 LLM 固定输出。oneNewsChannel SCENE_LABEL 同步加 work/product 映射（兼容旧值）。
+- **② 删除 IT之家源（非 AI 分类）**：intel_ingest 19 条 + intel_staged 19 条 ithome_ai 数据全部删除；intel_sources 删源；intel_current 从 27 条过滤到 8 条（保留 Simon/MarkTechPost/Solidot/MiniMax/智谱 有效 AI 内容，version 1→2）；seedSources.js 两副本删 ithome_ai 块。
+- **部署**：intelProcess / intelBrief / intelRssPoll 已更新。

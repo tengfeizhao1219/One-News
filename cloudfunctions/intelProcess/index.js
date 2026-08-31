@@ -317,11 +317,11 @@ function buildPrompts(item, profile, level) {
   "practice": "可以怎么做：1-2 句能落地的做法（工具/动作/收益），无则空字符串",
   "minAction": "想试试：轻松引导口吻（想体验的话，可以试试…），给 1 条最轻步骤，无则空字符串",
   "tryable": true,
-  "sceneTags": ["work_rcbc"]
+  "sceneTags": []
 }
 约束：
 - 所有字段都要输出，值不确定时用空字符串，不要省略字段
-- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集
+- sceneTags 必须与 sceneMapping 严格对应：sceneMapping 为空 → []；非空 → 从映射文本推导，含「工作/合规/FRAML/供应商」→ "work"；含「产品/One News/小程序/阅读引擎」→ "product"；含「家庭/生活/装修/育儿」→ "life"（可多选，未命中则为空数组，禁止硬套标签）
 - 严格 JSON：必须可被 JSON.parse 解析；缩进无关紧要；不要输出 JSON 以外的任何文字`,
       user: `情报原文：\n${String(text || '').replace(/\uFFFD/g, '')}`,
     }
@@ -339,11 +339,11 @@ function buildPrompts(item, profile, level) {
   "practice": "可以怎么做：工具 + 步骤 + 收益 + 坑点，老赵明天就能用",
   "minAction": "想试试：**轻松引导语气（owner 拍板，非命令式）**——仅当存在现在就能上手尝试的具体功能/产品/新特性时，用「想体验的话，可以试试…」口吻给 1 条，具体到「打开哪里 → 做什么 → 得到什么」；无则空字符串。**禁止命令式措辞**（不得出现「本周X前」「必须」「请尽快」等）；行业动态/收购/融资/观点类新闻 → 空字符串，禁止硬造",
   "tryable": true,
-  "sceneTags": ["work_rcbc", "product_onenews"]
+  "sceneTags": []
 }
 约束：
 - 所有字段都要输出，值不确定时用空字符串，不要省略字段
-- sceneTags 取值 ["work_rcbc","product_onenews","life"] 的子集
+- sceneTags 必须与 sceneMapping 严格对应：sceneMapping 为空 → []；非空 → 从映射文本推导，含「工作/合规/FRAML/供应商」→ "work"；含「产品/One News/小程序/阅读引擎」→ "product"；含「家庭/生活/装修/育儿」→ "life"（可多选，未命中则为空数组，禁止硬套标签）
 - 严格 JSON：必须可被 JSON.parse 解析；缩进无关紧要；不要输出 JSON 以外的任何文字${depthHint}`
   return { system, user: `情报原文：\n${text}` }
 }
@@ -496,9 +496,15 @@ function parseSopOut(text, item, profile, route) {
   }
 
   // 4) 场景标签 + 命中强度（rank 用，纯文本统计）
-  const sceneTags = Array.isArray(j.sceneTags)
-    ? j.sceneTags.map(String).filter((x) => ['work_rcbc', 'product_onenews', 'life'].includes(x))
-    : []
+  // 2026-08-31 修复：不再信任 LLM 固定输出的 sceneTags（此前 prompt 示例硬编码 work_rcbc → 每篇都命中"工作"）。
+  // 改为从 sceneMapping 文本推导：映射为空 → []；非空按关键词归到 work/product/life，未命中则为空数组。
+  const mappingText = String(j.sceneMapping || '').toLowerCase()
+  const sceneTags = []
+  if (mappingText) {
+    if (/工作|合规|framl|trustdecision|供应商|银行|风控/.test(mappingText)) sceneTags.push('work')
+    if (/产品|one news|onenews|小程序|阅读引擎|theme|rss/.test(mappingText)) sceneTags.push('product')
+    if (/家庭|生活|装修|育儿|个人效率|自动化/.test(mappingText)) sceneTags.push('life')
+  }
   const hitsIndicators = ['工作', '产品', '家庭', 'rcbc', 'framl', 'trustdecision', 'one news', 'onenews', '阅读引擎', 'theme.json', 'rss', '装修', '育儿', '自动化']
   const corpus = (t + ' ' + String(item.title || '')).toLowerCase()
   let sceneHits = 0

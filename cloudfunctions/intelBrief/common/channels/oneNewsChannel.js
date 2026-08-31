@@ -28,11 +28,13 @@
 const { IntelChannel } = require('./base')
 const { formatHHMM } = require('../beijingTime')
 
-/** 场景标签 → 小程序友好短标签 */
+/** 场景标签 → 小程序友好短标签（2026-08-31：新增 work/product 映射，兼容旧 work_rcbc/product_onenews） */
 const SCENE_LABEL = {
+  work: '工作',
+  product: '产品',
+  life: '生活',
   work_rcbc: '工作',
   product_onenews: '产品',
-  life: '生活',
 }
 
 /**

@@ -367,17 +367,6 @@ const INTEL_SEED_SOURCES = [
     blockTitleKeywords: ['广告', '招聘'],
   },
   {
-    _id: 'ithome_ai',
-    key: 'ithome_ai',
-    name: 'IT之家（AI/科技）',
-    layer: 'F',
-    sourceType: 'rss',
-    baseUrl: 'https://www.ithome.com/rss/',
-    adapterConfig: { endpoint: 'https://www.ithome.com/rss/', timeoutMs: 15000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
-    blockTitleKeywords: ['广告', '招聘'],
-  },
-  {
     _id: 'sspai_ai',
     key: 'sspai_ai',
     name: '少数派（AI/效率）',
