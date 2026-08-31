@@ -33,7 +33,7 @@ CHANGED=$(git status --porcelain | awk '{print $2}' | sed 's|.*/||' | tr '\n' ' 
 echo "📦 发现 $COUNT 个改动文件：$CHANGED"
 
 # 提交信息：当天日期 + 文件数（列出关键改动目录，保持简洁可读）
-MSG="chore(auto): 每日改动提交 $DATE_TAG（$COUNT 个文件）"
+MSG="chore(auto): 每日改动提交 ${ATE_TAG}（$COUNT 个文件）"
 DETAIL=$(git status --porcelain | awk '{print $2}' | sed 's|^|  - |' | head -20)
 FULL_MSG="$MSG
 

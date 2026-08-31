@@ -43,7 +43,7 @@ fi
 git config http.version HTTP/1.1 2>/dev/null || true
 
 # ---- 推送主循环（指数退避） ----
-echo "🚀 push 到 origin/$BRANCH（最多尝试 $MAX_ATTEMPTS 次）…"
+echo "🚀 push 到 origin/${BRANCH}（最多尝试 $MAX_ATTEMPTS 次）…"
 delay=$BASE_DELAY
 attempt=0
 while [ "$attempt" -lt "$MAX_ATTEMPTS" ]; do
