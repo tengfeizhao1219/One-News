@@ -49,7 +49,13 @@ MODE="${1:-all}"
 # ── 1) 关键逻辑存在/禁止校验 ─────────────────────────────────────────────
 echo "── [1/4] 关键逻辑校验（require=必须存在 / forbid=禁止出现）──"
 for entry in "${CRITICAL_CHECKS[@]}"; do
-  file="${entry%%|*}"; rest="${entry#*|}"; needle="${rest%%|*}"; rest2="${rest#*|}"; desc="${rest2%%|*}"; mode="${rest2#*|}"
+  # 用 sed 按 | 逐字段提取（bash 3.2 对中文 + ${var%%|*} 参数扩展有 unbound 缺陷）
+  file=$(printf '%s' "$entry" | sed 's/|.*//')
+  rest=$(printf '%s' "$entry" | sed 's/^[^|]*|//')
+  needle=$(printf '%s' "$rest" | sed 's/|.*//')
+  rest2=$(printf '%s' "$rest" | sed 's/^[^|]*|//')
+  desc=$(printf '%s' "$rest2" | sed 's/|.*//')
+  mode=$(printf '%s' "$rest2" | sed 's/^[^|]*|//')
   mode="${mode:-require}"
   # MODE 过滤：only backend / only cloudfunctions
   case "$MODE" in
@@ -57,21 +63,21 @@ for entry in "${CRITICAL_CHECKS[@]}"; do
     backend)        [[ "$file" == backend/* ]] || continue ;;
   esac
   # 校验 backend 副本（若存在）
-  bfile="${file/cloudfunctions\//backend\/}"
+  bfile=$(printf '%s' "$file" | sed 's|^cloudfunctions/|backend/|')
   for target in "$file" "$bfile"; do
     if [ -f "$target" ]; then
       if [ "$mode" = "forbid" ]; then
         if grep -q "$needle" "$target"; then
-          echo "  ❌ $target 含「$desc」——已回退/禁止，请移除后再 push！"
+          echo "  ❌ $target 含「${desc:-}」——已回退/禁止，请移除后再 push！"
           FAIL=1
         else
-          echo "  ✅ $target 无「$desc」（符合回退要求）"
+          echo "  ✅ $target 无「${desc:-}」（符合回退要求）"
         fi
       else
         if grep -q "$needle" "$target"; then
-          echo "  ✅ $target 含「$desc」"
+          echo "  ✅ $target 含「${desc:-}」"
         else
-          echo "  ❌ $target 缺失「$desc」——可能被并行覆盖，禁止 push/部署！"
+          echo "  ❌ $target 缺失「${desc:-}」——可能被并行覆盖，禁止 push/部署！"
           FAIL=1
         fi
       fi
