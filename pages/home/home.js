@@ -1,6 +1,6 @@
 // 首页 - 卡片流主视图逻辑
 
-const { CATEGORIES, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, RECOMMEND_PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
+const { CATEGORIES, CATEGORY_MAP, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, RECOMMEND_PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
 
@@ -786,8 +786,8 @@ Page({
       // 若已是最后一个分类 → 回退加载更多（原行为）
       this._tryNextCategoryOrLoadMore()
     } else if (dy > 0 && atFirst) {
-      // 已到开头下滑 → 刷新
-      this.refreshCurrentCategory()
+      // 已到开头下滑 → 优先跨分类切回上一分类（回到之前阅读位置）；无来源则刷新
+      this._tryPrevCategoryOrRefresh()
     } else {
       this._isAnimating = true
       if (dy < 0) this._animateSwipeNext()
@@ -989,6 +989,73 @@ Page({
   // ============ 边界加载更多 / 刷新 ============
 
   /**
+   * 下滑到当前分类第一条 → 优先跨分类切回上一分类（回到之前阅读位置，BUG-2026-08-22）。
+   * 无来源记录 / 已是首个分类 → 刷新（原行为）。
+   */
+  _tryPrevCategoryOrRefresh() {
+    const pos = this._prevCategoryPos
+    // 有来源记录且不是当前分类 → 切回上一分类最后一条
+    if (pos && pos.cat && pos.cat !== this.data.currentCategory) {
+      const that = this
+      this.setData({ loadingMore: true })
+      this._showStatusPill('正在阅读：' + (CATEGORY_MAP[pos.cat] || ''))
+      getNewsList({ category: pos.cat, pageNum: 1, pageSize: firstPageSize(pos.cat) })
+        .then(res => {
+          const list = res.list || []
+          if (this._destroyed) return
+          if (list.length === 0) {
+            // 上一分类无数据 → 清除记录，回退刷新
+            this._prevCategoryPos = null
+            this.setData({ loadingMore: false })
+            this.refreshCurrentCategory()
+            return
+          }
+          // 定位到之前阅读位置（越界则末条）
+          const idx = Math.min(pos.index != null ? pos.index : list.length - 1, list.length - 1)
+          this._isAnimating = true
+          this.setData({
+            currentCategory: pos.cat,
+            panelCategory: pos.cat,
+            currentPage: 1,
+            loadMoreCount: 0,
+            newsList: list,
+            currentIndex: idx,
+          })
+          const cards = this.data.cards.map(card => {
+            const next = { ...card }
+            if (card.state === 'active' || card.state === 'below') next.animClass = 'out-up'
+            return next
+          })
+          this.setData({ cards })
+          setTimeout(() => {
+            this.renderCards(list, idx, 'in-up')
+            const snapped = this.data.cards.map(card => ({ ...card, animClass: (card.animClass || '') + ' no-transition' }))
+            this.setData({ cards: snapped })
+            setTimeout(() => {
+              const cleared = this.data.cards.map(card => ({ ...card, animClass: '' }))
+              this.setData({ cards: cleared })
+              this._isAnimating = false
+              this.setData({ loadingMore: false })
+              this._syncPanelList(list, idx)
+              // 回到上一分类后清除来源记录（避免连续误切）
+              this._prevCategoryPos = null
+            }, 30)
+          }, 350)
+        })
+        .catch(() => {
+          if (this._destroyed) return
+          this._prevCategoryPos = null
+          this.setData({ loadingMore: false })
+          this.refreshCurrentCategory()
+        })
+      return
+    }
+    // 无来源 / 首个分类 → 刷新
+    this._prevCategoryPos = null
+    this.refreshCurrentCategory()
+  },
+
+  /**
    * BUG-20260806-022 (FE): 当前分类最后一条上滑 → 优先跨分类切到下一分类第一条。
    * 若已是最后一个分类 → 回退 loadMoreNews()（原加载更多行为）。
    * 与详情页 reading-engine.loadNextCategory 的顺序保持一致（CATEGORIES 固定顺序）。
@@ -1015,6 +1082,8 @@ Page({
     }
 
     // 跨分类切换：状态栏小胶囊提示（BUG-20260806-023 替换 wx.showToast，与详情页 _tryNextCategory 一致）
+    // 记录来源位置（上翻可回到此处的最后一条）
+    this._prevCategoryPos = { cat: currentCategory, index: Math.max(0, (this.data.newsList.length - 1)) }
     this.setData({ loadingMore: true })
     this._showStatusPill('正在阅读：' + nextCat.name)
 
