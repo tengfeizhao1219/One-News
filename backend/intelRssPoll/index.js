@@ -507,6 +507,14 @@ async function fetchSource(feed, ctx = {}) {
       headers: (cfg.headers || {}),
     })
     if (res.notModified) return { items: [], cursor: ctx.sinceMs || null, notModified: true }
+    // 2026-08-31 修复：识别 Cloudflare 人机验证挑战页（sgcaptcha / "Just a moment" / cf-chl / verify you are human）
+    // marktechpost 等源已被全站 Challenge 拦截，服务端请求必然命中该页（非 2xx 或 HTML 挑战体），
+    // 程序无法自动通过人机验证 → 优雅降级为 empty（返回 degraded，走 runWorker 的 empty 轻量分支：
+    // 不写 error alert、不累加 errorStreak），避免污染 intel_health；运营侧应评估换源或加绕行。
+    if (res.text && /sgcaptcha|Just a moment|cf-chl|__cf_chl_|verify you are human|attention required/i.test(res.text)) {
+      console.warn(`[worker] ${feed.key} 命中 Cloudflare 人机验证，优雅降级（源站反爬，非代码错误）`)
+      return { items: [], cursor: ctx.sinceMs || null, degraded: true }
+    }
     if (!res.ok || !res.text) throw new Error(`RSS 抓取失败 status=${res.status}`)
     const parsed = intelParseXml(res.text)
     // 增量兜底（§5.8 owner 08-19 决策，方案 A）：RSS 全量拉最近 N 篇，但有 lastSuccessCursor
@@ -578,32 +586,41 @@ async function fetchSource(feed, ctx = {}) {
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
-    // MiniMax 官方（2026-08-20 接入）：/api/news → data[]（title/summary/publishDate ms/slug）
-    if (Array.isArray(json.data) && feed.key === 'minimax_ai') {
-      const items = json.data
-        .filter((d) => d.title)
+    // 2026-08-31 加固：结构优先解析（不再强依赖易变 source.key，根治「id 改名即 throw」的脆弱性）。
+    // MiniMax 官方 /api/news → data[]；智谱 AI 官方 /api/articles → docs[]。
+    // 兼容可能的外层包装（如 {code,data}）与字段缺失（slug/newsId/title 任一存在即映射）。
+    const mmData = Array.isArray(json.data)
+      ? json.data
+      : (json.data && Array.isArray(json.data.data) ? json.data.data : null)
+    if (mmData) {
+      const items = mmData
+        .filter((d) => d && (d.title || d.slug || d.newsId))
         .map((d) => ({
-          title: _cleanStr(d.title),
+          title: _cleanStr(d.title || d.slug || ''),
           url: d.slug ? `https://www.minimaxi.com/blog/${d.slug}` : 'https://www.minimaxi.com/blog',
-          pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate))) ? new Date(Number(d.publishDate)).toISOString() : '',
+          pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate)))
+            ? new Date(Number(d.publishDate)).toISOString()
+            : (d.publishDate ? _cleanStr(d.publishDate) : ''),
           guid: `minimax:${d.newsId || d.slug || d.title}`,
-          desc: _cleanStr(d.summary || d.title),
-          content: _cleanStr(d.summary || d.title),
+          desc: _cleanStr(d.summary || d.title || ''),
+          content: _cleanStr(d.summary || d.content || d.title || ''),
           category: _cleanStr((d.tags || []).join(',')) || '',
         }))
       return { items, cursor: ctx.sinceMs || null }
     }
-    // 智谱 AI 官方（2026-08-20 接入）：/api/articles → docs[]（title_zh/createAt/content_zh 富文本）
-    if (Array.isArray(json.docs) && feed.key === 'zhipu_ai') {
-      const items = json.docs
-        .filter((d) => d.title_zh || d.title_en)
+    const zpDocs = Array.isArray(json.docs)
+      ? json.docs
+      : (json.docs && Array.isArray(json.docs.docs) ? json.docs.docs : null)
+    if (zpDocs) {
+      const items = zpDocs
+        .filter((d) => d && (d.title_zh || d.title_en || d.id))
         .map((d) => ({
-          title: _cleanStr(d.title_zh || d.title_en),
+          title: _cleanStr(d.title_zh || d.title_en || ''),
           url: `https://www.zhipuai.cn/zh/research/${d.id}`,
           pubDate: _cleanStr(d.createAt) || '',
           guid: `zhipu:${d.id}`,
-          desc: _cleanStr(d.resume_zh || d.title_zh || d.title_en),
-          content: extractZhipuContent(d.content_zh) || _cleanStr(d.resume_zh || ''),
+          desc: _cleanStr(d.resume_zh || d.title_zh || d.title_en || ''),
+          content: extractZhipuContent(d.content_zh) || _cleanStr(d.resume_zh || d.content_zh || ''),
           category: _cleanStr(d.category || ''),
         }))
       return { items, cursor: ctx.sinceMs || null }
