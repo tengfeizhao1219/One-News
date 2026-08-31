@@ -504,3 +504,10 @@
 - **① 命中场景固定 work_rcbc 根因**：intelProcess prompt 示例硬编码 `"sceneTags": ["work_rcbc"]`，LLM 照抄示例 → 每篇都命中"工作"。修复：示例改空数组 []，约束改为"从 sceneMapping 文本推导（含工作/合规→work，产品→product，生活→life，未命中为空）"；解析端（500 行）改为从 sceneMapping 关键词推导，不再信任 LLM 固定输出。oneNewsChannel SCENE_LABEL 同步加 work/product 映射（兼容旧值）。
 - **② 删除 IT之家源（非 AI 分类）**：intel_ingest 19 条 + intel_staged 19 条 ithome_ai 数据全部删除；intel_sources 删源；intel_current 从 27 条过滤到 8 条（保留 Simon/MarkTechPost/Solidot/MiniMax/智谱 有效 AI 内容，version 1→2）；seedSources.js 两副本删 ithome_ai 块。
 - **部署**：intelProcess / intelBrief / intelRssPoll 已更新。
+## 2026-08-31 · 中午批次不更新 Root Cause 修复（empty 分支不更新 lastFetchedAt）
+
+- **现象**：11:30 中午批次不发布新 brief，4 个源（ifanr/latent/openai/solidot）lastFetchedAt 永久停滞。
+- **Root Cause**：intelRssPoll `runWorker` 的 **empty 分支只写 lastFetchStatus='empty'，不更新 lastFetchedAt**（对比 not_modified 分支更新）。→ 空源 lastFetchedAt 停旧值 → intelFetch 补偿验证误判「分片丢失」反复补触发（浪费 + 掩盖真实状态）。
+- **连带**：真正原因是这些源确实无新内容（empty 是正常态），但 lastFetchedAt 不更新导致状态失真。
+- **修复**：empty 分支补 `lastFetchedAt: nowIso`（消除误判）；intelFetch 补偿验证（8s 检测 + 补触发）保留（真丢失分片仍有价值）。
+- **部署**：intelRssPoll 已更新。

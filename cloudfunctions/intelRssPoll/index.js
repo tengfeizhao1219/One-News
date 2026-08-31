@@ -596,18 +596,36 @@ async function fetchSource(feed, ctx = {}) {
     if (mmData) {
       const items = mmData
         .filter((d) => d && (d.title || d.slug || d.newsId))
-        .map((d) => ({
-          title: _cleanStr(d.title || d.slug || ''),
-          url: d.slug ? `https://www.minimaxi.com/blog/${d.slug}` : 'https://www.minimaxi.com/blog',
-          pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate)))
-            ? new Date(Number(d.publishDate)).toISOString()
-            : (d.publishDate ? _cleanStr(d.publishDate) : ''),
-          guid: `minimax:${d.newsId || d.slug || d.title}`,
-          desc: _cleanStr(d.summary || d.title || ''),
-          content: _cleanStr(d.summary || d.content || d.title || ''),
-          category: _cleanStr((d.tags || []).join(',')) || '',
-        }))
-      return { items, cursor: ctx.sinceMs || null }
+        .map((d) => {
+          const needsBody = !_cleanStr(d.content || '') && !!d.slug
+          const base = { title: _cleanStr(d.title || d.slug || '') }
+          // 2026-08-31 修复：MiniMax 官网正文路径实际是 /news/{slug}（/blog/ 已 404）
+          const item = {
+            ...base,
+            url: d.slug ? `https://www.minimaxi.com/news/${d.slug}` : 'https://www.minimaxi.com/news',
+            pubDate: (d.publishDate && !Number.isNaN(Number(d.publishDate)))
+              ? new Date(Number(d.publishDate)).toISOString()
+              : (d.publishDate ? _cleanStr(d.publishDate) : ''),
+            guid: `minimax:${d.newsId || d.slug || d.title}`,
+            desc: _cleanStr(d.summary || d.title || ''),
+            // 2026-08-31：MiniMax /api/news 的 content 恒为空，只有 summary（导语）。
+            // 对正文过短条目补抓 /news/{slug} 完整正文（失败保留 summary 不阻断）
+            content: _cleanStr(d.content || d.summary || d.title || ''),
+            category: _cleanStr((d.tags || []).join(',')) || '',
+          }
+          if (needsBody && d.slug) {
+            return fetchWebPage(`https://www.minimaxi.com/news/${d.slug}`)
+              .then((html) => {
+                const body = extractContentFromHtml(html, { base: `https://www.minimaxi.com/news/${d.slug}` })
+                if (body && body.length > 100) item.content = _cleanStr(body)
+                return item
+              })
+              .catch(() => item)  // 补抓失败保留 summary
+          }
+          return Promise.resolve(item)
+        })
+      // items 含 Promise（正文补抓），await 后返回
+      return { items: await Promise.all(items), cursor: ctx.sinceMs || null }
     }
     const zpDocs = Array.isArray(json.docs)
       ? json.docs
@@ -982,8 +1000,10 @@ async function runWorker(feed, now, ctx = {}) {
   const rawItems = fetched.items || []
   if (rawItems.length === 0) {
     // 2026-08-19 复盘：区分「无新增」与「源本身空/解析失败」，便于告警归因
+    // 2026-08-31 修复：empty 也更新 lastFetchedAt——否则空源 lastFetchedAt 永久停滞，
+    //   被 intelFetch 补偿验证误判为「分片丢失」反复补触发（浪费调用 + 掩盖真实状态）。
     console.warn(`[worker] ${sourceId} 解析后 0 条${fetched.timedOut ? '（超时）' : ''}（可能停更、无新增或解析规则待调，cursor=${sinceMs}）`)
-    await updateSource(sourceId, { lastFetchStatus: 'empty' })
+    await updateSource(sourceId, { lastFetchStatus: 'empty', lastFetchedAt: nowIso })
     return summarize({ sourceId, status: 'empty', inserted: 0 })
   }
 

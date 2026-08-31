@@ -146,6 +146,38 @@ exports.main = async (event = {}) => {
   }
   await triggerAll(sources)
 
+  // 2026-08-31 根因修复：self-fan-out（fire-and-forget）并发下部分分片 RPC 会静默丢失
+  // （实测 12 源每次丢 4 个，worker 未启动、无告警）→ 触发后验证补偿：
+  // 等 8s 查各源 lastFetchedAt，未更新的补触发（最多 2 轮）。
+  const verifyAndRetrigger = async () => {
+    for (let round = 0; round < 2; round++) {
+      await new Promise((r) => setTimeout(r, 8000))
+      let missed = []
+      try {
+        const nowRes = await db.collection(INTEL_SOURCE_COLLECTION)
+          .where({ enabled: true, status: db.command.neq('disabled') })
+          .field({ key: true, lastFetchedAt: true, _id: true })
+          .limit(100)
+          .get()
+        const nowSources = nowRes.data || []
+        for (const s of nowSources) {
+          const key = s.key || s._id
+          const lf = s.lastFetchedAt ? new Date(s.lastFetchedAt).getTime() : 0
+          // 本轮触发后 25s 内未更新 → 视为分片丢失，补触发
+          if (!lf || (Date.now() - lf) > 25000) missed.push(key)
+        }
+      } catch (e) {
+        console.warn('[intelFetch] 补偿验证读源失败:', e.message)
+        return
+      }
+      if (!missed.length) { console.log('[intelFetch] 补偿验证：全部源已更新，无遗漏'); return }
+      console.warn(`[intelFetch] 补偿验证：${missed.length} 个源分片疑似丢失，补触发: ${missed.join(',')}`)
+      await triggerAll(missed.map((k) => ({ _id: k, key: k })))
+    }
+  }
+  // 编排实例预算内完成补偿（60s 超时 - 已耗时间，最多 2 轮×8s）
+  try { await verifyAndRetrigger() } catch (e) { console.warn('[intelFetch] 补偿验证异常:', e.message) }
+
   const elapsed = Date.now() - startTime
   console.log(`[intelFetch] ========== 巡检已触发（编排/异步）: 后台更新中, 编排耗时 ${elapsed}ms ==========`)
   return {
