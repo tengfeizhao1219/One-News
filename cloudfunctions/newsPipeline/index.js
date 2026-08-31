@@ -777,6 +777,34 @@ function applyCategoryCaps(list) {
 //   - stageProcess 写 staging 前检查：锁有效则跳过本轮（避免 wipe 期间混写）
 // 锁有效期 90s > publish 单轮预算（110s 内 wipe+insert 通常在 10s 内完成）
 // ====================================================================
+/** 乱码处理：检测 → 还原(打回 AI 重跑) → 丢弃(无法还原)
+ *  owner 2026-08-31 拍板：先处理还原再 publish，确实无法还原才丢弃。
+ *   - clean    → 入库（走 garbleGate 最终清洗）
+ *   - light    → 入库（garbleGate 清洗剥残，语义完整）
+ *   - heavy    → 尝试还原：
+ *        · 有 content（可重新生成摘要）→ markPending 打回 AI 重跑（重试计数回归 AI 阶段处理）
+ *        · content 也乱码 / 已重试超限 → 丢弃（removeStaged）
+ */
+async function applyGarbledGate(collected) {
+  const cleanItems = []
+  const redoIds = []
+  const dropIds = []
+  for (const it of collected) {
+    const cls = classifyGarbled(it)
+    if (cls.level === 'clean') { cleanItems.push(it); continue }
+    if (cls.level === 'light') { cleanItems.push(it); continue }  // 轻微走 garbleGate 清洗
+    // heavy：尝试还原
+    const contentHasFFFD = cls.heavyFields.includes('content')
+    const retry = Number(it.aiRetry) || 0
+    if (!contentHasFFFD && retry < 3) {
+      redoIds.push(it._id)   // content 干净、可重新生成摘要 → 打回 AI
+    } else {
+      dropIds.push(it._id)   // content 也乱码或重试超限 → 丢弃
+    }
+  }
+  return { cleanItems, redoIds, dropIds }
+}
+
 const PUBLISH_LOCK_KEY = 'publish_lock'
 const PUBLISH_LOCK_TTL_MS = 90 * 1000
 
@@ -865,14 +893,14 @@ async function stagePublish(deadline) {
   // 2026-08-24 owner 拍板：注入前先与【现有 news_cache】比较去重——
   // 同 URL / 同标题指纹（跨源同主题）的重复条目从当前批次剔除，
   // 避免多源转载同一新闻被反复注入、用户反复看到旧内容。
-  const dedupRes = await dedupAgainstCache(collected)
+  const dedupRes = await dedupAgainstCache(cleanItems)
   if (!dedupRes.items.length) {
     // 空批保护：本批全部与现有 cache 重复 → 不发布、不清空、保留现有展示数据。
     // 被剔除条目的数据已在展示库，staging 消费删除（不堆积、不反复重试）。
-    await stagingStore.removeStaged(collected.map((i) => i._id))
-    console.log(`[newsPipeline][publish] 当前批次 ${collected.length} 条全部与现有 cache 重复，本轮不发布、保留现有 cache`)
+    await stagingStore.removeStaged(cleanItems.map((i) => i._id))
+    console.log(`[newsPipeline][publish] 当前批次 ${cleanItems.length} 条全部与现有 cache 重复，本轮不发布、保留现有 cache`)
     trigger('run')
-    return { stage: 'publish', skipped: true, reason: 'all-duplicate-with-cache', removed: dedupRes.removed, from: collected.length }
+    return { stage: 'publish', skipped: true, reason: 'all-duplicate-with-cache', removed: dedupRes.removed, from: cleanItems.length }
   }
 
   const capped = applyCategoryCaps(dedupRes.items)
@@ -895,11 +923,11 @@ async function stagePublish(deadline) {
     trigger('publish')
     return { stage: 'publish', deferred: true, reason: 'insert failed, staging kept', error: (e && e.message) || '' }
   }
-  await stagingStore.removeStaged(collected.map((i) => i._id))
+  await stagingStore.removeStaged(cleanItems.map((i) => i._id))
   await releasePublishLock()
   trigger('run')
-  console.log(`[newsPipeline][publish] 批次替换完成 inserted=${r.inserted} trimmed=${capped.trimmed} from=${collected.length}`)
-  return { stage: 'publish', published: r.inserted || 0, trimmed: capped.trimmed, from: collected.length }
+  console.log(`[newsPipeline][publish] 批次替换完成 inserted=${r.inserted} trimmed=${capped.trimmed} from=${cleanItems.length}`)
+  return { stage: 'publish', published: r.inserted || 0, trimmed: capped.trimmed, from: cleanItems.length }
 }
 
 // ====================================================================

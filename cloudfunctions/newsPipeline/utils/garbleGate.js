@@ -59,4 +59,39 @@ function garbleGate(doc) {
   return { changed, details }
 }
 
-module.exports = { garbleGate, cleanText, countHits }
+/** 乱码分级（检测层）：每条入库前判定乱码严重度，决定 还原 / 清洗 / 丢弃 */
+// 阈值（owner 2026-08-31）：某字段 U+FFFD ≥ HEAVY_THRESHOLD 或 占比 ≥ HEAVY_RATIO 判重度
+const HEAVY_THRESHOLD = 3            // 单字段 U+FFFD 数
+const HEAVY_RATIO = 0.05             // 占比 5%
+const LIGHT_THRESHOLD = 1            // ≥1 个即记轻度（走清洗）
+
+/**
+ * 分类一条文档的乱码等级。
+ * @param {Object} doc 待检文档（含 summary/content）
+ * @returns {{level:'clean'|'light'|'heavy', hits:Object<string,number>, heavyFields:Array, totalHits:number}}
+ *   clean  无乱码 → 直接入库
+ *   light  轻微（<阈值）→ garbleGate 清洗后入库
+ *   heavy  重度 → 需还原（打回 AI 重跑）或丢弃
+ */
+function classifyGarbled(doc) {
+  const hits = {}
+  for (const f of ['title', 'summary', 'content', 'aiOpinion']) {
+    const n = countHits(doc[f])
+    if (n > 0) hits[f] = n
+  }
+  const totalHits = Object.values(hits).reduce((a, b) => a + b, 0)
+  if (totalHits === 0) return { level: 'clean', hits, heavyFields: [], totalHits }
+
+  const heavyFields = []
+  for (const [f, n] of Object.entries(hits)) {
+    const len = String(doc[f] || '').length
+    const ratio = len > 0 ? n / len : 0
+    if (n >= HEAVY_THRESHOLD || ratio >= HEAVY_RATIO) heavyFields.push(f)
+  }
+  return {
+    level: heavyFields.length ? 'heavy' : 'light',
+    hits, heavyFields, totalHits,
+  }
+}
+
+module.exports = { garbleGate, cleanText, countHits, classifyGarbled }
