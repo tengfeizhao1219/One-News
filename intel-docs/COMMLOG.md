@@ -489,3 +489,13 @@
 
 - **决策**：摘要生成区间恢复为 50~150 汉字（此前 owner 改 100-200 → 再改回 50-150）；**保留** clampSummary 230 字硬截断（LLM 超发兜底，完整句号断开）。
 - **部署**：newsPipeline 已更新（下一批生效）；前端 230 截断逻辑保留不变。
+## 2026-08-31 · intel 情报 6 天空转修复（源扩充 + 严格窗口误过滤）
+
+- **问题**：08-25 后 intel ingest 无新增（6 天），brief 停在旧版。双因：
+  ① 源太少（9 个启用，海外源被 Cloudflare 403）；
+  ② 抓取时间窗口 bug：部分源（IT之家等）pubDate 带时分但部分历史源仅日期，且**抓取成功但窗口过滤误杀**。
+- **修复**：
+  ① 恢复 qbitai + 新增 4 国内源（ifanr/ithome/sspai/solidot，均本地 200 验证）→ 启用源 9→14，数据库 + seedSources.js 同步，intelRssPoll 已部署；
+  ② 严格窗口修复：pubDate 仅日期型（无时分）→ 回退用抓取时间（同 One News newsPipeline 逻辑），避免 00:00 被 24h 窗口边缘滤掉；
+  ③ 手动触发验证：14 分片 → ingest 出现 08-31 新数据（Hugging Face/NASA/IT之家 等），链路恢复。
+- **效果**：下一轮 11:10 定时批次起 intel 正常抓取；brief 将在处理完成后更新。

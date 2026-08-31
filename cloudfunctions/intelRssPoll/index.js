@@ -993,7 +993,16 @@ async function runWorker(feed, now, ctx = {}) {
     // 综合新闻过滤：标题多主题（；分隔）且任一段非 AI → 一律过滤（只留 AI 专题）
     if (!passPureAiFilter(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
     // 严格窗口：pubDate 必须有效且落在 (windowStart, now]
-    const t = raw.pubDate ? new Date(raw.pubDate).getTime() : NaN
+    // 2026-08-31 修复：pubDate 仅日期无时分（如 "Sun, 30 Aug 2026"）→ new Date 解析为 UTC 00:00，
+    // 恰好落在 24h 窗口边缘外被滤掉（IT之家/爱范儿等源全被误过滤 → 6 天 ingest 空）。
+    // 检测日期型后回退用抓取时间（now），让当日条目正常入窗。
+    let t = raw.pubDate ? new Date(raw.pubDate).getTime() : NaN
+    const rawPub = raw.pubDate != null ? String(raw.pubDate) : ''
+    const isDateOnly = /^\w{3}, \d{1,2} \w{3} \d{4}$/.test(rawPub.trim()) || /^\d{4}-\d{2}-\d{2}$/.test(rawPub.trim())
+    if (!Number.isNaN(t) && isDateOnly) {
+      // 日期型：用抓取时刻代表发布时间（同 One News newsPipeline 修复），避免 00:00 被窗口边缘滤掉
+      t = Date.now()
+    }
     if (Number.isNaN(t) || t <= windowStart || t > Date.now()) { filtered++; continue }
     // 2026-08-19 复盘：剥离聚合源标题前缀（AINews]），避免噪音直达前端
     raw.title = cleanItemTitle(raw.title)
