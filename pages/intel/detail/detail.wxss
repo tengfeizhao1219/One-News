@@ -203,6 +203,29 @@
   letter-spacing: 1rpx;
 }
 
+/* 大白话解读（2026-08-21）：仅专业/深度文档（plainTalk 非空）渲染，给不懂 AI 的普通读者；
+   样式与 AI 预测块同族——很浅蓝底（highlight-bg）+ 块内左上「大白话解读」蓝字 */
+.plain-talk {
+  background: var(--highlight-bg);
+  border-radius: 20rpx;
+  padding: 22rpx 26rpx;
+  margin: 16rpx 0;
+}
+.plain-talk-tag {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: calc(23rpx * var(--font-scale-meta, 1));
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 1rpx;
+}
+.plain-talk-body {
+  font-size: calc(28rpx * var(--font-scale));
+  color: var(--text-body);
+  line-height: 1.75;
+  display: block;
+}
+
 /* 落到你这里：浅蓝底卡 */
 .for-card {
   background: var(--highlight-bg);

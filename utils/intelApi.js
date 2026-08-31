@@ -95,6 +95,7 @@ function formatIntelDetail(d) {
       text: clean(b.text),
     })).filter(b => b.text) : [],   // 2026-08-21 修复：透传结构化块（此前丢失 → 前端永远走本地兜底解析，predict 类型不稳定）
     sceneMapping: clean(d.sceneMapping),
+    plainTalk: clean(d.plainTalk), // 2026-08-21：大白话解读（仅专业/深度文档非空）
     sceneMappingLines: Array.isArray(d.sceneMappingLines) ? d.sceneMappingLines.map(ln => ({
       segments: Array.isArray(ln && ln.segments) ? ln.segments.map(sg => ({ text: clean(sg && sg.text), bold: sg && sg.bold === true })).filter(sg => sg.text) : [],
     })).filter(ln => ln.segments.length) : [], // 2026-08-21 方案A：落到你这里结构化 lines

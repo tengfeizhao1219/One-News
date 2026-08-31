@@ -170,6 +170,7 @@ async function processOne(item, profile) {
       sceneMappingLines: parsed.sceneMappingLines,   // 2026-08-21 方案A：落到你这里结构化 lines（segments+bold），前端直接渲染
       practice: parsed.practice,
       minAction: parsed.minAction,
+      plainTalk: parsed.plainTalk,                   // 2026-08-21：大白话解读（仅专业/深度文档非空）
     },
     translated: route.level === 'high' ? parsed.translated : true, // 轻量默认已中文
     tryable: parsed.tryable,
@@ -312,6 +313,7 @@ function buildPrompts(item, profile, level) {
   "titleCn": "中文标题（把本条标题翻译成自然通顺的中文）",
   "whatHappened": "发生了什么正文：**严格基于情报原文客观转述**，把核心事实、关键数字、机制讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司/我们」「专业解读」「大白话」等字样）。总 180-320 字，按逻辑分 2-3 段，段与段之间用【换行+空行】分隔；语言风格贴合内容（技术→冷静专业/社区→轻松），句式多样化",
   "aiPrediction": "结尾若确有未来影响才写这一段（推测性措辞，可能会…，不要写成既成事实；没有未来影响则为空字符串）。**这一段不要写进 whatHappened**",
+  "plainTalk": "大白话解读（给不懂 AI 的普通读者看）：**先判断原文是否专业且有深度**——若原文包含普通读者不借助解读就无法理解的专业内容（论文/技术原理/方法论/术语密集）才写；用通俗的比喻和日常语言讲清这篇讲了什么、对普通人意味着什么（150-250字）；若原文是普通新闻/浅层动态/无专业门槛 → 空字符串（不要硬写）",
   "definition": "一句话定义（是什么 + 能做什么 + 能力边界，不夸大不堆参数，供列表摘要用）。**必须用自然通顺的中文**：英文源先翻译成中文，专有术语保留原文首次出现括号注中文；输出英文视为不合格",
   "sceneMapping": "落到你这里（场景映射）：**先判断关联性**——仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才写；第一行点明相关性（关键概念用 **加粗** 强调），后续每行一个使用场景（关键动作加粗），用换行分隔；弱相关/无法关联 → 空字符串，禁止强行关联凑数",
   "practice": "可以怎么做：1-2 句能落地的做法（工具/动作/收益），无则空字符串",
@@ -334,6 +336,7 @@ function buildPrompts(item, profile, level) {
   "titleCn": "中文标题（把本条标题翻译成自然通顺的中文）",
   "whatHappened": "发生了什么正文：**严格基于情报原文客观转述**，把核心事实、关键数据、机制、背景讲清楚，像如实复述新闻本身；禁止以介绍者视角说话（不要出现「他/该公司做了…」「我们来看…」「专业解读」「大白话」等字样），不添加原文没有的观点。按原文逻辑分 2-4 段，段与段之间用【换行+空行】分隔；术语保留原文，贴合内容性质选择语气（技术发布→冷静专业；行业动态→洞见；警示类→谨慎），句式多样化，总长 300-550 字",
   "aiPrediction": "结尾若确有未来影响才写这一段（推测性措辞，可能会…，不要写成既成事实；没有未来影响则为空字符串）。**这一段不要写进 whatHappened**",
+  "plainTalk": "大白话解读（给不懂 AI 的普通读者看）：**先判断原文是否专业且有深度**——若原文包含普通读者不借助解读就无法理解的专业内容（论文/技术原理/方法论/术语密集）才写；用通俗的比喻和日常语言讲清这篇讲了什么、对普通人意味着什么（150-250字）；若原文是普通新闻/浅层动态/无专业门槛 → 空字符串（不要硬写）",
   "definition": "一句话定义：是什么 + 能做什么 + 能力边界，不夸大不堆参数（保持精简，供列表摘要用）。**必须用自然通顺的中文输出**：对英文源先翻译成中文，专有术语保留原文并在首次出现时括号注中文；输出英文句子视为不合格",
   "sceneMapping": "落到你这里（场景映射）：**先判断关联性**——仅当与老赵行业/职位/关注议题**强相关且能具体点出关联点**时才写；第一行点明相关性（关键概念用 **加粗** 强调），后续每行一个使用场景（关键动作加粗），用换行分隔；弱相关/无法关联 → 空字符串，禁止强行关联凑数",
   "practice": "可以怎么做：工具 + 步骤 + 收益 + 坑点，老赵明天就能用",
@@ -400,7 +403,7 @@ function parseSopOut(text, item, profile, route) {
   const empty = {
     whatHappened: '', whatHappenedBlocks: [],
     definition: '', sceneMapping: '', sceneMappingLines: [],
-    practice: '', minAction: '',
+    practice: '', minAction: '', plainTalk: '',
     sceneTags: [], sceneHits: 0, tryable: false, titleCn: '', translated: true,
   }
   if (!t) return empty
@@ -522,6 +525,7 @@ function parseSopOut(text, item, profile, route) {
     sceneMappingLines,
     practice: clean(j.practice),
     minAction: normNone(j.minAction),
+    plainTalk: clean(j.plainTalk),
     sceneTags: sceneTags.length ? sceneTags : ['life'],
     sceneHits,
     tryable: j.tryable === true,

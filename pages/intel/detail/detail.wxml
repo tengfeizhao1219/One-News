@@ -63,6 +63,11 @@
       <!-- 发生了什么（2026-08-21 问题③⑥：正文自然段落；仅 AI 预测用浅灰底块+段尾 UI 提示，
            大白话/定义归为普通正文段（不显示标签文字）） -->
       <text class="block-label">发生了什么</text>
+      <!-- 大白话解读：仅专业/深度文档（plainTalk 非空）渲染，给不懂 AI 的普通读者 -->
+      <view wx:if="{{plainTalk}}" class="plain-talk">
+        <text class="plain-talk-tag">大白话解读</text>
+        <text class="plain-talk-body">{{plainTalk}}</text>
+      </view>
       <block wx:if="{{whatHappenedBlocks.length}}">
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
           <!-- 普通正文段（text / plain / def 都按自然段落渲染，不显示标记文字） -->

@@ -39,6 +39,7 @@ Page({
     whatHappenedText: '',  // 「发生了什么」科普向详细叙事（sop.whatHappened，多段）
     whatHappenedParagraphs: [], // 按换行分段，供多段渲染；有则优先展示，无则回退 descText
     whatHappenedBlocks: [],  // 2026-08-20 v5：结构化块 [{type:'text'|'plain'|'predict'|'def', text}]（正文段/大白话/AI预测/定义）
+    plainTalk: '',           // 2026-08-21：大白话解读（仅专业/深度文档非空，普通新闻为空）
     practiceText: '',      // 「可以怎么做」实操案例（sop.practice）
     minActionText: '',     // 「最小行动」（sop.minAction）
     relateItems: [],       // 「落到你这里」身份条目（who / txt）
@@ -445,6 +446,7 @@ function cleanText(v) {
       // 2026-08-21 修复：formatIntelDetail 输出 practiceParas（数组）非 practice；minAction 同名
       practiceText: cleanText(d.practice) || (Array.isArray(d.practiceParas) ? cleanText(d.practiceParas.join('\n')) : ''),
       minActionText: cleanText(d.minAction) || '',
+      plainTalk: cleanText(d.plainTalk) || '',   // 2026-08-21：大白话解读（空则不渲染）
       loading: false,
       empty: false,
       searchQuickTitle: (cleanText(d.title) || this.data.title || '').slice(0, 60),
