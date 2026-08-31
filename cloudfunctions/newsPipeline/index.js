@@ -27,7 +27,7 @@ const crypto = require('crypto')
 
 const rawStore = require('./newsRawStore')
 const stagingStore = require('./utils/newsStagingStore')
-const { fetchContentForItem, enrichNewsList, isInvalidDesc } = require('./utils/contentFetcher')
+const { fetchContentForItem, enrichNewsList, isInvalidDesc, cleanUtf8 } = require('./utils/contentFetcher')
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 const { scoreAll } = require('./utils/qualityScorer')
@@ -532,7 +532,7 @@ async function batchInsert(newsList) {
     try {
       const dk = dkOf(item)
       const existed = existMap[dk]
-      let summary = item.summary || ''
+      let summary = cleanUtf8(item.summary || '')
       let summarySource = item.summarySource || (!summary || summary === item.title ? 'title' : 'desc')
       if (existed) {
         const newIsAi = summarySource === 'ai'
@@ -542,10 +542,10 @@ async function batchInsert(newsList) {
         const oldIsFake = !existed.summary || isInvalidDesc(existed.summary, descCtx)
         const oldHasQuality = !oldIsFake && existed.summary !== item.title
         if (oldIsAi && !newIsAi) {
-          summary = existed.summary
+          summary = cleanUtf8(existed.summary)
           summarySource = 'ai'
         } else if (!oldIsAi && !newIsAi && oldHasQuality && existed.summary.length > summary.length) {
-          summary = existed.summary
+          summary = cleanUtf8(existed.summary)
           summarySource = 'desc'
         }
       }

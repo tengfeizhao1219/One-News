@@ -30,6 +30,11 @@ const INTERPRET_TIMEOUT_MS = 40000
 const BROWSER_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
 
+/** 清洗 UTF-8 断字节替换符（U+FFFD）与孤立控制字符——LLM 响应/编码异常产生的乱码 */
+function cleanUtf8(v) {
+  return String(v || '').replace(/\uFFFD/g, '').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '')
+}
+
 /**
  * 从 Buffer 检测编码并转码为 UTF-8（修复 GBK/GB2312 旧站正文乱码，如央视网 www.cctv.com）。
  * HTML 不像 XML 有顶层 encoding 声明，故优先扫 <meta charset> / <meta http-equiv=content-type>，
@@ -272,7 +277,7 @@ function fetchJuheContent(uniquekey, options = {}) {
         return
       }
 
-      let body = ''
+      const bodyChunks = []
       // B-14: 响应体大小上限（8MB），防异常大响应拖垮内存
       const MAX_BODY_BYTES = 8 * 1024 * 1024
       let bytes = 0
@@ -283,11 +288,11 @@ function fetchJuheContent(uniquekey, options = {}) {
           resolve(null)
           return
         }
-        body += chunk
+        bodyChunks.push(chunk)
       })
       res.on('end', () => {
         try {
-          const result = JSON.parse(body)
+          const result = JSON.parse(Buffer.concat(bodyChunks).toString('utf8'))
           // B-11: error_code 兼容字符串/数字（聚合接口偶发返回字符串 "0"）
           if (Number(result.error_code) !== 0 || !result.result || !result.result.content) {
             resolve(null)
@@ -581,7 +586,7 @@ async function interpretNews(content, title, references, signals) {
             // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
             const data = Buffer.concat(chunks).toString('utf8')
             try {
-              const resp = JSON.parse(data)
+              const resp = JSON.parse(Buffer.concat(chunks).toString('utf8'))
               const txt = resp.choices && resp.choices[0] && resp.choices[0].message
                 ? resp.choices[0].message.content.trim()
                 : null
@@ -775,7 +780,7 @@ async function summarizeWithZhipu(content, title) {
             // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
             const data = Buffer.concat(chunks).toString('utf8')
             try {
-              const resp = JSON.parse(data)
+              const resp = JSON.parse(Buffer.concat(chunks).toString('utf8'))
               const summary = resp.choices && resp.choices[0] && resp.choices[0].message
                 ? resp.choices[0].message.content.trim()
                 : null
@@ -1102,5 +1107,12 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
 
   const workers = Array.from({ length: Math.min(concurrency, cleanedNewsList.length) }, () => worker())
   await Promise.all(workers)
+  // 2026-08-24 修复：LLM 响应逐 chunk 拼接切断 UTF-8 多字节 → U+FFFD；
+  // 落库前统一清洗 summary/content，杜绝乱码进 news_cache。
+  for (let i = 0; i < result.length; i++) {
+    if (!result[i]) continue
+    result[i].summary = cleanUtf8(result[i].summary)
+    result[i].content = cleanUtf8(result[i].content)
+  }
   return result
 }
