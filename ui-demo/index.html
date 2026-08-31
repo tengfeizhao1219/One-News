@@ -67,6 +67,10 @@
   .ai-pred{background:var(--highlight-bg);border-radius:10px;padding:11px 14px 9px;margin-top:4px;}
   .ai-pred .pred-text{font-size:13px;color:var(--text-body);line-height:1.7;}
   .ai-pred .pred-tag{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;letter-spacing:.5px;/* 与 for-k（落到你这里）保持一致：块内左上 */}
+  /* 大白话解读：给普通读者看的通俗版，仅专业/深度文档才显示（plainTalk 非空时渲染） */
+  .plain-talk{background:var(--highlight-bg);border-radius:10px;padding:11px 14px 9px;margin-top:4px;}
+  .plain-talk .pt-tag{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;letter-spacing:.5px;}
+  .plain-talk .pt-text{font-size:13px;color:var(--text-body);line-height:1.7;}
   .for-card{background:var(--highlight-bg);border-radius:12px;padding:13px 15px;margin-bottom:10px;}
   .for-k{display:block;font-size:11.5px;font-weight:700;color:var(--primary);margin-bottom:6px;}
   .for-body{font-size:13px;color:var(--text-body);line-height:1.7;}
@@ -248,7 +252,8 @@ const PROJECTS = {
           { selector: '.block-label', name: '区块标题', intent: '系统蓝；SOP 五步呈现顺序：发生了什么→落到你这里→了解更多/想试试', params: [{k:'字号',v:'13px/700 primary'},{k:'间距',v:'22px 上边距'}], code: 'block-label', guideline: '准则5 风格一致' },
           { selector: '.for-card', name: '落到你这里', intent: '浅蓝底卡，按身份（工作/产品/家庭）呈现与画像关联；命中才显示，弱相关隐藏', params: [{k:'背景',v:'highlight-bg'},{k:'圆角',v:'12px'},{k:'正文',v:'13px/1.7'}], code: 'for-card', guideline: '准则5 轻高亮' },
           { selector: '.fold', name: '了解更多/想试试', intent: '可展开；想试试仅存在可落地案例时显示，无则隐藏（禁硬造）', params: [{k:'卡片',v:'bg-card, 12px 圆角'},{k:'触发',v:'点击展开 + chevron'}], code: 'fold / expand-head', guideline: '准则3 交互' },
-          { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '三段式叙事：第一段专业解读 / 第二段大白话（术语括号注中文）；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
+          { selector: '.prose-para', name: '正文段落（发生了什么）', intent: '专业解读叙事：第一段专业解读；段落格式化（两端对齐、段间距）', params: [{k:'字号',v:'13.5px/1.75'},{k:'分段',v:'10px 段间距, justify'},{k:'来源',v:'whatHappenedParagraphs 按空行分段'}], code: 'prose / prose-para / whatHappenedParagraphs', guideline: '准则5 叙事弧线' },
+          { selector: '.plain-talk', name: '大白话解读（普通读者版）', intent: '仅当原文是专业/有深度的文档时生成（plainTalk 非空才渲染）：用通俗比喻给不懂 AI 的读者讲清这篇讲了什么；样式与 AI 预测块同族——很浅蓝底（highlight-bg）+ 块内左上「大白话解读」蓝字', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pt-tag: 11.5px/700 primary'},{k:'位置',v:'发生了什么正文之后、AI 预测之前'},{k:'条件',v:'plainTalk 空则不渲染（普通新闻无此块）'}], code: 'plain-talk / pt-tag / sop.plainTalk', guideline: '准则5 轻高亮 / 准则1 按需呈现' },
           { selector: '.ai-pred', name: 'AI 预测段', intent: '第三段未来影响：很浅底色块区分（highlight-bg）；「AI 预测」标注在块内左上角，与「落到你这里」的 for-k 设计一致；措辞用推测性（可能会/有望）', params: [{k:'底色',v:'highlight-bg（很浅蓝）'},{k:'圆角',v:'10px'},{k:'标注',v:'块内左上 pred-tag: 11.5px/700 primary（同 for-k）'},{k:'措辞',v:'推测性（可能会/有望）'}], code: 'ai-pred / pred-tag', guideline: '准则5 轻高亮 / 风格一致' },
           { selector: '.meta', name: '来源/时间', intent: '来源与时间在详情页标题下展示（首页不展示）；时间经 intelDetailCard 透传 pubTime', params: [{k:'字号',v:'12px text-tertiary'},{k:'来源',v:'text-link'}], code: 'meta / pubTime', guideline: '准则1 信息归位' },
           { selector: '.fab-search', name: '深入了解入口（搜索悬浮按钮）', intent: '右下角搜索悬浮按钮（自绘放大镜 SVG 26px）；点击后搜索面板从底部升起，把除标题外的其它内容整体顶上去（rest 上移）；搜索完成后面板自动收起，入口区不保留——再次搜索需再点 FAB；历史记录沉淀在正文流搜索历史区，下滑可见、退出再进保留；面板展开时内部滚动，滑到最顶部再下滑即自动收起', params: [{k:'按钮',v:'48px 圆, tag-bg, 阴影, 右下角'},{k:'面板',v:'absolute bottom:0 + overflow-y auto, 搜索后自动收起'},{k:'收起',v:'面板内部滚到顶(scrollTop<=0)后下滑手势收起'},{k:'历史',v:'localStorage 持久化, 同话题折叠'}], code: 'fab-search / data-action=search / search-history', guideline: '准则2 自绘图标 / 准则1 简洁 / 准则3 同页过渡' },
@@ -313,6 +318,7 @@ const PAGE_HTML = {
         <div class="prose">
           <p class="prose-para">智谱今日发布 GLM-5.3，聚焦编程与网络安全两大方向。官方评测显示其在 SWE-bench 上领先同类模型，并在漏洞定位任务中表现出"涌现"式的安全能力——这源于其在后训练阶段引入的安全强化数据。</p>
           <p class="prose-para">用大白话说：这个模型写代码更厉害，而且开始"会找漏洞"了——你把一段代码给它，它能指出哪里可能有安全问题，相当于多了一个会读代码的安全工程师。</p>
+          <div class="plain-talk"><span class="pt-tag">大白话解读</span><div class="pt-text">打个比方：GLM-5.3 就像一个既会写代码、又会做安全检查的工程师。以前写程序出了问题，要专门找人"挑毛病"；现在它可以自己边写边查，把有安全隐患的地方直接标出来。对普通人来说，这意味着以后用 AI 写出来的代码会更可靠，出错被"钻空子"的风险更低。</div></div>
           <div class="ai-pred"><span class="pred-tag">AI 预测</span><div class="pred-text">从 AI 从业者视角看，GLM-5.3 的安全能力外溢可能推动"代码审查 + 安全扫描"类工具的重新洗牌——低成本接入安全能力的门槛大幅降低，未来 3-6 个月或出现一批基于该能力的开源安全工具。</div></div>
         </div>
         <span class="block-label">落到你这里</span>
