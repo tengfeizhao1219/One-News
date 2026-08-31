@@ -31,6 +31,7 @@ const { fetchContentForItem, enrichNewsList, isInvalidDesc } = require('./utils/
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 const { scoreAll } = require('./utils/qualityScorer')
+const { garbleGate } = require('./utils/garbleGate')
 const config = require('./config')
 
 const BUDGET_MS = 110000          // 单次实例预算（函数超时已调至 120s，110s 预算充分榨取实例能力，提升 AI 摘要/解读单轮覆盖率）
@@ -594,6 +595,15 @@ async function batchInsert(newsList) {
         noiseRatio: typeof item.noiseRatio === 'number' ? item.noiseRatio : null,
         gatedReason: item.gatedReason || item._gatedReason || (item._gated ? 'gated' : ''),
         aiOpinion: finalAiOpinion,
+      }
+
+      // 2026-08-31 乱码闸门：publish 写库前最后一步清洗（根因已修 contentFetcher 的
+      // data+=chunk 分片解码；此处兜底 RSS desc / 历史 staging 等其它来源的漏网脏字符）。
+      // 只剥 U+FFFD/私用区/控制字符，不阻断注入；title 被清洗时同步重算 titleFp 保持指纹一致。
+      const gate = garbleGate(docData)
+      if (gate.changed) {
+        docData.titleFp = normTitleFp(docData.title || '')
+        console.log(`[newsPipeline][publish] 乱码闸门清洗 [${item.id}]:`, JSON.stringify(gate.details))
       }
 
       if (existed && existed._id) {

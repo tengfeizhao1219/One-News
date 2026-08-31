@@ -574,9 +574,12 @@ async function interpretNews(content, title, references, signals) {
           },
           timeout: eng.timeout,
         }, (res) => {
-          let data = ''
-          res.on('data', chunk => { data += chunk })
+          const chunks = []
+          res.on('data', chunk => { chunks.push(chunk) })
           res.on('end', () => {
+            // 2026-08-31 乱码修复：Buffer 累积后整体解码。原 `data += chunk` 逐块把 Buffer
+            // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
+            const data = Buffer.concat(chunks).toString('utf8')
             try {
               const resp = JSON.parse(data)
               const txt = resp.choices && resp.choices[0] && resp.choices[0].message
@@ -765,9 +768,12 @@ async function summarizeWithZhipu(content, title) {
           },
           timeout: eng.timeout,
         }, (res) => {
-          let data = ''
-          res.on('data', chunk => { data += chunk })
+          const chunks = []
+          res.on('data', chunk => { chunks.push(chunk) })
           res.on('end', () => {
+            // 2026-08-31 乱码修复：Buffer 累积后整体解码。原 `data += chunk` 逐块把 Buffer
+            // 按 UTF-8 转字符串，多字节中文被 TCP 分片切断时产生 U+FFFD（AI 摘要/解读乱码根因）。
+            const data = Buffer.concat(chunks).toString('utf8')
             try {
               const resp = JSON.parse(data)
               const summary = resp.choices && resp.choices[0] && resp.choices[0].message
