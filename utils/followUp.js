@@ -39,12 +39,18 @@ function _write(module, list) {
 }
 
 /** 合并两模块，按 createdAt 倒序，每条带 module 字段（聚合 Feed 用）
- *  2026-09-01 清洗：§九 后端每日检索未实现，updates 仅来自演示 mock（addUpdate）。
- *  读取时清除 mock updates，恢复纯关注态（"已是最新"），不再展示假"新进展"。 */
+ *  2026-09-01 两版演进：
+ *   - 前版：§九 后端未实现，updates 仅来自演示 mock → 读取时清除，恢复纯关注态；
+ *   - 本版：§九 后端已上线，updates 来自云端真实检索（followUpCheck 写入，带 checkedAt 标记）。
+ *     clean 只清除「演示 mock 更新」（无 checkedAt），保留真实检索更新（前端红点/时间线数据源）。 */
 function getFollows() {
   const clean = function (it) {
     const c = Object.assign({}, it)
-    if (Array.isArray(c.updates) && c.updates.length) delete c.updates
+    if (Array.isArray(c.updates)) {
+      // 真实检索更新带 checkedAt；mock（addUpdate）没有 → 仅 mock 清除
+      c.updates = c.updates.filter(function (u) { return u && u.checkedAt })
+      if (!c.updates.length) delete c.updates
+    }
     if (c.unreadCount !== undefined) delete c.unreadCount
     if (c.lastCheckedDate) delete c.lastCheckedDate
     return c
@@ -157,6 +163,7 @@ function mergeUpdate(module, itemId, update) {
     summary: String(update.summary || ''),
     sourcesCount: Number(update.sourcesCount) || 1,
     read: false,
+    checkedAt: Number(update.checkedAt) || Date.now(), // 云端真实检索标记（getFollows 据此保留）
   }
   const fp = entry.date + '|' + entry.summary.slice(0, 20)
   let added = false

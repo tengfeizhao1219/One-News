@@ -58,22 +58,25 @@ ok('每条带 module 字段', merged.every(it => it.module === 'onenews' || it.m
 ok('倒序：最后关注的排最前（on-2→in-1→on-1）', merged[0].itemId === 'on-2' && merged[1].itemId === 'in-1' && merged[2].itemId === 'on-1')
 ok('intel key 隔离：onenews 不含情报 id', FU.getFollows().filter(i => i.module === 'onenews').every(i => i.itemId.startsWith('on-')))
 
-console.log('\n[3] 模拟更新 / 已读 / 全部已读')
+console.log('\n[3] mock 更新被清除 / 真实更新（checkedAt）保留')
 FU.addFollow('intel', { itemId: 'in-2', title: '情报2', createdAt: 400 })
-FU.addUpdate('intel', 'in-2')
+FU.addUpdate('intel', 'in-2') // mock：无 checkedAt
 let it = FU.getFollows().find(i => i.itemId === 'in-2')
-ok('addUpdate 生成 1 条 update', it.updates.length === 1)
-ok('update.read=false（未读红）', it.updates[0].read === false)
-ok('sourcesCount 在 1-4 之间', it.updates[0].sourcesCount >= 1 && it.updates[0].sourcesCount <= 4)
-ok('date 为今日', it.updates[0].date === (function () { const d = new Date(); const m = ('0' + (d.getMonth() + 1)).slice(-2); const dd = ('0' + d.getDate()).slice(-2); return d.getFullYear() + '-' + m + '-' + dd })())
+ok('mock 更新被 getFollows 清除（不放假数据）', !it.updates || it.updates.length === 0)
+// 真实云端更新（带 checkedAt）应保留
+FU.mergeUpdate('intel', 'in-2', { date: '2026-09-01', summary: '真实检索发现新进展', sourcesCount: 3, checkedAt: 1788264000000 })
+it = FU.getFollows().find(i => i.itemId === 'in-2')
+ok('真实更新（checkedAt）保留', it.updates.length === 1)
+ok('真实更新未读（红）', it.updates[0].read === false)
+ok('真实更新带 checkedAt', it.updates[0].checkedAt > 0)
 
 FU.markRead('intel', 'in-2')
 it = FU.getFollows().find(i => i.itemId === 'in-2')
 ok('markRead 后 update.read=true', it.updates[0].read === true)
 
-// 全部已读
-FU.addUpdate('onenews', 'on-1')
-FU.addUpdate('intel', 'in-1')
+// 全部已读（真实更新）
+FU.mergeUpdate('onenews', 'on-1', { date: '2026-09-01', summary: '进展一', sourcesCount: 2, checkedAt: 1 })
+FU.mergeUpdate('intel', 'in-1', { date: '2026-09-01', summary: '进展二', sourcesCount: 2, checkedAt: 1 })
 FU.markAllRead()
 const all = FU.getFollows()
 ok('markAllRead 所有 update.read=true', all.every(i => (i.updates || []).every(u => u.read)))
