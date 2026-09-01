@@ -21,6 +21,14 @@ Page({
   },
 
   onLoad() {
+    // 2026-08-31 修复：冷启动/栈底时左滑返回会退出小程序——
+    // reLaunch 到新闻首页带 redirect 重建 home→favorites 栈
+    try {
+      if (getCurrentPages().length === 1) {
+        wx.reLaunch({ url: '/pages/home/home?redirect=favorites', fail: function () {} })
+        return
+      }
+    } catch (e) {}
     const g = app.globalData || {}
     let statusBarHeight = 20, menuHeight = 32, menuTop = 44
     try {

@@ -46,6 +46,14 @@ Page({
   _cooldownTimer: null,
 
   onLoad: function () {
+    // 2026-08-31 修复：冷启动/栈底时左滑返回会退出小程序——
+    // 先 reLaunch 到新闻首页形成 home→本页 栈，左滑返回自然回首页
+    try {
+      if (getCurrentPages().length === 1) {
+        wx.reLaunch({ url: '/pages/home/home?redirect=feedback', fail: function () {} })
+        return
+      }
+    } catch (e) {}
     this.setData({
       menuTop: (app && app.globalData.menuTop) || 0,
       menuHeight: (app && app.globalData.menuHeight) || 32,

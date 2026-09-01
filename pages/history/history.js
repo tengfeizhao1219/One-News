@@ -24,6 +24,18 @@ Page({
   },
 
   onLoad: function () {
+    // 2026-08-31 修复：冷启动/栈底进入浏览记录页时左滑返回会退出小程序，
+    // 与收藏页同款处理——reLaunch 到首页带 redirect 参数重建 home→history 栈
+    try {
+      var _stack = getCurrentPages()
+      if (_stack.length === 1) {
+        wx.reLaunch({
+          url: '/pages/home/home?redirect=history',
+          fail: function () { /* 忽略 */ },
+        })
+        return
+      }
+    } catch (e) { /* 忽略 */ }
     this.setData({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,

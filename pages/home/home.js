@@ -91,7 +91,10 @@ Page({
     }, 3500)
   },
 
-  onLoad() {
+  onLoad(options) {
+    // 2026-08-31 修复：收藏页冷启动栈底时 reLaunch 到首页带 redirect 参数，
+    // 本页渲染后回跳形成 home→favorites 栈（左滑返回自然回首页，不退出小程序）
+    this._pendingRedirect = (options && options.redirect) || ''
     // UI-B11: 滑动提示同会话仅显示一次
     this._swipeHintDismissed = false
     // 翻页动画偏移：JS 计算的像素高度（= windowHeight），替代 WXSS transform 内的 100vh（部分机型/Webview 下方向异常）
@@ -153,6 +156,24 @@ Page({
 
     // 同步字体（onShow 时可能从其他页面返回，需刷新）
     this._syncFontScale()
+
+    // 2026-08-31 修复：收藏页冷启动栈底回跳（redirect 参数只消费一次）
+    if (this._pendingRedirect) {
+      var _target = this._pendingRedirect
+      this._pendingRedirect = ''
+      var _that = this
+      setTimeout(function () {
+        var _map = {
+          favorites: '/pages/favorites/favorites',
+          history: '/pages/history/history',
+          settings: '/pages/settings/settings',
+          about: '/pages/about/about',
+          feedback: '/pages/feedback/feedback',
+        }
+        var _url = _map[_target]
+        if (_url) wx.navigateTo({ url: _url })
+      }, 400) // 等首页首帧渲染稳定后再跳，避免闪屏
+    }
   },
 
   // P2-8 修复：此前页面无 onUnload/onHide，_destroyed 从未置 true，16 处守卫全部失效；

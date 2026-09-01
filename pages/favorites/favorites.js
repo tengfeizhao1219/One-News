@@ -42,6 +42,19 @@ Page({
   },
 
   onLoad: function () {
+    // 2026-08-31 修复：冷启动/栈底进入收藏页（getCurrentPages 深度=1）时，
+    // iOS 左滑返回无上级页 → 直接退出小程序。先 reLaunch 到新闻首页并带 redirect
+    // 回跳参数，由 home 重建 home→favorites 栈，左滑返回自然回到首页。
+    try {
+      var _stack = getCurrentPages()
+      if (_stack.length === 1) {
+        wx.reLaunch({
+          url: '/pages/home/home?redirect=favorites',
+          fail: function () { /* 忽略：保持当前页 */ },
+        })
+        return
+      }
+    } catch (e) { /* 忽略 */ }
     this.setData({
       // BUG-20260806-004: 导航栏与胶囊对齐
       menuTop: (app && app.globalData.menuTop) || 0,

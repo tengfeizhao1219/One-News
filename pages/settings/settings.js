@@ -33,6 +33,14 @@ Page({
   },
 
   onLoad: function () {
+    // 2026-08-31 修复：冷启动/栈底时左滑返回会退出小程序——
+    // 先 reLaunch 到新闻首页形成 home→本页 栈，左滑返回自然回首页
+    try {
+      if (getCurrentPages().length === 1) {
+        wx.reLaunch({ url: '/pages/home/home?redirect=settings', fail: function () {} })
+        return
+      }
+    } catch (e) {}
     var tier = (app && app.globalData && typeof app.globalData.fontScale === 'number') ? app.globalData.fontScale : 0
     this.setData({
       // BUG-20260806-004: 导航栏与胶囊对齐
