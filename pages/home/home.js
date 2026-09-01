@@ -761,10 +761,13 @@ Page({
     this._touchStartX = e.touches[0].clientX
     this._touchStartT = Date.now()
     // 关注后续：长按进入「我的关注」（仅 One News 首页本体、面板/情报屏未展开时）
-    this._startFollowPress(e)
+    if (!this.data.showFollow) this._startFollowPress(e)
   },
 
   onTouchMove(e) {
+    // 2026-08-31 修复：我的关注 overlay 打开时（page-container 拦截系统返回），
+    // 同一滑动手势可能冒泡到此处——忽略，避免触发面板/AI 情报切换
+    if (this.data.showFollow) return
     // 关注后续：长按期间若手指移动超过阈值，取消长按（让位给翻页/右滑/面板手势）
     if (this._touchActive && e.touches && e.touches[0]) {
       var dx = e.touches[0].clientX - (this._touchStartX || 0)
@@ -776,6 +779,9 @@ Page({
   onTouchEnd(e) {
     // 关注后续：松手即清除长按计时（任何情况都清，含动画中）
     this._cancelLongPress()
+    // 2026-08-31 修复：我的关注 overlay 打开时忽略一切滑动判定——
+    // 边缘返回手势被 page-container 拦截后，避免同手势再触发面板/AI 情报/翻页
+    if (this.data.showFollow) return
     // 若本次触摸已触发长按进入关注页，则阻止同一次触摸产生的 tap/翻页/面板等副作用
     if (this._lpJustFired) return
     if (this._isAnimating) return
