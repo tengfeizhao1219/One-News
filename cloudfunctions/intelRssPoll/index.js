@@ -30,6 +30,17 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 
 const crypto = require('crypto')
+
+// 2026-09-01 owner 拍板「收紧情报源过滤」：全局默认 AI 主题关键词门槛——
+// feed 未配置 requireTitleKeywords 时，标题必须命中以下任一关键词才入库。
+// 已配置的源（如 geekpark_ai）用其自身更严的列表；官方/单主题源不受影响（天然命中）。
+const GLOBAL_AI_KEYWORDS = [
+  'AI', '人工智能', '大模型', '模型', 'GPT', 'GLM', 'LLM', 'DeepSeek', '智谱', 'OpenAI', 'Anthropic',
+  'Claude', 'Gemini', 'Qwen', '通义', '文心', '豆包', 'Kimi', 'MiniMax', '混元', '机器学习', '深度学习',
+  '神经网络', '算法', '算力', 'GPU', '训练', '推理', 'Agent', '智能体', 'RAG', 'Prompt', '提示词',
+  '开源', '编程', '代码', '软件', '开发者', '工具', '应用', '行业', '技术', '芯片', '语义', '生成', '多模态',
+  '聊天机器人', 'Copilot', 'AI编程', '自动化', '机器人', '自动驾驶',
+]
 const { XMLParser } = require('fast-xml-parser')
 const { ensureSchema } = require('./common/ensureSchema')
 const { seed } = require('./seedSources')
@@ -1025,10 +1036,14 @@ async function runWorker(feed, now, ctx = {}) {
   const windowStart = sinceMs > 0 ? sinceMs : (Date.now() - 24 * 3600 * 1000)
   for (const raw of rawItems) {
     if (!passTitleFilter(raw.title, feed.blockTitleKeywords)) { filtered++; continue }
-    if (!passRequireKeywords(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
+    // 2026-09-01 收紧：feed 未配 requireTitleKeywords → 用全局默认 AI 关键词门槛
+    const reqKws = (feed.requireTitleKeywords && feed.requireTitleKeywords.length)
+      ? feed.requireTitleKeywords
+      : GLOBAL_AI_KEYWORDS
+    if (!passRequireKeywords(raw.title, reqKws)) { filtered++; continue }
     if (!passCategoryFilter(raw, feed.blockCategoryKeywords)) { filtered++; continue }
     // 综合新闻过滤：标题多主题（；分隔）且任一段非 AI → 一律过滤（只留 AI 专题）
-    if (!passPureAiFilter(raw.title, feed.requireTitleKeywords)) { filtered++; continue }
+    if (!passPureAiFilter(raw.title, reqKws)) { filtered++; continue }
     // 严格窗口：pubDate 必须有效且落在 (windowStart, now]
     // 2026-08-31 修复：pubDate 仅日期无时分（如 "Sun, 30 Aug 2026"）→ new Date 解析为 UTC 00:00，
     // 恰好落在 24h 窗口边缘外被滤掉（IT之家/爱范儿等源全被误过滤 → 6 天 ingest 空）。

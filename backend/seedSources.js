@@ -363,7 +363,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://www.ifanr.com/feed',
     adapterConfig: { endpoint: 'https://www.ifanr.com/feed', timeoutMs: 15000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['广告', '招聘'],
   },
   {
@@ -374,7 +374,7 @@ const INTEL_SEED_SOURCES = [
     sourceType: 'rss',
     baseUrl: 'https://www.sspai.com/feed',
     adapterConfig: { endpoint: 'https://www.sspai.com/feed', timeoutMs: 15000, rateLimit: 'none' },
-    pollSeconds: 21600, defaultOn: true, allowCategories: ['ai', 'tech'],
+    pollSeconds: 21600, defaultOn: false, allowCategories: ['ai', 'tech'],
     blockTitleKeywords: ['广告'],
   },
   {

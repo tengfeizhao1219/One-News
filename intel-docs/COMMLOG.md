@@ -511,3 +511,8 @@
 - **连带**：真正原因是这些源确实无新内容（empty 是正常态），但 lastFetchedAt 不更新导致状态失真。
 - **修复**：empty 分支补 `lastFetchedAt: nowIso`（消除误判）；intelFetch 补偿验证（8s 检测 + 补触发）保留（真丢失分片仍有价值）。
 - **部署**：intelRssPoll 已更新。
+## 2026-09-01 · 停用少数派/爱范儿 + 收紧情报源过滤（owner 拍板）
+
+- **任务1 停用源**：线上 intel_sources ifanr_ai/sspai_ai enabled=false+disabled+retireReason（全站 feed 混入生活/汽车/数码非 AI 内容）；seedSources.js 两副本 defaultOn→false 防复活；清理 staged 13 条非 AI 残留；重新发布 v5=6 条纯 AI。
+- **任务2 收紧过滤**：intelRssPoll 新增 `GLOBAL_AI_KEYWORDS`（全局默认 AI 主题关键词门槛）——feed 未配 requireTitleKeywords 时标题必须命中才入库；已配置源（geekpark_ai）用自身更严列表；passRequireKeywords/passPureAiFilter 统一用此门槛。已部署。
+- **验证**：v5 6 条全 AI（韩国AI服务/日本AI基建/ChatGPT Ads/GLM/MiniMax×2）。
