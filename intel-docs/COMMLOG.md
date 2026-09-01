@@ -525,3 +525,8 @@
   ③ 线上 intel_sources 集合删除 2 条 + feed_meta 集合删除 2 条（物理删除）。
 - **保留**：评分表（qualityScorer SOURCE_AUTHORITY 通用权威表）与历史注释中的名称提及（非配置，不影响抓取）。
 - **部署**：intelRssPoll + rssFetcher 已重部署（种子变更生效）。
+## 2026-09-01 · One News 触发时间改为 5 节点（owner 拍板）
+
+- **新触发时间（北京）**：05:00 / 08:00 / 12:00 / 18:00 / 20:00 → cron `0 0 5,8,12,18,20 * * * *`
+- **改动**：newsFetcher（hourlyFetch）+ rssFetcher（rssPoll）线上触发器 + cloudbaserc.json + 两函数本地 config.json 同步（newsFetcher config 补触发器，此前为空）。
+- **注意**：此前线上被并行会话改为 `6-22/2`（每 2 小时），现按 owner 要求收敛为 5 个固定节点。
