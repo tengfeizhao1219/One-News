@@ -516,3 +516,12 @@
 - **任务1 停用源**：线上 intel_sources ifanr_ai/sspai_ai enabled=false+disabled+retireReason（全站 feed 混入生活/汽车/数码非 AI 内容）；seedSources.js 两副本 defaultOn→false 防复活；清理 staged 13 条非 AI 残留；重新发布 v5=6 条纯 AI。
 - **任务2 收紧过滤**：intelRssPoll 新增 `GLOBAL_AI_KEYWORDS`（全局默认 AI 主题关键词门槛）——feed 未配 requireTitleKeywords 时标题必须命中才入库；已配置源（geekpark_ai）用自身更严列表；passRequireKeywords/passPureAiFilter 统一用此门槛。已部署。
 - **验证**：v5 6 条全 AI（韩国AI服务/日本AI基建/ChatGPT Ads/GLM/MiniMax×2）。
+## 2026-09-01 · 彻底删除少数派/爱范儿（配置级移除）
+
+- **需求**：从相关配置中直接删除（非停用）少数派/爱范儿。
+- **删除范围**：
+  ① intel 情报源种子（backend/seedSources.js + cloudfunctions/intelRssPoll/seedSources.js）：ifanr_ai/sspai_ai 完整源定义移除；
+  ② One News 新闻源（rssFetcher/seedFeeds.json）：ifanr_tech/sspai_tech 移除（38→36 条）；
+  ③ 线上 intel_sources 集合删除 2 条 + feed_meta 集合删除 2 条（物理删除）。
+- **保留**：评分表（qualityScorer SOURCE_AUTHORITY 通用权威表）与历史注释中的名称提及（非配置，不影响抓取）。
+- **部署**：intelRssPoll + rssFetcher 已重部署（种子变更生效）。
