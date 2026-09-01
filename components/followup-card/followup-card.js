@@ -162,18 +162,20 @@ Component({
       this._load()
     },
 
-    // 长按卡片：操作菜单（模拟更新 / 标记已读 / 改追踪时间 / 取消关注）
+    // 长按卡片：操作菜单（立即检索 / 标记已读 / 改追踪时间 / 取消关注）
     onItemLongPress(e) {
       const id = e.currentTarget.dataset.id
       const module = e.currentTarget.dataset.module
       const that = this
       wx.showActionSheet({
-        itemList: ['标记已读', '改追踪时间', '取消关注'],
+        itemList: ['立即检索最新进展', '标记已读', '改追踪时间', '取消关注'],
         success: function (res) {
           if (res.tapIndex === 0) {
+            that._checkNow(module, id)
+          } else if (res.tapIndex === 1) {
             FU.markRead(module, id)
             that._load()
-          } else if (res.tapIndex === 1) {
+          } else if (res.tapIndex === 2) {
             wx.showActionSheet({
               itemList: TRACK_TIMES,
               success: function (r) {
@@ -182,12 +184,44 @@ Component({
                 wx.showToast({ title: '追踪时间 ' + TRACK_TIMES[r.tapIndex], icon: 'none' })
               },
             })
-          } else if (res.tapIndex === 2) {
+          } else if (res.tapIndex === 3) {
             FU.removeFollow(module, id)
             if (that._expanded[id]) delete that._expanded[id]
             that._load()
             wx.showToast({ title: '已取消关注', icon: 'none' })
           }
+        },
+      })
+    },
+
+    // 立即检索该话题最新进展（T9.6：调 followUpCheck 单话题模式 → 拉取合并 → 刷新）
+    _checkNow(module, id) {
+      const that = this
+      wx.showLoading({ title: 'AI 检索中…', mask: true })
+      wx.cloud.callFunction({
+        name: 'followUpCheck',
+        data: { itemId: id },
+        success: function (res) {
+          wx.hideLoading()
+          const r = res && res.result
+          if (r && r.code === 0) {
+            const data = r.data || {}
+            if (data.newUpdates > 0) {
+              wx.showToast({ title: '发现 ' + data.newUpdates + ' 条新进展', icon: 'none' })
+            } else if (data.message === 'topic not found or not followed') {
+              wx.showToast({ title: '该话题未在关注列表', icon: 'none' })
+            } else {
+              wx.showToast({ title: '已检索，暂无新进展', icon: 'none' })
+            }
+            // 拉取云端 updates 合并进本地 → 刷新列表（红点/时间线更新）
+            FU_SYNC.fetchUpdates().then(function () { that._load() }).catch(function () { that._load() })
+          } else {
+            wx.showToast({ title: (r && r.message) || '检索失败', icon: 'none' })
+          }
+        },
+        fail: function () {
+          wx.hideLoading()
+          wx.showToast({ title: '检索失败，请重试', icon: 'none' })
         },
       })
     },

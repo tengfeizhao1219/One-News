@@ -10,7 +10,8 @@
  *
  * 触发：定时器每天 08/12/18/21 四档（config.json triggers）；
  *       每档触发时，仅处理 trackTime 已到点 且 当天未检索 的话题（防重复/控成本）。
- *       也可由前端手动触发（event.force=true 忽略日期去重，调试用）。
+ *       也可由前端手动触发（event.force=true 忽略日期去重，调试用），
+ *       或按单话题手动检索（event.itemId 精确检索当前用户某条关注，前端「立即检索最新进展」）。
  *
  * 检索链（复用 intelSearch 已验证的通道）：
  *   ① Tavily 搜索：「话题标题 + 最新进展/更新」（主通道）
@@ -291,13 +292,40 @@ async function listDueTopics(force) {
   return due
 }
 
+/**
+ * 单话题手动检索（前端「立即检索最新进展」入口）：
+ * 按 openid + itemId 精确定位用户自己的关注，忽略 trackTime/日期去重（用户主动触发）。
+ * @returns {Promise<Array>} 0 或 1 个 topic 文档
+ */
+async function findTopicByItemId(openid, itemId) {
+  if (!openid || !itemId) return []
+  const res = await db.collection('follow_up')
+    .where({ _openid: openid, itemId: String(itemId), isActive: true })
+    .limit(1)
+    .get()
+  return (res.data || []).slice(0, 1)
+}
+
 exports.main = async (event = {}) => {
   const startedAt = Date.now()
   const force = event.force === true
   const today = todayStr()
+  const openid = cloud.getWXContext().OPENID
 
   try {
-    const due = await listDueTopics(force)
+    let due
+    if (event.itemId) {
+      // 单话题手动检索：仅当前用户自己的关注（OPENID 隔离），忽略日期/时间去重
+      if (!openid) {
+        return { code: 0, data: { checked: 0, newUpdates: 0, message: 'no openid context' } }
+      }
+      due = await findTopicByItemId(openid, event.itemId)
+      if (!due.length) {
+        return { code: 0, data: { checked: 0, newUpdates: 0, message: 'topic not found or not followed' } }
+      }
+    } else {
+      due = await listDueTopics(force)
+    }
     if (!due.length) {
       return { code: 0, data: { checked: 0, skipped: 0, newUpdates: 0, message: 'no due topics' } }
     }
