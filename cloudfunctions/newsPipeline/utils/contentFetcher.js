@@ -405,6 +405,7 @@ module.exports = {
   interpretNews,    // B-COMPLIANCE-1 A（2026-08-11 owner 拍板）：AI 独立解读通道，供降级源（聚合/天行）补 content 解读
   isInvalidDesc,    // FS-05 v2:导出供 index.js 写库逻辑复用
   isValidParagraph, // FS-05 v2:导出供 index.js 写库逻辑复用
+  cleanUtf8,        // 2026-08-31 修复：index.js 已 require 但漏导出 → publish 写库必崩
 }
 
 /**

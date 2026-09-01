@@ -31,7 +31,7 @@ const { fetchContentForItem, enrichNewsList, isInvalidDesc, cleanUtf8 } = requir
 const { validateAndClean } = require('./validator')
 const { SecurityCheck } = require('./securityCheck')
 const { scoreAll } = require('./utils/qualityScorer')
-const { garbleGate } = require('./utils/garbleGate')
+const { garbleGate, classifyGarbled } = require('./utils/garbleGate') // 2026-08-31 修复：classifyGarbled 未导入 → publish 必崩
 const config = require('./config')
 
 const BUDGET_MS = 110000          // 单次实例预算（函数超时已调至 120s，110s 预算充分榨取实例能力，提升 AI 摘要/解读单轮覆盖率）
@@ -888,6 +888,20 @@ async function stagePublish(deadline) {
   if (!collected.length) {
     trigger('run')
     return { stage: 'publish', skipped: true, reason: 'no qualified data — keep cache' }
+  }
+
+  // 2026-08-31 修复：applyGarbledGate 定义了但调用被误删——乱码闸门未执行，
+  // 下方直接引用未定义的 cleanItems → publish 必然报错 → One News 永不刷新。
+  // 此处补回：清乱码(还原/丢弃) → 用 cleanItems 继续发布流程。
+  const garbled = await applyGarbledGate(collected)
+  const cleanItems = garbled.cleanItems
+  const redoIds = garbled.redoIds
+  const dropIds = garbled.dropIds
+  if (redoIds.length) { await stagingStore.markPendingKeepRetry(redoIds); trigger('ai') }
+  if (dropIds.length) { await stagingStore.removeStaged(dropIds) }
+  if (!cleanItems.length) {
+    trigger('run')
+    return { stage: 'publish', skipped: true, reason: 'all garbled — nothing to publish', redo: redoIds.length, drop: dropIds.length }
   }
 
   // 2026-08-24 owner 拍板：注入前先与【现有 news_cache】比较去重——
