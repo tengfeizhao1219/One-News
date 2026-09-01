@@ -7,6 +7,14 @@ Page({
   },
 
   onLoad() {
+    // 2026-08-31 修复：冷启动/栈底进入（分享链接直达/无上级页）时，
+    // iOS 左滑返回会直接退出小程序——reLaunch 到首页重建 home→本页 栈
+    try {
+      if (getCurrentPages().length === 1) {
+        wx.reLaunch({ url: '/pages/home/home?redirect=followup', fail: function () {} })
+        return
+      }
+    } catch (e) { /* 忽略 */ }
     const a = getApp()
     this.setData({ themeClass: (a.globalData && a.globalData.themeClass) || '' })
   },

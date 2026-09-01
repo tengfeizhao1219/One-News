@@ -169,6 +169,7 @@ Page({
           settings: '/pages/settings/settings',
           about: '/pages/about/about',
           feedback: '/pages/feedback/feedback',
+          followup: '/pages/followup/followup',
         }
         var _url = _map[_target]
         if (_url) wx.navigateTo({ url: _url })
