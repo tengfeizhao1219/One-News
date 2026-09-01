@@ -887,12 +887,17 @@ Page({
   //   - 面板/情报屏互相排斥：打开情报屏时先关侧边栏（避免叠层）。
   //  摘除方式：删除本段 + home.wxml 的 <intel-stage> + home.json 注册 + data._intelBridgeEnabled/intelActive 即可。
   onIntelTouchStart(e) {
+    // overlay 打开时跳过坐标记录（配合 onIntelTouchEnd 的 showFollow 守卫，双保险）
+    if (this.data.showFollow) return
     this._intelTouchX = e.touches[0].clientX
     this._intelTouchY = e.touches[0].clientY
     this._intelTouchT = Date.now()
   },
   onIntelTouchEnd(e) {
     if (!this.data._intelBridgeEnabled) return
+    // 2026-08-31 修复：我的关注 overlay 打开时忽略右滑进情报——
+    // 边缘返回被 page-container 拦截收起 overlay 后，同一右滑手势不得再触发 AI 情报屏
+    if (this.data.showFollow) return
     if (this._intelTouchX === undefined) return
     var dx = e.changedTouches[0].clientX - this._intelTouchX
     var dy = e.changedTouches[0].clientY - this._intelTouchY
