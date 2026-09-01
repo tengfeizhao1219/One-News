@@ -32,6 +32,19 @@
 
 ## 教训条目（倒序，最新在上）
 
+### [2026-09-01] newsPipeline 卡死三连根因（One News 中午无更新）（数据链路/工具）
+
+- **症状**：One News 中午批次无新数据，news_cache 停在 10:10；news_raw 堆积 300 条（08-26 至今）无人消化。
+- **根因①（流水线死锁）**：staging 中单条 title 含 U+FFFD（乱码）→ publish 的 applyGarbledGate 判 heavy → 打回 AI 重跑（markPendingKeepRetry）→ 重跑后 done → 再 publish → 再打回…**无限循环**。调度器 `run()` 只要 staging 有 pending/inflight 就永远 `trigger('ai')`，**process 阶段被饿死** → raw 只进不出。
+- **修复**：直接 DB 改掉乱码 title + 标 done → 手动循环触发 process（20 条/轮）→ ai（8 条/轮）→ publish。关键：**MCP invokeFunction 传参用顶层 `params`**（`params='{"action":"publish"}'`），`func.event`/`data` 都不生效。
+- **根因②（dedup+wipe 顺序 bug）**：publish 先 `dedupAgainstCache`（剔除与现有 cache 同 URL/同主题的 15 条）→ **再 wipe 旧 cache 全量替换** → 被剔除条目的旧数据也被 wipe 掉 → international 分类整体消失（15 条 = international 8 + science 7）。这是 08-24 owner 拍板 dedup 时的组合缺陷：dedup 假设"剔除条目数据已在展示库会保留"，与 wipe 全量替换冲突。
+- **根因③（MCP update 全量替换语义）**：`writeNoSqlDatabaseContent action=update` 是**整文档替换**而非字段合并——只传 `{title}` 会把该记录其余字段全部清空。修单字段必须带完整文档，或先读后写。
+- **正确做法**：
+  1. **乱码防线前移**：publish 打回重跑死循环时，应人工核对 title 是否 AI 阶段无法修复（AI 只重生成 summary/content，**title 是 raw 原样带进 staging 的**，打回重跑永远修不好 title 乱码）→ 直接 DB 修 title。
+  2. **dedup+wipe 顺序修复（待办）**：stagePublish 应**先 wipe 再 dedup**（对空 cache 判重自然全保留），或 dedup 剔除的条目其旧 cache 版本从 wipe 名单豁免——需 owner 确认方案后改代码部署。
+  3. **MCP 写库纪律**：update 永远传完整文档；改库前先读快照留底（本次靠 /tmp 快照救回两条被清空记录）。
+- **涉及角色**：Auto / O（dedup 方案需 owner 拍板）
+
 ### [2026-08-20] 重跑数据处理必须先清 staged（否则 already-staged 跳过）（流程）
 
 - **症状**：重置 ingest 为 pending 后触发 intelProcess，条目不重新生成（staged 内容不变）。

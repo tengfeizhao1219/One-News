@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-09-01 | Auto | **One News 中午无更新排查与修复（root cause 三连）**。① **staging 单条 title 乱码（FFFD）死循环卡死流水线**：publish 发现乱码 → 打回 AI 重跑 → done → 再打回…，`run()` 永远走 ai 分支，process 饿死，news_raw 堆积 300 条（08-26 至今），cache 停在 10:10。修复：DB 直改 NASA 条 title 去乱码 + 标 done → process 消化 300 条 → ai 全量处理 → publish 落库 33 条（15:07 新批次）。② **publish dedup+wipe 顺序 bug（owner 08-24 拍板功能，组合缺陷）**：dedupAgainstCache 对"与现有 cache 同 URL/同主题"条目剔除 15 条（international 8 + science 7），但 stagePublish 随后 wipe 旧 cache 全量替换 → 被剔除条目的旧数据也消失 → international 分类清空。止血：从 10:10 快照恢复 8 条 international（createdAt 15:14）+ 补 2 条 None 分类。③ **MCP writeNoSqlDatabaseContent update 是「全量替换」语义**（非合并！）：修 title/category 时把整条记录其他字段清空，NASA/IT之家两条险些只剩 title；已用完整 doc 重建（数据来自 staging/cache 快照）。最终 cache 41 条（recommend 15/life 8/tech 8/international 8/science 2），title 零乱码，raw/staging 清空。**待办**：dedup+wipe 顺序 bug 需代码修复（见 LEARNINGS 09-01） | ✅ 已修复 |
 | 2026-08-30 | Auto | **每日自动同步 2026-08-30 22:07：提交 0 个文件；— 无推送（无改动）；—；✅ 工作区干净。详情见 .git-auto/auto.log** | ✅ 已同步 |
 | 2026-08-30 | Auto | **每日自动同步 2026-08-30 22:02：提交 0 个文件；— 无推送（无改动）；—；✅ 工作区干净。详情见 .git-auto/auto.log** | ✅ 已同步 |
 | 2026-08-28 | DevOps | **每日自动同步定时任务上线（S4U 不依赖登录）**：任务计划程序 OneNews-DailyCommit 每天 23:00 执行 .git-auto/daily-sync.bat → 提交本地改动 → 推送 → pull --rebase → 同步结论自动写入本表 + 推送（含 60s 冷却重试）。脚本：scripts/daily-commit-push.sh + scripts/daily-sync-report.sh。实测全链路通过（无登录会话可运行，git 凭据经 credential manager 可用）| ✅ 已上线 |
