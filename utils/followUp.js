@@ -85,6 +85,7 @@ function addFollow(module, item) {
     categoryName: item.categoryName || '',
     picUrl: item.picUrl || '',
     trackTime: item.trackTime || '12:00',
+    knownSummary: item.knownSummary || '', // 关注时已知内容基线（云端 followUpCheck 判新用）
     createdAt: now,
     lastCheckedDate: '',
     updates: [],
@@ -221,12 +222,14 @@ function formatFollowTime(dateStr) {
   const hh = ('0' + d.getHours()).slice(-2)
   const mi = ('0' + d.getMinutes()).slice(-2)
   const hm = hh + ':' + mi
+  // 旧数据 date 只有 YYYY-MM-DD（无时分）→ 只显示日期，不硬补 00:00
+  const hasTime = /\d{2}:\d{2}/.test(s)
   const dayDiff = Math.round((startOfToday - startOfDay) / 86400000)
-  if (dayDiff === 0) return '今天 ' + hm
-  if (dayDiff === 1) return '昨天 ' + hm
+  if (dayDiff === 0) return hasTime ? '今天 ' + hm : '今天'
+  if (dayDiff === 1) return hasTime ? '昨天 ' + hm : '昨天'
   const mm = ('0' + (d.getMonth() + 1)).slice(-2)
   const dd = ('0' + d.getDate()).slice(-2)
-  return mm + '-' + dd + ' ' + hm
+  return hasTime ? mm + '-' + dd + ' ' + hm : mm + '-' + dd
 }
 
 module.exports = {

@@ -54,8 +54,11 @@ const MAX_RETRY_SAME_DAY = 1    // 同天 LLM/搜索失败重试次数（随后�
 // ─── 北京时间工具（SCF 环境是 UTC，需显式转北京）───
 function beijingParts(ts) {
   const d = new Date((ts || Date.now()) + 8 * 3600 * 1000)
+  const hh = ('0' + d.getUTCHours()).slice(-2)
+  const mi = ('0' + d.getUTCMinutes()).slice(-2)
   return {
     date: d.toISOString().slice(0, 10), // YYYY-MM-DD（北京）
+    datetime: d.toISOString().slice(0, 10) + ' ' + hh + ':' + mi, // YYYY-MM-DD HH:MM（北京，带时分）
     hour: d.getUTCHours(),
     minute: d.getUTCMinutes(),
   }
@@ -225,17 +228,22 @@ function deepseekChat(systemPrompt, user, { maxTokens = 500, temperature = 0.3 }
  * 判断搜索结果是否有「实质性新进展」并生成摘要。
  * @returns {Promise<{hasNew:boolean, summary:string, sourcesCount:number}|null>} null=LLM 失败
  */
-async function judgeAndSummarize(topicTitle, search) {
+async function judgeAndSummarize(topicTitle, knownSummary, search) {
   const searchText = (search.sources || [])
     .map((s, i) => `${i + 1}. ${s.title} ${s.url}${s.snippet ? '\n   ' + s.snippet : ''}`).join('\n')
+  const knownBlock = knownSummary
+    ? `\n用户已知内容（关注该话题时的原文摘要，以下信息不算新进展）：\n${String(knownSummary).slice(0, 300)}`
+    : ''
   const system = `你是「话题进展追踪器」。用户关注了一个话题，以下是今天联网检索到的最新结果。
-请判断：这些结果与话题是否相关，且是否包含【实质性新进展】（新发布/新动态/新结论，区别于话题背景介绍）。
+请判断：检索结果中是否有【超出用户已知内容的新进展】（用户已关注过原事件，只对「之后又发生了什么」感兴趣）。
 只输出 JSON：{"hasNew":true/false,"summary":"80-150字中文摘要，仅当hasNew=true时给出","sourcesCount":数字}
-- hasNew=false：检索到的都是背景介绍/旧闻/无关内容 → 不打扰用户
-- summary 要具体：发生了什么、谁、何时、影响，不要泛泛而谈
-- sourcesCount = 相关且有新进展的来源条数（1-5）
+判定标准：
+- hasNew=false：结果全部是用户已知内容的重复/背景介绍/旧闻/无关内容 → 不打扰用户
+- hasNew=true：存在【已知内容未提及的新事实】——新发布、新动态、新结论、事件后续发展、新影响
+- summary 只写【新进展部分】，复述已知内容的部分不要写；要具体：发生了什么、谁、何时、影响
+- sourcesCount = 提供新进展信息的来源条数（1-5）
 不要输出其它内容。`
-  const user = `关注话题：${topicTitle}
+  const user = `关注话题：${topicTitle}${knownBlock}
 联网搜索结果：
 ${searchText || '（无结构化结果）'}
 搜索结果回答：${search.answer || ''}
@@ -258,14 +266,14 @@ ${searchText || '（无结构化结果）'}
 
 /** 检索一个话题，返回 { hasNew, summary, sourcesCount } 或 null（失败） */
 async function checkTopic(topic) {
-  const query = `${topic.title} 最新进展 更新`.slice(0, 200)
+  const query = `${topic.title} 最新进展 后续 更新`.slice(0, 200)
   let search = await tavilySearch(query)
   if (!search.ok) {
     const z = await zhipuWebSearch(query)
     if (z.ok) search = z
     else return { ok: false, reason: search.reason + '/' + (z && z.reason) }
   }
-  const judge = await judgeAndSummarize(topic.title, search)
+  const judge = await judgeAndSummarize(topic.title, topic.knownSummary || '', search)
   if (!judge) return { ok: false, reason: 'judge-fail' }
   return { ok: true, hasNew: judge.hasNew, summary: judge.summary, sourcesCount: judge.sourcesCount }
 }
@@ -344,7 +352,7 @@ exports.main = async (event = {}) => {
       checked++
       if (r && r.ok && r.hasNew) {
         const entry = {
-          date: today,
+          date: beijingParts().datetime,  // 2026-08-31: 带时分（关注列表显示具体时间）
           summary: String(r.summary || '').slice(0, 300),
           sourcesCount: r.sourcesCount || 1,
           read: false,
