@@ -2,7 +2,7 @@
  * intelLLM.js — AI 情报官 LLM 调用封装（Phase 3 地基 / P 角色）
  * ============================================================
  * 复用 One News `common/contentFetcher.js` `interpretNews` 的多引擎降级链（非其业务）：
- *   智谱 GLM → DeepSeek → ys365（OpenAI 兼容 chat/completions）+ 混元云开发内置兜底。
+ *   智谱 GLM → DeepSeek → 混元云开发内置兜底。
  * 与 interpretNews 的差异：本模块只提供「通用 chat 通道」，不绑定新闻解读读法路由
  *   （interpretLens）/【一页说】观点段/qualityScorer 信号。SOP 五步 prompt、路由、画像
  *   关联由 intelProcess（T3.x）负责组装。intel_ 命名空间隔离，可整体摘除。
@@ -10,7 +10,7 @@
  * 配置读取（与 One News 一致，避免双 key 体系）：
  *   - 智谱：config.zhipuSummary.{ apiKey, baseUrl, model }
  *   - DeepSeek：process.env.DEEPSEEK_API_KEY || config.deepseek.{apiKey, model}
- *   - ys365：process.env.YS365_API_KEY（New API 中转，2026-08-24 接入）
+
  *   - 混元：config.hunyuan.{ enabled, model, timeout }（云开发内置 createModel，免费额度）
  * 依赖：any OpenAI 兼容 /v1/chat/completions；纯 Node https，零第三方依赖。
  * 2026-08-24：移除 Qwen 引擎（owner 决策，DASHSCOPE_API_KEY 不再使用）。
@@ -90,7 +90,7 @@ function requestHunyuan(config, systemPrompt, userText, minAccept, isAvailable) 
 }
 
 /**
- * 通用多引擎 chat：按序尝试 智谱/DeepSeek/ys365/混元，任一成功即返回。
+ * 通用多引擎 chat：按序尝试 智谱/DeepSeek/混元，任一成功即返回。
  * @param {Object} opts
  * @param {string} opts.systemPrompt system 角色
  * @param {string} opts.user - user 内容
@@ -98,7 +98,7 @@ function requestHunyuan(config, systemPrompt, userText, minAccept, isAvailable) 
  * @param {number} [opts.maxTokens=900] - 输出上限 token
  * @param {number} [opts.temperature=0.7]
  * @param {string} [opts.tag] - 日志标签（如 intelProcess/sop）
- * @returns {Promise<{text:string, engine: '智谱'|'DeepSeek'|'ys365'|'混元'}|null>}
+ * @returns {Promise<{text:string, engine: '智谱'|'DeepSeek'|'混元'}|null>}
  */
 // P1 优化（2026-08-19）：引擎记忆——上次成功引擎优先尝试，避免故障引擎每次白白 20s 超时
 let _lastEngine = null
@@ -115,17 +115,6 @@ async function intelChat(opts = {}) {
   if (zsKey) engines.push({ name: '智谱', apiKey: zsKey, baseUrl: zs.baseUrl || 'https://open.bigmodel.cn/api/paas/v4/chat/completions', model: zs.model || 'glm-4-flash', timeout: 20000 })
   const dsKey = process.env.DEEPSEEK_API_KEY || (config.deepseek && config.deepseek.apiKey) || ''
   if (dsKey) engines.push({ name: 'DeepSeek', apiKey: dsKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 20000 })
-  // ys365（New API 中转网关，2026-08-24 接入）：统一 OpenAI 兼容端点，官方 key 全部失败后的最后兜底。
-  // 启用：云函数环境变量 YS365_API_KEY（模型名可用 YS365_MODEL 覆盖，默认见 config.ys365.model）。
-  const ysKey = process.env.YS365_API_KEY || (config.ys365 && config.ys365.apiKey) || ''
-  if (ysKey) engines.push({
-    name: 'ys365',
-    apiKey: ysKey,
-    baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions',
-    model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash',
-    timeout: 20000,
-  })
-
   const bodyFor = (eng) => JSON.stringify({
     model: eng.model,
     messages: [

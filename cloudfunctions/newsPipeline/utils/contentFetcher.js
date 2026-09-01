@@ -431,12 +431,6 @@ async function interpretNews(content, title, references, signals) {
   const keys = await loadKeys()
   const hunyuanCfg = (config.hunyuan || {})
   const engines = []
-  // 引擎降级链（owner 2026-08-28 拍板）：ys365 → DeepSeek → 智谱 → 混元兜底。
-  // 缘由：ys365 中转 Gateway 性价比高且稳定 → 前置优先；混元免费额度留作最后防线。
-  const ysKey = keys.ys365
-  if (ysKey) {
-    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
-  }
   const deepseekKey = keys.deepseek
   if (deepseekKey) {
     engines.push({ name: 'DeepSeek', apiKey: deepseekKey, baseUrl: 'https://api.deepseek.com/v1/chat/completions', model: (config.deepseek && config.deepseek.model) || 'deepseek-chat', timeout: 8000 })
@@ -531,8 +525,8 @@ async function interpretNews(content, title, references, signals) {
     console.warn('[interpret] 未配置任何解读引擎，跳过 AI 独立解读')
     return Promise.resolve(null)
   }
-  // 有序降级链（owner 2026-08-28）：ys365 → DeepSeek → 智谱 → 混元兜底
-  // 弱付费/中转引擎前置（ys365 性价比高），混元免费额度留作最后防线。
+  // 有序降级链（owner 2026-08-31）：DeepSeek → 智谱 → 混元兜底
+  // 混元免费额度留作最后防线。
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
   if (hunyuanCfg.enabled) {
     providers.push({ kind: 'hunyuan' }) // 混元放最后兜底
@@ -653,16 +647,11 @@ function clampSummary(s) {
 }
 async function summarizeWithZhipu(content, title) {
     // config 模块级引用（顶部 require ../config）
-  // owner 2026-08-28：引擎链调整为 ys365 → DeepSeek → 智谱 → 混元兜底；Key 统一走 configStore
+  // owner 2026-08-31：移除 ys365 中转网关；引擎链为 DeepSeek → 智谱 → 混元兜底；Key 统一走 configStore
   const keys = await loadKeys()
   const hunyuanCfg = (config.hunyuan || {})
   const zhipuCfg = (config.zhipuSummary || {})
   const engines = []
-  // ys365（New API 中转网关）前置：性价比高
-  const ysKey = keys.ys365
-  if (ysKey) {
-    engines.push({ name: 'ys365', apiKey: ysKey, baseUrl: (config.ys365 && config.ys365.baseUrl) || 'https://api.ys365.cyou/v1/chat/completions', model: (config.ys365 && config.ys365.model) || process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash', timeout: 8000 })
-  }
   // DeepSeek 摘要引擎（OpenAI 兼容协议）
   const deepseekKey = keys.deepseek
   if (deepseekKey) {
@@ -729,7 +718,7 @@ async function summarizeWithZhipu(content, title) {
     return Promise.resolve(null)
   }
 
-  // 有序降级链（owner 2026-08-28）：ys365 → DeepSeek → 智谱 → 混元兜底
+  // 有序降级链（owner 2026-08-31）：DeepSeek → 智谱 → 混元兜底
   const providers = engines.map((eng) => ({ kind: 'openai', eng }))
   if (hunyuanCfg.enabled) {
     providers.push({ kind: 'hunyuan' }) // 混元放最后兜底

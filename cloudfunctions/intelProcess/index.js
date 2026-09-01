@@ -24,7 +24,7 @@
 //
 // LLM 通道（设计 §6.8，独立 intelProcess 云函数 + 独立 env key）：
 //   复用 backend/common/intelLLM.js intelChat 多引擎降级链
-//   （混元前置 → 智谱 → DeepSeek → ys365，2026-08-24 移除 Qwen）。
+//   （混元前置 → 智谱 → DeepSeek，2026-08-24 移除 Qwen；2026-08-31 移除 ys365）。
 //   LLM Key 未配（T0.3 🚫 待 owner）→ 本轮静默降级跳过处理、不阻塞巡检。
 //
 // 特殊路由（设计 §6.7 硬约束）：命中「合同/API/接口/协议/价格/SLA 变更」

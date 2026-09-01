@@ -33,15 +33,6 @@ module.exports = {
   },
 
 
-  // ys365（New API 中转网关 · 2026-08-24 接入）：统一 OpenAI 兼容端点，官方 key 全挂后的最后 AI 兜底。
-  // 启用：云函数环境变量 YS365_API_KEY（模型名用 YS365_MODEL 或本段 model 覆盖，默认 deepseek-chat）。
-  ys365: {
-    apiKey: process.env.YS365_API_KEY || '',
-    baseUrl: 'https://api.ys365.cyou/v1/chat/completions',
-    model: process.env.YS365_MODEL || 'deepseek-ai/deepseek-v4-flash',
-    timeout: 10000,
-  },
-
   // 阿里百炼 DeepSeek API（已废弃 v4.0，保留配置以防回滚）
   bailian: {
     apiKey: process.env.DASHSCOPE_API_KEY || '',

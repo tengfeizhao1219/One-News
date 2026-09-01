@@ -11,7 +11,7 @@
 const COLLECTION = 'app_config'
 const DOC_ID = 'ai_keys'
 const CACHE_TTL_MS = 60 * 1000
-const KEYS = ['deepseek', 'zhipu', 'ys365', 'tian', 'juhe']
+const KEYS = ['deepseek', 'zhipu', 'tian', 'juhe']
 
 let cache = null
 let cacheAt = 0
@@ -20,7 +20,6 @@ function envFallback() {
   return {
     deepseek: process.env.DEEPSEEK_API_KEY || '',
     zhipu: process.env.ZHIPU_API_KEY || '',
-    ys365: process.env.YS365_API_KEY || '',
     tian: process.env.TIAN_API_KEY || '',
     juhe: process.env.JUHE_API_KEY || '',
   }
