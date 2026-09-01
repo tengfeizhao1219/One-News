@@ -89,7 +89,7 @@ Component({
       let latestSummary = ''
       let summaryMuted = false
       if (latest) {
-        latestDate = latest.date
+        latestDate = FU.formatFollowTime(latest.date)  // 2026-08-31: 带时分（今天 HH:MM / 昨天 HH:MM）
         latestSummary = latest.summary
       } else {
         // 无更新：展示「已检索但无新进展」提示（对齐 demo 灰态文案）
@@ -108,7 +108,7 @@ Component({
         latestSummary: latestSummary,
         summaryMuted: summaryMuted,
         timeline: updates.map(function (u) {
-          return { date: u.date, summary: u.summary, sourcesCount: u.sourcesCount, read: u.read }
+          return { date: FU.formatFollowTime(u.date), summary: u.summary, sourcesCount: u.sourcesCount, read: u.read }  // 2026-08-31: 带时分
         }),
       })
     },

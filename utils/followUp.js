@@ -191,11 +191,38 @@ function _todayStr() {
   const d = new Date()
   const mm = ('0' + (d.getMonth() + 1)).slice(-2)
   const dd = ('0' + d.getDate()).slice(-2)
-  return d.getFullYear() + '-' + mm + '-' + dd
+  const hh = ('0' + d.getHours()).slice(-2)
+  const mi = ('0' + d.getMinutes()).slice(-2)
+  return d.getFullYear() + '-' + mm + '-' + dd + ' ' + hh + ':' + mi
+}
+
+/** 关注列表时间显示（2026-08-31）：带具体时分——
+ *  今天 → 「今天 HH:MM」；昨天 → 「昨天 HH:MM」；更早 → 「MM-DD HH:MM」
+ *  兼容旧数据（date 只有 YYYY-MM-DD 无时分 → 补 00:00）
+ */
+function formatFollowTime(dateStr) {
+  if (!dateStr) return ''
+  const s = String(dateStr).trim()
+  // 解析（兼容 无时分 / 带时分 / ISO）
+  const d = new Date(s.length >= 10 ? s.replace(' ', 'T') + (s.length === 10 ? 'T00:00:00' : ':00') : s)
+  if (isNaN(d.getTime())) return s
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const hh = ('0' + d.getHours()).slice(-2)
+  const mi = ('0' + d.getMinutes()).slice(-2)
+  const hm = hh + ':' + mi
+  const dayDiff = Math.round((startOfToday - startOfDay) / 86400000)
+  if (dayDiff === 0) return '今天 ' + hm
+  if (dayDiff === 1) return '昨天 ' + hm
+  const mm = ('0' + (d.getMonth() + 1)).slice(-2)
+  const dd = ('0' + d.getDate()).slice(-2)
+  return mm + '-' + dd + ' ' + hm
 }
 
 module.exports = {
   getFollows,
+  formatFollowTime,
   isFollowed,
   addFollow,
   removeFollow,
