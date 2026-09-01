@@ -203,8 +203,17 @@ function _todayStr() {
 function formatFollowTime(dateStr) {
   if (!dateStr) return ''
   const s = String(dateStr).trim()
-  // 解析（兼容 无时分 / 带时分 / ISO）
-  const d = new Date(s.length >= 10 ? s.replace(' ', 'T') + (s.length === 10 ? 'T00:00:00' : ':00') : s)
+  // 解析（兼容 无时分 / 空格或T分隔 / 完整 ISO 带秒）
+  let d
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    d = new Date(s + 'T00:00:00')              // YYYY-MM-DD
+  } else if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}$/.test(s)) {
+    d = new Date(s.replace(' ', 'T') + ':00')   // YYYY-MM-DD HH:MM
+  } else if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(s)) {
+    d = new Date(s.replace(' ', 'T'))           // YYYY-MM-DD HH:MM:SS
+  } else {
+    d = new Date(s)
+  }
   if (isNaN(d.getTime())) return s
   const now = new Date()
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
