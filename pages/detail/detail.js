@@ -201,6 +201,18 @@ Page({
   },
 
   // BUG-004: 页面销毁标记，防止回调中 setData
+  onShow: function () {
+    // 2026-08-31 修复：从收藏页/我的关注移除后返回详情页时同步收藏状态——
+    // 此前仅在 onLoad 检查一次 isFavorited，收藏页移除后返回不刷新（不同步）
+    try {
+      var _n = this.data.news || {}
+      if (_n && _n.id) {
+        this._checkFavorite(_n.id)
+        this._checkFollow(_n.id)
+      }
+    } catch (e) { /* 忽略 */ }
+  },
+
   onHide: function () {
     // BUG-20260828-001：侧滑返回/切后台时取消长按关注计时——
     // 系统侧滑返回手势可能拦截 touchmove，onTouchMove 位移保护不触发，
