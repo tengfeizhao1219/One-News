@@ -855,6 +855,21 @@ Page({
     this.setData({ showFollow: false })
   },
 
+  // 2026-08-31 修复：page-container 拦截系统返回（iOS 边缘右滑/安卓物理返回键）——
+  // 首页在栈底时系统返回=退出小程序；这里拦截并收起 overlay（返回首页内容）。
+  // 注意：page-container 每次返回只拦一次，需重新置 true 恢复拦截。
+  onFollowBeforeLeave() {
+    if (this.data.showFollow) {
+      // 先关闭 overlay（触发反向收回动画），再用下一帧重新挂载 page-container 恢复拦截
+      this.setData({ showFollow: false })
+      var that = this
+      // 若 overlay 仍打开则恢复拦截（正常情况下上面已关闭，此分支不会执行）
+      if (that.data.showFollow) {
+        setTimeout(function () { that.setData({ showFollow: true }) }, 100)
+      }
+    }
+  },
+
   // ============ INTEL-BRIDGE (START): AI 情报模块——同屏横滑（内嵌面板，最小可摘除） ============
   // 说明：本段为 AI 情报官模块新增，独立于 One News 既有业务。
   //  owner 2026-08-18 拍板：AI 情报屏内嵌为 One News 首页覆盖层，同屏横滑切换。

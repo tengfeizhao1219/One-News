@@ -220,7 +220,11 @@
   </intel-stage>
   <!-- ========== INTEL-BRIDGE (END) ========== -->
 
-  <!-- 关注后续：纯圆形绽放 overlay（fixed 覆盖层，长按挂载；触发时以震动提示，无进度环） -->
-  <followup-card visible="{{showFollow}}" enter-point="{{followEnterPoint}}" bind:back="onFollowBack" />
+  <!-- 关注后续：纯圆形绽放 overlay（fixed 覆盖层，长按挂载；触发时以震动提示，无进度环）
+       page-container 包裹：拦截系统返回（iOS 边缘右滑/安卓物理返回）→ beforeleave 收起 overlay，
+       而不是退出小程序（首页栈底时系统返回=退出，必须拦截） -->
+  <page-container show="{{showFollow}}" overlay="{{false}}" duration="{{200}}" bindbeforeleave="onFollowBeforeLeave">
+    <followup-card visible="{{showFollow}}" enter-point="{{followEnterPoint}}" bind:back="onFollowBack" />
+  </page-container>
 
 </view>
