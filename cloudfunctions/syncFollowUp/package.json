@@ -1,0 +1,9 @@
+{
+  "name": "syncFollowUp",
+  "version": "1.0.0",
+  "description": "关注后续 · 关注关系云端增量同步",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

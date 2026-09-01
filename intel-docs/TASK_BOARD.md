@@ -102,3 +102,16 @@
 | Phase 1 → Phase 2 | ✅ | O | 2026-08-18 | T1.1–T1.4 全 ✅；25 源权威清单 O 裁决对齐（A9/B4/C6/D2/E1/F3） |
 
 - T1.4+ **方案 A 增量兜底**（08-19）：rss/news 分支按 lastSuccessCursor→sinceMs 过滤，单源本轮限 30 条，防旧文淹没。提交 `d49441f`。
+
+---
+
+## Phase 9 · 关注后续后端（§九，owner 2026-09-01 确认方案后实施）
+
+| ID | 任务 | 角色 | 状态 | 依赖 | 备注 |
+|---|---|---|---|---|---|
+| T9.1 | `follow_up` 集合（按 openid+module+itemId 幂等 upsert，软删除保留历史） | Auto | ✅ | owner 确认「全量增量同步」 | 集合已建（2026-09-01 16:xx） |
+| T9.2 | `syncFollowUp` 云函数（关注/取消/进入关注页增量同步 + get 拉取 updates） | Auto | ✅ | T9.1 | 已部署；OPENID 链路待真机验证 |
+| T9.3 | `followUpCheck` 云函数（定时按 trackTime 检索：Tavily 主 + 智谱兜底 + DeepSeek 判新/摘要） | Auto | ✅ | T9.1 + env keys | 已部署 + 4 定时器（08/12/18/21 北京）；实测检索链路通（DeepSeek 话题产出 4 来源摘要） |
+| T9.4 | 前端接线：detail×2 关注/取消同步 + followup-card 进入拉取合并（`utils/followUpSync.js` + `mergeUpdate`） | Auto | ✅ | T9.2/T9.3 | 33/33 单测过；IDE 编译待验证 |
+| T9.5 | 真机/模拟器端到端验证（关注→云端→定时检索→红点→已读） | D/Auto | 📋 | T9.4 | 需开发者工具或真机；OPENID 上下文只能真机验证 |
+| T9.6 | 可选增强：长按菜单「立即检索最新进展」（force 单话题）+ 微信订阅消息推送 | D/Auto | 📋 | 稳定后 | 站内红点先行（owner 已确认本期不做订阅消息） |

@@ -3,6 +3,7 @@
 // 不依赖 wx.navigateTo，故无系统右滑转场——真正从手指位置「炸开」。
 
 const FU = require('../../utils/followUp')
+const FU_SYNC = require('../../utils/followUpSync')
 const TRACK_TIMES = ['08:00', '12:00', '18:00', '21:00']
 
 Component({
@@ -136,11 +137,17 @@ Component({
       const zero = 'clip-path: circle(0% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(0% at ' + pt.x + ' ' + pt.y + ');'
       this.setData({ revealStyle: zero })
       this._load()
+      // §九 后端：异步拉取云端检索更新 → 合并进本地 → 重渲染（失败静默，不影响展示）
       const that = this
+      FU_SYNC.fetchUpdates().then(function (merged) {
+        if (that._destroyed) return
+        if (merged > 0) that._load()
+      }).catch(function () { /* 离线/未部署：保持本地数据 */ })
+      const that2 = this
       // 稍延迟一帧再切到 150%，确保浏览器已应用 0% 初始态，transition 能被触发
       setTimeout(function () {
-        if (that._destroyed) return
-        that.setData({ revealStyle: 'clip-path: circle(150% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(150% at ' + pt.x + ' ' + pt.y + ');' })
+        if (that2._destroyed) return
+        that2.setData({ revealStyle: 'clip-path: circle(150% at ' + pt.x + ' ' + pt.y + '); -webkit-clip-path: circle(150% at ' + pt.x + ' ' + pt.y + ');' })
       }, 80)
     },
 

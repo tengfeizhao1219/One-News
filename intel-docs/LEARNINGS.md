@@ -32,6 +32,16 @@
 
 ## 教训条目（倒序，最新在上）
 
+### [2026-09-01] 关注后端落地：cron 7 段格式 / OPENID 模拟 / env 误传假 key（云函数部署）
+
+- **症状**：部署关注功能 2 个云函数时踩 3 个坑：定时器 cron 被拒、OPENID 无法 mock 验证、env 误传假 key。
+- **根因与修复**：
+  1. **cron 必须 7 段**（秒 分 时 日 月 周 年）：`0 0 8 * * * * *`（8 段）被 mcporter 校验器拒绝；`0 0 8 * * * *`（7 段）通过。**注意 `* * * *` 是 4 个星号**（前 3 段 + 4 星 = 7 段）；线上 newsFetcher `0 0 5,8,12,18,20 * * * *` 即 7 段。config.json 与 cloudbaserc 需一致。
+  2. **mcporter invokeFunction 无法模拟 OPENID**：`cloud.getWXContext().OPENID` 在外部 invoke 时为空 → syncFollowUp 报「无法获取用户身份」。这不是 bug，真实小程序调用会自动注入。**涉及 OPENID 的函数只能真机/模拟器验证**（T9.5 待办）。可验证的：followUpCheck（不依赖 OPENID，定时器维度）→ 实测 Tavily+DeepSeek 全链路通。
+  3. **部署 env 勿手填假 key**：createFunction 时我传了猜测的假 TAVILY/DEEPSEEK/ZHIPU key → 必须用线上函数（intelSearch getFunctionDetail）的真实 env 值 `updateFunctionConfig` 覆盖。教训：**env 从线上同款函数读取，绝不手编**。
+- **正确做法**：部署后 `getFunctionDetail` 验证 env、`listFunctionTriggers` 验证 cron；新云函数先空跑（无集合→建集合 `writeNoSqlDatabaseStructure createCollection`）；检索类函数 invoke 超 3s 属正常（SCF 后台继续跑，稍后查集合验证）。
+- **涉及角色**：Auto / D（真机验证）
+
 ### [2026-09-01] newsPipeline 卡死三连根因（One News 中午无更新）（数据链路/工具）
 
 - **症状**：One News 中午批次无新数据，news_cache 停在 10:10；news_raw 堆积 300 条（08-26 至今）无人消化。

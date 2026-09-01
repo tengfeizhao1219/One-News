@@ -1,0 +1,9 @@
+{
+  "name": "followUpCheck",
+  "version": "1.0.0",
+  "description": "关注后续 · 每日 AI 定时检索（Tavily + DeepSeek）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

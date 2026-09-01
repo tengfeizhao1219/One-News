@@ -1,0 +1,26 @@
+{
+  "timeout": 120,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "followCheck0800",
+      "type": "timer",
+      "config": "0 0 8 * * * *"
+    },
+    {
+      "name": "followCheck1200",
+      "type": "timer",
+      "config": "0 0 12 * * * *"
+    },
+    {
+      "name": "followCheck1800",
+      "type": "timer",
+      "config": "0 0 18 * * * *"
+    },
+    {
+      "name": "followCheck2100",
+      "type": "timer",
+      "config": "0 0 21 * * * *"
+    }
+  ]
+}

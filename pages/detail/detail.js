@@ -20,6 +20,8 @@ var app = getApp()
 var searchIntelTopic = require('../../utils/intelApi').searchIntelTopic
 // 「关注后续」关注关系本地存储（纯本地，对齐 favorites / intelFavorites 模式）
 var followUp = require('../../utils/followUp')
+// §九 后端：关注关系云端同步桥（异步，失败静默）
+var followUpSync = require('../../utils/followUpSync')
 
 // 全局缓存单例（引擎内部复用，favorites / browseHistory 同源存储为数组）
 var _cache = localCache
@@ -1203,6 +1205,8 @@ Page({
     }
     this.setData({ isFollowed: true })
     wx.showToast({ title: '已关注，将为你追踪后续', icon: 'none', duration: 1500 })
+    // §九 后端：异步增量同步关注关系到云端（失败静默，不阻塞交互）
+    followUpSync.syncModule('onenews')
   },
 
   /** 取消关注：直接移除关注关系，隐藏元信息行铃铛 icon */
@@ -1212,6 +1216,8 @@ Page({
     followUp.removeFollow('onenews', news.id)
     this.setData({ isFollowed: false })
     wx.showToast({ title: '已取消关注', icon: 'none', duration: 1500 })
+    // §九 后端：同步删除云端关注关系
+    followUpSync.syncModule('onenews')
   },
 
   /**

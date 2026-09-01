@@ -1,233 +1,269 @@
 {
-  "envId": "cloud1-1g9313w0bb791de0",
-  "functionRoot": "cloudfunctions",
-  "functions": [
+ "envId": "cloud1-1g9313w0bb791de0",
+ "functionRoot": "cloudfunctions",
+ "functions": [
+  {
+   "name": "newsFetcher",
+   "path": "newsFetcher",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
     {
-      "name": "newsFetcher",
-      "path": "newsFetcher",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "hourlyFetch",
-          "type": "timer",
-          "config": "0 0 5,8,12,18,20 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "rssFetcher",
-      "path": "rssFetcher",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "rssPoll",
-          "type": "timer",
-          "config": "0 0 5,8,12,18,20 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "newsPipeline",
-      "path": "newsPipeline",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "getNewsList",
-      "path": "getNewsList",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "getNewsDetail",
-      "path": "getNewsDetail",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "getNewsDelta",
-      "path": "getNewsDelta",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "setNewsRetained",
-      "path": "setNewsRetained",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "feedback-create",
-      "path": "feedback-create",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "feedback-delete",
-      "path": "feedback-delete",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "feedback-list",
-      "path": "feedback-list",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "intelFetch",
-      "path": "intelFetch",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "intelFetch0500",
-          "type": "timer",
-          "config": "0 10 5 * * * *"
-        },
-        {
-          "name": "intelFetch1100",
-          "type": "timer",
-          "config": "0 10 11 * * * *"
-        },
-        {
-          "name": "intelFetch1800",
-          "type": "timer",
-          "config": "0 40 17 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "intelRssPoll",
-      "path": "intelRssPoll",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "intelPoll0500",
-          "type": "timer",
-          "config": "0 15 5 * * * *"
-        },
-        {
-          "name": "intelPoll1100",
-          "type": "timer",
-          "config": "0 15 11 * * * *"
-        },
-        {
-          "name": "intelPoll1800",
-          "type": "timer",
-          "config": "0 45 17 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "intelProcess",
-      "path": "intelProcess",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "intelProcess0500",
-          "type": "timer",
-          "config": "0 20 5 * * * *"
-        },
-        {
-          "name": "intelProcess1100",
-          "type": "timer",
-          "config": "0 20 11 * * * *"
-        },
-        {
-          "name": "intelProcess1800",
-          "type": "timer",
-          "config": "0 50 17 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "intelDispatcher",
-      "path": "intelDispatcher",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "intelDispatcher0530",
-          "type": "timer",
-          "config": "0 30 5 * * * *"
-        },
-        {
-          "name": "intelDispatcher1130",
-          "type": "timer",
-          "config": "0 30 11 * * * *"
-        },
-        {
-          "name": "intelDispatcher1830",
-          "type": "timer",
-          "config": "0 0 18 * * * *"
-        }
-      ]
-    },
-    {
-      "name": "intelBrief",
-      "path": "intelBrief",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "intelGetList",
-      "path": "intelGetList",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "intelGetDetail",
-      "path": "intelGetDetail",
-      "runtime": "Nodejs18.15",
-      "handler": "index.main",
-      "installDependency": true
-    },
-    {
-      "name": "intelManualRun",
-      "path": "intelManualRun",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "timeout": 300,
-      "memorySize": 512,
-      "installDependency": true,
-      "triggers": []
-    },
-    {
-      "name": "intelCleanup",
-      "path": "intelCleanup",
-      "runtime": "Nodejs16.13",
-      "handler": "index.main",
-      "timeout": 60,
-      "memorySize": 256,
-      "installDependency": true,
-      "triggers": [
-        {
-          "name": "intelCleanupDaily",
-          "type": "timer",
-          "config": "0 0 3 * * * *"
-        }
-      ]
+     "name": "hourlyFetch",
+     "type": "timer",
+     "config": "0 0 5,8,12,18,20 * * * *"
     }
-  ]
+   ]
+  },
+  {
+   "name": "rssFetcher",
+   "path": "rssFetcher",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "rssPoll",
+     "type": "timer",
+     "config": "0 0 5,8,12,18,20 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "newsPipeline",
+   "path": "newsPipeline",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "getNewsList",
+   "path": "getNewsList",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "getNewsDetail",
+   "path": "getNewsDetail",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "getNewsDelta",
+   "path": "getNewsDelta",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "setNewsRetained",
+   "path": "setNewsRetained",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "feedback-create",
+   "path": "feedback-create",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "feedback-delete",
+   "path": "feedback-delete",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "feedback-list",
+   "path": "feedback-list",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "intelFetch",
+   "path": "intelFetch",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "intelFetch0500",
+     "type": "timer",
+     "config": "0 10 5 * * * *"
+    },
+    {
+     "name": "intelFetch1100",
+     "type": "timer",
+     "config": "0 10 11 * * * *"
+    },
+    {
+     "name": "intelFetch1800",
+     "type": "timer",
+     "config": "0 40 17 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "intelRssPoll",
+   "path": "intelRssPoll",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "intelPoll0500",
+     "type": "timer",
+     "config": "0 15 5 * * * *"
+    },
+    {
+     "name": "intelPoll1100",
+     "type": "timer",
+     "config": "0 15 11 * * * *"
+    },
+    {
+     "name": "intelPoll1800",
+     "type": "timer",
+     "config": "0 45 17 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "intelProcess",
+   "path": "intelProcess",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "intelProcess0500",
+     "type": "timer",
+     "config": "0 20 5 * * * *"
+    },
+    {
+     "name": "intelProcess1100",
+     "type": "timer",
+     "config": "0 20 11 * * * *"
+    },
+    {
+     "name": "intelProcess1800",
+     "type": "timer",
+     "config": "0 50 17 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "intelDispatcher",
+   "path": "intelDispatcher",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "intelDispatcher0530",
+     "type": "timer",
+     "config": "0 30 5 * * * *"
+    },
+    {
+     "name": "intelDispatcher1130",
+     "type": "timer",
+     "config": "0 30 11 * * * *"
+    },
+    {
+     "name": "intelDispatcher1830",
+     "type": "timer",
+     "config": "0 0 18 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "intelBrief",
+   "path": "intelBrief",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "intelGetList",
+   "path": "intelGetList",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "intelGetDetail",
+   "path": "intelGetDetail",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "intelManualRun",
+   "path": "intelManualRun",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "timeout": 300,
+   "memorySize": 512,
+   "installDependency": true,
+   "triggers": []
+  },
+  {
+   "name": "intelCleanup",
+   "path": "intelCleanup",
+   "runtime": "Nodejs16.13",
+   "handler": "index.main",
+   "timeout": 60,
+   "memorySize": 256,
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "intelCleanupDaily",
+     "type": "timer",
+     "config": "0 0 3 * * * *"
+    }
+   ]
+  },
+  {
+   "name": "syncFollowUp",
+   "path": "syncFollowUp",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true
+  },
+  {
+   "name": "followUpCheck",
+   "path": "followUpCheck",
+   "runtime": "Nodejs18.15",
+   "handler": "index.main",
+   "installDependency": true,
+   "triggers": [
+    {
+     "name": "followCheck0800",
+     "type": "timer",
+     "config": "0 0 8 * * * *"
+    },
+    {
+     "name": "followCheck1200",
+     "type": "timer",
+     "config": "0 0 12 * * * *"
+    },
+    {
+     "name": "followCheck1800",
+     "type": "timer",
+     "config": "0 0 18 * * * *"
+    },
+    {
+     "name": "followCheck2100",
+     "type": "timer",
+     "config": "0 0 21 * * * *"
+    }
+   ]
+  }
+ ]
 }

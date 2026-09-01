@@ -19,6 +19,8 @@ const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 const { recordView } = require('../../../utils/intelHistory')
 // 「关注后续」关注关系本地存储（情报官 module='intel'，对齐 One News detail）
 const followUp = require('../../../utils/followUp')
+// §九 后端：关注关系云端同步桥（异步，失败静默）
+const followUpSync = require('../../../utils/followUpSync')
 
 Page({
   data: {
@@ -335,6 +337,8 @@ Page({
     }
     this.setData({ isFollowed: true })
     wx.showToast({ title: '已关注，将为你追踪后续', icon: 'none', duration: 1500 })
+    // §九 后端：异步增量同步关注关系到云端
+    followUpSync.syncModule('intel')
   },
 
   /** 取消关注：直接移除关注关系，隐藏 meta 行末尾铃铛 icon */
@@ -344,6 +348,8 @@ Page({
     followUp.removeFollow('intel', id)
     this.setData({ isFollowed: false })
     wx.showToast({ title: '已取消关注', icon: 'none', duration: 1500 })
+    // §九 后端：同步删除云端关注关系
+    followUpSync.syncModule('intel')
   },
 
   /** 长按手势：touchstart 起计时 */

@@ -136,6 +136,34 @@ function addUpdate(module, itemId, update) {
   })
 }
 
+/**
+ * 合并云端检索更新（§九 后端：followUpCheck 写入云端 → 前端拉取合并）。
+ * 去重指纹 = date + summary 前 20 字；已存在则跳过（保留本地已读状态）。
+ * @returns {boolean} 是否新增了更新
+ */
+function mergeUpdate(module, itemId, update) {
+  if (!itemId || !update || !update.date || !update.summary) return false
+  const entry = {
+    date: String(update.date || ''),
+    summary: String(update.summary || ''),
+    sourcesCount: Number(update.sourcesCount) || 1,
+    read: false,
+  }
+  const fp = entry.date + '|' + entry.summary.slice(0, 20)
+  let added = false
+  _mapOne(module, itemId, function (it) {
+    const updates = (it.updates || []).slice()
+    const dup = updates.some(function (u) {
+      return (u.date + '|' + String(u.summary || '').slice(0, 20)) === fp
+    })
+    if (dup) return it
+    added = true
+    updates.unshift(entry)
+    return Object.assign({}, it, { updates: updates, lastCheckedDate: entry.date })
+  })
+  return added
+}
+
 /** 改追踪时间（08:00 / 12:00 / 18:00 / 21:00） */
 function setTrackTime(module, itemId, time) {
   return _mapOne(module, itemId, function (it) {
@@ -158,5 +186,6 @@ module.exports = {
   markAllRead,
   markRead,
   addUpdate,
+  mergeUpdate,
   setTrackTime,
 }
