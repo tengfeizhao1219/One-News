@@ -1210,6 +1210,7 @@ Page({
       category: news.category || '',
       categoryName: news.categoryName || '',
       picUrl: news.picUrl || '',
+      knownSummary: news.summary || '', // 已知内容基线（云端检索判新用）
     })
     if (res.full) {
       wx.showToast({ title: '关注已达上限，请先清理', icon: 'none' })

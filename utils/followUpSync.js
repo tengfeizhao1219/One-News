@@ -34,6 +34,7 @@ function _localList(module) {
           picUrl: it.picUrl || '',
           trackTime: it.trackTime || '12:00',
           createdAt: it.createdAt || 0,
+          knownSummary: it.knownSummary || '', // 关注时已知内容基线（followUpCheck 判新用）
         }
       })
   } catch (e) {
@@ -92,6 +93,7 @@ async function fetchUpdates() {
           categoryName: c.categoryName || '',
           picUrl: c.picUrl || '',
           trackTime: c.trackTime || '12:00',
+          knownSummary: c.knownSummary || '', // 换设备恢复基线
         })
       }
     })

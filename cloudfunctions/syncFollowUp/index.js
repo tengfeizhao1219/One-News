@@ -78,6 +78,7 @@ async function syncModule(openid, module, list) {
         category: it.category || old.category || '',
         categoryName: it.categoryName || old.categoryName || '',
         picUrl: it.picUrl || old.picUrl || '',
+        knownSummary: it.knownSummary || old.knownSummary || '', // 关注时已知内容基线（检索判新用）
         updatedAt: now,
       }
       await db.collection('follow_up').doc(old._id).update({ data: patch })
@@ -95,6 +96,7 @@ async function syncModule(openid, module, list) {
           categoryName: it.categoryName || '',
           picUrl: it.picUrl || '',
           trackTime: it.trackTime || '12:00',
+          knownSummary: it.knownSummary || '', // 关注时已知内容基线（检索判新用）
           isActive: true,
           createdAt: it.createdAt || now,
           addedAt: now,
@@ -139,6 +141,7 @@ async function getFollows(openid, module) {
     trackTime: d.trackTime || '12:00',
     createdAt: d.createdAt || d.addedAt || 0,
     lastCheckedDate: d.lastCheckedDate || '',
+    knownSummary: d.knownSummary || '', // 已知内容基线（前端补传/展示用）
   }))
   const updatesByItem = {}
   ;(res.data || []).forEach((d) => {

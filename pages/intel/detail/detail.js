@@ -330,6 +330,7 @@ Page({
       category: '',
       categoryName: this.data.srcName || '',
       picUrl: '',
+      knownSummary: this.data.whatHappenedText || this.data.descText || '', // 已知内容基线（云端检索判新用）
     })
     if (res.full) {
       wx.showToast({ title: '关注已达上限，请先清理', icon: 'none' })
