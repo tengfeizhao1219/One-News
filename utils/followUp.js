@@ -38,10 +38,19 @@ function _write(module, list) {
   localCache.set(_keyOf(module), list, { ttl: 0 })
 }
 
-/** 合并两模块，按 createdAt 倒序，每条带 module 字段（聚合 Feed 用） */
+/** 合并两模块，按 createdAt 倒序，每条带 module 字段（聚合 Feed 用）
+ *  2026-09-01 清洗：§九 后端每日检索未实现，updates 仅来自演示 mock（addUpdate）。
+ *  读取时清除 mock updates，恢复纯关注态（"已是最新"），不再展示假"新进展"。 */
 function getFollows() {
-  const on = _read('onenews').map(function (it) { return Object.assign({ module: 'onenews' }, it) })
-  const intel = _read('intel').map(function (it) { return Object.assign({ module: 'intel' }, it) })
+  const clean = function (it) {
+    const c = Object.assign({}, it)
+    if (Array.isArray(c.updates) && c.updates.length) delete c.updates
+    if (c.unreadCount !== undefined) delete c.unreadCount
+    if (c.lastCheckedDate) delete c.lastCheckedDate
+    return c
+  }
+  const on = _read('onenews').map(function (it) { return clean(Object.assign({ module: 'onenews' }, it)) })
+  const intel = _read('intel').map(function (it) { return clean(Object.assign({ module: 'intel' }, it)) })
   return on.concat(intel).sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0) })
 }
 

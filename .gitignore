@@ -30,3 +30,5 @@ project.private.config.json
 
 .git-auto/
 
+.preview/
+cloudfunctions/*/miniprogram_npm/

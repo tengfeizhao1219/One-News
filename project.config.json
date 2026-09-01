@@ -153,5 +153,6 @@
     "include": []
   },
   "compileType": "miniprogram",
-  "simulatorPluginLibVersion": {}
+  "simulatorPluginLibVersion": {},
+  "themeLocation": "theme.json"
 }

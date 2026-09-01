@@ -168,16 +168,12 @@ Component({
       const module = e.currentTarget.dataset.module
       const that = this
       wx.showActionSheet({
-        itemList: ['模拟收到新更新', '标记已读', '改追踪时间', '取消关注'],
+        itemList: ['标记已读', '改追踪时间', '取消关注'],
         success: function (res) {
           if (res.tapIndex === 0) {
-            FU.addUpdate(module, id)
-            that._load()
-            wx.showToast({ title: '已模拟一次 AI 更新', icon: 'none' })
-          } else if (res.tapIndex === 1) {
             FU.markRead(module, id)
             that._load()
-          } else if (res.tapIndex === 2) {
+          } else if (res.tapIndex === 1) {
             wx.showActionSheet({
               itemList: TRACK_TIMES,
               success: function (r) {
@@ -186,7 +182,7 @@ Component({
                 wx.showToast({ title: '追踪时间 ' + TRACK_TIMES[r.tapIndex], icon: 'none' })
               },
             })
-          } else if (res.tapIndex === 3) {
+          } else if (res.tapIndex === 2) {
             FU.removeFollow(module, id)
             if (that._expanded[id]) delete that._expanded[id]
             that._load()

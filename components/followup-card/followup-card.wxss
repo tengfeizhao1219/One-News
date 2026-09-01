@@ -102,11 +102,16 @@
 
 /* 列表 */
 .list-scroll {
-  flex: 1;
-  min-height: 0;
+  /* absolute 从导航栏底部开始（nav-bar top+height），内容紧贴导航栏，无空隙遮挡 */
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--nav-offset, 0px));
+  bottom: 0;
   overflow-y: auto;
-  /* 导航栏 fixed 定位，列表需预留 navOffset + 原有 16rpx 间距，避免首条被遮挡 */
-  padding: calc(var(--nav-offset) + 16rpx) 0 40rpx;
+  padding: 0 0 40rpx;
+  /* 顶部无 padding：内容紧贴导航栏，去绿色窄条 */
+  padding-top: 0;
 }
 
 /* 汇总计数行（对齐 demo feed-head .c；BUG-20260828-007：flex 两端对齐，右侧放「全部标为已读」） */
