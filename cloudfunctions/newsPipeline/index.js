@@ -854,16 +854,31 @@ async function releasePublishLock() {
 
 async function wipeNewsCache() {
   let removed = 0
+  let kept = 0
   let rounds = 0
+  const now = Date.now()
   while (++rounds <= MAX_PAGE_ROUNDS) {
     const res = await db.collection('news_cache').limit(100).get()
     const list = (res && res.data) || []
     if (!list.length) break
-    await Promise.all(list.map((d) => db.collection('news_cache').doc(d._id).remove().catch(() => {})))
-    removed += list.length
+    const toRemove = []
+    for (const d of list) {
+      // 方案A（owner 2026-09-02 拍板）：「保留机制」根治分享链接失效——
+      //   朋友圈/收藏分享的新闻被 setNewsRetained 标记 isRetained=true（30 天保留期），
+      //   publish 整批替换时不得物理删除，否则分享链接随批次消失（报「该新闻已失效」）。
+      //   保留条件：isRetained=true 且 cacheExpire 还未过期（30 天内）。
+      const retained = d.isRetained === true
+      const notExpired = d.cacheExpire && Number(d.cacheExpire) > now
+      if (retained && notExpired) { kept++; continue }
+      toRemove.push(d._id)
+    }
+    if (toRemove.length) {
+      await Promise.all(toRemove.map((id) => db.collection('news_cache').doc(id).remove().catch(() => {})))
+      removed += toRemove.length
+    }
     if (list.length < 100) break
   }
-  console.log(`[newsPipeline][publish] 注入前全量清理 news_cache ${removed} 条`)
+  console.log(`[newsPipeline][publish] 注入前清理 news_cache ${removed} 条（保留 isRetained 未过期 ${kept} 条）`)
   return removed
 }
 
