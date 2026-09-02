@@ -66,12 +66,19 @@ async function checkRateLimit(openid) {
 exports.main = async (event) => {
   const { newsId, retained, retainedBy } = event
 
-  // P2-1：身份校验（所有操作必须来自已登录用户）
+  // P2-1：身份校验。owner 2026-09-02 决策：
+  //   - retained=true（标记保留）：放行匿名。朋友圈单页模式（onShareTimeline）无法登录，
+  //     OPENID 为空，但「标记新闻保留」是低风险操作（仅防新闻被 publish 删除），
+  //     无身份也允许，否则朋友圈分享的新闻不保留 → 下次整批替换后被删 → 打开报「新闻详情暂不可用」。
+  //   - retained=false（取消保留）：必须登录。防止任意用户把他人保留的新闻提前释放（缩短可见期）。
   let openid = ''
   try { openid = (cloud.getWXContext() && cloud.getWXContext().OPENID) || '' } catch (e) { /* 忽略 */ }
-  if (!openid) {
+  const isAnonymousMark = (!openid && retained === true)
+  if (!openid && !isAnonymousMark) {
     return { code: -1, message: '无法获取用户身份（OPENID 为空）' }
   }
+  // 匿名标记保留用固定兜底身份（限频 key 需要非空）
+  const rateKey = openid || 'anonymous_mark'
 
   // ── 参数校验 ──
   if (!newsId || typeof newsId !== 'string' || newsId.trim().length === 0 || newsId.length > 200) {
@@ -86,7 +93,7 @@ exports.main = async (event) => {
   }
 
   // P2-1：频率限制
-  const allowed = await checkRateLimit(openid)
+  const allowed = await checkRateLimit(rateKey)
   if (!allowed) {
     return { code: -1, message: '操作过于频繁，请稍后再试' }
   }

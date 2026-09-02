@@ -192,6 +192,33 @@ Page({
     // FS-02: news 尚未加载 → 先生成分类占位图兜底；_renderDetail 会用 AI 摘要图覆盖
     this._pregenShareImage(null)
 
+    // 单页分享直读（owner 2026-09-02）：朋友圈单页模式（scene 1154）微信平台限制，
+    // wx.cloud 云函数调用全部返回 500，无法实时拉取。故分享时把 title( tn )/summary( st )
+    // 打包进 query，单页模式打开时直接用分享数据渲染，不调云函数，避免"网络开了个小差"。
+    if (options.st) {
+      var shareNews = {
+        id: id || '',
+        title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
+        summary: decodeURIComponent(options.st) || '',
+        category: category,
+        categoryName: category,
+        content: decodeURIComponent(options.st) || '',   // 单页模式用摘要当正文展示
+        contentSource: 'ai_interpretation',
+        publishTime: '',
+      }
+      var spara = String(shareNews.content || '').split('\n').filter(function (p) { return p.trim() })
+      this.setData({
+        news: shareNews,
+        paragraphs: spara,
+        total: 1, currentIndex: 0, isFirst: true, isLast: true,
+        positionText: '1 / 1', scrollTop: 0, loading: false, pageState: 'ready',
+      })
+      this._singleMode = true
+      this._pregenShareImage(shareNews)
+      if (shareNews.id) { this._checkFavorite(shareNews.id); this._checkFollow(shareNews.id) }
+      return
+    }
+
     // 初始化跨分类阅读引擎（方案 A：全量预拉 + localCache 缓存注入）
     this._initEngine(id, index, category)
   },
@@ -1050,7 +1077,9 @@ Page({
       title: title,
       query: 'id=' + encodeURIComponent(news.id || '') +
              '&index=' + (this.data.currentIndex || 0) +
-             '&category=' + encodeURIComponent(this.data.category || 'recommend'),
+             '&category=' + encodeURIComponent(this.data.category || 'recommend') +
+             '&st=' + encodeURIComponent((news.summary || '').slice(0, 150)) +
+             '&tn=' + encodeURIComponent((news.title || '').slice(0, 40)),
       imageUrl: this._placeholderCache || undefined,
     }
   },
