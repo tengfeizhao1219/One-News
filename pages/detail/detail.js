@@ -314,6 +314,14 @@ Page({
       preloadedCategory = ctx.category
     }
 
+    // 单页/分享冷启动直载（owner 2026-09-02）：朋友圈单页模式（无预加载列表、仅带 id）
+    // 优先直接单篇加载 getNewsDetail —— 单页模式下 getNewsList（整包拉取）易超时/被限，
+    // 且单页带明确 id 无需先拉列表，减少一次大调用、提升打开成功率。
+    if (!preloadedList && newsId) {
+      that._loadFallback(newsId, false)
+      return
+    }
+
     var engine = new ReadingEngine({
       entryCategory: entryCategory,
       entryIndex: entryIndex,
