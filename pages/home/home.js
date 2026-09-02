@@ -115,6 +115,17 @@ Page({
     if (app && app.setNavBarColor) {
       app.setNavBarColor((app.globalData && app.globalData.effectiveTheme) || 'light')
     }
+    // 朋友圈单页直读（owner 2026-09-02）：朋友圈单页模式（scene 1154）wx.cloud 云函数 500/权限拦截，
+    // 首页 loadNews→getNewsList 在单页必失败（报 -501023）。分享时 onShareTimeline 已打包
+    // title(tn)+summary(st) 进 query，单页模式打开首页时直接 redirectTo 到 detail 页复用详情直读渲染。
+    if (options && options.st && options.tn) {
+      var dq = 'id=' + encodeURIComponent(options.id || '') +
+               '&index=0&category=' + encodeURIComponent(options.category || 'recommend') +
+               '&st=' + encodeURIComponent(options.st) +
+               '&tn=' + encodeURIComponent(options.tn)
+      wx.redirectTo({ url: '/pages/detail/detail?' + dq })
+      return
+    }
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
     this.loadNews()
     // 同步字体档位（由 app._initFontScale 初始化）
@@ -1403,6 +1414,8 @@ Page({
       title: title,
       query: news && news.id
         ? 'id=' + encodeURIComponent(news.id) + '&index=' + currentIndex + '&category=' + encodeURIComponent(currentCategory)
+          + '&st=' + encodeURIComponent((news.summary || '').slice(0, 150))
+          + '&tn=' + encodeURIComponent((news.title || '').slice(0, 40))
         : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
       imageUrl: (news && news.picUrl) || undefined,
     }
