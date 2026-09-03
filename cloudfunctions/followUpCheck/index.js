@@ -228,22 +228,26 @@ function deepseekChat(systemPrompt, user, { maxTokens = 500, temperature = 0.3 }
  * 判断搜索结果是否有「实质性新进展」并生成摘要。
  * @returns {Promise<{hasNew:boolean, summary:string, sourcesCount:number}|null>} null=LLM 失败
  */
-async function judgeAndSummarize(topicTitle, knownSummary, search) {
+async function judgeAndSummarize(topicTitle, knownSummary, historyUpdates, search) {
   const searchText = (search.sources || [])
     .map((s, i) => `${i + 1}. ${s.title} ${s.url}${s.snippet ? '\n   ' + s.snippet : ''}`).join('\n')
   const knownBlock = knownSummary
     ? `\n用户已知内容（关注该话题时的原文摘要，以下信息不算新进展）：\n${String(knownSummary).slice(0, 300)}`
     : ''
+  const histBlock = (Array.isArray(historyUpdates) && historyUpdates.length)
+    ? `\n用户历史已收到的进展推送（以下内容用户已看过，重复不算新进展）：\n${historyUpdates.map((h, i) => `${i + 1}. ${String(h.summary || '').slice(0, 200)}`).join('\n')}`
+    : ''
   const system = `你是「话题进展追踪器」。用户关注了一个话题，以下是今天联网检索到的最新结果。
-请判断：检索结果中是否有【超出用户已知内容的新进展】（用户已关注过原事件，只对「之后又发生了什么」感兴趣）。
+请判断：检索结果中是否有【超出用户已知内容 + 历史推送的新进展】（用户已关注过原事件、已收到过若干进展推送，只对「还没看过的、更晚发生的新事实」感兴趣）。
 只输出 JSON：{"hasNew":true/false,"summary":"80-150字中文摘要，仅当hasNew=true时给出","sourcesCount":数字}
 判定标准：
-- hasNew=false：结果全部是用户已知内容的重复/背景介绍/旧闻/无关内容 → 不打扰用户
-- hasNew=true：存在【已知内容未提及的新事实】——新发布、新动态、新结论、事件后续发展、新影响
-- summary 只写【新进展部分】，复述已知内容的部分不要写；要具体：发生了什么、谁、何时、影响
+- hasNew=false：结果全部是 已知内容/历史推送 的重复、背景介绍、旧闻、无关内容 → 不打扰用户
+- hasNew=true：存在【已知内容与历史推送都未提及的新事实】——时间上更晚的事件后续、新发布、新动态、新结论
+- ⚠️ 特别警惕：若搜索结果描述的事件日期/内容与历史推送几乎相同（如同一场会晤、同一批宣布），即使措辞不同也算重复 → hasNew=false
+- summary 只写【真正的新进展部分】，绝不复述已知/历史内容；要具体：发生了什么、谁、何时、影响
 - sourcesCount = 提供新进展信息的来源条数（1-5）
 不要输出其它内容。`
-  const user = `关注话题：${topicTitle}${knownBlock}
+  const user = `关注话题：${topicTitle}${knownBlock}${histBlock}
 联网搜索结果：
 ${searchText || '（无结构化结果）'}
 搜索结果回答：${search.answer || ''}
@@ -273,7 +277,9 @@ async function checkTopic(topic) {
     if (z.ok) search = z
     else return { ok: false, reason: search.reason + '/' + (z && z.reason) }
   }
-  const judge = await judgeAndSummarize(topic.title, topic.knownSummary || '', search)
+  // 历史更新（已推送摘要）作为判重基线：与已知内容/历史重复 → hasNew=false
+  const historyUpdates = Array.isArray(topic.updates) ? topic.updates.slice(0, 5) : []
+  const judge = await judgeAndSummarize(topic.title, topic.knownSummary || '', historyUpdates, search)
   if (!judge) return { ok: false, reason: 'judge-fail' }
   return { ok: true, hasNew: judge.hasNew, summary: judge.summary, sourcesCount: judge.sourcesCount }
 }
