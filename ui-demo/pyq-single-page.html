@@ -44,21 +44,10 @@
   /* 概要元信息 */
   .pyq-meta{margin-top:8px;font-size:12px;color:var(--text-tertiary);}
   .pyq-meta .src{color:var(--text-link);}
-  /* 分享封面模拟卡（实际是分享出去的 imageUrl 图） */
-  .pyq-cover{margin-top:16px;width:100%;height:160px;border-radius:12px;
-    background:linear-gradient(135deg,#0a84ff22,var(--bg-card));border:1px solid var(--divider);
-    display:flex;align-items:center;justify-content:center;overflow:hidden;}
-  .pyq-cover-ph{color:var(--primary);font-size:13px;font-weight:600;}
-  /* 概要摘要（AI 摘要内容） */
-  .pyq-summary{margin-top:16px;font-size:14.5px;color:var(--text-body);line-height:1.8;text-align:justify;}
-  .pyq-summary b{color:var(--text-primary);}
-  /* 进入小程序引导卡 */
-  .pyq-more{margin-top:18px;background:var(--bg-card);border:1px solid var(--divider);
-    border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;}
-  .pyq-more-ic{width:40px;height:40px;border-radius:10px;background:var(--bg-subtle);
-    display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:700;flex-shrink:0;}
-  .pyq-more-t{flex:1;font-size:12.5px;color:var(--text-secondary);line-height:1.55;}
-  .pyq-more-t b{color:var(--text-primary);}
+  /* AI 摘要引导胶囊（复用首页 ai-chip 视觉：primary 文字 + primary-subtle 底胶囊） */
+  .pyq-chip{display:inline-block;padding:2px 10px;border-radius:8px;font-size:11px;font-weight:500;
+    line-height:1.5;color:var(--primary);background-color:var(--primary-subtle);}
+  .pyq-more-txt{display:block;margin-top:10px;font-size:13px;color:var(--text-secondary);line-height:1.7;}
 
   /* ═══ 微信底部固定操作栏（不可自定义样式，系统渲染） ═══ */
   .pyq-bottombar{flex-shrink:0;background:#fff;border-top:1px solid var(--divider);
@@ -76,7 +65,8 @@
   <p>朋友圈点开分享后，用户先看到<b>当前页的精简版</b>（概要），微信底部固定「前往小程序」操作栏。点击进入完整小程序。</p>
   <ul>
     <li><b>顶部栏</b>：微信渲染的只读导航（标题 = 页面 JSON 标题），不可自定义</li>
-    <li><b>中部</b>：概要内容（标题 + 封面图 + AI 摘要）——本页要确认的核心</li>
+    <li><b>中部</b>：概要内容（标题 + AI 摘要，无图）——本页要确认的核心</li>
+    <li><b>摘要末尾</b>：AI 摘要胶囊 + 进入小程序引导（复用首页 ai-chip 视觉）</li>
     <li><b>底部「前往小程序」</b>：微信原生固定栏，点它进完整详情页</li>
     <li><b>单页限制</b>：不能跳页/无登录态/存储隔离</li>
   </ul>
@@ -98,19 +88,12 @@
       <div class="pyq-title">AI 编程助手进入"会找漏洞"时代：GLM-5.3 安全能力实测领跑</div>
       <div class="pyq-meta"><span class="src">智谱AI 官方</span> · 今天 18:00</div>
 
-      <div class="pyq-cover"><span class="pyq-cover-ph">分享封面图（AI 摘要生成）</span></div>
-
       <div class="pyq-summary">
-        <b>一句话：</b>智谱发布 GLM-5.3，编程与网络安全双升级——不只写代码更快，还开始"会找漏洞"。
-        <br><br>核心变化是后训练阶段引入安全强化数据，使模型在漏洞定位任务上表现出"涌现"式能力。用大白话说：以前写完代码要专人挑毛病，现在它能边写边自查、直接标出安全隐患，相当于多了个会读代码的安全工程师。
-        <br><br>（完整解读与"对你的影响"请进入小程序查看）
+        智谱发布 GLM-5.3，编程与网络安全双升级——不只写代码更快，还开始"会找漏洞"。核心变化是后训练阶段引入安全强化数据，使模型在漏洞定位任务上表现出"涌现"式能力。用大白话说：以前写完代码要专人挑毛病，现在它能边写边自查、直接标出安全隐患，相当于多了个会读代码的安全工程师。
       </div>
 
-      <!-- 进入引导卡（可选：概要内再放一个轻引导） -->
-      <div class="pyq-more">
-        <div class="pyq-more-ic">一页</div>
-        <div class="pyq-more-t"><b>想看完整解读？</b><br>进入小程序：落到你这里、AI 预测、可试用清单都在里面</div>
-      </div>
+      <!-- 摘要末尾引导：ai-chip 胶囊同款视觉，非普通一句话 -->
+      <text class="pyq-chip">AI 摘要</text><text class="pyq-more-txt">进入小程序查看完整内容</text>
     </div>
 
     <!-- 微信原生底部栏（模拟） -->
