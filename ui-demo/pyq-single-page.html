@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一页 One News · 朋友圈单页模式 Demo（确认用）</title>
+<style>
+  :root{
+    --bg-page:#F5F3F0; --bg-card:#FAF9F7; --bg-subtle:#EFEDEA;
+    --divider:#E4E1DC; --text-primary:#1C1C1E; --text-body:#3A3A3C;
+    --text-secondary:#6E6A63; --text-tertiary:#A5A09A; --text-link:#007AFF;
+    --primary:#007AFF; --primary-subtle:rgba(0,122,255,.12); --highlight-bg:rgba(0,122,255,.06);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+  body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;background:#ededed;
+    display:flex;gap:40px;justify-content:center;align-items:flex-start;padding:40px 20px;flex-wrap:wrap;}
+  /* 提示卡 */
+  .note{max-width:320px;background:#fff;border-radius:14px;padding:18px 20px;font-size:13px;line-height:1.8;color:#333;}
+  .note h2{font-size:15px;margin-bottom:8px;}
+  .note ul{padding-left:18px;}
+  .note li{margin-bottom:4px;}
+
+  /* 手机壳 */
+  .phone{width:390px;height:844px;border-radius:44px;background:var(--bg-page);overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.25);border:8px solid #2c2c2e;display:flex;flex-direction:column;position:relative;}
+
+  /* 顶部系统状态栏（模拟真机） */
+  .statusbar{height:44px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;color:var(--text-primary);font-size:15px;font-weight:600;flex-shrink:0;}
+
+  /* ═══ 单页模式内容（scene 1154 打开后所见） ═══ */
+  .pyq-body{flex:1;display:flex;flex-direction:column;min-height:0;background:var(--bg-page);}
+  /* 微信单页模式顶部只读导航栏（标题=页面 JSON title） */
+  .pyq-topbar{flex-shrink:0;height:44px;display:flex;align-items:center;justify-content:center;
+    background:var(--bg-card);border-bottom:1px solid var(--divider);position:relative;}
+  .pyq-topbar-title{font-size:16px;font-weight:600;color:var(--text-primary);}
+  /* 单页模式角标（模拟系统标识） */
+  .pyq-tag{position:absolute;right:14px;font-size:10px;color:var(--text-tertiary);
+    border:1px solid var(--divider);border-radius:4px;padding:1px 5px;}
+  /* 滚动概要区 */
+  .pyq-scroll{flex:1;overflow-y:auto;padding:16px 20px 8px;}
+  /* 概要标题（结论式） */
+  .pyq-title{font-size:22px;font-weight:800;line-height:1.45;color:var(--text-primary);}
+  /* 概要元信息 */
+  .pyq-meta{margin-top:8px;font-size:12px;color:var(--text-tertiary);}
+  .pyq-meta .src{color:var(--text-link);}
+  /* 分享封面模拟卡（实际是分享出去的 imageUrl 图） */
+  .pyq-cover{margin-top:16px;width:100%;height:160px;border-radius:12px;
+    background:linear-gradient(135deg,#0a84ff22,var(--bg-card));border:1px solid var(--divider);
+    display:flex;align-items:center;justify-content:center;overflow:hidden;}
+  .pyq-cover-ph{color:var(--primary);font-size:13px;font-weight:600;}
+  /* 概要摘要（AI 摘要内容） */
+  .pyq-summary{margin-top:16px;font-size:14.5px;color:var(--text-body);line-height:1.8;text-align:justify;}
+  .pyq-summary b{color:var(--text-primary);}
+  /* 进入小程序引导卡 */
+  .pyq-more{margin-top:18px;background:var(--bg-card);border:1px solid var(--divider);
+    border-radius:12px;padding:13px 15px;display:flex;align-items:center;gap:12px;}
+  .pyq-more-ic{width:40px;height:40px;border-radius:10px;background:var(--bg-subtle);
+    display:flex;align-items:center;justify-content:center;color:var(--primary);font-weight:700;flex-shrink:0;}
+  .pyq-more-t{flex:1;font-size:12.5px;color:var(--text-secondary);line-height:1.55;}
+  .pyq-more-t b{color:var(--text-primary);}
+
+  /* ═══ 微信底部固定操作栏（不可自定义样式，系统渲染） ═══ */
+  .pyq-bottombar{flex-shrink:0;background:#fff;border-top:1px solid var(--divider);
+    padding:14px 20px calc(16px + 8px);text-align:center;}
+  .pyq-bottom-label{font-size:12px;color:#999;line-height:1.5;}
+  .pyq-open-btn{display:block;margin-top:12px;background:var(--primary);color:#fff;
+    border-radius:12px;font-size:16px;font-weight:600;padding:13px 0;text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- 左侧：说明 -->
+<div class="note">
+  <h2>朋友圈单页模式（scene 1154）Demo</h2>
+  <p>朋友圈点开分享后，用户先看到<b>当前页的精简版</b>（概要），微信底部固定「前往小程序」操作栏。点击进入完整小程序。</p>
+  <ul>
+    <li><b>顶部栏</b>：微信渲染的只读导航（标题 = 页面 JSON 标题），不可自定义</li>
+    <li><b>中部</b>：概要内容（标题 + 封面图 + AI 摘要）——本页要确认的核心</li>
+    <li><b>底部「前往小程序」</b>：微信原生固定栏，点它进完整详情页</li>
+    <li><b>单页限制</b>：不能跳页/无登录态/存储隔离</li>
+  </ul>
+  <p style="margin-top:10px;font-size:12px;color:#888;">右侧是单页模式打开后的页面形态。请确认概要卡布局、文案、引导是否满意。</p>
+</div>
+
+<!-- 右侧：手机模拟 -->
+<div class="phone">
+  <div class="statusbar"><span>9:41</span><span class="capsule" style="width:92px;height:28px;background:#000;border-radius:18px;"></span></div>
+
+  <!-- 单页模式主体 -->
+  <div class="pyq-body">
+    <div class="pyq-topbar">
+      <span class="pyq-topbar-title">一页 · 新闻速览</span>
+      <span class="pyq-tag">单页模式</span>
+    </div>
+
+    <div class="pyq-scroll">
+      <div class="pyq-title">AI 编程助手进入"会找漏洞"时代：GLM-5.3 安全能力实测领跑</div>
+      <div class="pyq-meta"><span class="src">智谱AI 官方</span> · 今天 18:00</div>
+
+      <div class="pyq-cover"><span class="pyq-cover-ph">分享封面图（AI 摘要生成）</span></div>
+
+      <div class="pyq-summary">
+        <b>一句话：</b>智谱发布 GLM-5.3，编程与网络安全双升级——不只写代码更快，还开始"会找漏洞"。
+        <br><br>核心变化是后训练阶段引入安全强化数据，使模型在漏洞定位任务上表现出"涌现"式能力。用大白话说：以前写完代码要专人挑毛病，现在它能边写边自查、直接标出安全隐患，相当于多了个会读代码的安全工程师。
+        <br><br>（完整解读与"对你的影响"请进入小程序查看）
+      </div>
+
+      <!-- 进入引导卡（可选：概要内再放一个轻引导） -->
+      <div class="pyq-more">
+        <div class="pyq-more-ic">一页</div>
+        <div class="pyq-more-t"><b>想看完整解读？</b><br>进入小程序：落到你这里、AI 预测、可试用清单都在里面</div>
+      </div>
+    </div>
+
+    <!-- 微信原生底部栏（模拟） -->
+    <div class="pyq-bottombar">
+      <div class="pyq-bottom-label">小程序 · 单页模式</div>
+      <div class="pyq-open-btn">前往小程序</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
