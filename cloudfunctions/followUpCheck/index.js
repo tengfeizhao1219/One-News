@@ -81,7 +81,7 @@ function trackDue(hhmm, now) {
 }
 
 // ─── ① Tavily 搜索（主通道）───
-function tavilySearch(query) {
+function tavilySearch(query, days) {
   return new Promise((resolve) => {
     if (!TAVILY_API_KEY) return resolve({ ok: false, reason: 'no-tavily-key' })
     const body = JSON.stringify({
@@ -90,6 +90,9 @@ function tavilySearch(query) {
       max_results: 5,
       search_depth: 'basic',
       include_answer: false,
+      // 时间限定（owner 2026-09-03）：只搜近期（默认 14 天），过滤旧闻——
+      // 关注页此前反复推送 2025 年 12 月旧闻，根因之一是搜索不限时间窗。
+      days: (typeof days === 'number' && days > 0) ? days : 14,
     })
     const req = https.request({
       hostname: TAVILY_BASE,
@@ -270,18 +273,79 @@ ${searchText || '（无结构化结果）'}
 
 /** 检索一个话题，返回 { hasNew, summary, sourcesCount } 或 null（失败） */
 async function checkTopic(topic) {
-  const query = `${topic.title} 最新进展 后续 更新`.slice(0, 200)
-  let search = await tavilySearch(query)
-  if (!search.ok) {
-    const z = await zhipuWebSearch(query)
-    if (z.ok) search = z
-    else return { ok: false, reason: search.reason + '/' + (z && z.reason) }
-  }
+  const title = topic.title || ''
+  const known = topic.knownSummary || ''
   // 历史更新（已推送摘要）作为判重基线：与已知内容/历史重复 → hasNew=false
   const historyUpdates = Array.isArray(topic.updates) ? topic.updates.slice(0, 5) : []
-  const judge = await judgeAndSummarize(topic.title, topic.knownSummary || '', historyUpdates, search)
+
+  // ① 生成精确检索词：LLM 基于话题标题+已知内容，产出 2-4 个锁定话题本身的检索词。
+  //    避免「标题 + 最新进展」的泛搜（易带回旧闻/他话题内容）。
+  let queries = await buildTopicQueries(title, known)
+  if (!queries || !queries.length) {
+    // 兜底：LLM 失败时退回单标题检索（保证话题总能被检）
+    queries = [`${title} 最新进展`]
+  }
+
+  // ② 多路搜索：每个检索词独立 Tavily（近 14 天），合并去重。
+  const seenUrls = new Set()
+  const allSources = []
+  for (const q of queries) {
+    let s = await tavilySearch(q, 14)
+    if (!s.ok) {
+      const z = await zhipuWebSearch(q)
+      if (z.ok) s = z
+      else continue // 单路失败不影响其它路
+    }
+    for (const src of (s.sources || [])) {
+      if (src.url && !seenUrls.has(src.url)) {
+        seenUrls.add(src.url)
+        allSources.push(src)
+      }
+    }
+  }
+  if (!allSources.length) return { ok: false, reason: 'search-empty:' + queries.join('|') }
+
+  console.log(`[followUpCheck] 话题「${title.slice(0, 20)}」检索词=${JSON.stringify(queries)} 命中来源=${allSources.length} 条`)
+  const search = { sources: allSources, answer: '' }
+  const judge = await judgeAndSummarize(title, known, historyUpdates, search)
   if (!judge) return { ok: false, reason: 'judge-fail' }
   return { ok: true, hasNew: judge.hasNew, summary: judge.summary, sourcesCount: judge.sourcesCount }
+}
+
+/**
+ * 生成锁定话题的精确检索词（owner 2026-09-03 颗粒度细化）。
+ * 输入：话题标题 + 关注时已知内容（原文摘要）。
+ * 输出：2-4 个检索词（含话题核心实体 + 事件方向 + 后续/进展意图），
+ *       每个都必须锚定「这个话题本身」，禁止泛化到无关话题。
+ * @returns {Promise<string[]|null>} 检索词数组；LLM 失败返回 null（调用方走单标题兜底）
+ */
+async function buildTopicQueries(topicTitle, knownSummary) {
+  const knownBlock = knownSummary
+    ? `\n话题已知内容（背景，用于理解话题具体指什么，不要把它本身当搜索词）：\n${String(knownSummary).slice(0, 250)}`
+    : ''
+  const system = `你是「精确搜索词构造器」。给定一个用户关注的话题（可能是一条新闻标题），请构造 2-4 个
+适合联网搜索的检索词，用于追踪该话题的【后续进展/最新更新】。
+要求：
+- 每个检索词都必须锚定该话题的核心主体与事件，不允许泛化（例：话题是"普京会晤莫迪"，可扩出
+  "俄印峰会""莫迪 普京 新德里 会晤"，但绝不能扩成"普京"或"印度外交"这种无主体约束的词）。
+- 检索词要体现"追踪后续/进展/更新"的意图，可以带具体方向词（声明/结果/后续/回应/最新）但必须以话题实体收束。
+- 每个检索词 10-30 字，中文为主；最多 4 个。
+只输出 JSON 数组：["检索词1","检索词2"]，不要输出其它内容。`
+  const user = `关注话题标题：${topicTitle}${knownBlock}
+请给出追踪该话题后续进展的检索词。`
+  const r = await deepseekChat(system, user, { maxTokens: 200, temperature: 0.3 })
+  if (!r || !r.text) return null
+  const raw = r.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+  try {
+    const arr = JSON.parse(raw)
+    const list = (Array.isArray(arr) ? arr : []).map(String).filter(s => s && s.length >= 4 && s.length <= 60)
+    if (!list.length) return null
+    return list.slice(0, 4)
+  } catch (e) {
+    // 解析失败：尝试按行/逗号切
+    const fallback = raw.split(/[\n,，]/).map(s => s.replace(/^\s*[\d.)、-]+\s*/, '').trim()).filter(s => s && s.length >= 4 && s.length <= 60 && !s.startsWith('[') && !s.endsWith(']'))
+    return fallback.length ? fallback.slice(0, 4) : null
+  }
 }
 
 /** 拉取待检话题：活跃关注 + trackTime 到点 + 今天未检索（或 force） */
