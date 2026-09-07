@@ -182,6 +182,8 @@ Component({
                 FU.setTrackTime(module, id, TRACK_TIMES[r.tapIndex])
                 that._load()
                 wx.showToast({ title: '追踪时间 ' + TRACK_TIMES[r.tapIndex], icon: 'none' })
+                // 追踪时间改后需同步云端（否则定时器按旧 trackTime 触发）
+                FU_SYNC.syncModule(module)
               },
             })
           } else if (res.tapIndex === 3) {
@@ -189,6 +191,8 @@ Component({
             if (that._expanded[id]) delete that._expanded[id]
             that._load()
             wx.showToast({ title: '已取消关注', icon: 'none' })
+            // 取消关注同步云端（否则云端残留，定时器继续检索已取消话题）
+            FU_SYNC.syncModule(module)
           }
         },
       })

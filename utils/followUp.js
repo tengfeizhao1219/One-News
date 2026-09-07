@@ -13,8 +13,12 @@
  *
  * 依赖：utils/localCache.js 全局单例（与 detail/favorites/history 同源）
  *
- * 说明：本期纯前端，后端每日 AI 定时检索未实现（需求文档 §九）。addUpdate 为演示用，
- *       仅手动触发生成 mock update，不放自动 mock（尊重 intel「前端不放假数据」约定）。
+ * 说明（2026-09-03 收尾更新）：后端每日 AI 检索已上线（followUpCheck 云函数 + §九）。
+ *  - updates 数据源 = 云端真实检索结果（followUpCheck 写入，带 checkedAt），经
+ *    utils/followUpSync.js fetchUpdates 拉取后由 mergeUpdate 合并进本地。
+ *  - addUpdate 为早期演示 mock（无 checkedAt），getFollows 读取时自动清除，
+ *    仅保留在测试中验证「mock 不放假数据」逻辑，前端无调用。
+ *  - 已读状态（read）为设备级，不做云同步（每设备独立标记）。
  */
 
 const { localCache } = require('./localCache')

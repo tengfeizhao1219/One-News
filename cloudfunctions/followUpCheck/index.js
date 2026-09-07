@@ -50,6 +50,7 @@ const ZHIPU_TIMEOUT = 15000
 const MAX_BATCH = 30            // 单次运行最多处理话题数（防超时）
 const RUN_DEADLINE_MS = 90000   // 单次运行预算（config timeout 120s 内留余量）
 const MAX_RETRY_SAME_DAY = 1    // 同天 LLM/搜索失败重试次数（随后续定时档）
+const UPDATES_MAX_KEEP = 20     // 云端 updates 保留上限（旧更新裁剪，防数组无限膨胀）
 
 // ─── 北京时间工具（SCF 环境是 UTC，需显式转北京）───
 function beijingParts(ts) {
@@ -429,9 +430,12 @@ exports.main = async (event = {}) => {
           checkedAt: Date.now(),
         }
         try {
+          // updates 追加 + 上限裁剪（保留最新 UPDATES_MAX_KEEP 条，防数组无限膨胀）
+          const cur = topic.updates || []
+          const next = [entry].concat(cur).slice(0, UPDATES_MAX_KEEP)
           await db.collection('follow_up').doc(topic._id).update({
             data: {
-              updates: _.push([entry]),
+              updates: next,
               lastCheckedDate: today,
               lastCheckedTime: Date.now(),
               lastResult: 'new',
