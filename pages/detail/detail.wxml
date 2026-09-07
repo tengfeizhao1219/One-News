@@ -55,6 +55,24 @@
     <view class="state-sub" wx:else>等信号好的时候再回来，随时都在的</view>
   </view>
 
+  <!-- 朋友圈单页模式（scene 1154）：就地渲染完整首页卡片（视觉与首页卡片一致） -->
+  <view class="single-page" wx:if="{{pageState === 'singleCard' && singleCard}}">
+    <view class="single-card">
+      <view class="single-card-title">{{singleCard.title}}</view>
+      <view class="single-card-meta">
+        <view class="single-card-tag" wx:if="{{singleCard.categoryName}}">{{singleCard.categoryName}}</view>
+        <text wx:if="{{singleCard.metaSource}}">{{singleCard.metaSource}}</text>
+        <text wx:if="{{singleCard.metaSource && singleCard.time}}">·</text>
+        <text wx:if="{{singleCard.time}}">{{singleCard.time}}</text>
+      </view>
+      <view class="single-card-summary">
+        <text wx:if="{{singleCard.isAi}}" class="single-card-chip">AI 摘要</text>
+        {{singleCard.summary}}
+      </view>
+    </view>
+    <view class="single-hint">内容由 AI 整理 · 点上方「前往小程序」查看完整新闻</view>
+  </view>
+
   <!-- 内容 -->
   <!-- UX-FIX: 把 touch 事件直接绑在 scroll-view 上，避免 enhanced 模式下事件冒泡到外层 page 不一致 -->
   <scroll-view

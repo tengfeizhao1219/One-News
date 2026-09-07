@@ -7,6 +7,7 @@ const { localCache } = require('../../utils/localCache')
 const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
 
 const app = getApp()
+const { parseCardData, buildCardQuery } = require('../../utils/shareCard')
 
 // 2026-08-18（owner 决策）：分类首页首屏尺寸——recommend 读满落库 cap(15)，其余分类 8。
 const firstPageSize = function (cat) {
@@ -66,9 +67,8 @@ Page({
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
     statusPillShow: false,
     statusPillText: '',
-    // 朋友圈单页模式（scene 1154）：就地渲染摘要，不跳转/不调云函数（微信单页禁路由）
-    singleTitle: '',
-    singleSummary: '',
+    // 朋友圈单页模式（scene 1154）：就地渲染完整首页卡片（分享打包数据），不跳转/不调云函数
+    singleCard: null,
   },
 
   // 触摸状态（v5.9: 与详情页完全对齐——JS 线程处理、70px/500ms flick-only）
@@ -127,16 +127,29 @@ Page({
     // 朋友圈单页直读（owner 2026-09-02）：朋友圈单页模式（scene 1154）wx.cloud 云函数 500/权限拦截，
     // 首页 loadNews→getNewsList 在单页必失败（报 -501023）。分享时 onShareTimeline 已打包
     // title(tn)+summary(st) 进 query，单页模式打开首页时直接 redirectTo 到 detail 页复用详情直读渲染。
-    if (options && options.st && options.tn) {
-      // 朋友圈单页模式（scene 1154）：微信禁用全部路由（redirectTo/reLaunch/navigateTo 等），
-      // 只能"当前页面就地渲染"，不能跳 detail。否则 reLaunch 失败 → 白屏打不开。
-      // 单页亦禁登录/云函数/本地独立 → 只能展示分享打包的标题(tn)+摘要(st)。
-      // 此处就地 setData 单页内容，用 wxml 的单页分支渲染（不调 loadNews/云函数）。
-      this.setData({
-        pageState: 'single',
-        singleTitle: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
-        singleSummary: decodeURIComponent(options.st || '') || '',
-      })
+    if (options && (options.card || (options.st && options.tn))) {
+      // 朋友圈单页模式（scene 1154）：微信禁用全部路由/登录/云函数/本地存储，
+      // 只能"当前页面就地渲染"，不能跳 detail（否则 reLaunch 失败白屏）。
+      // 只能读分享时打包进 query 的数据：分享侧 onShareTimeline(promise) 已打包 card=JSON。
+      var card = parseCardData(options)
+      var singleCard = card ? {
+        title: card.title,
+        categoryName: card.categoryName,
+        metaSource: card.source,
+        time: card.time,
+        summary: card.summary,
+        isAi: card.isAi,
+        summaryParagraphs: card.summary ? card.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
+      } : {
+        title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
+        categoryName: '',
+        metaSource: '',
+        time: '',
+        summary: decodeURIComponent(options.st || '') || '',
+        isAi: false,
+        summaryParagraphs: [],
+      }
+      this.setData({ pageState: 'single', singleCard: singleCard })
       return
     }
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
@@ -1423,14 +1436,29 @@ Page({
       title = chars.slice(0, 29).join('') + '\u2026'
     }
 
+    // owner 2026-09-07：单页模式只能读分享 query 数据 → 用 promise 后台把当前卡片
+    // 完整内容打包进 query（标题/分类/来源/时间/摘要/AI标识），单页打开即渲染完整首页卡片。
+    var newsRef = news
     return {
       title: title,
-      query: news && news.id
-        ? 'id=' + encodeURIComponent(news.id) + '&index=' + currentIndex + '&category=' + encodeURIComponent(currentCategory)
-          + '&st=' + encodeURIComponent((news.summary || '').slice(0, 150))
-          + '&tn=' + encodeURIComponent((news.title || '').slice(0, 40))
+      query: newsRef && newsRef.id
+        ? 'id=' + encodeURIComponent(newsRef.id) + '&index=' + currentIndex +
+          '&category=' + encodeURIComponent(currentCategory) +
+          '&' + buildCardQuery(newsRef)
         : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
-      imageUrl: (news && news.picUrl) || undefined,
+      imageUrl: (newsRef && newsRef.picUrl) || undefined,
+      promise: new Promise(function (resolve) {
+        // 后台"加载当前卡片内容"（此处卡片已在内存，直接打包；未来可扩展为异步预拉全文）
+        resolve({
+          title: title,
+          query: newsRef && newsRef.id
+            ? 'id=' + encodeURIComponent(newsRef.id) + '&index=' + currentIndex +
+              '&category=' + encodeURIComponent(currentCategory) +
+              '&' + buildCardQuery(newsRef)
+            : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
+          imageUrl: (newsRef && newsRef.picUrl) || undefined,
+        })
+      }),
     }
   },
 

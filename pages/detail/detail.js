@@ -18,6 +18,7 @@ var cloud = require('../../utils/cloud')
 var app = getApp()
 // 2026-08-22：话题搜索深挖（intelSearch 云函数，从 intel 详情页平移）
 var searchIntelTopic = require('../../utils/intelApi').searchIntelTopic
+var { parseCardData, buildCardQuery } = require('../../utils/shareCard')
 // 「关注后续」关注关系本地存储（纯本地，对齐 favorites / intelFavorites 模式）
 var followUp = require('../../utils/followUp')
 // §九 后端：关注关系云端同步桥（异步，失败静默）
@@ -198,30 +199,33 @@ Page({
     // FS-02: news 尚未加载 → 先生成分类占位图兜底；_renderDetail 会用 AI 摘要图覆盖
     this._pregenShareImage(null)
 
-    // 单页分享直读（owner 2026-09-02）：朋友圈单页模式（scene 1154）微信平台限制，
-    // wx.cloud 云函数调用全部返回 500，无法实时拉取。故分享时把 title( tn )/summary( st )
-    // 打包进 query，单页模式打开时直接用分享数据渲染，不调云函数，避免"网络开了个小差"。
-    if (options.st) {
-      var shareNews = {
-        id: id || '',
-        title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
-        summary: decodeURIComponent(options.st) || '',
-        category: category,
-        categoryName: category,
-        content: decodeURIComponent(options.st) || '',   // 单页模式用摘要当正文展示
-        contentSource: 'ai_interpretation',
-        publishTime: '',
-      }
-      var spara = String(shareNews.content || '').split('\n').filter(function (p) { return p.trim() })
+    // 单页分享直读（owner 2026-09-07）：朋友圈单页模式（scene 1154）微信平台限制——
+    // 禁登录/云函数/本地存储不共用，只能读分享时打包进 query 的数据。
+    // 分享侧 onShareTimeline 已用 buildCardQuery 打包完整卡片（card=JSON），
+    // 单页打开即渲染完整首页卡片（视觉与首页卡片一致）；旧版 st/tn 兜底。
+    if (options.card || options.st) {
+      var card = parseCardData(options)
       this.setData({
-        news: shareNews,
-        paragraphs: spara,
-        total: 1, currentIndex: 0, isFirst: true, isLast: true,
-        positionText: '1 / 1', scrollTop: 0, loading: false, pageState: 'ready',
+        pageState: 'singleCard',
+        singleCard: card ? {
+          title: card.title,
+          categoryName: card.categoryName,
+          metaSource: card.source,
+          time: card.time,
+          summary: card.summary,
+          isAi: card.isAi,
+          summaryParagraphs: card.summary ? card.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
+        } : {
+          title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
+          categoryName: category,
+          metaSource: '',
+          time: '',
+          summary: decodeURIComponent(options.st || '') || '',
+          isAi: false,
+          summaryParagraphs: [],
+        },
       })
       this._singleMode = true
-      this._pregenShareImage(shareNews)
-      if (shareNews.id) { this._checkFavorite(shareNews.id); this._checkFollow(shareNews.id) }
       return
     }
 
@@ -1084,8 +1088,7 @@ Page({
       query: 'id=' + encodeURIComponent(news.id || '') +
              '&index=' + (this.data.currentIndex || 0) +
              '&category=' + encodeURIComponent(this.data.category || 'recommend') +
-             '&st=' + encodeURIComponent((news.summary || '').slice(0, 150)) +
-             '&tn=' + encodeURIComponent((news.title || '').slice(0, 40)),
+             '&' + buildCardQuery(news),
       imageUrl: this._placeholderCache || undefined,
     }
   },

@@ -1337,3 +1337,67 @@
   line-height: 1.5;
 }
 .rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1)); }
+
+/* ========== 朋友圈单页模式（scene 1154）：就地渲染完整首页卡片 ==========
+   视觉对齐首页卡片（theme token 复刻 .card/.card-title/.card-meta/.card-summary/.ai-chip） */
+.single-page {
+  box-sizing: border-box;
+  min-height: calc(100vh - 120px);
+  padding: 40rpx 32rpx;
+  background-color: var(--bg-page);
+}
+.single-card {
+  background-color: var(--bg-card);
+  border: 1rpx solid var(--divider);
+  border-radius: 32rpx;
+  padding: 28rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
+}
+.single-card-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.single-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+}
+.single-card-tag {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--text-link);
+  background-color: var(--primary-subtle);
+  border-radius: 8rpx;
+  padding: 4rpx 16rpx;
+}
+.single-card-summary {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  line-height: 1.7;
+  color: var(--text-body);
+  text-align: justify;
+}
+.single-card-chip {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 12rpx 0 0;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--primary);
+  background-color: var(--primary-subtle);
+}
+.single-hint {
+  margin-top: 40rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  text-align: center;
+}
