@@ -124,6 +124,12 @@ Page({
   },
 
   onLoad: function (options) {
+    // BUG-2026-0907: 开启「分享到朋友圈」菜单——默认无此入口，需显式 showShareMenu 才出现，
+    // 否则右上角无「分享到朋友圈」，朋友圈单页(scene 1154)无法进入
+    try {
+      wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+    } catch (e) { /* 静默：旧基础库不支持时仅转发给朋友 */ }
+
     var id = options.id
     var index = parseInt(options.index, 10) || 0
     var category = options.category || 'recommend'  // DG-03: 默认分类 all → recommend

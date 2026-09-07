@@ -205,12 +205,23 @@
     </view>
   </view>
 
+  <!-- ========== 朋友圈单页模式（scene 1154）就地渲染：标题 + AI 摘要 ==========
+       微信单页禁路由/登录/云函数/本地存储不共用，仅能展示分享打包的 tn/st。
+       底部「前往小程序」由微信原生提供，点击进入完整版。 -->
+  <view class="single-page" wx:if="{{pageState === 'single'}}">
+    <view class="single-title">{{singleTitle}}</view>
+    <view class="single-meta">一页 · AI 摘要</view>
+    <view class="single-summary">{{singleSummary}}</view>
+    <view class="single-hint">摘要由 AI 整理 · 点上方「前往小程序」查看完整内容</view>
+  </view>
+
   <!-- ========== INTEL-BRIDGE (START): AI 情报官模块 — AI 情报屏（同屏横滑，覆盖层） ========== -->
   <!-- owner 2026-08-18 拍板：内嵌横滑面板。AI 情报屏为覆盖层，默认藏在屏幕左侧；
        在 One News 首页右滑 → 情报屏从左侧滑入；在情报屏左滑 → 从右侧滑回 One News。
        与右滑进入判定在 home.js onIntelTouchEnd 统一处理，互不冲突。
        摘除方式：删除此处 <intel-stage> + home.json 注册 + onIntelTouch* 桥接即可。 -->
   <intel-stage
+    wx:if="{{pageState !== 'single'}}"
     active="{{intelActive}}"
     page-h="{{pageH}}"
     font-scale-value="{{_fontScaleValue}}"

@@ -848,3 +848,36 @@
   /* 暗色下原阴影在纯黑背景上不可见，加深一档强化悬浮感（box-shadow 豁免范畴） */
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
 }
+
+/* ========== 朋友圈单页模式（scene 1154）就地渲染 ==========
+   微信单页：顶部固定导航 + 底部「前往小程序」，中部展示分享打包的摘要。 */
+.single-page {
+  box-sizing: border-box;
+  min-height: calc(var(--page-h, 100vh) - 120px);
+  padding: 40rpx 32rpx;
+  background-color: var(--bg-page);
+}
+.single-title {
+  font-size: 40rpx;
+  font-weight: 800;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.single-meta {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+}
+.single-summary {
+  margin-top: 28rpx;
+  font-size: 30rpx;
+  line-height: 1.75;
+  color: var(--text-body);
+  text-align: justify;
+}
+.single-hint {
+  margin-top: 40rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}

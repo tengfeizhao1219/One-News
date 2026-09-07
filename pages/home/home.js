@@ -40,7 +40,7 @@ Page({
     dataAsOf: '',           // 2026-08-24：本批数据落库时间（HH:MM，跨天含 MM/DD），顶栏「数据截至」展示
     favList: [],             // 已废弃：收藏入口已迁移至 dock 菜单独立页
     // 页面状态
-    pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty'
+    pageState: 'loading',   // 'loading' | 'ready' | 'error' | 'empty' | 'single'(朋友圈单页)
     errorMessage: '',       // 错误提示文案
     skeletonCount: 3,       // 骨架屏卡片数量
     isRefreshing: false,    // 手动刷新中
@@ -66,6 +66,9 @@ Page({
     // BUG-20260806-023: 状态栏小胶囊提示（替换跨分类切换的 wx.showToast）
     statusPillShow: false,
     statusPillText: '',
+    // 朋友圈单页模式（scene 1154）：就地渲染摘要，不跳转/不调云函数（微信单页禁路由）
+    singleTitle: '',
+    singleSummary: '',
   },
 
   // 触摸状态（v5.9: 与详情页完全对齐——JS 线程处理、70px/500ms flick-only）
@@ -92,6 +95,12 @@ Page({
   },
 
   onLoad(options) {
+    // BUG-2026-0907: 开启「分享到朋友圈」菜单——默认右上角无此入口，需显式 showShareMenu 才出现；
+    // 首页是朋友圈分享的源头（onShareTimeline），缺此调用则无「分享到朋友圈」可选
+    try {
+      wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+    } catch (e) { /* 静默：旧基础库仅转发给朋友 */ }
+
     // 2026-08-31 修复：收藏页冷启动栈底时 reLaunch 到首页带 redirect 参数，
     // 本页渲染后回跳形成 home→favorites 栈（左滑返回自然回首页，不退出小程序）
     this._pendingRedirect = (options && options.redirect) || ''
@@ -119,11 +128,15 @@ Page({
     // 首页 loadNews→getNewsList 在单页必失败（报 -501023）。分享时 onShareTimeline 已打包
     // title(tn)+summary(st) 进 query，单页模式打开首页时直接 redirectTo 到 detail 页复用详情直读渲染。
     if (options && options.st && options.tn) {
-      var dq = 'id=' + encodeURIComponent(options.id || '') +
-               '&index=0&category=' + encodeURIComponent(options.category || 'recommend') +
-               '&st=' + encodeURIComponent(options.st) +
-               '&tn=' + encodeURIComponent(options.tn)
-      wx.redirectTo({ url: '/pages/detail/detail?' + dq })
+      // 朋友圈单页模式（scene 1154）：微信禁用全部路由（redirectTo/reLaunch/navigateTo 等），
+      // 只能"当前页面就地渲染"，不能跳 detail。否则 reLaunch 失败 → 白屏打不开。
+      // 单页亦禁登录/云函数/本地独立 → 只能展示分享打包的标题(tn)+摘要(st)。
+      // 此处就地 setData 单页内容，用 wxml 的单页分支渲染（不调 loadNews/云函数）。
+      this.setData({
+        pageState: 'single',
+        singleTitle: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
+        singleSummary: decodeURIComponent(options.st || '') || '',
+      })
       return
     }
     // BUG-20260802-004: 侧栏不再独立请求，loadNews 内会由 newsList 派生 filteredNewsList
