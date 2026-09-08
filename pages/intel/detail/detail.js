@@ -16,7 +16,7 @@ const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
 const { getIntelProfile } = require('../../../utils/intelRequest')
 const { getSafeBottom } = require('../../../utils/intelRender')
 // 朋友圈单页模式（scene 1154/1155）：分享卡片打包 + 场景判定（与 One News home/detail 同机制）
-const { buildCardQuery, parseCardData, isSinglePageScene } = require('../../../utils/shareCard')
+const { parseCardData, isSinglePageScene } = require('../../../utils/shareCard')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 const { recordView } = require('../../../utils/intelHistory')
 // 「关注后续」关注关系本地存储（情报官 module='intel'，对齐 One News detail）
@@ -86,47 +86,25 @@ Page({
 
   },
 
+  /** 关闭本页分享入口（owner 2026-09-08：情报官首页+详情页都禁用分享）。
+   *  ①wx.hideShareMenu() 无参——基础库 1.1.0 全平台隐藏「转发给朋友」；
+   *  ②wx.hideShareMenu({menus:[shareAppMessage,shareTimeline]})——2.11.3+ 隐藏朋友圈。
+   *  onLoad + onShow 都调，兜住其他页面（One News 首页/详情）showShareMenu 的跨页泄漏。 */
+  _hideShareMenu() {
+    try { wx.hideShareMenu() } catch (e) {}
+    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+  },
+
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
   onShow() {
+    // owner 2026-09-08：每次页面显示都重新压住分享入口（防跨页泄漏，见 _hideShareMenu 注释）
+    this._hideShareMenu()
     const g = app.globalData || {}
     if (g.themeClass && this.data.themeClass !== g.themeClass) {
       this.setData({
         themeClass: g.themeClass,
         isDark: g.effectiveTheme === 'dark'
       })
-    }
-  },
-
-  /** 分享给朋友(2026-08-27):标题=情报标题;不传 imageUrl → 微信默认用页面截图(展示情报摘要内容)作缩略图。
-   *  朋友点开 = 正常模式完整小程序，query 只带 id → onLoad 走 intelGetDetail 冷启动直载（云函数已验证可用）。 */
-  onShareAppMessage() {
-    return {
-      title: this.data.title || 'AI 情报官',
-      path: '/pages/intel/detail/detail?id=' + (this.data.itemId || ''),
-    }
-  },
-
-  /** 分享到朋友圈(2026-09-08 升级)：打包完整卡片（card=base64url JSON）。
-   *  scene 1154 单页沙箱禁云函数/globalData 不共用 → 单页内容只能来自 query；
-   *  scene 1155「前往小程序」复用同一 query → onLoad 从卡片解出 itemId 走真实详情。
-   *  朋友圈标题展示上限约 30 字，超长截断加省略号（对齐 One News detail）。 */
-  onShareTimeline() {
-    var raw = {
-      id: this.data.itemId || '',
-      title: this.data.title || 'AI 情报官',
-      categoryName: '情报',
-      source: this.data.srcName || '',
-      time: this.data.pubTime || this.data.processedTime || '',
-      summary: this.data.descText || this.data.title || '',
-      isAi: true, // AI 情报官内容本身即 AI 生成
-    }
-    var title = raw.title
-    if (title.length > 30) {
-      title = Array.from(title).slice(0, 29).join('') + '\u2026'
-    }
-    return {
-      title: title,
-      query: buildCardQuery(raw),
     }
   },
 
@@ -212,9 +190,9 @@ Page({
         if (typeof g.menuTop === 'number') menuTop = g.menuTop
       }
     } catch (e) {}
-    // BUG-2026-0908: 开启「分享到朋友圈」菜单——默认右上角无此入口，需显式 showShareMenu 才出现
-    // （对齐 One News home/detail 的 BUG-2026-0907 同款处理）
-    try { wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+    // owner 2026-09-08：情报官详情页禁用分享——不再 showShareMenu，改为 hideShareMenu 压住入口。
+    // 防止本页（或其他 One News 页面）share menu 状态泄漏到情报首页。
+    this._hideShareMenu()
 
     // 朋友圈单页模式（owner 2026-09-08「不管从哪个页面分享到朋友圈，打开后都展示一个单页」）：
     // scene 1154 单页沙箱禁云函数、globalData 不共用 → 本页数据只能来自打包 query（card=base64url）。
