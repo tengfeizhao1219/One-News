@@ -95,11 +95,10 @@ Page({
   },
 
   onLoad(options) {
-    // BUG-2026-0907: 开启「分享到朋友圈」菜单——默认右上角无此入口，需显式 showShareMenu 才出现；
-    // 首页是朋友圈分享的源头（onShareTimeline），缺此调用则无「分享到朋友圈」可选
-    try {
-      wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
-    } catch (e) { /* 静默：旧基础库仅转发给朋友 */ }
+    // owner 2026-09-08：分享菜单按主首页当前视图动态开关——
+    // One News 新闻屏可分享（朋友圈单页功能源头，onShareTimeline 在此），
+    // AI 情报屏(intel-stage 覆盖)不可分享（情报模块不开放分享）。onLoad 默认新闻屏 → 开。
+    this._syncIntelShareMenu()
 
     // 2026-08-31 修复：收藏页冷启动栈底时 reLaunch 到首页带 redirect 参数，
     // 本页渲染后回跳形成 home→favorites 栈（左滑返回自然回首页，不退出小程序）
@@ -180,6 +179,9 @@ Page({
       app.globalData.intelFromEmbed = false
       if (this.data._intelBridgeEnabled) this.setData({ intelActive: true })
     }
+    // owner 2026-09-08：onShow 同步分享菜单（返回首页时可能刚从情报屏/情报详情/我的等回来；
+    // 情报屏激活=情报视图 → 压住分享；新闻视图 → 恢复分享。也兜住其他页面 showShareMenu 的泄漏）
+    this._syncIntelShareMenu()
 
     // B-07: 处理从详情页阅读模式返回的定位
     // 若首页被回收，onLoad 会重新 loadNews；onShow 中需等 loadNews 完成后再定位，
@@ -959,6 +961,7 @@ Page({
         setTimeout(function () { that2._intelNavLock = false }, 1000)
         console.log('[intel-bridge] 情报屏左滑返回 One News, dx=', dx)
         this.setData({ intelActive: false })
+        this._syncIntelShareMenu()
       }
       return // 情报屏打开时不再处理 One News 屏的其它横向手势
     }
@@ -974,12 +977,32 @@ Page({
       // 打开情报屏前先收起侧边栏，避免叠层
       if (this.data.showPanel) this.closePanel()
       this.setData({ intelActive: true })
+      // owner 2026-09-08：情报屏激活 → 压住分享菜单（情报视图不可分享）
+      this._syncIntelShareMenu()
     }
   },
   // 组件内 ‹ 返回按钮请求滑回 One News
   onIntelReqBack() {
     if (!this.data.intelActive) return
     this.setData({ intelActive: false })
+    this._syncIntelShareMenu()
+  },
+
+  /** owner 2026-09-08：主首页承载两套视图——One News 新闻屏 + AI 情报屏(intel-stage 覆盖)。
+   *  新闻屏保持可分享（朋友圈单页功能源头）；情报屏激活时压住分享（情报模块不开放分享）。
+   *  右上角 ··· 菜单按当前视图动态开关；情报屏隐藏期间用双形式 hideShareMenu 压住
+   *  （无参=1.1.0 全平台隐藏转发给朋友；menus 形式=2.11.3+ 隐藏朋友圈），
+   *  切回新闻屏用 showShareMenu 恢复。所有 intelActive 翻转点 + onLoad/onShow 都调用。 */
+  _syncIntelShareMenu() {
+    var on = this.data.intelActive
+    try {
+      if (on) {
+        wx.hideShareMenu()
+        wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] })
+      } else {
+        wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] })
+      }
+    } catch (e) { /* 静默：旧基础库 */ }
   },
   // ============ INTEL-BRIDGE (END) ============
 
