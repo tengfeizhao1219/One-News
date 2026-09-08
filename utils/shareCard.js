@@ -169,4 +169,24 @@ function parseCardData(query) {
   }
 }
 
-module.exports = { buildCardQuery, parseCardData }
+/**
+ * 判断当前是否处于朋友圈单页模式（scene 1154）
+ * - 1154：朋友圈卡片打开的"单页模式"沙箱（禁路由/云函数/存储）→ 应渲染单页卡片
+ * - 1155：单页模式点「前往小程序」后以**正常模式**打开小程序（微信复用同一分享 query）
+ *         → 此时应渲染真实首页/详情页，不能再渲染单页卡片
+ * 优先 wx.getEnterOptionsSync（每次进入都会更新，热启动也准确），
+ * 兜底 wx.getLaunchOptionsSync（仅冷启动）。
+ * @returns {boolean}
+ */
+function isSinglePageScene() {
+  try {
+    var opts = null
+    if (wx.getEnterOptionsSync) opts = wx.getEnterOptionsSync()
+    else if (wx.getLaunchOptionsSync) opts = wx.getLaunchOptionsSync()
+    return !!opts && opts.scene === 1154
+  } catch (e) {
+    return false
+  }
+}
+
+module.exports = { buildCardQuery, parseCardData, isSinglePageScene }

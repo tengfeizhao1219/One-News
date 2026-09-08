@@ -7,7 +7,7 @@ const { localCache } = require('../../utils/localCache')
 const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
 
 const app = getApp()
-const { parseCardData, buildCardQuery } = require('../../utils/shareCard')
+const { parseCardData, buildCardQuery, isSinglePageScene } = require('../../utils/shareCard')
 
 // 2026-08-18（owner 决策）：分类首页首屏尺寸——recommend 读满落库 cap(15)，其余分类 8。
 const firstPageSize = function (cat) {
@@ -127,7 +127,10 @@ Page({
     // 朋友圈单页直读（owner 2026-09-02）：朋友圈单页模式（scene 1154）wx.cloud 云函数 500/权限拦截，
     // 首页 loadNews→getNewsList 在单页必失败（报 -501023）。分享时 onShareTimeline 已打包
     // title(tn)+summary(st) 进 query，单页模式打开首页时直接 redirectTo 到 detail 页复用详情直读渲染。
-    if (options && (options.card || (options.st && options.tn))) {
+    // owner 2026-09-08：仅 scene 1154（朋友圈单页沙箱）渲染单页卡片；scene 1155（单页点
+    // 「前往小程序」以正常模式打开，微信复用同一 query）等正常入口必须跳过本分支，
+    // 落到下方 loadNews() 渲染真实首页（实际新闻列表）。
+    if (options && (options.card || (options.st && options.tn)) && isSinglePageScene()) {
       // 朋友圈单页模式（scene 1154）：微信禁用全部路由/登录/云函数/本地存储，
       // 只能"当前页面就地渲染"，不能跳 detail（否则 reLaunch 失败白屏）。
       // 只能读分享时打包进 query 的数据：分享侧 onShareTimeline(promise) 已打包 card=JSON。

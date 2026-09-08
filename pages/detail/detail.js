@@ -18,7 +18,7 @@ var cloud = require('../../utils/cloud')
 var app = getApp()
 // 2026-08-22：话题搜索深挖（intelSearch 云函数，从 intel 详情页平移）
 var searchIntelTopic = require('../../utils/intelApi').searchIntelTopic
-var { parseCardData, buildCardQuery } = require('../../utils/shareCard')
+var { parseCardData, buildCardQuery, isSinglePageScene } = require('../../utils/shareCard')
 // 「关注后续」关注关系本地存储（纯本地，对齐 favorites / intelFavorites 模式）
 var followUp = require('../../utils/followUp')
 // §九 后端：关注关系云端同步桥（异步，失败静默）
@@ -204,7 +204,10 @@ Page({
     // 分享侧 onShareTimeline 已用 buildCardQuery 打包完整卡片（card=base64url JSON），
     // 单页打开即渲染 single-page-card 组件（视觉与首页卡片完全一致，owner 2026-09-08）；
     // 旧版 st/tn 兜底。
-    if (options.card || options.st) {
+    // owner 2026-09-08：仅 scene 1154（单页沙箱）渲染单页卡片。scene 1155（单页点
+    // 「前往小程序」以正常模式打开，微信复用同一 query）等正常入口 → 渲染真实详情页：
+    // 用打包卡片里的 news id 走 _initEngine → _loadFallback 单篇直载（完整内容+全交互）。
+    if ((options.card || options.st) && isSinglePageScene()) {
       var card = parseCardData(options)
       this.setData({
         pageState: 'singleCard',
@@ -232,6 +235,22 @@ Page({
       })
       this._singleMode = true
       return
+    }
+    if (options.card || options.st) {
+      // 正常模式带分享打包参数（如 scene 1155「前往小程序」）
+      if (!id) {
+        var cardNormal = parseCardData(options)
+        if (cardNormal && cardNormal.id) {
+          id = cardNormal.id
+          index = 0
+        }
+      }
+      if (!id) {
+        // 打包参数损坏/无法定位新闻（异常历史链接）→ 回真实首页
+        wx.reLaunch({ url: '/pages/home/home' })
+        return
+      }
+      // 不 return → 落到 onLoad 末尾 _initEngine(id, index, category) 走真实详情加载
     }
 
     // 初始化跨分类阅读引擎（方案 A：全量预拉 + localCache 缓存注入）
