@@ -7,6 +7,7 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-09-08 | Auto | **朋友圈单页真机反馈修复：统一为首页同款卡片单页**。真机两问题：①首页分享→朋友圈打开只见框架内容全空——根因 home 单页分支复用 `.card` 类（home 卡片默认 opacity:0 靠状态类激活）→ 整卡透明；②详情分享→打开是详情框架+顶部被 nav-bar 悬浮层遮挡+非首页样式。修复（owner 拍板「不管从哪分享，打开都是首页卡片样式的单页」）：新建 components/single-page-card（样式完整复制首页卡片：52rpx 标题/衬线摘要/ai-chip/整体居中，主题走页面根 CSS 变量继承），home/detail 单页模式**只渲染该组件**、页面框架全部隐藏（wx:else 包裹）。shareCard v2：percent-JSON 400 字中文≈3600 字符超长风险 → base64url（膨胀 1.33x，整包≈900 字符内），query 去掉单页无用的 id/index/category 前缀，兼容旧版解析；home onPullDownRefresh 单页守卫。提交 1ad64b6，已 auto_preview。**待真机复验**：首页/详情分享→朋友圈打开=纯单页首页卡片样式 | ✅ 已推送预览 |
 | 2026-09-07 | Auto | **朋友圈单页模式（scene 1154）根治**：单页禁全部路由(redirectTo/reLaunch/navigateTo)+禁登录/云函数/本地存储不共用 → 只能读分享 query。方案(owner 提议)：分享时 promise 后台把完整卡片打包 card=JSON（new utils/shareCard.js buildCardQuery/parseCardData），单页打开就地渲染完整首页卡片（不跳转）。首页+详情 onShareTimeline 均打包；home/detail 单页分支 parseCardData→渲染 card 视觉。提交 6bbe7b3/4e89e0b，已 auto_preview。待真机验证：首页/详情分享→朋友圈点开显示完整卡片 | ✅ 已推送预览 |
 | 2026-09-07 | Auto | **浏览历史/收藏 30 天滚动清除**（真机+ui-demo）：new utils/intelHistory.js（TTL30天/LRU200/去重置顶）；new pages/intel/history（列表/删除/清空）；mine 页加浏览历史入口；收藏 TTL 半年→30 天。提交 c21bea2 等 | ✅ 已推送 |
 | 2026-09-07 | Auto | **intel 详情页话题搜索→深挖历史**：深挖历史区(rest 内折叠/持久化 wx storage/itemId 隔离)；搜索入口默认隐藏、点 FAB 展开、搜索后自动收起滚到历史；面板滚到顶下滑收起。提交 12218a9/d4822f0 等 | ✅ 已推送 |
