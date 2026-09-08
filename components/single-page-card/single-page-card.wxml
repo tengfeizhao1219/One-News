@@ -1,0 +1,33 @@
+<!-- 朋友圈单页模式（scene 1154）单页：设计 = 首页卡片（owner 2026-09-08 拍板）
+     首页/详情页分享到朋友圈打开后，本组件是页面唯一渲染内容（页面其余框架全部隐藏）。
+     底部「前往小程序」由微信原生提供。 -->
+<view class="spc-page" style="padding-top: calc({{statusBarHeight || 44}}px + 56px);">
+  <!-- 标题（首页 card-title 同款：52rpx/700/居中排版） -->
+  <view class="card-title">{{card.title || '一页 · 新闻速览'}}</view>
+
+  <!-- 元信息（首页 card-meta 同款：分类 tag + 来源 + 时间） -->
+  <view class="card-meta">
+    <view class="category-tag" wx:if="{{card.categoryName}}">{{card.categoryName}}</view>
+    <text wx:if="{{card.metaSource}}">{{card.metaSource}}</text>
+    <text wx:if="{{card.metaSource && card.time}}">·</text>
+    <text wx:if="{{card.time}}">{{card.time}}</text>
+  </view>
+
+  <!-- 摘要（首页 card-summary 同款：衬线正文 + 行首胶囊标识） -->
+  <view class="card-summary">
+    <block wx:for="{{card.summaryParagraphs}}" wx:for-item="para" wx:key="*this" wx:for-index="pIdx">
+      <view class="summary-p">
+        <text wx:if="{{pIdx === 0 && card.summarySource === 'ai' && card.contentSource !== 'official_rss'}}" class="ai-chip">AI 摘要</text>
+        <text wx:elif="{{pIdx === 0 && card.summarySource === 'desc'}}" class="src-chip">来源摘要</text>
+        <text wx:elif="{{pIdx === 0 && card.summarySource === 'content'}}" class="src-chip">正文摘要</text>
+        <text wx:elif="{{pIdx === 0 && card.summarySource === 'title'}}" class="src-chip src-chip--weak">标题摘要</text>{{para}}
+      </view>
+    </block>
+    <view class="summary-p spc-empty" wx:if="{{!card.summaryParagraphs || !card.summaryParagraphs.length}}">
+      内容暂不可用，点下方「前往小程序」查看完整新闻
+    </view>
+  </view>
+
+  <!-- 引导语（owner 确认文案；官方源卡片不称「AI 整理」） -->
+  <view class="spc-hint">{{card.contentSource === 'official_rss' ? '内容整理自官方源' : '内容由 AI 整理'}} · 点下方「前往小程序」查看完整新闻</view>
+</view>

@@ -139,6 +139,8 @@ Page({
         time: card.time,
         summary: card.summary,
         isAi: card.isAi,
+        summarySource: card.summarySource || '',
+        contentSource: card.contentSource || '',
         summaryParagraphs: card.summary ? card.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
       } : {
         title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
@@ -147,6 +149,8 @@ Page({
         time: '',
         summary: decodeURIComponent(options.st || '') || '',
         isAi: false,
+        summarySource: '',
+        contentSource: '',
         summaryParagraphs: [],
       }
       this.setData({ pageState: 'single', singleCard: singleCard })
@@ -618,7 +622,8 @@ Page({
   // 2026-08-20 owner 决策：下拉刷新 = 从数据库（news_cache，即已展示给前端的数据）重新读取并渲染，
   // 不触发 newsFetcher 抓取新数据、不轮询 getNewsDelta 增量。
   onPullDownRefresh() {
-    if (this.data.isRefreshing) {
+    // 朋友圈单页模式（scene 1154）：禁云函数，下拉刷新无意义，直接收起指示器
+    if (this.data.pageState === 'single' || this.data.isRefreshing) {
       wx.stopPullDownRefresh()
       return
     }
@@ -1438,24 +1443,18 @@ Page({
 
     // owner 2026-09-07：单页模式只能读分享 query 数据 → 用 promise 后台把当前卡片
     // 完整内容打包进 query（标题/分类/来源/时间/摘要/AI标识），单页打开即渲染完整首页卡片。
+    // owner 2026-09-08 v2：query 只带 card=（shareCard base64url 紧凑打包，整包 ≈900 字符内）。
+    // 旧版 id/index/category 前缀在单页模式下无用，只会加大 query 超长被微信截断的风险。
     var newsRef = news
     return {
       title: title,
-      query: newsRef && newsRef.id
-        ? 'id=' + encodeURIComponent(newsRef.id) + '&index=' + currentIndex +
-          '&category=' + encodeURIComponent(currentCategory) +
-          '&' + buildCardQuery(newsRef)
-        : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
+      query: buildCardQuery(newsRef),
       imageUrl: (newsRef && newsRef.picUrl) || undefined,
       promise: new Promise(function (resolve) {
         // 后台"加载当前卡片内容"（此处卡片已在内存，直接打包；未来可扩展为异步预拉全文）
         resolve({
           title: title,
-          query: newsRef && newsRef.id
-            ? 'id=' + encodeURIComponent(newsRef.id) + '&index=' + currentIndex +
-              '&category=' + encodeURIComponent(currentCategory) +
-              '&' + buildCardQuery(newsRef)
-            : 'category=' + encodeURIComponent(currentCategory || 'recommend'),
+          query: buildCardQuery(newsRef),
           imageUrl: (newsRef && newsRef.picUrl) || undefined,
         })
       }),

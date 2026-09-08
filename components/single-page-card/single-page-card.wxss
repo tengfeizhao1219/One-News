@@ -1,0 +1,115 @@
+/* 朋友圈单页卡片 — 样式复制自 home.wxss 卡片视觉（owner 2026-09-08：与首页卡片设计完全一致）
+   主题变量（--text-primary/--bg-card/--tag-bg/--font-scale 等）由页面根节点注入，
+   CSS 自定义属性可跨组件边界继承 → 深色模式/字体缩放自动生效。 */
+
+/* 页面容器 = 首页激活卡片的满屏 --bg-card 背景；内容整体垂直居中（FE-20260810-002 同款）。
+   padding-top 内联注入（状态栏 + 胶囊区留白，≈ menuTop + menuHeight + 40rpx 基准）。 */
+.spc-page {
+  box-sizing: border-box;
+  min-height: 100vh;
+  background-color: var(--bg-card);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 64rpx;
+  padding-bottom: 48rpx;
+  padding-left: 64rpx;
+}
+
+/* 标题（home .card-title 同款） */
+.card-title {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.35;
+  margin-bottom: 28rpx;
+  letter-spacing: -1rpx;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* 元信息（home .card-meta 同款） */
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  font-size: 22rpx;
+  color: var(--text-secondary);
+  margin-bottom: 20rpx;
+  letter-spacing: 0.5rpx;
+}
+
+.category-tag {
+  color: var(--tag-text);
+  background-color: var(--tag-bg);
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  line-height: 1;
+}
+
+/* 摘要（home .card-summary/.summary-p 同款：衬线正文，保留无障碍缩放） */
+.card-summary {
+  margin-top: 28rpx;
+  margin-bottom: 48rpx;
+}
+
+.summary-p {
+  font-family: "PingFang SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+  font-size: calc(32rpx * var(--font-scale, 1));
+  color: var(--text-body);
+  line-height: calc(1.85 * var(--font-scale, 1));
+  margin-bottom: 24rpx;
+  letter-spacing: 1rpx;
+}
+
+/* AI 摘要胶囊（home .ai-chip 同款：主色字 + primary-subtle 底，UI 层无衬线） */
+.ai-chip {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 12rpx 0 0;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: var(--primary);
+  background-color: var(--primary-subtle);
+}
+
+/* 非 AI 档角标（home .src-chip 同款：灰色弱化） */
+.src-chip {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 12rpx 0 0;
+  padding: 3rpx 14rpx;
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: var(--text-tertiary);
+  background-color: var(--bg-subtle);
+  border: 1rpx solid var(--divider);
+}
+
+.src-chip--weak {
+  color: var(--text-tertiary);
+  opacity: 0.75;
+}
+
+/* 摘要为空时的兜底文案 */
+.spc-empty {
+  color: var(--text-tertiary);
+}
+
+/* 引导语（内容尾部随排版，不悬浮，避免与微信原生「前往小程序」底条冲突） */
+.spc-hint {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}

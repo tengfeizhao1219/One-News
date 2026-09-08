@@ -201,8 +201,9 @@ Page({
 
     // 单页分享直读（owner 2026-09-07）：朋友圈单页模式（scene 1154）微信平台限制——
     // 禁登录/云函数/本地存储不共用，只能读分享时打包进 query 的数据。
-    // 分享侧 onShareTimeline 已用 buildCardQuery 打包完整卡片（card=JSON），
-    // 单页打开即渲染完整首页卡片（视觉与首页卡片一致）；旧版 st/tn 兜底。
+    // 分享侧 onShareTimeline 已用 buildCardQuery 打包完整卡片（card=base64url JSON），
+    // 单页打开即渲染 single-page-card 组件（视觉与首页卡片完全一致，owner 2026-09-08）；
+    // 旧版 st/tn 兜底。
     if (options.card || options.st) {
       var card = parseCardData(options)
       this.setData({
@@ -214,6 +215,8 @@ Page({
           time: card.time,
           summary: card.summary,
           isAi: card.isAi,
+          summarySource: card.summarySource || '',
+          contentSource: card.contentSource || '',
           summaryParagraphs: card.summary ? card.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
         } : {
           title: decodeURIComponent(options.tn || '') || '一页 · 新闻速览',
@@ -222,6 +225,8 @@ Page({
           time: '',
           summary: decodeURIComponent(options.st || '') || '',
           isAi: false,
+          summarySource: '',
+          contentSource: '',
           summaryParagraphs: [],
         },
       })
@@ -1085,10 +1090,9 @@ Page({
 
     return {
       title: title,
-      query: 'id=' + encodeURIComponent(news.id || '') +
-             '&index=' + (this.data.currentIndex || 0) +
-             '&category=' + encodeURIComponent(this.data.category || 'recommend') +
-             '&' + buildCardQuery(news),
+      // owner 2026-09-08 v2：query 只带 card=（base64url 紧凑打包 ≈900 字符内），
+      // 去掉 id/index/category 前缀——单页模式下无用，且降低 query 超长被截断风险
+      query: buildCardQuery(news),
       imageUrl: this._placeholderCache || undefined,
     }
   },

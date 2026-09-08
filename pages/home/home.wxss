@@ -849,23 +849,3 @@
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.5), 0 4rpx 12rpx rgba(0, 0, 0, 0.3);
 }
 
-/* ========== 朋友圈单页模式（scene 1154）：就地渲染完整首页卡片 ==========
-   视觉与首页卡片完全一致（复用 card/card-title/card-meta/card-summary/ai-chip）。
-   微信单页：顶部固定导航 + 底部「前往小程序」。 */
-.single-page {
-  box-sizing: border-box;
-  min-height: calc(var(--page-h, 100vh) - 120px);
-  padding: 32rpx 24rpx;
-  background-color: var(--bg-page);
-}
-.single-card {
-  margin: 0;
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
-}
-.single-hint {
-  margin-top: 36rpx;
-  font-size: 24rpx;
-  color: var(--text-tertiary);
-  line-height: 1.6;
-  text-align: center;
-}

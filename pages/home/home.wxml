@@ -9,6 +9,14 @@
   bindtouchstart="onIntelTouchStart"
   bindtouchend="onIntelTouchEnd">
 
+  <!-- ========== 朋友圈单页模式（scene 1154）：纯单页 = 首页同款卡片（owner 2026-09-08） ==========
+       不管从哪个页面分享到朋友圈，打开后都只渲染 single-page-card（设计与首页卡片完全一致），
+       首页框架（顶栏/卡片流/情报屏入口等）全部隐藏；底部「前往小程序」为微信原生提供。
+       注意：不复用 .card 类（home 卡片 .card 默认 opacity:0 靠状态类激活，直接复用会整卡透明）。
+       单页模式禁路由/登录/云函数/本地存储不共用，仅能读分享 query 打包的数据（utils/shareCard.js）。 -->
+  <single-page-card wx:if="{{pageState === 'single' && singleCard}}" card="{{singleCard}}" status-bar-height="{{statusBarHeight}}" />
+  <block wx:else>
+
   <!-- 固定顶部栏：原右上角设置按钮已移除（owner 2026-08-06 13:21 裁定：设置入口统一走 ⚙ dock 菜单）-->
   <!-- D-09 v1.2（BUG-20260806-007）: 占位对齐胶囊，高度仅下扩展 12px（与全页面条带规范一致） -->
   <!-- BUG-20260806-009 v3: 状态栏不透明背景层（home 页卡片全屏，需遮住状态栏区域防内容透出） -->
@@ -205,32 +213,6 @@
     </view>
   </view>
 
-  <!-- ========== 朋友圈单页模式（scene 1154）就地渲染：完整首页卡片 ==========
-       微信单页禁路由/登录/云函数/本地存储不共用，仅能展示分享打包进 query 的卡片数据。
-       视觉与首页卡片完全一致（card/card-title/card-meta/card-summary/ai-chip）。
-       底部「前往小程序」由微信原生提供，点击进入完整版。 -->
-  <view class="single-page" wx:if="{{pageState === 'single' && singleCard}}">
-    <view class="card single-card">
-      <view class="card-body">
-        <view class="card-title">{{singleCard.title}}</view>
-        <view class="card-meta">
-          <view class="category-tag" wx:if="{{singleCard.categoryName}}">{{singleCard.categoryName}}</view>
-          <text wx:if="{{singleCard.metaSource}}">{{singleCard.metaSource}}</text>
-          <text wx:if="{{singleCard.metaSource && singleCard.time}}">·</text>
-          <text wx:if="{{singleCard.time}}">{{singleCard.time}}</text>
-        </view>
-        <view class="card-summary">
-          <block wx:for="{{singleCard.summaryParagraphs}}" wx:for-item="para" wx:key="*this" wx:for-index="pIdx">
-            <view class="summary-p">
-              <text wx:if="{{pIdx === 0 && singleCard.isAi}}" class="ai-chip">AI 摘要</text>{{para}}
-            </view>
-          </block>
-        </view>
-      </view>
-    </view>
-    <view class="single-hint">内容由 AI 整理 · 点上方「前往小程序」查看完整新闻</view>
-  </view>
-
   <!-- ========== INTEL-BRIDGE (START): AI 情报官模块 — AI 情报屏（同屏横滑，覆盖层） ========== -->
   <!-- owner 2026-08-18 拍板：内嵌横滑面板。AI 情报屏为覆盖层，默认藏在屏幕左侧；
        在 One News 首页右滑 → 情报屏从左侧滑入；在情报屏左滑 → 从右侧滑回 One News。
@@ -254,4 +236,5 @@
     <followup-card visible="{{showFollow}}" enter-point="{{followEnterPoint}}" bind:back="onFollowBack" />
   </page-container>
 
+  </block>
 </view>

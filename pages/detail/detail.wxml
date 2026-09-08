@@ -5,6 +5,13 @@
   data-font-scale="{{fontScaleTier}}"
   style="--font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-fs: 0.875; --page-h: {{pageH}}px; --nav-offset: {{navOffset}}px; --status-bar-height: {{statusBarHeight}}px;">
 
+  <!-- ========== 朋友圈单页模式（scene 1154）：纯单页 = 首页同款卡片（owner 2026-09-08） ==========
+       详情页分享到朋友圈打开后，只渲染 single-page-card（设计与首页卡片完全一致），
+       详情页框架（导航栏/正文/底栏/搜索/深挖历史）全部隐藏——同时根治 nav-bar 悬浮层
+       遮挡内容顶部的问题；底部「前往小程序」为微信原生提供。 -->
+  <single-page-card wx:if="{{pageState === 'singleCard' && singleCard}}" card="{{singleCard}}" status-bar-height="{{statusBarHeight}}" />
+  <block wx:else>
+
   <!-- 顶部导航栏：返回（左）+ 进度指示（右）· D-09 v1.2（BUG-20260806-007）
        top=menuTop（无上呼吸）；height=menuHeight+24rpx（仅下扩展 12px） -->
   <!-- BUG-20260806-009 v3: 状态栏不透明背景层（custom 模式下 setNavigationBarColor 无效，
@@ -53,24 +60,6 @@
     <view class="state-title" wx:else>网络开了个小差</view>
     <view class="state-sub" wx:if="{{pageState === 'empty'}}">可能是发布方撤下了，不用着急，看看别的吧</view>
     <view class="state-sub" wx:else>等信号好的时候再回来，随时都在的</view>
-  </view>
-
-  <!-- 朋友圈单页模式（scene 1154）：就地渲染完整首页卡片（视觉与首页卡片一致） -->
-  <view class="single-page" wx:if="{{pageState === 'singleCard' && singleCard}}">
-    <view class="single-card">
-      <view class="single-card-title">{{singleCard.title}}</view>
-      <view class="single-card-meta">
-        <view class="single-card-tag" wx:if="{{singleCard.categoryName}}">{{singleCard.categoryName}}</view>
-        <text wx:if="{{singleCard.metaSource}}">{{singleCard.metaSource}}</text>
-        <text wx:if="{{singleCard.metaSource && singleCard.time}}">·</text>
-        <text wx:if="{{singleCard.time}}">{{singleCard.time}}</text>
-      </view>
-      <view class="single-card-summary">
-        <text wx:if="{{singleCard.isAi}}" class="single-card-chip">AI 摘要</text>
-        {{singleCard.summary}}
-      </view>
-    </view>
-    <view class="single-hint">内容由 AI 整理 · 点上方「前往小程序」查看完整新闻</view>
   </view>
 
   <!-- 内容 -->
@@ -357,4 +346,6 @@
     <image class="fab-search-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
     <image class="fab-search-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
   </view>
+
+  </block>
 </view>
