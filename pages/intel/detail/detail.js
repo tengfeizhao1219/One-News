@@ -15,6 +15,8 @@ function cleanText(v) {
 const { getIntelDetail, searchIntelTopic } = require('../../../utils/intelApi')
 const { getIntelProfile } = require('../../../utils/intelRequest')
 const { getSafeBottom } = require('../../../utils/intelRender')
+// 朋友圈单页模式（scene 1154/1155）：分享卡片打包 + 场景判定（与 One News home/detail 同机制）
+const { buildCardQuery, parseCardData, isSinglePageScene } = require('../../../utils/shareCard')
 const { isFavorited, toggleFavorite } = require('../../../utils/intelFavorites')
 const { recordView } = require('../../../utils/intelHistory')
 // 「关注后续」关注关系本地存储（情报官 module='intel'，对齐 One News detail）
@@ -53,6 +55,10 @@ Page({
     safeBottom: 0,         // 底部安全区（px）：JS 注入 --safe-bottom，规避 env() 真机失效
     loading: true,         // 加载态
     empty: false,          // 空态
+    // 朋友圈单页模式（owner 2026-09-08）：'normal'=正常详情；'single'=scene 1154 单页沙箱，
+    // 只渲染 single-page-card（视觉与首页卡片一致），框架（导航/正文/搜索/FAB）全部隐藏
+    pageState: 'normal',
+    singleCard: null,
     // 收藏（2026-08-20：对齐 One News B-04 纯本地，TTL 半年）
     itemId: '',
     isFavorited: false,
@@ -91,7 +97,8 @@ Page({
     }
   },
 
-  /** 分享给朋友(2026-08-27):标题=情报标题;不传 imageUrl → 微信默认用页面截图(展示情报摘要内容)作缩略图 */
+  /** 分享给朋友(2026-08-27):标题=情报标题;不传 imageUrl → 微信默认用页面截图(展示情报摘要内容)作缩略图。
+   *  朋友点开 = 正常模式完整小程序，query 只带 id → onLoad 走 intelGetDetail 冷启动直载（云函数已验证可用）。 */
   onShareAppMessage() {
     return {
       title: this.data.title || 'AI 情报官',
@@ -99,11 +106,27 @@ Page({
     }
   },
 
-  /** 分享到朋友圈(2026-08-27) */
+  /** 分享到朋友圈(2026-09-08 升级)：打包完整卡片（card=base64url JSON）。
+   *  scene 1154 单页沙箱禁云函数/globalData 不共用 → 单页内容只能来自 query；
+   *  scene 1155「前往小程序」复用同一 query → onLoad 从卡片解出 itemId 走真实详情。
+   *  朋友圈标题展示上限约 30 字，超长截断加省略号（对齐 One News detail）。 */
   onShareTimeline() {
-    return {
+    var raw = {
+      id: this.data.itemId || '',
       title: this.data.title || 'AI 情报官',
-      query: 'id=' + (this.data.itemId || ''),
+      categoryName: '情报',
+      source: this.data.srcName || '',
+      time: this.data.pubTime || this.data.processedTime || '',
+      summary: this.data.descText || this.data.title || '',
+      isAi: true, // AI 情报官内容本身即 AI 生成
+    }
+    var title = raw.title
+    if (title.length > 30) {
+      title = Array.from(title).slice(0, 29).join('') + '\u2026'
+    }
+    return {
+      title: title,
+      query: buildCardQuery(raw),
     }
   },
 
@@ -189,7 +212,59 @@ Page({
         if (typeof g.menuTop === 'number') menuTop = g.menuTop
       }
     } catch (e) {}
-    const id = (query && query.id) || ''
+    // BUG-2026-0908: 开启「分享到朋友圈」菜单——默认右上角无此入口，需显式 showShareMenu 才出现
+    // （对齐 One News home/detail 的 BUG-2026-0907 同款处理）
+    try { wx.showShareMenu({ withShareTicket: true, menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+
+    // 朋友圈单页模式（owner 2026-09-08「不管从哪个页面分享到朋友圈，打开后都展示一个单页」）：
+    // scene 1154 单页沙箱禁云函数、globalData 不共用 → 本页数据只能来自打包 query（card=base64url）。
+    // 只渲染 single-page-card（与首页卡片设计一致），导航/正文/搜索/FAB 等框架全隐藏，不做任何云/存储调用。
+    if ((query && (query.card || query.st)) && isSinglePageScene()) {
+      var spCard = parseCardData(query)
+      this.setData({
+        pageState: 'single',
+        loading: false,
+        singleCard: spCard ? {
+          title: spCard.title,
+          categoryName: spCard.categoryName || '情报',
+          metaSource: spCard.source,
+          time: spCard.time,
+          summary: spCard.summary,
+          isAi: spCard.isAi,
+          summarySource: spCard.summarySource || '',
+          contentSource: spCard.contentSource || '',
+          summaryParagraphs: spCard.summary ? spCard.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
+        } : null,
+      })
+      return
+    }
+
+    // scene 1155（单页点「前往小程序」→ 正常模式打开，微信复用同一 query）等正常入口：
+    // query 只带打包卡片无 id 时，从卡片解出 itemId 继续走真实详情加载（intelGetDetail 冷启动直载）。
+    var id = (query && query.id) || ''
+    if (!id && query && (query.card || query.st)) {
+      var cardNormal = parseCardData(query)
+      if (cardNormal && cardNormal.id) {
+        id = cardNormal.id
+        // 兜底卡：真实详情拉取失败（云函数异常/情报已滚出）时回退展示摘要卡，免死空态
+        this._cardFallback = {
+          title: cardNormal.title,
+          categoryName: cardNormal.categoryName || '情报',
+          metaSource: cardNormal.source,
+          time: cardNormal.time,
+          summary: cardNormal.summary,
+          isAi: cardNormal.isAi,
+          summarySource: cardNormal.summarySource || '',
+          contentSource: cardNormal.contentSource || '',
+          summaryParagraphs: cardNormal.summary ? cardNormal.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
+        }
+      }
+      if (!id) {
+        // 打包参数损坏/无法定位情报（异常历史链接）→ 回情报首页
+        wx.reLaunch({ url: '/pages/intel/home/home' })
+        return
+      }
+    }
     const card = (app.globalData && app.globalData.intelDetailCard) || null
 
     this.setData({
@@ -485,6 +560,11 @@ function cleanText(v) {
       })
       .catch(err => {
         console.warn('[intel-detail] 真实详情拉取失败:', err && err.message, err)
+        // 分享冷启动带打包卡片时：真实详情拉取失败 → 回退展示摘要卡（免死空态，对齐 One News detail）
+        if (this._cardFallback) {
+          this.setData({ pageState: 'single', loading: false, singleCard: this._cardFallback })
+          return
+        }
         // 有卡片基础数据时保持展示，不因全量失败清空
         if (!(this.data.title || this.data.descText)) {
           this.setData({ loading: false, empty: true })

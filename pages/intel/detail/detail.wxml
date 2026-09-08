@@ -6,6 +6,14 @@
       状态条 8-21 恢复（v6 重构时删过，owner 拍板完整对齐 demo）。
 -->
 <view class="page {{themeClass}} intel-detail" style="--menu-top: {{topBarH}}px; --menu-height: {{menuHeight}}px; --safe-bottom: {{safeBottom}}px; --font-scale: {{_fontScaleValue}}; --font-scale-meta: {{_metaScaleValue}}; --page-fs: 0.875;">
+
+  <!-- ========== 朋友圈单页模式（scene 1154）：纯单页 = 首页同款卡片（owner 2026-09-08） ==========
+       情报详情分享到朋友圈打开后，只渲染 single-page-card（设计与首页卡片完全一致），
+       情报页框架（导航/正文/搜索/FAB/深挖历史）全部隐藏；底部「前往小程序」为微信原生提供。
+       scene 1155「前往小程序」走 wx:else 渲染真实情报详情（onLoad 已按场景分流）。 -->
+  <single-page-card wx:if="{{pageState === 'single' && singleCard}}" card="{{singleCard}}" status-bar-height="{{statusBarHeight}}" />
+  <block wx:else>
+
   <!-- 顶部条带（对齐原生胶囊） -->
   <view class="status-bar-fill" style="height: {{topBarH}}px; background-color: var(--bg-page);"></view>
 
@@ -274,4 +282,5 @@
     <image class="fab-search-icon nav-light" src="/assets/icons/search.svg" mode="aspectFit"></image>
     <image class="fab-search-icon nav-dark" src="/assets/icons/search-dark.svg" mode="aspectFit"></image>
   </view>
+  </block>
 </view>

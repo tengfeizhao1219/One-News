@@ -2,6 +2,7 @@
   "navigationStyle": "custom",
   "backgroundTextStyle": "dark",
   "usingComponents": {
-    "logo": "/components/logo/logo"
+    "logo": "/components/logo/logo",
+    "single-page-card": "/components/single-page-card/single-page-card"
   }
 }

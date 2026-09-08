@@ -20,7 +20,10 @@ var MAX_SUMMARY = 100
 var MAX_SOURCE = 20
 var MAX_TIME = 20
 var MAX_CATEGORY = 12
-var MAX_ID = 40
+// 2026-09-08：40 会截断真实主键——news_cache id 为 64 位 hex（官方源 official_<fp> 更长），
+// 情报 itemId 为 intel_<src>_<64hex>（约 82 字符）。截断后 1155「前往小程序」解出残缺 id，
+// 真实详情按 id 查库必 miss。放宽到 120 覆盖现有全部 id 形态（base64url 打包后 query 仍远在安全长度内）。
+var MAX_ID = 120
 
 var CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 
