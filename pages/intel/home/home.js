@@ -41,14 +41,23 @@ Page({
     followEnterPoint: null,
   },
 
+  /** 关闭本页分享入口（onShow + onLoad 都调，兜住跨页泄漏）：
+   *  ①wx.hideShareMenu() 不带参数——基础库 1.1.0 起全平台可靠隐藏「转发给朋友」；
+   *  ②wx.hideShareMenu({menus:[shareAppMessage,shareTimeline]})——2.11.3+ 隐藏到朋友圈（Beta，Android）。
+   *  本页无 onShareAppMessage/onShareTimeline 处理器，但有旧版微信/路由泄漏时会以默认行为可分享，
+   *  必须每次页面显示都显式压住。 */
+  _hideShareMenu() {
+    try { wx.hideShareMenu() } catch (e) {}
+    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+  },
+
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
   onShow() {
     // owner 2026-09-08：情报官首页关闭分享——每次页面显示都重新隐藏分享入口。
     // 踩坑实锤（微信菜单状态跨页面泄漏）：情报详情页 onLoad 的 wx.showShareMenu 会在
     // 返回本页后仍然生效（页面跳转后菜单重新可用），onLoad 只跑一次挡不住，
     // 必须放 onShow 每次显示都 hide（社区同款修法「放在 onShow 调用，每次都禁用」）。
-    // 本页无 onShareAppMessage/onShareTimeline 处理器，泄漏后两项均以默认行为可分享——必须显式压住。
-    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+    this._hideShareMenu()
 
     const g = app.globalData || {}
     if (g.themeClass && this.data.themeClass !== g.themeClass) {
@@ -64,9 +73,9 @@ Page({
   onLoad() {
 
     // owner 2026-09-08：情报官首页关闭分享——首次进入先隐藏一次。
-    // 注意：主力修复在 onShow（showShareMenu 菜单状态会从情报详情页跨页面泄漏回来，
-    // 页面跳转后菜单重新可用，必须每次 onShow 都重新 hide，见 onShow 注释）。
-    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+    // 注意：主力在 onShow（showShareMenu 菜单状态会跨页面泄漏回来，页面跳转后菜单重新可用，
+    // 必须每次 onShow 都重新 hide；此处 onLoad 保首次覆盖）。详见 _hideShareMenu 注释。
+    this._hideShareMenu()
 
     // 状态栏文字颜色跟随主题：亮色黑/暗色白（One News 页面 onLoad 同款，intel 页此前缺失导致亮色下状态栏白字）
     const _app = getApp()
