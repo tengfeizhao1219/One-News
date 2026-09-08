@@ -238,8 +238,21 @@ Page({
     }
     if (options.card || options.st) {
       // 正常模式带分享打包参数（如 scene 1155「前往小程序」）
+      var cardNormal = parseCardData(options)
+      // 兜底数据：getNewsDetail 冷启动直载可能失败（云端函数缺依赖/新闻已滚出 30 天缓存），
+      // 届时回退展示打包卡片摘要，而不是死错误页
+      this._cardFallback = cardNormal ? {
+        title: cardNormal.title,
+        categoryName: cardNormal.categoryName,
+        metaSource: cardNormal.source,
+        time: cardNormal.time,
+        summary: cardNormal.summary,
+        isAi: cardNormal.isAi,
+        summarySource: cardNormal.summarySource || '',
+        contentSource: cardNormal.contentSource || '',
+        summaryParagraphs: cardNormal.summary ? cardNormal.summary.split(/\n+/).filter(function (p) { return p.trim() }).slice(0, 3) : [],
+      } : null
       if (!id) {
-        var cardNormal = parseCardData(options)
         if (cardNormal && cardNormal.id) {
           id = cardNormal.id
           index = 0
@@ -533,6 +546,11 @@ Page({
   _loadFallback: function (newsId, isExpiredEntry) {
     var that = this
     if (!newsId) {
+      // 分享/单页进入且带打包卡片 → 回退展示摘要卡，避免死错误页
+      if (that._cardFallback) {
+        that.setData({ pageState: 'singleCard', singleCard: that._cardFallback })
+        return
+      }
       that.setData({ pageState: 'error', errorMessage: '新闻加载失败' })
       wx.showToast({ title: '新闻加载失败', icon: 'none' })
       return
@@ -559,6 +577,12 @@ Page({
         that._startSwipeHintTimer()
         if (news && news.id) { that._checkFavorite(news.id); that._checkFollow(news.id) }
     }).catch(function () {
+      // 冷启动直载失败（云函数缺依赖/新闻已滚出缓存的真实场景）：
+      // 若带打包卡片 → 回退展示摘要卡（有内容胜过死错误页）；否则按原错误态提示
+      if (that._cardFallback) {
+        that.setData({ pageState: 'singleCard', singleCard: that._cardFallback })
+        return
+      }
       var msg = isExpiredEntry ? '该新闻已失效' : '新闻详情暂不可用，请返回重试'
       that.setData({ pageState: 'error', errorMessage: msg })
       wx.showToast({ title: msg, icon: 'none' })
