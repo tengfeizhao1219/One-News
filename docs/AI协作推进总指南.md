@@ -73,17 +73,36 @@ bash scripts/git_push.sh        # 推送统一走脚本（见 §三）
 
 ---
 
-## 三、Git 纪律与推送节奏
+## 三、代码管理（改什么、怎么提交、怎么推）
 
-### 3.1 标准推送入口：`bash scripts/git_push.sh`（禁止裸 `git push`）
+### 3.1 代码放在哪里（目录职责）
+
+| 目录 | 职责 | 注意 |
+|---|---|---|
+| `pages/` `components/` `utils/` | 小程序前端（页面/组件/工具） | 微信开发者工具直接打开本地目录编译，改完即生效 |
+| `cloudfunctions/<函数名>/` | 云函数**部署副本**（CLI 从这里部署） | 目录需含 node_modules |
+| `backend/` | 云函数**源码母本**（尤其 intelSearch 等） | 部署前先同步母本 → cloudfunctions/ 对应副本（intelSearch 还需改写 require `../common/`→`./common/`，见 §六） |
+| `ui-demo/` | UI 改动的 1:1 HTML demo | 流程：先 demo 给 owner 确认 → 再落小程序代码 |
+| `assets/icons/` | 自绘 SVG 图标（项目禁系统图标） | 深色模式需 `-dark` 变体 |
+| `scripts/` | 运维脚本（推送/门禁/文件锁/部署） | 新 clone 先 `bash scripts/install-hooks.sh` 装门禁 |
+| `docs/` `intel-docs/` | 文档（管理方式见 §四） | 与代码同仓库、同 commit 管理 |
+
+### 3.2 提交规范
+
+- commit message：`类型: 中文简述`（feat / fix / docs / refactor / chore），修复类要写**根因**。
+- 粒度：一次逻辑单元一次 commit，不跨职责混提；本地 commit 随时做（先保护成果，推送另说）。
+- ⚠️ **只 `git add <自己改的文件列表>`，严禁 `git add -A` / `git add .`**——会把他人未提交 WIP 带进你的 commit。
+- 改了接口/机制/配置的，对应文档与代码**同一个 commit** 一起入库。
+
+### 3.3 推送入口：`bash scripts/git_push.sh`（禁止裸 `git push`）
 
 内置：60s 推送间隔保护（`~/.cache/one-news-last-push`）、指数退避重试（10→120s，最多 5 次）、强制 HTTP/1.1（规避 HTTP2 framing 错误）、pre-push 门禁自动执行。
 
-### 3.2 pre-push 门禁
+### 3.4 pre-push 门禁
 
 `.git/hooks/pre-push`（新 clone 需先 `bash scripts/install-hooks.sh`）自动跑 `scripts/check_intel.sh`：关键逻辑存在性校验（防止并行覆盖弄丢清理类静默逻辑）+ 冲突标记扫描。**失败拒推，不可绕过。**
 
-### 3.3 推送节奏（防 GitHub 二级限流）
+### 3.5 推送节奏（防 GitHub 二级限流）
 
 背景：高频 push（实测峰值 10 次/时）触发 GitHub **secondary rate limit**——写操作挂起/超时（`SSL_ERROR_SYSCALL`/`Empty reply`），读操作正常。
 
@@ -95,7 +114,7 @@ bash scripts/git_push.sh        # 推送统一走脚本（见 §三）
 | 兜底 | launchd 每日 **23:30** 自动跑 `scripts/daily-commit-push.sh`（`com.one-news.daily-push`；有改动才提交推送，日志 `/tmp/one-news-daily-push.log`）。注意它用 `git add -A`——**所以工作区平时要保持干净，别留不想入库的文件** |
 | push 失败时 | 等 60-120s 再用脚本重试，**不要立即重试轰炸**；先 `git fetch` 确认是否其实已推上去 |
 
-### 3.4 网络故障速查
+### 3.6 网络故障速查
 
 | 现象 | 处置 |
 |---|---|
@@ -103,13 +122,40 @@ bash scripts/git_push.sh        # 推送统一走脚本（见 §三）
 | `HTTP2 framing layer` | 脚本已强制 HTTP/1.1；或 `git config http.version HTTP/1.1` |
 | github.com 被解析到 198.18.x（沙箱代理） | 读通常正常、写易挂起——用脚本的重试循环；必要时 `git -c http.curloptResolve=github.com:443:140.82.113.4 pull --rebase` |
 
+### 3.7 工作区卫生（多 AI 共享目录的特殊要求）
+
+- launchd 每日 23:30 兜底任务用 `git add -A` 提交全部改动 → **平时工作区必须保持干净**，别留不想入库的文件（临时脚本、日志等放 /tmp 或加 .gitignore）。
+- 每次开工 `git status --short` 辨认他人 WIP（未提交的改动、未跟踪的 package-lock.json 等）——**勿动、勿提交、勿还原**。
+- 只在拿到文件锁（§二）后编辑对应文件，编辑完立即 unlock。
+
 ---
 
-## 四、文档体系（「文件即通信」，一切靠文件交接）
+## 四、文档管理（写什么、放哪里、何时写、谁维护）
 
-> 核心理念：**没有 IM、没有会议**。所有沟通记录、任务状态、决策都落在仓库文件里，任何新会话读文件即可 100% 继承上下文。
+> 核心理念：**文件即通信——没有 IM、没有会议**。所有沟通记录、任务状态、决策都落在仓库文件里，任何新会话读文件即可 100% 继承上下文。文档与代码同仓库、同 commit 管理，**GitHub 为唯一事实源**。
 
-### 4.1 必读文件地图（按顺序）
+### 4.1 文档放在哪里（双目录体系）
+
+| 位置 | 定位 | 典型内容 |
+|---|---|---|
+| `docs/` | **项目级**通用规范（对全项目生效） | 多会话防覆盖操作规范、本总指南、架构文档 |
+| `intel-docs/` | **AI 情报官文档库**（主体，最多） | 协作五件套（CONTEXT/ROLE_CARDS/TASK_BOARD/COMMLOG/RELAY）、需求/调研/设计/实现拆解、UI 规范家族、LEARNINGS/ADR/REVIEW、会话迁移与继承指南、专项技术设计 |
+| 仓库根 | 门面文档 | README、RELEASE_NOTE_v* |
+
+> 新文档归属判断：管「整个项目怎么做」→ `docs/`；只关于情报官模块或协作机制 → `intel-docs/`。拿不准就放 `intel-docs/` 并在导航索引登记。
+
+### 4.2 什么时候必须写/更新（写入时机 = 硬性纪律）
+
+| 文档 | 写入时机 | 格式要点 |
+|---|---|---|
+| `intel-docs/COMMLOG.md` | **每次交付/交接/紧急推送后立即留痕**（多 AI 唯一广播频道） | 表格一行、**倒序**（最新在上）：日期 \| 角色 \| 事项 \| 状态 |
+| `intel-docs/LEARNINGS.md` | 修复/返工 ≥2 次尝试或 ≥1 小时，**当次必写** | 症状 / 根因 / 正确做法 / 涉及角色 |
+| `intel-docs/ADR.md` | owner 每次拍板（方案/技术栈/资源取舍）当次写入 | 日期 / 决策 / 理由 / 备选 / 影响 |
+| 会话恢复块（迁移指南末尾） | 一轮大工作收尾时更新，供下个会话快速接续 | 本轮成果 / 待办 / 易踩点 |
+| `TASK_BOARD.md` / `RELAY.md` | 认领任务、状态变更、关口检查时 | 状态机：📋 待认领 → 🔄 进行中 → ✅ 完成 / 🚫 阻塞 |
+| 需求/设计/拆解文档 | 新模块开工前按链路补齐（需求 → 调研 → 设计 → 拆解） | 交叉引用见文档导航索引 |
+
+### 4.3 必读文件地图（按顺序）
 
 | 顺序 | 文件 | 作用 |
 |---|---|---|
@@ -122,7 +168,7 @@ bash scripts/git_push.sh        # 推送统一走脚本（见 §三）
 | 7 | `intel-docs/AI情报官_协作机制.md` | 协作总规（认领/交付/关口检查/DoD/文件锁纪律） |
 | 8 | `intel-docs/AI情报官_文档导航与交叉引用索引.md` | 需求/调研/设计/拆解四份核心文档的跳读入口 |
 
-### 4.2 专项规范（按需读）
+### 4.4 专项规范（按需读）
 
 | 场景 | 必读 |
 |---|---|
@@ -131,11 +177,13 @@ bash scripts/git_push.sh        # 推送统一走脚本（见 §三）
 | Git 推送 | `intel-docs/GIT推送规范.md` |
 | 情报官技术设计 | `AI情报官_设计文档_v1.md`、`情报详情页话题搜索_技术设计.md` 等 |
 
-### 4.3 文档维护纪律
+### 4.5 维护规则与文档生命周期
 
-- COMMLOG **倒序追加**：每次交付/交接必留痕（日期 | 角色 | 事项 | 状态）；这是多 AI 之间唯一的「广播频道」。
-- 修复/返工（≥2 次尝试或 ≥1 小时）→ 当次必须写 LEARNINGS；owner 拍板 → 写 ADR。
-- 文档与代码同步提交入库；Notion 有镜像库（「AI 情报官项目资料」），但 **GitHub 仓库为事实源**。
+- **归属与留痕**：谁写谁维护、谁改谁留痕；COMMLOG/LEARNINGS/恢复块一律**倒序追加**，不改旧条目。
+- **一致性**：改任何一份核心文档后，回看 `AI情报官_文档导航与交叉引用索引.md` 的锚点表是否仍成立（需求→设计→TASK_BOARD 互相对齐）。
+- **镜像**：Notion「AI 情报官项目资料」库是文档镜像（无仓库访问权时只读 Notion），但**以 GitHub 仓库为准**，不同步不追责、同步了才算归档完成。
+- **轮转归档**：COMMLOG 超 30 条或跨月 → 旧条目压缩成「决策摘要」归档，主文件只留存活信息。
+- **可回退**：阶段关口通过时打 tag（`git tag phase-N-done && git push --tags`），失败可 `git checkout <tag>` 恢复。
 
 ---
 
