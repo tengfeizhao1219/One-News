@@ -108,3 +108,25 @@ git clone -b intel-officer https://github.com/tengfeizhao1219/One-News.git
 | 云端会话还继续跑吗？ | 可以并行。两边都按 §五 纪律 pull/push，文件级无冲突风险（各自改不同文件时）。 |
 | 本地没有 GitHub 凭证怎么办？ | 让新会话先只读 Notion 库（无凭证），或你把 token 配进本地 secrets 再 clone/push。 |
 | 云端已配好的自定义模型/技能要重配吗？ | 模型配置是客户端侧、不跨设备（除非走云端记忆），本地需按《自定义模型配置》重配；Skills/插件同账号可同步。 |
+
+---
+
+## 2026-09-07 会话恢复块（本轮快速接续用）
+
+> 后续任何会话接续本项目时，先读本块 + 拉取 `git log --oneline -15`，即可恢复本轮进度。
+
+**仓库**：`~/Desktop/One-News`（GitHub tengfeizhao1219/One-News）。纪律：**先 git pull 以线上为准**；改完即 commit+push；工作区他人 WIP 勿动（当前有 `pages/detail/detail.js` 旧 pyq 改动可能已被本会话覆盖、`ui-demo/index.html` 的旧 pyq WIP、`cloudfunctions/followUpCheck/package-lock.json` 未跟踪勿提交）。
+
+**本轮核心成果（均已推送）：**
+1. **朋友圈单页模式（scene 1154）根治**（提交 6bbe7b3→4e89e0b）：
+   - 微信硬限制：单页禁全部路由+登录+云函数+本地存储不共用 → **只能读分享 query**
+   - 方案：`utils/shareCard.js`（buildCardQuery/parseCardData），onShareTimeline promise 后台打包完整卡片 card=JSON（标题/分类/来源/时间/摘要400字/AI标识），单页打开就地渲染完整首页卡片（不跳转）
+   - home/detail 单页分支 `options.card` → parseCardData → 渲染卡片视觉；`st/tn` 兜底
+   - 预览已推送，**待真机验证**：首页/详情分享→朋友圈点开=完整卡片
+2. **intel 详情页深挖历史**：折叠/持久化(wx storage 按 itemId)/搜索后收起入口（12218a9）
+3. **浏览历史+收藏 30 天滚动清除**：utils/intelHistory.js + pages/intel/history + mine 入口；收藏 TTL 改 30 天（c21bea2 一带）
+4. **详情页话题搜索**：searchIntelTopic 导出修复、结果累积、sections 层级渲染、纯文本（后端 prompt+清洗已部署 intelSearch）
+
+**易踩点**：微信 `wx.cloud.callFunction` 无 timeout 参数（忽略即可）；云函数部署用 wechatide/cli，函数目录需含 node_modules；push 网络不稳用重试循环。
+
+**当前待办**：朋友圈单页真机验证结果反馈（用户会再分享→点开确认卡片形态）；若仍异常看单页打开时控制台报错。

@@ -7,6 +7,9 @@
 
 | 日期 | 角色 | 事项 | 状态 |
 |---|---|---|---|
+| 2026-09-07 | Auto | **朋友圈单页模式（scene 1154）根治**：单页禁全部路由(redirectTo/reLaunch/navigateTo)+禁登录/云函数/本地存储不共用 → 只能读分享 query。方案(owner 提议)：分享时 promise 后台把完整卡片打包 card=JSON（new utils/shareCard.js buildCardQuery/parseCardData），单页打开就地渲染完整首页卡片（不跳转）。首页+详情 onShareTimeline 均打包；home/detail 单页分支 parseCardData→渲染 card 视觉。提交 6bbe7b3/4e89e0b，已 auto_preview。待真机验证：首页/详情分享→朋友圈点开显示完整卡片 | ✅ 已推送预览 |
+| 2026-09-07 | Auto | **浏览历史/收藏 30 天滚动清除**（真机+ui-demo）：new utils/intelHistory.js（TTL30天/LRU200/去重置顶）；new pages/intel/history（列表/删除/清空）；mine 页加浏览历史入口；收藏 TTL 半年→30 天。提交 c21bea2 等 | ✅ 已推送 |
+| 2026-09-07 | Auto | **intel 详情页话题搜索→深挖历史**：深挖历史区(rest 内折叠/持久化 wx storage/itemId 隔离)；搜索入口默认隐藏、点 FAB 展开、搜索后自动收起滚到历史；面板滚到顶下滑收起。提交 12218a9/d4822f0 等 | ✅ 已推送 |
 | 2026-09-03 | Auto | **news_cache AI summary 乱码（U+FFFD）止血**。18:42/最新批次出现 2-3 条 AI 生成 summary 含 U+FFFD（苏州书画/波音卫星，summarySource=ai + contentSource=ai_interpretation），staging 另 2 条 title 乱码已 discard。已 DB 清洗现有乱码条目（strip FFFD）。**根因待查（记 LEARNINGS）**：线上 newsPipeline batchInsert 有 cleanUtf8+garbleGate 却未拦住 AI summary 乱码，疑似 AI 响应流断字节在 cleanUtf8 之后/之外的路径二次写入，需看 publish 日志定位（T9.7 待办） | ⚠️ 止血已做，根治待查 |
  2026-09-03 | Auto | **关注页"每次更新一样"修复**。现象：普京-莫迪话题 3 次推送同一 2025年12月旧闻（第23届峰会/武器生产/1000亿美元贸易额），库克/北京范儿话题同日重复推送。根因：followUpCheck 判新只对比关注时 knownSummary，**不知道已推送的更新历史** → Tavily 搜到旧闻反复当新进展推。修复：`judgeAndSummarize` 增加 historyUpdates 参数（最近5条已推送摘要），prompt 明确"与历史重复（措辞不同/事件日期相同）= hasNew=false 不打扰"。实测 force 重检 → lastResult=none、updates 不新增 ✓。存量清理：普京-莫迪 4→1、库克 3→2、北京范儿 4→3（文本相似度>0.7 去重保留最新）。提交 `2926310`（本地未推）。**另发现**：news_cache 有 3 条官方源 summary 含 U+FFFD（18:42 批次，garbleGate 未拦截，待排查官方源写入旁路） | ✅ 已修 |
  2026-09-01 | Owner/Auto | **GitHub 推送节奏调整（owner 拍板，防限流）**：所有改动**提交后不立即 push**，由**隔天第一次对话的会话一次性推送**全部累积提交；紧急/线上事故修复除外（可立即 push 并在 COMMLOG 注明）。已写入 `docs/多会话防覆盖操作规范.md`（§GitHub 同步节奏）。云端/数据库部署不受此限制。**注意**：今天已有提交 `5636019`（关注后端）已推送；此后新提交累积到隔天统一推 | ✅ 已生效 |
