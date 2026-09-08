@@ -43,6 +43,13 @@ Page({
 
   /** 主题跟随兜底：页面重新显示时同步 One News 设置的深浅色（applyTheme 只更新页面栈，onShow 双保险） */
   onShow() {
+    // owner 2026-09-08：情报官首页关闭分享——每次页面显示都重新隐藏分享入口。
+    // 踩坑实锤（微信菜单状态跨页面泄漏）：情报详情页 onLoad 的 wx.showShareMenu 会在
+    // 返回本页后仍然生效（页面跳转后菜单重新可用），onLoad 只跑一次挡不住，
+    // 必须放 onShow 每次显示都 hide（社区同款修法「放在 onShow 调用，每次都禁用」）。
+    // 本页无 onShareAppMessage/onShareTimeline 处理器，泄漏后两项均以默认行为可分享——必须显式压住。
+    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+
     const g = app.globalData || {}
     if (g.themeClass && this.data.themeClass !== g.themeClass) {
       this.setData({
@@ -56,10 +63,9 @@ Page({
 
   onLoad() {
 
-    // owner 2026-09-08：情报官首页关闭分享——菜单里不得出现任何分享入口。
-    // 本页本就无 onShareAppMessage/onShareTimeline 处理器（转发本就不可用），但微信默认
-    // 仍在 ··· 菜单里显示灰色「转发给朋友」；hideShareMenu 将其彻底隐藏（menus 参数
-    // 需基础库 2.11.3+，低版本走 catch 忽略）。情报详情页不受影响（各自独立控制菜单）。
+    // owner 2026-09-08：情报官首页关闭分享——首次进入先隐藏一次。
+    // 注意：主力修复在 onShow（showShareMenu 菜单状态会从情报详情页跨页面泄漏回来，
+    // 页面跳转后菜单重新可用，必须每次 onShow 都重新 hide，见 onShow 注释）。
     try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
 
     // 状态栏文字颜色跟随主题：亮色黑/暗色白（One News 页面 onLoad 同款，intel 页此前缺失导致亮色下状态栏白字）
