@@ -56,6 +56,12 @@ Page({
 
   onLoad() {
 
+    // owner 2026-09-08：情报官首页关闭分享——菜单里不得出现任何分享入口。
+    // 本页本就无 onShareAppMessage/onShareTimeline 处理器（转发本就不可用），但微信默认
+    // 仍在 ··· 菜单里显示灰色「转发给朋友」；hideShareMenu 将其彻底隐藏（menus 参数
+    // 需基础库 2.11.3+，低版本走 catch 忽略）。情报详情页不受影响（各自独立控制菜单）。
+    try { wx.hideShareMenu({ menus: ['shareAppMessage', 'shareTimeline'] }) } catch (e) {}
+
     // 状态栏文字颜色跟随主题：亮色黑/暗色白（One News 页面 onLoad 同款，intel 页此前缺失导致亮色下状态栏白字）
     const _app = getApp()
     if (_app && _app.setNavBarColor) {
