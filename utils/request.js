@@ -21,13 +21,15 @@ const LIST_CACHE_TTL = 90 * 1000
  * @param {string} params.category 分类ID，默认'recommend'（DG-03: all → recommend）
  * @param {number} params.pageNum   页码，默认1
  * @param {number} params.pageSize  每页条数；不传时按分类默认：recommend→15（对齐落库 cap），其余→8（PAGE_SIZE）
- * @param {boolean} [params.includeContent=false] 是否透传完整正文 content/aiOpinion。
- *        默认 false（瘦包）：首页卡片流只用 summary，无需长正文。
- *        详情页首屏按需传 true（或走 getNewsDetail 后台拉取）。
+ * @param {boolean} [params.includeContent=true] 是否透传完整正文 content/aiOpinion。
+ *        2026-09-07 owner 拍板恢复方案A（=生产版 v2.0.0 行为）：默认 true，列表随行携带
+ *        AI 解读全文，详情页 detailContext 首帧零网络渲染（详情页加载慢根因修复）。
+ *        8/28 曾默认 false 瘦包（首页省 ~60-150KB），代价是详情首屏绑死 getNewsDetail RTT；
+ *        参数保留作开关，未来数据量增长需要瘦包时配合「详情首屏本地优先」再启用。
  * @param {boolean} [params.forceRefresh=false] 强制打云、跳过本地缓存（下拉刷新等需强一致场景）
  * @returns {Promise<{list: Array, total: number, hasMore: boolean, meta?: Object}>}
  */
-function getNewsList({ category = 'recommend', pageNum = 1, pageSize, includeContent = false, forceRefresh = false } = {}) {
+function getNewsList({ category = 'recommend', pageNum = 1, pageSize, includeContent = true, forceRefresh = false } = {}) {
   const size = pageSize || (category === 'recommend' ? RECOMMEND_PAGE_SIZE : PAGE_SIZE)
   const cacheKey = `nl:${category}:${pageNum}:${size}:${includeContent ? 1 : 0}`
   const hit = !forceRefresh && localCache.get(cacheKey)
@@ -55,7 +57,7 @@ function getNewsList({ category = 'recommend', pageNum = 1, pageSize, includeCon
 function _fetchList({ category, pageNum, size, includeContent }) {
   return wx.cloud.callFunction({
     name: 'getNewsList',
-    // 首页高频列表默认不拉长正文，减小响应包（详情页按需 includeContent=true / getNewsDetail）
+    // 2026-09-07 恢复方案A：列表默认透传完整正文（=生产版 v2.0.0 行为），详情页 detailContext 首帧零网络渲染
     data: { category, pageNum, pageSize: size, includeContent }
   }).then(res => {
     if (res.result.code !== 0) {

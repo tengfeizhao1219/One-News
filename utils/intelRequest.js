@@ -89,6 +89,13 @@ function normalizeFocusItem(it) {
     relevance: it.relevance || 'medium',
     contract: it.contract === true,
     rank: it.rank || 0,
+    // 方案A（对齐 One News 2026-09-07 方案A）：透传云端已下发的完整 sop（structured，
+    //   含 whatHappened/Blocks/sceneMappingLines/plainTalk 等）→ 详情页本地渲染秒开，免云函数等待。
+    //   云端 oneNewsChannel._renderItem 已带 sop:it.sop，此前前端 normalizeFocusItem 丢失导致
+    //   详情页 card.sop 恒空 → 每次都调 intelGetDetail（冷启动+网络）变慢。
+    sop: it.sop || null,
+    references: Array.isArray(it.references) ? it.references : [],
+    tryable: it.tryable === true,
   }
 }
 

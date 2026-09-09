@@ -147,9 +147,9 @@ function ReadingEngine(options) {
   this._initializing = false
   // BUG-20260806-002：入口新闻未命中标记（收藏/历史旧新闻已失效时禁止回退展示他条）
   this._entryNotFound = false
-  // 2026-08-28：首屏渲染控制——首屏等待 getNewsDetail 完成再渲染（展示 logo 加载动画），
-  // 避免「先摘要后补全」跳变；翻页保持「秒出本地 + 后台升级」的丝滑体验（仅首次为 true）。
-  this._firstLoadPending = true
+  // 2026-09-07 回滚 d73011c（owner 拍板恢复方案A）：列表恢复默认透传完整正文（request.js
+  // includeContent=true），detailContext/本地缓存首帧即全文——首屏与翻页统一走
+  // 「秒出本地渲染 + 后台 getNewsDetail 升级」，不再等待云函数（消除详情首屏绑死 RTT 的根因）。
 }
 
 /**
@@ -572,39 +572,9 @@ ReadingEngine.prototype.loadCurrentDetail = function () {
   }
   var paragraphs = text.split('\n').filter(function (p) { return p.trim() })
 
-  // 首屏：等待 getNewsDetail 完成再渲染（详情页展示 logo 加载动画，避免「先摘要后补全」跳变）。
-  // 翻页：保持「秒出本地 + 后台升级」的丝滑体验（_firstLoadPending 仅在首次为 true）。
-  if (that._firstLoadPending) {
-    that._firstLoadPending = false
-    return getNewsDetail(cur.id).then(function (detail) {
-      var fresh = normalizeDetail(detail)
-      // 回写 mergedList 合规字段（后续翻页/返回/分享图一致）
-      if (that._mergedList[that._globalIndex] && that._mergedList[that._globalIndex].id === cur.id) {
-        that._mergedList[that._globalIndex].contentSource = fresh.contentSource
-        that._mergedList[that._globalIndex].references = fresh.references
-        that._mergedList[that._globalIndex].sourceUrl = fresh.sourceUrl || that._mergedList[that._globalIndex].sourceUrl
-        that._mergedList[that._globalIndex].content = fresh.content || that._mergedList[that._globalIndex].content
-        that._mergedList[that._globalIndex].aiOpinion = fresh.aiOpinion || ''
-      }
-      if (that._cache) {
-        try { that._cache.set('newsDetail:' + cur.id, fresh, { ttl: 24 * 60 * 60 * 1000 }) } catch (e) { /* 忽略 */ }
-      }
-      var t2 = resolveContentText(fresh)
-      var p2 = t2.split('\n').filter(function (p) { return p.trim() })
-      if (fresh.contentSource === 'app_intro') {
-        fresh.isAppIntro = true
-        fresh.introBlocks = buildIntroBlocks(t2)
-      }
-      that._onDetailReady(fresh, p2)
-      return { news: fresh, paragraphs: p2, fromCache: false }
-    }).catch(function () {
-      // 网络失败：回退本地/摘要数据渲染，避免永远卡在加载态
-      that._onDetailReady(normalized, paragraphs)
-      return { news: normalized, paragraphs: paragraphs, fromCache: !!local }
-    })
-  }
-
-  // —— 翻页路径：立即用本地数据渲染（Promise 立即 resolve，零等待），后台 getNewsDetail 升级 ——
+  // 2026-09-07 回滚 d73011c（owner 拍板恢复方案A）：列表已默认透传完整正文（request.js
+  // includeContent=true），detailContext/本地缓存首帧即全文——首屏与翻页统一
+  // 「秒出本地渲染 + 后台 getNewsDetail 升级」，不再等待云函数（消除详情首屏绑死 RTT 的根因）。
   that._onDetailReady(normalized, paragraphs)
 
   // 后台刷新（网络失败静默，不影响已展示内容）

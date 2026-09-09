@@ -294,8 +294,10 @@ Page({
       const cached = (app.globalData && app.globalData.intelDetailCache && app.globalData.intelDetailCache[id]) || null
       if (cached) {
         this.applyDetail(cached)
-      } else if (card && card.sop && card.sop.whatHappened) {
-        // 首页已带完整详情（sop）→ 本地渲染，零等待；云函数兜底不必要
+      } else if (card && card.sop && (card.sop.whatHappened || card.sop.definition || (Array.isArray(card.sop.whatHappenedBlocks) && card.sop.whatHappenedBlocks.length) || card.sop.sceneMapping || card.sop.minAction || card.sop.practice)) {
+        // 首页已带完整详情（sop）→ 本地渲染秒开，云函数兜底不必要
+        // 2026-09-08 方案A：云端 brief focusItems 已下发 sop，此前 normalizeFocusItem 丢失
+        //  → card.sop 恒空 → 每次调 intelGetDetail 变慢；现已透传，走本地快路径
         this._renderFromCard(card, id)
       } else {
         this.loadRealDetail(id)
@@ -319,6 +321,10 @@ Page({
       whatHappened: sop.whatHappened || '',
       whatHappenedBlocks: Array.isArray(sop.whatHappenedBlocks) ? sop.whatHappenedBlocks : [],
       sceneMapping: sop.sceneMapping || '',
+      // 2026-09-08 方案A：本地渲染补齐结构化 sceneMappingLines（bold 分段）与 plainTalk（大白话），
+      // 与云端 intelGetDetail 输出完全一致，避免本地路径丢失这两块
+      sceneMappingLines: Array.isArray(sop.sceneMappingLines) ? sop.sceneMappingLines : [],
+      plainTalk: sop.plainTalk || '',
       sceneTags: Array.isArray(card.sceneTags) ? card.sceneTags.map(t => (typeof t === 'object' ? t.key || t.label : t)) : [],
       relevance: card.relevance || 'medium',
       minAction: sop.minAction || '',

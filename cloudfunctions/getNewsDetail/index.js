@@ -1,31 +1,31 @@
-// 获取新闻详情云函数 v6.2 — 聚合正文 + AI 摘要（智谱 GLM-4-Flash）+ 内容清洗
+// 获取新闻详情云函数 v6.4 — 纯读取端（news_cache/news_raw_official 只读 + R1 合规过滤）
 // ============================================================
-// v5.6 改造（2026-08-03）：
-//   抓取到正文后调用智谱 GLM-4-Flash 生成 100-150 字摘要，
-//   写回 news_cache 的 summary 字段（下次列表刷新即展示高质量摘要）。
-//   未配置 ZHIPU_API_KEY 或调用失败时保持原 summary，不影响主流程。
+// v6.4 纯读取端改造（2026-09-07 owner 拍板）：
+//   1) 移除历史遗留 news 集合查询——news 自 v5.1 起无任何写入方（全库 grep 证实
+//      仅本函数还在读），每次详情先查 news 必 miss，白付一次串行 DB 往返。
+//   2) 移除读取端实时抓取（聚合内容接口 / 原文网页抓取）与抓后回写库。
+//      详情页定位为纯读取端：正文抓取/清洗/AI 加工一律由 newsPipeline 在入库阶段
+//      完成并落 news_cache，读取端不再有任何实时抓取处理动作。
+//      根因：此前 content ≤ 200 字时读取端现抓聚合接口（超时 2.5s）→ 原文网页
+//      （每跳超时 2.5s × 最多 3 跳，最坏 ~10s），且抓到的全文在 ai_first 合规模式下
+//      返回前必被 R1 拦截——用户白等 3~10s 后看到的仍是 summary（延迟全损、零展示收益）。
+//      现 content 不足时统一走 R1 过滤返回，前端 resolveContentText 自动以 summary 渲染。
+//   附带清理：fetchWebPage/decodeBuffer/isSafeHttpUrl/fetchJuheContent/parseJuheKey/
+//   extractContentFromHtml/locateBodyHtml/trimExtraneousContent/extractParagraphs/
+//   cacheDoc/cacheContent/summarizeWithZhipu/summarizeWithDashscope 等随之失效的函数
+//   一并删除（summarize 系列自 DG-08 移出关键路径后已无调用方）。
 //
+// ── 以下为历史演进记录（保留备查）──
+// v5.6 改造（2026-08-03）：
+//   抓取到正文后调用智谱 GLM-4-Flash 生成 100-150 字摘要（v6.4 起摘要生成只在管线侧）。
 // v5.5 改造（2026-08-03）：
 //   详情页正文清洗增强：去除标题重复段、元信息行（时间+来源）、仅含来源段落。
-//   cleanNewsContent 新增 options.title / options.source。
-//
 // v5.4 改造（2026-08-03）：
-//   详情页正文获取优先级：聚合官方内容接口（/toutiao/content，稳定无反爬）
-//   → 网页抓取（带 UA + 重定向 + <p> 段落提取）→ summary 兜底。
-//   解决：v5.3 网页裸抓被反爬拦截 → 详情页只显示标题兜底。
-//
+//   详情页正文获取优先级：聚合官方内容接口 → 网页抓取 → summary 兜底（v6.4 已移除）。
 // v5.3 改造（2026-08-03）：
-//   v5.1 后 refreshNews 为适配 3 秒超时，只写 news_cache，不再双写 news 集合。
-//   详情页点击时必须支持从 news_cache 读取（否则报"新闻不存在"）。
-//   查询顺序：news 集合（历史 AI 版本遗留）→ news_cache 集合（v5 当前数据源）。
-//
+//   查询顺序兼容 news_cache（v5 当前数据源）；v6.4 起不再查历史遗留 news 集合。
 // v5.0 原逻辑：
-//   refreshNews 只缓存标题列表（不含正文），详情页用户点击时调用本函数：
-//     1. 先从集合查缓存（如果有 content 则直接返回）
-//     2. 如果没有 content，从 sourceUrl 抓取原文 → 清洗 → 返回并缓存
-//     3. 如果没有 sourceUrl，返回 title + summary
-//
-// 清洗流水线：newsCleaner.js（HTML 解码 → 标签移除 → 噪音过滤 → 段落规范化）
+//   列表只缓存标题，详情页点击时实时抓原文（v6.4 起废弃，正文的唯一供给方是 newsPipeline）。
 // ============================================================
 
 const cloud = require('wx-server-sdk')
@@ -33,23 +33,18 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const { cleanNewsContent, validateCleanedContent, cleanTitle } = require('./utils/newsCleaner')
-
-// 抓取原文超时时间（需 < 3 秒云函数限制）
-const FETCH_TIMEOUT_MS = 2500
-// 单次抓取最大字节数（防止异常大页面拖垮云函数）
-const MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024 // 2MB
+const { cleanTitle } = require('./utils/newsCleaner')
 
 // B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：读取端 content_mode 拦截
 // 默认 = 'ai_first'。含义：详情页只返回 AI 摘要/解读，不返回抓取的全文（防版权侵权）。
-// 拦截范围：缓存命中 (L510) + 实时抓取 (L589) 两处，凡 contentSource 不是 'ai_interpretation'
+// 拦截范围：所有返回点统一走 applyR1Filter，凡 contentSource 不是 'ai_interpretation'
 // （即 'cached' / 'fetched_and_cleaned' / 'juhe_content_api' / 'summary_fallback' 等历史全文本）
 // 一律清空 doc.content，前端只看到 summary + title + contentSource 标记。
 // 标记为 'r1_blocked_fulltext' → 前端可识别并展示"已合规降级"提示。
 // PRD §2.3 全局开关（2026-08-11 owner 拍板）：通过云函数环境变量 READ_CONTENT_MODE 切换
 //   - ai_first（默认）：拦截全文本，仅返回 AI 摘要/解读（防版权侵权）
-//   - fetch_full：回滚旧行为，详情页返回完整正文（仅合规审查期/灰度回滚使用）
-// 环境变量未设置时默认 ai_first（安全默认值，与上线版语义一致）
+//   - fetch_full：回滚旧行为，详情页返回库内完整正文（仅合规审查期/灰度回滚使用；
+//     v6.4 起读取端不抓取，该模式只放行库内已有 content，不再有"实时抓全文"行为）
 const READ_CONTENT_MODE_DEFAULT = process.env.READ_CONTENT_MODE || 'ai_first'
 // R1 拦截掉的 contentSource 应被前端识别为"已合规降级"
 const R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
@@ -57,7 +52,7 @@ const R1_BLOCKED_CONTENT_SOURCE = 'r1_blocked_fulltext'
 /**
  * R1 拦截：根据 read_content_mode 判断是否清空 content（保留 summary/title/references）
  * @param {Object} doc - 详情文档
- * @param {string} originalContentSource - 原始 contentSource（如 'cached' / 'fetched_and_cleaned'）
+ * @param {string} originalContentSource - 原始 contentSource（如 'cached' / 'ai_interpretation'）
  * @returns {Object} { content, contentSource, blocked }
  */
 function applyR1Filter(doc, originalContentSource) {
@@ -66,7 +61,7 @@ function applyR1Filter(doc, originalContentSource) {
     return { content: doc.content || '', contentSource: originalContentSource, blocked: false }
   }
   // ai_first 模式（默认）：仅放行以下 contentSource，其余全文本一律清空
-  // - 'ai_interpretation'：refreshNews 走"AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
+  // - 'ai_interpretation'：newsPipeline "AI 独立解读"通道（PRD §2.1-2 档位二）写入的 content
   // - 'official_rss'：官方 RSS 源直连，版权红线只存 summary 不存正文（v1.1 #35）
   //   content 为 summary 兜底值，非侵权全文，前端展示「出处↗」跳转源站 H5
   // - 'ai_summary'：owner 8/13 新增——聚合/天行源 AI 解读失败时回退的 AI 摘要 content（仍属 AI 加工产物，非 raw 原文），放行展示
@@ -81,275 +76,13 @@ function applyR1Filter(doc, originalContentSource) {
   }
 }
 
-// 浏览器 UA（模拟真实浏览器，避免新闻站反爬拦截无 UA 的数据中心请求）
-const BROWSER_UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36'
-
 /**
- * 从 Buffer 检测编码并转码为 UTF-8（修复 GBK/GB2312 旧站正文乱码，如央视网 www.cctv.com）。
- * HTML 不像 XML 有顶层 encoding 声明，故优先扫 <meta charset> / <meta http-equiv=content-type>，
- * 其次信任响应头 content-type 的 charset；均无声明时兜底 UTF-8。
- */
-function decodeBuffer(buffer, declaredEncoding) {
-  const buf = Buffer.from(buffer)
-  // 1) BOM 优先
-  if (buf.length >= 3 && buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) {
-    return buf.slice(3).toString('utf8')
-  }
-  // 2) 从 HTML <head> 前 1024 字节探测 charset（meta 声明优先于响应头）
-  const head = buf.slice(0, 1024).toString('latin1')
-  let enc = declaredEncoding || ''
-  if (!enc) {
-    const m1 = /<meta[^>]+charset\s*=\s*["']?\s*([a-z0-9-]+)/i.exec(head)
-    if (m1) enc = m1[1]
-    else {
-      const m2 = /<meta[^>]+http-equiv\s*=\s*["']?content-type["']?[^>]*content\s*=\s*["'][^"']*charset\s*=\s*([a-z0-9-]+)/i.exec(head)
-      if (m2) enc = m2[1]
-    }
-  }
-  const canonical = (enc || '').toLowerCase().replace(/[-_]/g, '')
-  if (canonical && canonical !== 'utf8') {
-    try {
-      if (canonical === 'gbk' || canonical === 'gb2312' || canonical === 'gb18030') {
-        if (typeof TextDecoder !== 'undefined') return new TextDecoder('gbk').decode(buf)
-        try { const iconv = require('iconv-lite'); return iconv.decode(buf, 'gbk') } catch (e) { /* 回退 UTF-8 */ }
-      }
-      if (typeof TextDecoder !== 'undefined') {
-        try { const td = new TextDecoder(canonical); if (td.encoding !== 'utf-8') return td.decode(buf) } catch (e) { /* 回退 UTF-8 */ }
-      }
-    } catch (e) { /* 回退 UTF-8 */ }
-  }
-  return buf.toString('utf8')
-}
-
-/**
- * C-5：URL 安全校验（防 SSRF）——仅允许 http/https，拒绝内网/保留段/云元数据地址。
- * @param {string} url
- * @returns {boolean}
- */
-function isSafeHttpUrl(url) {
-  try {
-    const u = new URL(url)
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
-    const host = u.hostname.toLowerCase()
-    if (host === 'localhost' || host === '0.0.0.0' || host.endsWith('.local')) return false
-    if (host === '::' || host === '::1' || host.startsWith('fe80:')) return false
-    const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(host)
-    if (m) {
-      const a = +m[1], b = +m[2]
-      if (a === 10) return false                       // 10.0.0.0/8
-      if (a === 172 && b >= 16 && b <= 31) return false // 172.16-31.0.0/16
-      if (a === 192 && b === 168) return false         // 192.168.0.0/16
-      if (a === 127) return false                      // loopback
-      if (a === 169 && b === 254) return false         // link-local（含云元数据 169.254.169.254）
-      if (a === 0) return false                        // 0.0.0.0/8
-      if (a === 100 && b >= 64 && b <= 127) return false // CGNAT（含阿里云元数据 100.100.100.200）
-    }
-    return true
-  } catch (e) { return false }
-}
-
-const MAX_REDIRECTS = 3 // C-5：重定向最多跟随 3 次（防重定向环挂死/连环跳转）
-
-/**
- * 从 URL 抓取网页 HTML（v5.4：加 UA / Accept 头 + 跟随重定向 + 2MB 上限）
- * @param {string} url
- * @param {number} [redirectCount] 已跟随重定向次数
- * @returns {Promise<string|null>}
- */
-function fetchWebPage(url, redirectCount) {
-  const redirects = redirectCount || 0
-  if (!url) return Promise.resolve(null)
-
-  // C-5：scheme/host 校验（sourceUrl 来自第三方上游，防内网/元数据地址被代发请求）
-  if (!isSafeHttpUrl(url)) return Promise.resolve(null)
-
-  const protocol = url.startsWith('https') ? require('https') : require('http')
-
-  return new Promise((resolve) => {
-    const req = protocol.get(url, {
-      timeout: FETCH_TIMEOUT_MS,
-      headers: {
-        'User-Agent': BROWSER_UA,
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-        'Cache-Control': 'no-cache',
-      },
-    }, (res) => {
-      // C-5：跟随重定向但有深度上限（3 次），超限直接放弃
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        res.resume()
-        if (redirects >= MAX_REDIRECTS) {
-          resolve(null)
-          return
-        }
-        const nextUrl = new URL(res.headers.location, url).toString()
-        return resolve(fetchWebPage(nextUrl, redirects + 1))
-      }
-
-      // 只处理 200 且 HTML 类型
-      const contentType = res.headers['content-type'] || ''
-      if (res.statusCode !== 200 || (!contentType.includes('html') && !contentType.includes('text'))) {
-        res.resume()
-        resolve(null)
-        return
-      }
-
-      // 提取响应头声明的 charset（GBK 等旧站常缺，decodeBuffer 会再扫 meta 兜底）
-      const charsetMatch = /charset\s*=\s*([a-z0-9-]+)/i.exec(contentType)
-      const declaredEncoding = charsetMatch ? charsetMatch[1] : ''
-
-      const chunks = []
-      let total = 0
-      res.on('data', chunk => {
-        total += chunk.length
-        // 防止过大网页撑爆内存
-        if (total > MAX_DOWNLOAD_BYTES) {
-          req.destroy()
-          resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding))
-          return
-        }
-        chunks.push(chunk)
-      })
-      res.on('end', () => resolve(decodeBuffer(Buffer.concat(chunks), declaredEncoding)))
-    })
-
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => {
-      req.destroy()
-      resolve(null)
-    })
-
-    req.end()
-  })
-}
-
-/**
- * 从 HTML 中定位正文容器（优先语义标签，其次常见 class/id）
- * v6.3(V5-FS-02-⑥): 严格限定容器并截断延伸阅读/相关推荐
- * @param {string} html
- * @returns {string|null} 容器 HTML
- */
-function locateBodyHtml(html) {
-  const patterns = [
-    /<article[^>]*>([\s\S]*?)<\/article>/i,
-    /<div[^>]*id=["']paragraph["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*post_body[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*post_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*id=["']content["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["']article-content["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*article[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-    /<div[^>]*class=["'][^"']*content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
-  ]
-  for (const re of patterns) {
-    const m = html.match(re)
-    if (m && m[1]) return trimExtraneousContent(m[1])
-  }
-  return null
-}
-
-/**
- * v6.3(V5-FS-02-⑥): 截断正文容器内"延伸阅读/相关推荐"及之后的内容
- */
-function trimExtraneousContent(html) {
-  if (!html) return null
-  const cutoffPatterns = [
-    /<[^>]*class=["'][^"']*(?:related|recommend|extend|extra)[^"']*["'][^>]*>/i,
-    /(?:延伸阅读|相关推荐|推荐阅读|相关新闻|热门推荐|猜你喜欢|更多阅读)[：:]/i,
-    /<h\d[^>]*>(?:延伸阅读|相关推荐|推荐阅读|相关新闻)[\s\S]*?<\/h\d>/i,
-    /广告声明[：:][\s\S]*?(?:链接|二维码|口令)/i,
-  ]
-  for (const pattern of cutoffPatterns) {
-    const idx = html.search(pattern)
-    if (idx > 100) {
-      return html.slice(0, idx).trim()
-    }
-  }
-  return html
-}
-
-/**
- * 从一段 HTML 中提取 <p> 文本段落（过滤过短噪音段落）
- * @param {string|null} containerHtml
- * @returns {string[]}
- */
-function extractParagraphs(containerHtml) {
-  if (!containerHtml) return []
-  const paras = []
-  const pRe = /<p[^>]*>([\s\S]*?)<\/p>/gi
-  let m
-  while ((m = pRe.exec(containerHtml)) !== null) {
-    const text = m[1]
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      // 数字实体一律解码为字符（合法码点还原，非法/超出用空格兜底，避免丢字）
-      .replace(/&#(\d+);/g, (_, code) => {
-        const cp = parseInt(code, 10)
-        // 0x10FFFF 是 Unicode 单码位上限；代理区/控制字符码点换成空格防脏字符
-        return cp > 0 && cp <= 0x10FFFF && !(cp >= 0xd800 && cp <= 0xdfff) && !(cp < 0x20 && !/[\t\n\r]/.test(String.fromCodePoint(cp)))
-          ? String.fromCodePoint(cp)
-          : ' '
-      })
-      .replace(/\s+/g, ' ')
-      .trim()
-    // 过滤过短段落（导航/图片说明）
-    if (text.length >= 15) paras.push(text)
-  }
-  return paras
-}
-
-/**
- * 从 HTML 中提取正文纯文本（v5.4：容器 + <p> 段落提取，兼容全页退化）
- * @param {string} html
- * @returns {string|null}
- */
-function extractContentFromHtml(html) {
-  if (!html) return null
-
-  // 1. 移除噪音标签块
-  const cleaned = html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, ' ')
-    .replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, ' ')
-    .replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, ' ')
-    .replace(/<header[^>]*>[\s\S]*?<\/header>/gi, ' ')
-    .replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
-
-  // 2. 优先定位正文容器提取 <p>；容器提取不到 → 退化为全页 <p> 提取
-  let paras = extractParagraphs(locateBodyHtml(cleaned))
-  if (paras.length < 2) {
-    paras = extractParagraphs(cleaned)
-  }
-
-  // 3. 合并成正文
-  if (paras.length === 0) return null
-  return paras.join('\n')
-}
-
-/**
- * 按 newsId 查找新闻文档（v5.3：news 集合 → news_cache 集合兜底）
- * @param {string} newsId  - 前端传入的 id（juhe_xxx）或数据库 _id
+ * 按 newsId 查找新闻文档（v6.4：news_cache → news_raw_official，已移除遗留 news 集合查询）
+ * @param {string} newsId  - 前端传入的 id（juhe_xxx 形态 id 或数据库 _id）
  * @returns {Promise<{doc: Object, collection: string}|null>}
  */
 async function findNewsDoc(newsId) {
-  // 1. news 集合（历史 AI 版本遗留数据）
-  try {
-    const res = await db.collection('news').where({ id: newsId }).get()
-    if (res.data && res.data.length > 0) {
-      return { doc: res.data[0], collection: 'news' }
-    }
-  } catch (e) {
-    console.warn('[getNewsDetail] news 集合按 id 查询失败:', e && e.message)
-  }
-
-  // 2. news_cache 集合按 id（v5 当前数据源）
+  // 1. news_cache 集合按 id（v5 当前数据源；聚合/天行源前端传 juhe_xxx 形态 id）
   try {
     const res = await db.collection('news_cache').where({ id: newsId }).get()
     if (res.data && res.data.length > 0) {
@@ -359,7 +92,7 @@ async function findNewsDoc(newsId) {
     console.warn('[getNewsDetail] news_cache 按 id 查询失败:', e && e.message)
   }
 
-  // 3. news_cache 集合按 _id（前端可能直接传数据库 _id）
+  // 2. news_cache 集合按 _id（前端可能直接传数据库 _id，如官方源汇入条目）
   try {
     const res = await db.collection('news_cache').doc(newsId).get()
     if (res.data && res.data._id) {
@@ -369,7 +102,7 @@ async function findNewsDoc(newsId) {
     // 忽略：可能不是合法 _id
   }
 
-  // 4. news_raw_official 集合（官方 RSS 源直连，v1.1 #35）
+  // 3. news_raw_official 集合（官方 RSS 源直连，v1.1 #35）
   // id 格式 official_<urlFp>，前端传参主键即 _id
   try {
     const res = await db.collection('news_raw_official').doc(newsId).get()
@@ -381,44 +114,6 @@ async function findNewsDoc(newsId) {
   }
 
   return null
-}
-
-/**
- * 补写来源集合中的 content 字段（缓存正文，下次不再抓取）
- * @param {string} collection - 'news' 或 'news_cache'
- * @param {string} newsId
- * @param {string} content
- */
-async function cacheContent(collection, newsId, content) {
-  try {
-    const res = await db.collection(collection).where({ id: newsId }).get()
-    if (res.data && res.data.length > 0) {
-      await db.collection(collection).doc(res.data[0]._id).update({
-        data: { content, updatedAt: Date.now() },
-      })
-    }
-  } catch (err) {
-    console.warn(`[getNewsDetail] 缓存 content 失败 [${newsId}] @${collection}:`, err.message)
-  }
-}
-
-/**
- * 通用缓存写入：补写任意字段到 news/news_cache 集合
- * @param {string} collection
- * @param {string} newsId
- * @param {Object} fields - 要写入的字段，如 { content, summary }
- */
-async function cacheDoc(collection, newsId, fields) {
-  try {
-    const res = await db.collection(collection).where({ id: newsId }).get()
-    if (res.data && res.data.length > 0) {
-      await db.collection(collection).doc(res.data[0]._id).update({
-        data: { ...fields, updatedAt: Date.now() },
-      })
-    }
-  } catch (err) {
-    console.warn(`[getNewsDetail] 缓存写入失败 [${newsId}] @${collection}:`, err.message)
-  }
 }
 
 /**
@@ -434,182 +129,7 @@ function bumpViewCount(collection, realId) {
   } catch (_) {}
 }
 
-// 聚合内容接口地址（v5.4：官方正文接口，比抓第三方网页稳定）
-const JUHE_CONTENT_URL = 'https://v.juhe.cn/toutiao/content'
-
-/**
- * 从 juhe id 解析 uniquekey
- * id 格式：juhe_${category}_${uniquekey}，例如 juhe_recommend_83d955608f4b0608abbfc1c1b785942a
- * @param {string} id
- * @returns {string|null}
- */
-function parseJuheKey(id) {
-  if (!id || typeof id !== 'string') return null
-  const prefix = 'juhe_'
-  if (!id.startsWith(prefix)) return null
-  // 找到 category 后的第一个下划线
-  const first = id.indexOf('_', prefix.length)
-  if (first === -1) return null
-  const key = id.slice(first + 1)
-  return key || null
-}
-
-/**
- * 调用聚合官方内容接口获取正文（POST form-urlencoded）
- * @param {string} uniquekey
- * @returns {Promise<string|null>} 清洗后的正文纯文本
- */
-function fetchJuheContent(uniquekey, options = {}) {
-  const config = require('./config')
-  if (!config.juhe.apiKey || !uniquekey) return Promise.resolve(null)
-
-  return new Promise((resolve) => {
-    const https = require('https')
-    const querystring = require('querystring')
-    const postData = querystring.stringify({
-      key: config.juhe.apiKey,
-      uniquekey,
-    })
-
-    const req = https.request(JUHE_CONTENT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Content-Length': Buffer.byteLength(postData),
-      },
-      timeout: FETCH_TIMEOUT_MS,
-    }, (res) => {
-      let body = ''
-      res.on('data', chunk => { body += chunk })
-      res.on('end', () => {
-        try {
-          const result = JSON.parse(body)
-          // B-11: error_code 兼容字符串/数字（聚合接口偶发返回字符串 "0"）
-          if (Number(result.error_code) !== 0 || !result.result || !result.result.content) {
-            console.warn(`[getNewsDetail] 聚合内容接口异常: error_code=${result.error_code} reason=${result.reason}`)
-            resolve(null)
-            return
-          }
-          const cleaned = cleanNewsContent(result.result.content, {
-            maxLength: 3000,
-            title: options.title,
-            source: options.source,
-          })
-          const validation = validateCleanedContent(cleaned)
-          if (!validation.valid) {
-            console.warn(`[getNewsDetail] 聚合内容清洗后无效: ${validation.reason}`)
-            resolve(null)
-            return
-          }
-          resolve(cleaned)
-        } catch (e) {
-          console.warn('[getNewsDetail] 聚合内容接口 JSON 解析失败:', e.message)
-          resolve(null)
-        }
-      })
-    })
-
-    req.on('error', () => resolve(null))
-    req.on('timeout', () => { req.destroy(); resolve(null) })
-    req.write(postData)
-    req.end()
-  })
-}
-
-/**
- * 调用智谱 GLM-4-Flash 生成新闻摘要（v6.2）
- * 未配置 ZHIPU_API_KEY 时返回 null，调用方保持原 summary。
- * @param {string} content - 清洗后的正文
- * @param {string} title   - 新闻标题
- * @returns {Promise<string|null>} 100-150 字中文摘要
- */
-function summarizeWithZhipu(content, title) {
-    const config = require('./config')
-  // 2026-08-24：移除 Qwen 引擎（owner 决策），摘要链仅剩智谱
-  const engines = []
-  const zhipuCfg = (config.zhipuSummary || {})
-  if (zhipuCfg.apiKey) {
-    engines.push({ name: '智谱', apiKey: zhipuCfg.apiKey, baseUrl: zhipuCfg.baseUrl, model: zhipuCfg.model || 'glm-4-flash', timeout: zhipuCfg.timeout || 8000 })
-  }
-  if (engines.length === 0) {
-    console.warn('[summarize] 未配置 AI 摘要 Key（ZHIPU），跳过 AI 摘要')
-    return Promise.resolve(null)
-  }
-  // 正文门槛 10 字（提高 AI 摘要覆盖率）
-  if (!content || content.trim().length < 10) return Promise.resolve(null)
-  const input = content.slice(0, (zhipuCfg.maxInputChars) || 2000)
-
-  // 顺序尝试各引擎（智谱），每引擎最多 3 次尝试（指数退避 500ms/1500ms）
-  function tryEngine(idx) {
-    return new Promise((resolve) => {
-      if (idx >= engines.length) { resolve(null); return }
-      const eng = engines[idx]
-      const body = JSON.stringify({
-        model: eng.model,
-        messages: [
-          {
-            role: 'system',
-            content: '你是新闻摘要助手。基于用户提供的新闻正文，生成 100-150 字的中文简洁摘要。要求：突出核心事件与关键信息，不重复标题，不使用"本文""据报道"等套话，直接输出摘要正文。',
-          },
-          {
-            role: 'user',
-            content: `新闻标题：${title || ''}\n\n新闻正文：\n${input}`,
-          },
-        ],
-        max_tokens: 300,
-        temperature: 0.3,
-      })
-      const doRequest = () => new Promise((r) => {
-        const https = require('https')
-        const url = new URL(eng.baseUrl)
-        const req = https.request({
-          hostname: url.hostname,
-          path: url.pathname + url.search,
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${eng.apiKey}`,
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(body),
-          },
-          timeout: eng.timeout,
-        }, (res) => {
-          let data = ''
-          res.on('data', chunk => { data += chunk })
-          res.on('end', () => {
-            try {
-              const resp = JSON.parse(data)
-              const summary = resp.choices && resp.choices[0] && resp.choices[0].message
-                ? resp.choices[0].message.content.trim()
-                : null
-              r(summary)
-            } catch (e) { r(null) }
-          })
-        })
-        req.on('error', () => r(null))
-        req.on('timeout', () => { req.destroy(); r(null) })
-        req.write(body)
-        req.end()
-      })
-      ;(async () => {
-        for (let attempt = 0; attempt < 3; attempt++) {
-          const summary = await doRequest()
-          if (summary && summary.length >= 20) { resolve(summary); return }
-          if (attempt < 2) await new Promise(r => setTimeout(r, 500 * Math.pow(3, attempt)))
-        }
-        console.warn(`[summarize] ${eng.name} 摘要失败，尝试下一引擎`)
-        tryEngine(idx + 1).then(resolve)
-      })()
-    })
-  }
-  return tryEngine(0)
-}
-
-// v6.2：保留旧函数名兼容
-function summarizeWithDashscope(content, title) {
-  return summarizeWithZhipu(content, title)
-}
-
-// ─── 主函数 ─────────────────────────────────────────
+// ─── 主函数（v6.4 纯读取：查库 → 官方源短路 → R1 过滤 → 返回，无任何实时抓取） ─────────────────────────────────────────
 
 exports.main = async (event) => {
   const { newsId } = event
@@ -618,9 +138,9 @@ exports.main = async (event) => {
     return { code: -1, message: '缺少 newsId 参数' }
   }
 
-  console.log(`[getNewsDetail] v5.6 查询 newsId=${newsId}`)
+  console.log(`[getNewsDetail] v6.4 纯读取 newsId=${newsId}`)
 
-  // ── 第 1 步：查集合（news → news_cache）──
+  // ── 第 1 步：查集合（news_cache 按 id → 按 _id → news_raw_official）──
   let found
   try {
     found = await findNewsDoc(newsId)
@@ -665,8 +185,7 @@ exports.main = async (event) => {
 
   // ── 官方源已汇入 news_cache（v1.2 路线1）──
   // 官方源在 news_cache 中 content 可能为空（解读失败，版权红线不缓存原文）或为 AI 解读正文。
-  // contentSource='official_rss'。命中 news_cache 时短路：有 AI 解读正文则展示，否则返回 summary + 出处，
-  // 不进入第 3 步网页抓取（禁止抓官方正文）。
+  // contentSource='official_rss'。命中时短路：有 AI 解读正文则展示，否则返回 summary + 出处。
   if (doc.contentSource === 'official_rss') {
     bumpViewCount(collection, doc._id)
     return {
@@ -692,125 +211,22 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 第 2 步：如果已有足够长的 content，直接返回 ──
-  // DG-03（owner 16:24 诉求「尽量返回原文」）：阈值 30 → 200 字——
-  // content 过短（如旧数据/抓取失败回退的摘要）时继续第 3 步尝试抓 sourceUrl 原文
-  if (doc.content && doc.content.trim().length > 200) {
-    // B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：缓存命中拦截
-    // 即使 doc.content 已有全文，若 contentSource 不是 'ai_interpretation'（说明是历史
-    // cached 全文 / 抓取 / 聚合接口原文）→ 同样按 R1 清空，仅返回 summary + title。
-    // ⚠️ meta.contentSource 仍保留原值供排查，但 data.content 为空，前端不再展示全文。
-    const r1 = applyR1Filter(doc, doc.contentSource || 'cached')
-    console.log(`[getNewsDetail] 命中缓存 content (${doc.content.length} 字符), R1=${r1.blocked ? '拦截' : '放行'}`)
-
-    // 阅读数+1（非阻塞）
-    bumpViewCount(collection, doc._id)
-
-    return {
-      code: 0,
-      data: {
-        ...doc,
-        content: r1.content,
-        contentSource: r1.contentSource,
-      },
-      meta: {
-        source: collection,
-        contentSource: doc.contentSource || 'cached',
-        engine: 'juhe',
-        r1Blocked: r1.blocked,
-        readContentMode: READ_CONTENT_MODE_DEFAULT,
-      },
-    }
-  }
-
-  // ── 第 3 步：content 为空，获取正文（v5.4 优先级：聚合官方接口 → 网页抓取 → summary）──
-  let finalContent = ''
-  let contentSource = 'fallback'
-
-  // 3a. 优先：聚合官方内容接口（id 为 juhe_xxx 时解析 uniquekey）
-  const juheKey = parseJuheKey(newsId)
-  if (juheKey) {
-    console.log(`[getNewsDetail] 聚合内容接口查询 uniquekey=${juheKey}`)
-    const juheContent = await fetchJuheContent(juheKey, { title: doc.title, source: doc.source })
-    if (juheContent) {
-      finalContent = juheContent
-      contentSource = 'juhe_content_api'
-      console.log(`[getNewsDetail] 聚合内容接口成功: ${finalContent.length} 字符`)
-    } else {
-      console.warn('[getNewsDetail] 聚合内容接口失败，尝试网页抓取')
-    }
-  }
-
-  // 3b. 次选：网页抓取 sourceUrl
-  if (!finalContent && doc.sourceUrl) {
-    console.log(`[getNewsDetail] 从原文抓取: ${doc.sourceUrl}`)
-    try {
-      const html = await fetchWebPage(doc.sourceUrl)
-
-      if (html) {
-        console.log(`[getNewsDetail] 抓取到 HTML (${html.length} 字符)`)
-        const extracted = extractContentFromHtml(html)
-
-        if (extracted) {
-          const cleaned = cleanNewsContent(extracted, {
-            maxLength: 3000,
-            title: doc.title,
-            source: doc.source,
-          })
-          const validation = validateCleanedContent(cleaned)
-
-          if (validation.valid) {
-            finalContent = cleaned
-            contentSource = 'fetched_and_cleaned'
-            console.log(`[getNewsDetail] 清洗完成: ${finalContent.length} 字符`)
-          } else {
-            console.warn(`[getNewsDetail] 清洗后内容无效: ${validation.reason}`)
-          }
-        } else {
-          console.warn('[getNewsDetail] 未能从 HTML 提取正文')
-        }
-      } else {
-        console.warn('[getNewsDetail] 原文抓取返回空')
-      }
-    } catch (err) {
-      console.warn(`[getNewsDetail] 原文抓取异常:`, err.message)
-    }
-  }
-
-  // ── 第 4 步：如果抓取失败，用 summary 兜底 ──
-  if (!finalContent) {
-    finalContent = doc.summary || doc.title || ''
-    contentSource = 'summary_fallback'
-    console.log('[getNewsDetail] 使用 summary 兜底')
-  }
-
-  // ── 第 5 步：补写 content 到来源集合（下次直接命中缓存）──
-  // DG-08（2026-08-06）性能优化：AI 摘要移出详情关键路径。
-  // 此前 await summarizeWithZhipu 在每次缓存未命中时阻塞返回（LLM 往返 0.5~3s），
-  // 是「进入详情/翻页 ~1s」的主因之一。详情页只展示 content，不需要 summary；
-  // summary 统一由 refreshNews 列表刷新时生成。这里仅回写 content，不再生成摘要。
-  if (finalContent && contentSource !== 'fallback') {
-    await cacheDoc(collection, newsId, { content: finalContent })
-  }
-
-  // ── 第 6 步：阅读数+1 + 返回 ──
+  // ── 第 2 步：统一 R1 过滤后返回（v6.4：不再按 content 长度分流、不再实时抓取）──
+  // 库内 content 即展示数据的唯一来源：管线已入库的 AI 解读/AI 摘要直接放行展示；
+  // content 为空/过短或来源不在放行列表时，R1 清空 content，前端 resolveContentText
+  // 自动以 summary 渲染（与改造前该场景的用户可见结果一致，但不再白等抓取超时）。
+  // 附带收益：此前 content ≤ 200 字的放行来源（如较短的 ai_interpretation）会被
+  // 200 字阈值误伤强制走抓取后被拦，现在按 contentSource 正确放行。
   bumpViewCount(collection, doc._id)
 
-  // B-COMPLIANCE-1 R1（2026-08-10 owner 拍板）：实时抓取点拦截
-  // 若 contentSource 是 'fetched_and_cleaned' / 'juhe_content_api' / 'fallback'（非 AI 解读），
-  // 一律清空 content 仅返回 summary + title。
-  // 注意：缓存写库（cacheDoc）仍写完整 finalContent，**不阻断** content 字段的预热
-  // （未来若 R1 升级为可放行即可直接命中）。这里只对"返回给前端"做拦截。
-  const r1 = applyR1Filter({ content: finalContent }, contentSource)
-  if (r1.blocked) {
-    console.log(`[getNewsDetail] R1 拦截实时抓取 (contentSource=${contentSource})，仅返回 summary`)
-  }
+  const r1 = applyR1Filter(doc, doc.contentSource || 'cached')
+  console.log(`[getNewsDetail] 纯读取返回: content=${(doc.content || '').length}字, source=${doc.contentSource || 'cached'}, R1=${r1.blocked ? '拦截' : '放行'}`)
 
   const result = {
     ...doc,
-    content: r1.content, // R1 拦截后可能为空字符串
+    content: r1.content, // R1 拦截后为空字符串，前端以 summary 渲染
     summary: doc.summary || doc.title || '',
-    contentSource: r1.contentSource, // 优先 R1 标记值（含 blocked 时为 r1_blocked_fulltext）
+    contentSource: r1.contentSource, // 优先 R1 标记值（blocked 时为 r1_blocked_fulltext）
     // B-COMPLIANCE-1 S1：透传 references（智谱/AI 搜索链的来源 URL 列表），
     // 前端详情页"原文回源"按钮根据此数组显示/隐藏（PRD §3.2）。
     references: Array.isArray(doc.references) ? doc.references : [],
@@ -823,8 +239,8 @@ exports.main = async (event) => {
     data: result,
     meta: {
       source: collection,
-      contentSource,
-      engine: 'juhe',
+      contentSource: doc.contentSource || 'cached',
+      engine: 'cache_read', // v6.4：纯读取端，不再有 juhe 抓取引擎
       r1Blocked: r1.blocked,
       readContentMode: READ_CONTENT_MODE_DEFAULT,
     },
