@@ -4,6 +4,7 @@
 
 var { formatAbsoluteTime } = require('../../utils/util')
 var app = getApp()
+var feedbackRemind = require('../../utils/feedbackRemind')
 
 // 30s 限频（PRD §3.1 F2 / D-02 §4：30s/条）
 var COOLDOWN_MS = 30 * 1000
@@ -136,6 +137,11 @@ Page({
       loading: false,
       isEmpty: cards.length === 0,
     })
+
+    // 2026-09-09 3.0.0：进入留言板并读到列表 → 视为已读：前移基线、清空“与我相关”提醒
+    // （首页⚙蓝圈 / dock设置蓝框 / 设置页数字气泡在各自 onShow 重新拉取后消失）
+    feedbackRemind.markRead()
+    feedbackRemind.clearCache()
   },
 
   _buildCard: function (t, replies, isAuthor) {
@@ -278,7 +284,7 @@ Page({
         } else if (r.code === 'BLOCKED') {
           this._gotoRules(r.data && r.data.reason)
         } else {
-          wx.showToast({ title: '回复失败，请重试', icon: 'none' })
+          wx.showToast({ title: String(r.message || '回复失败，请重试').slice(0, 30), icon: 'none' })
         }
       })
       .catch(() => {
@@ -314,6 +320,8 @@ Page({
   },
 
   // ============ 作者：筛选（全部 / 仅违规标记 / 仅我的回复） ============
+
+
 
   toggleFilter: function () {
     this.setData({ filterOpen: !this.data.filterOpen })

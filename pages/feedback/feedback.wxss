@@ -177,6 +177,11 @@
   padding-top: calc(var(--nav-offset, 88px) + 16rpx);
   box-sizing: border-box;
 }
+/* 作者态：上方已有「共N条/筛选」管理条（自身已 navOffset 下移），列表区再叠加 padding-top
+   会二次偏移 → 大片空白；作者态改为仅留很小上边距（2026-09-09 修） */
+.feedback-scroll.with-manage {
+  padding-top: 16rpx;
+}
 .feedback-list {
   padding: 0 32rpx 220rpx; /* 底部预留输入区高度（顶部已由 feedback-scroll padding 承担） */
 }

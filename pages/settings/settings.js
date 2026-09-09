@@ -2,6 +2,7 @@
 
 var app = getApp()
 var changelog = require('../../config/changelog')
+var feedbackRemind = require('../../utils/feedbackRemind')
 
 var scaleMap = [1, 1.15, 1.3, 1.5]
 var META_SCALE_CAP = 1.15
@@ -24,6 +25,8 @@ Page({
     appVersion: changelog.currentVersion,
     latestChangelog: changelog.versions[0] || null,
     showChangelog: false,
+    // 意见反馈提醒（3.0.0）：与我相关的新反馈数 → 该行数字气泡
+    fbUnread: 0,
     tiers: [
       { value: 0, label: '标准' },
       { value: 1, label: '大' },
@@ -75,6 +78,12 @@ Page({
   },
 
   onShow: function () {
+    // 意见反馈提醒（3.0.0）：进设置页即刷新“与我相关”未读数 → 意见反馈行数字气泡
+    var that = this
+    feedbackRemind.unread().then(function (d) {
+      if (d) { var n = d.count || 0; if (n !== that.data.fbUnread) that.setData({ fbUnread: n }) }
+    }).catch(function () {})
+
     // 刷新底部 logo 组件主题（页面可能从其他页面返回后主题已变）
     try {
       var logoComp = this.selectComponent('#settings-logo')

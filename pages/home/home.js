@@ -3,6 +3,7 @@
 const { CATEGORIES, CATEGORY_MAP, SWIPE_THRESHOLD, PANEL_SWIPE_THRESHOLD, PAGE_HEIGHT, PAGE_SIZE, RECOMMEND_PAGE_SIZE, MORE_PAGE_SIZE, MORE_PAGE_LIMIT, refreshPageSize } = require('../../utils/constants')
 const { getNewsList, handleApiError } = require('../../utils/request')
 const { localCache } = require('../../utils/localCache')
+const feedbackRemind = require('../../utils/feedbackRemind')
 
 const INTEL_ENTER_SWIPE_THRESHOLD = 60 // INTEL-BRIDGE: 右滑进入 AI 情报阈值（与 PANEL_SWIPE_THRESHOLD 同级）
 
@@ -55,6 +56,8 @@ Page({
     _metaScaleValue: 1,     // UX-FIX-F12: 元信息缩放（封顶 1.15），由 app 注入
     // TL-B16: 更多功能菜单
     showMoreMenu: false,    // ⚙ 浮动按钮弹出的 dock 菜单是否展开
+    // 意见反馈提醒（3.0.0）：有与我相关的新反馈时 ⚙ 蓝圈 + dock「设置」蓝框
+    fbRemind: false,
     // BUG-FS-20260805-001（同根因扩展）: dock 菜单 icon 深色模式切换白色版
     isDark: false,
     _intelBridgeEnabled: true, // INTEL-BRIDGE: 右滑入口总开关，置 false 即摘除（不影响 One News 既有手势）
@@ -202,6 +205,9 @@ Page({
 
     // 同步字体（onShow 时可能从其他页面返回，需刷新）
     this._syncFontScale()
+
+    // 意见反馈提醒（3.0.0）：有相关新反馈 → ⚙ 蓝圈 + dock「设置」蓝框
+    this._refreshFeedbackRemind()
 
     // 2026-08-31 修复：收藏页冷启动栈底回跳（redirect 参数只消费一次）
     if (this._pendingRedirect) {
@@ -1629,7 +1635,22 @@ Page({
    * TL-B16: 切换「更多功能」dock 菜单（⚙ 浮动按钮 / 遮罩 皆可触发）
    */
   toggleMoreMenu() {
-    this.setData({ showMoreMenu: !this.data.showMoreMenu })
+    const open = !this.data.showMoreMenu
+    this.setData({ showMoreMenu: open })
+    // 展开 dock 时强刷一次，保证「设置」蓝框与最新提醒一致（收起不刷）
+    if (open) this._refreshFeedbackRemind(true)
+  },
+
+  /** 意见反馈提醒（3.0.0）：拉“与我相关”未读数 → ⚙ 蓝圈/ dock「设置」蓝框 */
+  _refreshFeedbackRemind(force) {
+    const that = this
+    feedbackRemind.unread({ force: !!force })
+      .then(function (d) {
+        if (that._destroyed) return
+        const has = ((d && d.count) || 0) > 0
+        if (has !== that.data.fbRemind) that.setData({ fbRemind: has })
+      })
+      .catch(function () {})
   },
 
   /**

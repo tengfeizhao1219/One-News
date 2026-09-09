@@ -22,7 +22,6 @@
       <text class="manage-filter-label">筛选 ▾</text>
     </view>
   </view>
-
   <!-- 筛选下拉（仅作者）· D-02 §4 -->
   <view wx:if="{{filterOpen}}" class="filter-mask" bindtap="toggleFilter"></view>
   <view wx:if="{{filterOpen && isAuthor}}" class="filter-dropdown">
@@ -52,7 +51,7 @@
 
   <!-- 留言列表（倒序 · 卡片式） -->
   <view wx:else class="feedback-scroll-wrap">
-    <scroll-view class="feedback-scroll" scroll-y>
+    <scroll-view class="feedback-scroll {{isAuthor ? 'with-manage' : ''}}" scroll-y>
       <view class="feedback-list">
         <view class="msg-card {{item.deleted ? 'deleted' : ''}}" wx:for="{{list}}" wx:key="id">
           <!-- 卡片头：昵称（作者角标）+ 相对时间 -->

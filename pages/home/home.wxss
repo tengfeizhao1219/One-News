@@ -754,7 +754,18 @@
   pointer-events: auto;
 }
 
+/* 意见反馈提醒（3.0.0）：有“与我相关”的新反馈时 ⚙ 蓝色描边、dock「设置」蓝色描边。
+   预置透明边框 + border-box，出现蓝圈时无尺寸跳动 */
+.floating-more {
+  box-sizing: border-box;
+  border: 4rpx solid transparent;
+}
+.floating-more.fb-remind {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 6rpx rgba(0, 122, 255, 0.18);
+}
 .more-item {
+  /* 布局/圆角/底色（原有）——此前误删，补齐 */
   display: flex;
   align-items: center;
   gap: 16rpx;
@@ -762,6 +773,8 @@
   min-width: 220rpx;
   border-radius: 999rpx;
   background-color: var(--bg-card);
+  /* 提醒态预置透明边框，避免加蓝框时尺寸跳动 */
+  border: 3rpx solid transparent;
   /* BUG-20260805-001：阴影加深加大，让菜单项在蒙板之上清晰"悬浮" */
   box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.32), 0 4rpx 12rpx rgba(0, 0, 0, 0.18);
   font-size: 28rpx;
@@ -793,6 +806,9 @@
   100% { opacity: 1; transform: scale(1); }
 }
 
+.more-item.fb-remind-item {
+  border-color: var(--primary);
+}
 .more-item:active {
   transform: scale(0.96);
   background-color: var(--tag-bg);

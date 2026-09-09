@@ -92,7 +92,10 @@
         </view>
         <view class="row" bindtap="onFeedback">
           <view class="row-label">意见反馈</view>
-          <text class="row-chev">›</text>
+          <view class="row-side">
+            <text class="row-badge" wx:if="{{fbUnread > 0}}">{{fbUnread}}</text>
+            <text class="row-chev">›</text>
+          </view>
         </view>
         <view class="row" bindtap="openContactModal">
           <view class="row-label">联系开发者</view>

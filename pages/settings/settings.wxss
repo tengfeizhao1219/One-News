@@ -389,3 +389,25 @@
   align-items: center;
   justify-content: center;
 }
+
+/* 右侧组合（气泡贴箭头左侧） */
+.row-side {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+/* 意见反馈提醒数字气泡（3.0.0） */
+.row-badge {
+  min-width: 40rpx;
+  height: 40rpx;
+  padding: 0 12rpx;
+  border-radius: 20rpx;
+  background-color: var(--primary);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 600;
+  line-height: 40rpx;
+  text-align: center;
+  box-sizing: border-box;
+}

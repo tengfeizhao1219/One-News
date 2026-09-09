@@ -232,6 +232,7 @@ exports.main = async (event) => {
 
   const content = (event.content || '').trim()
   const parentId = event.parentId ? String(event.parentId) : null
+  const author = isAuthorOpenid(openid) // 2026-09-09：提前判定（作者可信，跳过 AI 语义审核提速）
 
   // 1. 参数校验（C-4：内容长度上限；此前不限字数，超大文本直接入库并原样喂 AI）
   if (!content) {
@@ -254,28 +255,30 @@ exports.main = async (event) => {
     return { code: 'BLOCKED', data: { reason: kw.reason } }
   }
 
-  // 4. AI 语义校验（C-4：输入截断，控制 token 成本）
-  const ai = await aiValidate(content.slice(0, AI_VALIDATE_TRUNCATE))
-  if (!ai.safe) {
-    console.warn(`[feedback/create] AI 拦截: "${content.slice(0, 60)}" — ${ai.reason}`)
-    return { code: 'BLOCKED', data: { reason: ai.reason || '内容不合规' } }
+    // 4. AI 语义校验（C-4）——仅非作者执行（作者可信，省审核延迟）
+  if (!author) {
+    const ai = await aiValidate(content.slice(0, AI_VALIDATE_TRUNCATE))
+    if (!ai.safe) {
+      return { code: 'BLOCKED', data: { reason: ai.reason || '内容不合规' } }
+    }
   }
 
   const now = Date.now()
-  const author = isAuthorOpenid(openid)
   const nickname = await getOrCreateNickname(openid, author)
 
   // 5. 计算 rootId（楼中楼归属）
   let rootId = null
+  let parentOpenid = ''   // 2026-09-09：父留言作者 openid（回复提醒相关性判定用：谁回复了“我”的留言）
   if (parentId) {
     try {
       const parentRes = await db.collection('feedback').doc(parentId).get()
       const parent = parentRes.data
       if (!parent) {
-        return { code: -1, message: '回复的留言不存在' }
+          return { code: -1, message: '回复的留言不存在' }
       }
       // 父留言的 rootId：顶层留言 rootId 为空 → 自身即 root；回复 → 沿用其 rootId
       rootId = parent.rootId || parent._id
+      parentOpenid = parent.openid || parent._openid || ''
     } catch (e) {
       return { code: -1, message: '回复的留言不存在' }
     }
@@ -286,6 +289,7 @@ exports.main = async (event) => {
     const docData = {
       parentId,
       rootId,
+      parentOpenid,          // 2026-09-09：父留言作者 openid（顶层留言为空）
       content,
       openid,
       nickname,

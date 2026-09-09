@@ -1,0 +1,9 @@
+{
+  "name": "feedback-status",
+  "version": "1.0.0",
+  "description": "意见反馈提醒状态（unread/markRead，owner 3.0.0）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

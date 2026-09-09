@@ -122,7 +122,7 @@
 
   <!-- BUG-20260802-005 / TL-B16：⚙ 浮动按钮升级为「更多功能」dock 菜单主入口 -->
   <!-- BUG-FE-001-fix: mask 在真机不可靠，改用 image 直接渲染 SVG -->
-  <view class="floating-more {{showPanel ? 'hidden' : ''}}" bindtap="toggleMoreMenu">
+  <view class="floating-more {{showPanel ? 'hidden' : ''}} {{fbRemind ? 'fb-remind' : ''}}" bindtap="toggleMoreMenu">
     <image class="more-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
   </view>
 
@@ -143,7 +143,7 @@
       <image class="more-item-icon-img" src="/assets/icons/favorite{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">我的收藏</text>
     </view>
-    <view class="more-item" data-target="settings" bindtap="onMoreMenuTap">
+    <view class="more-item {{fbRemind ? 'fb-remind-item' : ''}}" data-target="settings" bindtap="onMoreMenuTap">
       <image class="more-item-icon-img" src="/assets/icons/settings{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="more-item-label">设置</text>
     </view>
