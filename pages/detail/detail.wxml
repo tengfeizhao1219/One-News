@@ -249,12 +249,39 @@
       <!-- BUG-20260805-004：移除 inline style 让"已收藏"文字保持默认色，仅 icon 红色 -->
       <text class="bottom-bar-label">{{isFavorited ? '已收藏' : '收藏'}}</text>
     </view>
-    <button class="bottom-bar-btn share-btn-reset" open-type="share">
+    <view class="bottom-bar-btn" bindtap="onShowShareSheet">
       <!-- BUG-20260806-027: 分享图标由文本「↗」改为 SVG image（与收藏一致，避免发灰；
            主题色跟随 currentColor，深色模式用白色版） -->
       <image class="bottom-bar-icon-img" src="/assets/icons/share{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       <text class="bottom-bar-label">分享</text>
-    </button>
+    </view>
+  </view>
+
+  <!-- ===== 分享弹窗（owner 2026-09-08 需求：底部分享按钮弹出选去处） =====
+       纯图标面板（无标题/无取消按钮），点弹窗外遮罩关闭：
+       - 转发给朋友：<button open-type="share"> 触发 onShareAppMessage，真拉起微信转发
+       - 分享到朋友圈：微信无 API 可直接拉起（onShareTimeline 仅宿主右上角 ··· 触发），点击仅引导
+       图标（微信官方/原生风格）：
+       - 转发给朋友：微信官方品牌图标（绿色双气泡）——微信分享场景通用标识；源为 Mac 微信 1024px 官方图
+       - 分享到朋友圈：官方标准朋友圈多彩花瓣图标（developers.weixin.qq.com Design Resource）
+       展示约束：图标一律置于固定 80rpx 方形槽位(.share-target-icon)内，image 100% 填充；
+       PNG 画布已在资源侧归一化（320x320、图形居中、同占 ~96%），保证两图标等大对齐同步心 -->
+  <view class="share-sheet-mask {{shareSheetOpen ? 'show' : ''}}" bindtap="onCloseShareSheet"></view>
+  <view class="share-sheet {{shareSheetOpen ? 'show' : ''}}">
+    <view class="share-sheet-grid">
+      <button class="share-target" open-type="share" hover-class="share-target--hover" bindtap="onTapShareFriend">
+        <view class="share-target-icon">
+          <image class="share-target-img" src="/assets/icons/share-wechat-friend.png" mode="aspectFit"></image>
+        </view>
+        <text class="share-target-label">转发给朋友</text>
+      </button>
+      <view class="share-target" hover-class="share-target--hover" bindtap="onTapShareTimeline">
+        <view class="share-target-icon">
+          <image class="share-target-img" src="/assets/icons/share-wechat-moments.png" mode="aspectFit"></image>
+        </view>
+        <text class="share-target-label">分享到朋友圈</text>
+      </view>
+    </view>
   </view>
 
   <!-- 隐藏 Canvas（分享占位图预生成） -->

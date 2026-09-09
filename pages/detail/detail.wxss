@@ -1321,3 +1321,105 @@
 }
 .rel-chev { color: var(--text-tertiary); font-size: calc(28rpx * var(--font-scale) * var(--page-fs, 1)); }
 
+/* ===== 分享弹窗（owner 2026-09-08 需求）：纯图标面板 =====
+   无标题/无取消按钮：两枚微信风格图标直接展示，点弹窗外遮罩关闭。
+   展示约束（前后端对齐契约）：
+   1. 图标一律置于固定方形槽位 .share-target-icon(80x80rpx) 内，image 宽高 100%；
+   2. 两枚 PNG 画布在资源侧已归一化：320x320、图形居中、同占画布 ~96%（305/306px），
+      等大且同心 —— 转发用微信官方品牌图标(绿双气泡)，朋友圈用官方多彩圆；
+   3. 两个 .share-target 等宽(176rpx)、结构一致 → 图标与文字基线必然对齐。
+   控件用主题变量适配深/浅色 */
+.share-sheet-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 400; /* 需盖过右下角搜索悬浮钮 .fab-search(z-index:300)，避免弹窗与其重叠 */
+  background-color: var(--overlay);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, visibility 0.22s;
+}
+.share-sheet-mask.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+.share-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 401; /* 与遮罩同层之上 */
+  padding: 40rpx 32rpx calc(44rpx + env(safe-area-inset-bottom));
+  background-color: var(--overlay-surface);
+  border-radius: 32rpx 32rpx 0 0;
+  box-shadow: 0 -6rpx 30rpx rgba(0, 0, 0, 0.10);
+  transform: translateY(100%);
+  transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.share-sheet.show {
+  transform: translateY(0);
+}
+
+.share-sheet-grid {
+  display: flex;
+  justify-content: center;   /* 两图标组整体居中、对称 */
+  align-items: flex-start;
+  gap: 104rpx;                /* 组间固定间距，不随文案宽度变化 */
+}
+
+/* 两个目标项：等宽、结构一致（槽位+文案）。
+   关键：转发项是 <button open-type="share">，微信框架会给 button 默认加
+   margin-left/right:auto（居中自动边距），会自动吞掉 flex 剩余空间、把图标组推歪，
+   导致「两图标离两边边框不等距」。因此必须用 !important 彻底清掉默认 margin/padding，
+   否则真机上会复现左远右近、整体右移的不对称。 */
+.share-target {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 176rpx;           /* 固定列宽，两列严格等宽 → 左右对齐 */
+  gap: 14rpx;
+  width: 176rpx !important;   /* 压过 button 默认宽度 */
+  min-width: 0 !important;
+  margin: 0 !important;       /* 压过 button 默认 margin:auto —— 修复不对称的根因 */
+  padding: 0 !important;      /* 压过 button 默认左右 padding */
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  line-height: 1;
+  font-size: 0;               /* 杜绝 button 默认字号/字重撑高布局 */
+}
+.share-target::after {
+  border: none;
+}
+.share-target--hover .share-target-icon {
+  transform: scale(0.92);
+}
+
+/* 图标槽位：80rpx（对齐微信原生分享面板功能网格图标尺寸 ~70-80rpx）；
+   两图 PNG 已归一化（同占画布、居中），槽位内容自然等大同心、上下对齐 */
+.share-target-icon {
+  width: 80rpx;
+  height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.12s ease;
+}
+.share-target-img {
+  width: 100%;
+  height: 100%;
+}
+
+.share-target-label {
+  font-size: calc(22rpx * var(--font-scale-meta, 1) * var(--page-fs, 1));
+  font-weight: 400;           /* 显式常规字重：按钮默认 500（加粗），两个都统一为不加粗 */
+  line-height: 1.2;           /* 显式行高，两行文案基线一致 */
+  color: var(--text-primary);
+  white-space: nowrap;        /* 文案不换行，宽度恒定 */
+}
+
+

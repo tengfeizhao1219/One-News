@@ -53,6 +53,8 @@ Page({
     flashColor: '',            // 跨分类进度分类名着色；空串触发 CSS fallback 到 var(--primary)
     // 网络兜底
     networkToastVisible: false,
+    // 分享弹窗（owner 2026-09-08 需求：底部分享按钮弹出可选去处；朋友圈项无 API 拉起，仅引导）
+    shareSheetOpen: false,
     // BUG-20260806-025: 浏览完毕居中 toast 显示状态
     finishToastVisible: false,
     // 收藏
@@ -1061,6 +1063,33 @@ Page({
         that._placeholderCache = null
       }
     }, 150)
+  },
+
+  /**
+   * 分享弹窗控制（owner 2026-09-08 需求）
+   * 底部分享按钮 → 打开自定义分享弹窗（选去处），而非直接进转发。
+   * - 转发给朋友：弹窗内 <button open-type="share"> 触发 onShareAppMessage（可拉起）
+   * - 分享到朋友圈：微信无 API 可直接拉起（onShareTimeline 仅宿主右上角 ··· 触发），此处仅引导
+   */
+  onShowShareSheet: function () {
+    this.setData({ shareSheetOpen: true })
+  },
+  onCloseShareSheet: function () {
+    this.setData({ shareSheetOpen: false })
+  },
+  onTapShareFriend: function () {
+    // 转发给朋友：open-type="share" 继续触发 onShareAppMessage；先收起弹窗
+    this.setData({ shareSheetOpen: false })
+  },
+  onTapShareTimeline: function () {
+    // 平台限制：无法由按钮直接拉起朋友圈分享面板，引导用户去右上角 ···
+    this.setData({ shareSheetOpen: false })
+    wx.showModal({
+      title: '分享到朋友圈',
+      content: '请点击右上角「···」，在弹出的菜单中选择「分享到朋友圈」。',
+      showCancel: false,
+      confirmText: '知道了',
+    })
   },
 
   /**
