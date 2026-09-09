@@ -127,6 +127,9 @@ function fetchWebPage(url) {
  */
 function locateBodyHtml(html) {
   const patterns = [
+    // 中华网新闻详情页（2026-09-09 修复，与 newsPipeline/utils/contentFetcher.js 保持一致）：
+    // 正文容器是 <div id="chan_newsDetail">（id 而非 class），宽松匹配抓不到正文 → 全页 <p> 兜底连带滚动列表
+    /<div[^>]*(?:id|class)=["'][^"']*chan_newsDetail[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     // 中新网（chinanews.com.cn）正文容器
     /<div[^>]*class=["'][^"']*content_maincontent_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     // 优先：严格语义标签
@@ -175,7 +178,20 @@ function trimExtraneousContent(html) {
 }
 
 /**
- * 提取 <p> 段落（过滤过短噪音）
+ * 滚动新闻列表噪音检测（2026-09-09 修复，与 newsPipeline/utils/contentFetcher.js 保持一致）
+ * 中华网 socialgd 等滚动页把「其他新闻标题+ISO时间戳」列表混进正文 → 污染下游 AI。
+ */
+const ISO_TS_RE = /\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}(?::\d{2})?/
+function isRollingListNoise(text) {
+  const t = String(text || '')
+  const hits = t.match(new RegExp(ISO_TS_RE.source, 'g'))
+  if (!hits || !hits.length) return false
+  if (hits.length >= 2) return true // 段内 ≥2 个时间戳 → 滚动列表块
+  return new RegExp(ISO_TS_RE.source + '\\s*$').test(t.trim()) // 单时间戳且收尾 → 列表项
+}
+
+/**
+ * 提取 <p> 段落（过滤过短噪音 + 滚动列表噪音）
  */
 function extractParagraphs(containerHtml) {
   if (!containerHtml) return []
@@ -193,7 +209,7 @@ function extractParagraphs(containerHtml) {
       .replace(/&#\d+;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-    if (text.length >= 15) paras.push(text)
+    if (text.length >= 15 && !isRollingListNoise(text)) paras.push(text)
   }
   return paras
 }
@@ -214,7 +230,12 @@ function extractContentFromHtml(html) {
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
   let paras = extractParagraphs(locateBodyHtml(cleaned))
-  if (paras.length < 2) paras = extractParagraphs(cleaned)
+  // 兜底条件收紧（2026-09-09 修复，与 newsPipeline/utils/contentFetcher.js 保持一致）：
+  // 容器有 ≥50 字实质段落就信任容器，不再「<2 段即全页 <p>」——防止滚动推荐列表混进正文
+  if (!paras.some((p) => p.length >= 50)) {
+    const fb = extractParagraphs(cleaned)
+    if (fb.length > paras.length) paras = fb
+  }
   if (paras.length === 0) return null
   return paras.join('\n')
 }

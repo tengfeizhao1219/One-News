@@ -142,6 +142,10 @@ function locateBodyHtml(html) {
   const patterns = [
     // 中新网（chinanews.com.cn）正文容器
     /<div[^>]*class=["'][^"']*content_maincontent_content[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
+    // 中华网新闻详情页（2026-09-09 修复）：正文容器是 <div id="chan_newsDetail">（id 而非 class），
+    // 页面正文后内嵌「滚动新闻列表」（chan_wntj），宽松容器匹配抓不到正文 → 全页 <p> 兜底连带列表
+    // → AI 摘要跑偏成大杂烩。id+class 双匹配。
+    /<div[^>]*(?:id|class)=["'][^"']*chan_newsDetail[^"']*["'][^>]*>([\s\S]*?)<\/div>/i,
     // 优先：严格语义标签
     /<article[^>]*>([\s\S]*?)<\/article>/i,
     // IT之家 / 聚合数据 特定容器
@@ -188,7 +192,31 @@ function trimExtraneousContent(html) {
 }
 
 /**
- * 提取 <p> 段落（过滤过短噪音）
+ * 滚动新闻列表噪音检测（2026-09-09 修复）
+ * 背景：中华网 socialgd 等滚动频道页「真实正文只有一段（~100字）」+ 页面内嵌「其他新闻标题+ISO时间戳」
+ *       滚动列表。列表混进提取正文 → AI 如实总结列表 → 摘要跑偏成大杂烩/其他新闻
+ *       （实锤案例：「16岁女孩晚自习发病」摘要=小米/哈兰德/黄金等8条；「大爷救摩托艇」摘要=哈兰德劈柴）。
+ * 列表项形态特征：标题文本 + 结尾 ISO 时间戳（如 2026-09-09 11:00:41）；正常正文段落不以 ISO 时间戳收尾。
+ */
+const ISO_TS_RE = /\d{4}-\d{2}-\d{2}\s+\d{1,2}:\d{2}(?::\d{2})?/
+function isRollingListNoise(text) {
+  const t = String(text || '')
+  const hits = t.match(new RegExp(ISO_TS_RE.source, 'g'))
+  if (!hits || !hits.length) return false
+  if (hits.length >= 2) return true // 段内 ≥2 个时间戳 → 滚动列表块
+  return new RegExp(ISO_TS_RE.source + '\\s*$').test(t.trim()) // 单时间戳且收尾 → 「标题+时间戳」列表项
+}
+
+/**
+ * 对已提取的纯文本做同规则降噪（enrich 阶段兜底：RSS desc/其他通道带入的列表噪音）
+ */
+function stripRollingNoise(text) {
+  if (!text) return ''
+  return String(text).split('\n').filter((line) => line.trim() && !isRollingListNoise(line)).join('\n')
+}
+
+/**
+ * 提取 <p> 段落（过滤过短噪音 + 滚动列表噪音）
  */
 function extractParagraphs(containerHtml) {
   if (!containerHtml) return []
@@ -206,7 +234,7 @@ function extractParagraphs(containerHtml) {
       .replace(/&#\d+;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-    if (text.length >= 15) paras.push(text)
+    if (text.length >= 15 && !isRollingListNoise(text)) paras.push(text)
   }
   return paras
 }
@@ -227,7 +255,13 @@ function extractContentFromHtml(html) {
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, ' ')
   let paras = extractParagraphs(locateBodyHtml(cleaned))
-  if (paras.length < 2) paras = extractParagraphs(cleaned)
+  // 兜底条件收紧（2026-09-09 修复）：容器段落存在实质内容（有 ≥50 字段落）时信任容器，不再全页兜底——
+  // 短正文页面（容器只有 1 段文字+1 段图）原「paras<2 即全页 <p>」会滚动推荐列表全部混进正文 → AI 摘要跑偏。
+  // 容器无实质段落（如误匹配页头）才退回全页 <p> 提取。
+  if (!paras.some((p) => p.length >= 50)) {
+    const fb = extractParagraphs(cleaned)
+    if (fb.length > paras.length) paras = fb
+  }
   if (paras.length === 0) return null
   return paras.join('\n')
 }
@@ -932,9 +966,16 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         } else if (content && content.length > 10) {
           // P0-2：剩余预算不足跑摘要（<8s）→ 跳过 AI 摘要，保留 content（详情页优先正文，摘要仅列表展示用）
           if (!deadline || Date.now() + 8000 <= deadline) {
+            // 2026-09-09 修复：滚动页列表降噪闸门——content 若混入「其他新闻标题+时间戳」列表
+            // （中华网 socialgd 等页面结构），AI 会如实总结列表 → 摘要跑偏成大杂烩。
+            // 剥离列表行后有效正文 <100 字（与 CONTENT_MIN_FOR_AI 对齐）→ 判定无有效正文，跳过 AI 摘要走兜底链。
+            const aiInput = stripRollingNoise(content)
+            if (aiInput.trim().length < 100) {
+              console.warn(`[enrich] ${item.id || ''} 正文降噪后<100字（滚动列表污染），跳过 AI 摘要防跑偏`)
+            } else {
             // B-14: AI 摘要同样加超时兜底（12s）；混元前置后首引擎免费额度快速命中，极少走到外部 Key 链
             const aiSummary = await Promise.race([
-              summarizeWithZhipu(content, item.title),
+              summarizeWithZhipu(aiInput, item.title),
               new Promise(resolve => setTimeout(() => resolve(null), ITEM_TIMEOUT_MS)),
             ])
             if (aiSummary && aiSummary.length >= 30) {
@@ -946,6 +987,7 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
               } else {
                 console.warn(`[enrich] ${item.id || ''} AI 摘要过短(<60字)，降级兜底`)
               }
+            }
             }
           } else {
             console.warn(`[enrich] ${item.id || ''} 预算不足跳过 AI 摘要（保留 content，summarySource=${summarySource}）`)
@@ -966,14 +1008,17 @@ async function enrichNewsList(newsList, concurrency, skipFetch = false, skipAiSu
         // 2026-08-14 A+B+C+D 优化：解读是硬需求，不再以固定 28s 跳过（此前 ~95 次/日因预算守卫被跳过）。
         // 改为：剩余 ≥5s 即尝试；race 超时动态 = min(INTERPRET_TIMEOUT_MS, 剩余-3s)，
         // 早段条目给满 40s 走完整降级链，晚段条目 race 自动缩短 → 数学上保证不超 60s 函数墙。
-        if (enriched.contentSource !== 'ai_interpretation' && content && content.trim().length >= 50) {
+        // 2026-09-09 修复：解读输入同样滚动降噪——列表噪音会稀释正文（解读虽靠标题锚定幸存，
+        // 但喂干净正文更稳）。noise-stripped 后 <50 字则维持原 content 走 R1 兜底。
+        const interpretInput = stripRollingNoise(content || '')
+        if (enriched.contentSource !== 'ai_interpretation' && interpretInput && interpretInput.trim().length >= 50) {
           // 预算守卫：仅剩 <5s 才跳过（保函数不超时）；其余一律尝试解读
           if (!deadline || Date.now() + 5000 <= deadline) {
             const interpretRaceMs = deadline
               ? Math.min(INTERPRET_TIMEOUT_MS, Math.max(0, deadline - Date.now() - 3000))
               : INTERPRET_TIMEOUT_MS
             const interpretation = await Promise.race([
-              interpretNews(content, item.title, enriched.references, item),
+              interpretNews(interpretInput, item.title, enriched.references, item),
               new Promise(resolve => setTimeout(() => resolve(null), interpretRaceMs)),
             ])
             if (interpretation && interpretation.text) {
