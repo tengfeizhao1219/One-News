@@ -41,13 +41,14 @@
     </view>
   </view>
 
-  <!-- 首屏加载：logo 加载动画（等待 getNewsDetail 完成再渲染，避免「先摘要后补全」跳变） -->
+  <!-- 首屏加载：启动页式（owner 2026-09-09）——对齐微信原生启动屏观感：居中图标+应用名+柔和呼吸；
+       去旧版旋转描边环与「正在为你准备…」文案（owner 反馈不美观）。
+       等待 getNewsDetail 完成再渲染，避免「先摘要后补全」跳变 -->
   <view class="detail-loading" wx:if="{{pageState === 'loading'}}">
-    <view class="loading-logo-wrap">
-      <view class="loading-ring"></view>
-      <logo mode="avatar-circle" size="92" />
+    <view class="launch-logo">
+      <logo mode="avatar-circle" size="120" />
     </view>
-    <view class="loading-text">正在为你准备…</view>
+    <view class="launch-name">一页</view>
   </view>
 
   <!-- 空态 / 错误态 · D-04 v0.2 §4.2：去按钮、温和文案、居中 logo-avatar-circle。

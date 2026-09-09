@@ -814,8 +814,10 @@
   100% { background-position: -200% 0; }
 }
 
-/* ============ 首屏 logo 加载动画（2026-08-28） ============
-   居中 logo（avatar-circle）+ 旋转描边环，等待 getNewsDetail 完成再渲染首屏。 */
+/* ============ 首屏加载 · 启动页式（owner 2026-09-09） ============
+   对齐微信原生启动屏观感：居中图标(120rpx) + 应用名「一页」，柔和呼吸动画；
+   去旧版旋转描边环(logoSpin)与「正在为你准备…」文案——太工程感，owner 反馈不美观。
+   仍等待 getNewsDetail 完成再渲染首屏。 */
 .detail-loading {
   position: absolute;
   left: 50%;
@@ -826,38 +828,19 @@
   align-items: center;
   z-index: 12;
 }
-.loading-logo-wrap {
-  position: relative;
-  width: 156rpx;
-  height: 156rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.launch-logo {
+  animation: launchBreath 1.8s ease-in-out infinite;
 }
-.loading-ring {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 156rpx;
-  height: 156rpx;
-  border-radius: 50%;
-  border: 4rpx solid var(--primary-subtle, rgba(10, 124, 235, 0.15));
-  border-top-color: var(--primary, #0a7ceb);
-  box-sizing: border-box;
-  animation: logoSpin 0.9s linear infinite;
+.launch-name {
+  margin-top: 30rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 4rpx;
 }
-.loading-logo-wrap .logo-img {
-  width: 92rpx;
-  height: 92rpx;
-}
-.loading-text {
-  margin-top: 40rpx;
-  font-size: 26rpx;
-  color: var(--text-tertiary);
-  letter-spacing: 1rpx;
-}
-@keyframes logoSpin {
-  to { transform: rotate(360deg); }
+@keyframes launchBreath {
+  0%, 100% { opacity: 0.55; transform: scale(0.97); }
+  50% { opacity: 1; transform: scale(1); }
 }
 
 /* ============ 状态页面（错误/空数据）· D-04 v0.2 §4.2 ============

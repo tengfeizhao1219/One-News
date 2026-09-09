@@ -181,13 +181,13 @@
     </view>
   </scroll-view>
 
-  <!-- 首屏加载：logo 加载动画（等待 getIntelDetail 完成再渲染，避免空内容闪现；对齐 One News detail） -->
+  <!-- 首屏加载：启动页式（owner 2026-09-09，对齐 One News detail）——居中图标+应用名+柔和呼吸，
+       去旋转描边环与「情报官正在梳理详情…」文案；等待 getIntelDetail 完成再渲染，避免空内容闪现 -->
   <view class="detail-loading" wx:if="{{loading}}">
-    <view class="loading-logo-wrap">
-      <view class="loading-ring"></view>
-      <logo mode="avatar-circle" size="92" />
+    <view class="launch-logo">
+      <logo mode="avatar-circle" size="120" />
     </view>
-    <view class="loading-text">情报官正在梳理详情…</view>
+    <view class="launch-name">一页</view>
   </view>
 
   <!-- 话题搜索覆盖面板（FAB 点击：面板从底部升起，把其余内容顶上去；结果展开展示，下滑到顶或退出收起） -->
