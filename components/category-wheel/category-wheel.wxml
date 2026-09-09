@@ -1,5 +1,7 @@
 <!-- 左侧垂直分类滚轮（RQ-15-D / UI-B7 §3.2） -->
 <!-- v5.3-final：选中项固定顶部第二行锚定；触摸实时切分类 + 松手 snap + 震动 -->
+<!-- owner 2026-09-09：新增点按直选——tap 具体分类项即选中该项并锚定回第二行；
+     拖拽松手后微信会合成 tap，用位移阈值 _moved 拦截（见 js onItemTap）。 -->
 <!-- BUG-20260806-013 (FE): 去掉 .wheel 固定 432rpx 高度，改用 height:100% 撑满父容器，
      配合 flex 居中让 .wheel-list 居中显示。视觉效果：滚轮列表居中，
      上下空白（如分类只有 5 个时，"社会"上方/下方均有空白）均属触摸热区，
@@ -11,14 +13,16 @@
   catchtouchstart="onTouchStart"
   catchtouchmove="onTouchMove"
   catchtouchend="onTouchEnd"
-  catchtouchcancel="onTouchEnd">
+  catchtouchcancel="onTouchCancel">
 
   <view class="wheel-list" style="transform: translateY({{translateY}}rpx); transition: {{touching ? 'none' : 'transform 300ms cubic-bezier(.4,0,.2,1)'}};">
     <view
       wx:for="{{categories}}"
       wx:key="id"
       class="wheel-item {{item.id === activeId ? 'active' : ''}}"
-      style="height: {{itemHeight}}rpx; line-height: {{itemHeight}}rpx;">
+      style="height: {{itemHeight}}rpx; line-height: {{itemHeight}}rpx;"
+      catchtap="onItemTap"
+      data-index="{{index}}">
       <text class="wheel-label {{item.id === activeId ? 'active' : ''}}">{{item.name}}</text>
     </view>
   </view>

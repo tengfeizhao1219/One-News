@@ -51,6 +51,8 @@ Component({
       const idx = cats.findIndex(c => c.id === activeId)
       this._activeIndex = idx >= 0 ? idx : 0
       this._updateTranslate()
+      // owner 2026-09-09 点按直选：首次缓存列表矩形（touchstart 时还会刷新）
+      this._queryListRect()
     },
   },
 
@@ -90,16 +92,25 @@ Component({
       if (!touch) return
       this._startY = touch.clientY
       this._startIndex = this._activeIndex || 0
+      // owner 2026-09-09 点按直选：每次触摸重置位移标记——松手后合成的 tap
+      // 只有在"未拖动"时才应视为点选
+      this._moved = false
       // BUG-008③: 记录起始基础位移（含当前 bounce），拖动时连续跟手
       this._startTranslate = this._baseTranslate(this._startIndex) + (this.data.bounceOffset || 0)
       this._lastVibrateIndex = this._startIndex
       this.setData({ touching: true })
+      // owner 2026-09-09 点按直选：每次落下刷新列表矩形（人手触摸 ≥50ms，
+      // 异步查询在 touchend 前必回，拿到的就是本次手势期间的新鲜布局）
+      this._queryListRect()
     },
 
     onTouchMove: function (e) {
       const touch = e.touches && e.touches[0]
       if (!touch || this._startY === undefined) return
       const deltaY = touch.clientY - this._startY
+      // owner 2026-09-09 点按直选：位移超过 ~6px(≈3pt 标准滑动容差) 视为拖拽，
+      // 其松手合成的 tap 不再触发直选
+      if (Math.abs(deltaY) > 6) this._moved = true
       // BUG-20260807-001: px→rpx 换算。此前 deltaY(px) 直接与 itemHeight(rpx) 混算，
       // 在 375px 屏上阈值翻倍（下滑一格不触发）、跟手减半、Math.round 边界方向不对称。
       const deltaYRpx = deltaY * (this._px2rpx || 2)
@@ -146,7 +157,7 @@ Component({
       }
     },
 
-    onTouchEnd: function () {
+    onTouchEnd: function (e) {
       this._startY = undefined
       this.setData({ touching: false })
       // FE-1：松手后弹性回弹（300ms 过渡），选中锚点不变
@@ -156,6 +167,65 @@ Component({
       // BUG-008③（AC-RQ15-20）: 松手 snap 到最近分类（300ms 缓动，wxml transition 恢复）
       // _activeIndex 已在 move 中实时对齐，_updateTranslate 计算最终位置
       this._updateTranslate()
+      // owner 2026-09-09 点按直选：tap 合成事件在本组件 catch 触摸链上真机不派发，
+      // 改为 touchend 直接判定——未拖动时用触点 Y + 列表布局矩形换算点中的分类项
+      // （_listRect 已在 touchstart 异步查询缓存；矩形高 = 项高×项数，直接按行等分换算）
+      if (!this._moved && e && e.changedTouches && e.changedTouches[0] && this._listRect) {
+        const rel = e.changedTouches[0].clientY - this._listRect.top
+        const len = (this.data.categories || []).length
+        if (len > 0 && rel >= 0 && rel <= this._listRect.height) {
+          this._selectIndex(Math.floor(rel / (this._listRect.height / len)))
+        }
+      }
+    },
+
+    /** owner 2026-09-09：touchcancel 只做清理，不触发点按直选 */
+    onTouchCancel: function () {
+      this._startY = undefined
+      this.setData({ touching: false })
+      if (this.data.bounceOffset !== 0) {
+        this.setData({ bounceOffset: 0 })
+      }
+      this._updateTranslate()
+    },
+
+    /** owner 2026-09-09：缓存 .wheel-list 布局矩形（touchstart 时刷新，touchend 换算用） */
+    _queryListRect: function () {
+      try {
+        wx.createSelectorQuery().in(this)
+          .select('.wheel-list')
+          .boundingClientRect(function (rect) {
+            if (rect) this._listRect = rect
+          }.bind(this))
+          .exec()
+      } catch (e) { /* 忽略：无矩形时 touchend 直选跳过，拖拽选择不受影响 */ }
+    },
+
+    /**
+     * owner 2026-09-09：点按直选公共入口——tap 具体分类项即选中该项，列表以 300ms 缓动
+     * 锚定回第二行（与滑动 snap 同一动画语义）；震动 + change 事件与拖拽切换一致。
+     * 幂等：重复选中同一项仅回正锚点，不发事件、不震动（touchend 与 tap 双路径安全）。
+     */
+    _selectIndex: function (idx) {
+      const cats = this.data.categories || []
+      if (idx === undefined || idx === null || idx < 0 || idx >= cats.length) return
+      if (idx === this._activeIndex) {
+        this._updateTranslate()
+        return
+      }
+      this._activeIndex = idx
+      this._vibrate()
+      this.triggerEvent('change', { category: cats[idx].id, index: idx })
+      this._updateTranslate()
+    },
+
+    /**
+     * owner 2026-09-09：点按直选 tap 路径（双保险）——主路径在 onTouchEnd 坐标直算；
+     * 若部分机型 tap 正常派发，此处先到/后到均幂等，不会重复发 change。
+     */
+    onItemTap: function (e) {
+      if (this._moved) return
+      this._selectIndex(e.currentTarget.dataset.index)
     },
   },
 })
