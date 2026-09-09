@@ -1,4 +1,8 @@
-/* 关于一页 — dock「扩展位」改造（AB-01）· BUG-20260806-004 导航栏对齐胶囊 */
+/* 关于一页 — dock「扩展位」改造（AB-01）· BUG-20260806-004 导航栏对齐胶囊
+   字号统一（2026-09-09 3.0.0）：一套层级——
+     区块标题 section-title 26 / 项标题(pi·commitment·story) 28 / 正文叙述(origin) 28
+     说明文字(pi-desc·commitment-desc·story-p) 26 / 引子·悬念(teaser·mystery·more) 24
+     元信息(version·date·sign·footer) 20-22 —— 所有字号不再叠加多余缩放系数 */
 
 .page {
   display: flex;
@@ -40,7 +44,7 @@
 }
 
 .nav-title {
-  font-size: 34rpx;
+  font-size: 32rpx;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -93,7 +97,7 @@
 }
 
 .section-title {
-  font-size: 28rpx;
+  font-size: 26rpx;
   font-weight: 600;
   color: var(--text-tertiary);
   margin: 0 8rpx 16rpx;
@@ -109,10 +113,23 @@
 
 /* 初衷 */
 .origin-p {
-  font-size: 30rpx;
-  line-height: 1.8;
+  font-size: 28rpx;
+  line-height: 1.85;
   color: var(--text-body);
   margin-bottom: 16rpx;
+}
+
+/* 初衷展开入口（2026-09-09：默认折叠到第一段） */
+.origin-more {
+  display: inline-block;
+  padding: 4rpx 20rpx 10rpx 4rpx;
+}
+.origin-more--hover {
+  opacity: 0.7;
+}
+.origin-more-text {
+  font-size: 24rpx;
+  color: var(--text-tertiary);
 }
 
 /* 初衷落款（owner 亲笔寄语：书于正式上线前） */
@@ -120,7 +137,7 @@
   margin-top: 28rpx;
   padding-top: 20rpx;
   border-top: 1rpx solid var(--divider);
-  font-size: 24rpx;
+  font-size: 22rpx;
   line-height: 1.6;
   color: var(--text-secondary);
   text-align: right;
@@ -137,7 +154,7 @@
 }
 
 .commitment-title {
-  font-size: 30rpx;
+  font-size: 28rpx;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -145,7 +162,7 @@
 .commitment-desc {
   margin-top: 6rpx;
   font-size: 26rpx;
-  line-height: 1.6;
+  line-height: 1.7;
   color: var(--text-body);
 }
 
@@ -168,7 +185,107 @@
 }
 .footer-text {
   margin-top: 20rpx;
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: var(--text-tertiary);
   letter-spacing: 2rpx;
+}
+
+/* ===== 产品介绍（2026-09-09 3.0.0） ===== */
+.pi-row {
+  padding: 14rpx 0;
+}
+.pi-row + .pi-row {
+  border-top: 1rpx solid var(--divider);
+}
+.pi-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.pi-desc {
+  margin-top: 4rpx;
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+.pi-mystery {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed var(--divider);
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  line-height: 1.7;
+}
+
+/* ===== 版本故事（2026-09-09 3.0.0：默认折叠，展开阅读） ===== */
+.story {
+  padding: 4rpx 0;
+}
+.story + .story {
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid var(--divider);
+}
+.story-head {
+  padding: 8rpx 0 12rpx;
+}
+.story-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 12rpx;
+  margin-bottom: 6rpx;
+}
+.story-version {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: var(--primary);
+}
+.story-date {
+  font-size: 20rpx;
+  color: var(--text-tertiary);
+}
+.story-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+.story-title {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+.story-title.open {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.story-chev {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  color: var(--text-tertiary);
+}
+.story-teaser {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  line-height: 1.7;
+}
+.story-body {
+  margin-top: 8rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed var(--divider);
+}
+.story-p {
+  font-size: 26rpx;
+  color: var(--text-secondary);
+  line-height: 1.85;
+  margin-bottom: 12rpx;
+}
+.story-p:last-child {
+  margin-bottom: 0;
+  font-size: 22rpx;
+  color: var(--text-tertiary);
+  text-align: right;
 }

@@ -2,6 +2,7 @@
 
 var app = getApp()
 var changelog = require('../../config/changelog')
+var stories = require('../../config/stories')
 
 Page({
   data: {
@@ -20,6 +21,21 @@ Page({
       { title: 'AI加持', desc: '借助AI能力，帮助你更快，更高效阅读' },
       { title: '尊重你的注意力', desc: '不打扰、无广告、不推送' },
     ],
+    // 产品介绍（2026-09-09 3.0.0：核心功能点到即止 + 保留探索乐趣）
+    // 2026-09-09 owner 调整：AI 摘要与解读并入第一项；新增「深度挖掘」介绍项
+    productIntro: [
+      { title: '一页极简阅读 · AI 加持', desc: '打开即读，无推荐、无追踪；每条都带 AI 摘要与解读，几秒抓住要点，重要的再深一层讲透' },
+      { title: '深度挖掘', desc: '读到想了解更多？按一下深挖，AI 汇聚多角度信息，把来龙去脉讲清楚' },
+      { title: 'AI 情报官', desc: '每日划重点：发生了什么、AI 预测、落到你这里' },
+      { title: '我的关注', desc: '长按一个话题，替你盯住“后来怎么样了”' },
+    ],
+    productMystery: '更多能力，藏在细节里——试试长按正文、左右滑动、点开「发生了什么」……',
+    // 版本故事（2026-09-09 3.0.0：保留历史故事线，默认折叠，展开阅读；
+    //   展开态按下标存（版本号含“.”会被 setData 当路径拆开，故不用版本号作 key））
+    versionStories: (stories && stories.stories) || [],
+    storyExpanded: {},
+    // 我们的初衷（2026-09-09：过长，默认折叠到第一段，可按需展开全文）
+    originOpen: false,
   },
 
   onLoad: function () {
@@ -90,6 +106,22 @@ Page({
 
   onCloseChangelog: function () {
     this.setData({ showChangelog: false })
+  },
+
+  /** 版本故事：点击卡片展开/收起（默认折叠，保留故事线；按下标作 key 防版本号“.”被 setData 拆路径） */
+  onToggleStory: function (e) {
+    var idx = e.currentTarget.dataset.idx
+    if (idx === undefined || idx === null || idx === '') return
+    var cur = this.data.storyExpanded || {}
+    var next = {}
+    for (var k in cur) next[k] = cur[k]
+    next[idx] = !cur[idx]
+    this.setData({ storyExpanded: next })
+  },
+
+  /** 我们的初衷：展开/收起全文（默认折叠到第一段） */
+  onToggleOrigin: function () {
+    this.setData({ originOpen: !this.data.originOpen })
   },
 
   /**
