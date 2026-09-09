@@ -67,6 +67,19 @@ function syncModule(module) {
 }
 
 /**
+ * 物理删除单条关注的云端记录（owner 2026-09-08：取消关注 → 云端+本地都不再保留）。
+ * 本地删除由 followUp.removeFollow 完成；云端删除走 remove 动作（物理 remove，不再软删）。
+ * 普通场景无需直接调用——followUp.removeFollow 内部已统一触发本函数。
+ */
+function removeOne(module, itemId) {
+  if (!itemId) return
+  return cloudApi.report({
+    name: SYNC_FN,
+    data: { action: 'remove', module: module === 'intel' ? 'intel' : 'onenews', itemId: String(itemId) },
+  })
+}
+
+/**
  * 拉取云端 updates 合并进本地（进入关注页时调用）。
  * 合并规则：
  *   - 云端某 itemId 有 updates 且本地无 → 注入本地 updates
@@ -121,6 +134,7 @@ async function fetchUpdates() {
 module.exports = {
   syncLocal,
   syncModule,
+  removeOne,
   fetchUpdates,
   _localList,
 }

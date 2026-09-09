@@ -41,6 +41,10 @@
         <view class="fc-badge status-{{item.status}}">{{item.statusText}}</view>
       </view>
 
+      <!-- owner 2026-09-08：话题介绍——关注时捕获的原文摘要作简短背景，
+           标题下先给上下文，最新进展在此之上按时间展开 -->
+      <view class="fc-intro" wx:if="{{item.knownSummary}}">{{item.knownSummary}}</view>
+
       <!-- 元信息：来源标签 · 追踪时间 · 已关注天数 -->
       <view class="fc-meta">
         <text class="src-tag {{item.module}}">{{item.module === 'intel' ? '情报官' : '资讯'}}</text>
@@ -50,9 +54,9 @@
         <text>已关注 {{item.followDays}} 天</text>
       </view>
 
-      <!-- 最新更新高亮框：有更新/已读时展示最新一条；无更新时展示检索提示 -->
-      <view class="fc-summary {{item.summaryMuted ? 'muted' : ''}}" wx:if="{{item.latestSummary}}">
-        <text wx:if="{{!item.summaryMuted}}" class="fc-summary-date">{{item.latestDate}} 更新：</text>{{item.latestSummary}}
+      <!-- 最新更新高亮框：有更新/已读时展示最新一条（无更新静默留白，不再展示检索提示话术） -->
+      <view class="fc-summary" wx:if="{{item.latestSummary}}">
+        <text class="fc-summary-date">{{item.latestDate}} 更新：</text>{{item.latestSummary}}
       </view>
 
       <!-- 历史时间线（点击展开） -->
@@ -68,12 +72,27 @@
       <view class="link-row" wx:if="{{item.timeline.length > 0}}">{{expanded[item.itemId] ? '收起 ▴' : '展开历史更新 ▾'}}</view>
     </view>
 
-    <!-- BUG-20260828-006：品牌页脚紧凑居中（splash 全宽横幅→200rpx 小 logo） -->
+    <!-- owner 2026-09-08：logo 条横向铺满屏幕（回退 BUG-20260828-006 的 200rpx 收缩） -->
     <view class="brand-footer">
       <view class="brand-card">
-        <logo id="fu-logo" mode="splash" size="200"></logo>
+        <logo id="fu-logo" mode="splash" fluid="{{true}}"></logo>
       </view>
       <view class="brand-text">一页 · 简单到极致</view>
     </view>
   </scroll-view>
+
+  <!-- 长按操作面板（owner 2026-09-08：自定义底部面板——无系统「取消」按钮，点蒙层关闭） -->
+  <view class="sheet-mask" wx:if="{{sheetShow}}" bindtap="onSheetMaskTap"></view>
+  <view class="sheet {{sheetShow ? 'sheet--show' : ''}}" wx:if="{{sheetShow}}" catchtap="noop">
+    <block wx:if="{{sheetMode === 'actions'}}">
+      <view class="sheet-title">{{sheetTitle}}</view>
+      <view class="sheet-item" hover-class="sheet-item--hover" bindtap="onSheetMarkRead">标记已读</view>
+      <view class="sheet-item" hover-class="sheet-item--hover" bindtap="onSheetTrackTime">改追踪时间</view>
+      <view class="sheet-item sheet-item--danger" hover-class="sheet-item--hover" bindtap="onSheetUnfollow">取消关注</view>
+    </block>
+    <block wx:if="{{sheetMode === 'tracktime'}}">
+      <view class="sheet-title">每天追踪时间</view>
+      <view class="sheet-item" hover-class="sheet-item--hover" wx:for="{{trackTimeOptions}}" wx:key="*this" data-v="{{item}}" bindtap="onSheetPickTime">每天 {{item}}</view>
+    </block>
+  </view>
 </view>

@@ -10,8 +10,11 @@
  *
  * 触发：定时器每天 08/12/18/21 四档（config.json triggers）；
  *       每档触发时，仅处理 trackTime 已到点 且 当天未检索 的话题（防重复/控成本）。
- *       也可由前端手动触发（event.force=true 忽略日期去重，调试用），
- *       或按单话题手动检索（event.itemId 精确检索当前用户某条关注，前端「立即检索最新进展」）。
+ *       event.force=true 忽略日期去重（仅调试用）。
+ * owner 2026-09-08 调整：①移除「立即检索」单话题手动模式（前端入口已下线，检索只走每日定时档）；
+ *       ②待检话题分页扫描（修复单次 1000 条上限截断漏检）；
+ *       ③AI 判新兜底只认显式 "hasNew":true/false（修复 JSON 解析失败时 /true/i 误判
+ *         以及 catch 作用域引用 j 导致 ReferenceError 炸掉整次运行的问题）。
  *
  * 检索链（复用 intelSearch 已验证的通道）：
  *   ① Tavily 搜索：「话题标题 + 最新进展/更新」（主通道）
@@ -267,8 +270,16 @@ ${searchText || '（无结构化结果）'}
       sourcesCount: Math.min(5, Math.max(1, Number(j.sourcesCount) || 1)),
     }
   } catch (e) {
-    // JSON 解析失败 → 尝试抽取 hasNew
-    return { hasNew: /true/i.test(raw), summary: String(j.summary || raw).slice(0, 150), sourcesCount: 1 }
+    // owner 2026-09-08 修复：解析失败兜底两处问题——
+    // ① 旧代码在此引用 try 作用域的 j → ReferenceError 会向上炸掉整次运行；
+    // ② /true/i 全文匹配太宽松（正文出现 true 即误判 hasNew）。
+    // 现在只认显式 "hasNew":true/false；true 还需能抽出 summary，否则按失败处理（下档重试）。
+    if (/"hasNew"\s*:\s*false/i.test(raw)) return { hasNew: false, summary: '', sourcesCount: 1 }
+    if (/"hasNew"\s*:\s*true/i.test(raw)) {
+      const sm = raw.match(/"summary"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+      if (sm && sm[1]) return { hasNew: true, summary: sm[1].slice(0, 300), sourcesCount: 1 }
+    }
+    return null
   }
 }
 
@@ -349,62 +360,47 @@ async function buildTopicQueries(topicTitle, knownSummary) {
   }
 }
 
-/** 拉取待检话题：活跃关注 + trackTime 到点 + 今天未检索（或 force） */
+/** 拉取待检话题：活跃关注 + trackTime 到点 + 今天未检索（或 force）。
+ *  owner 2026-09-08：改为分页扫描（每页 100，直到批次满或扫完全集）——
+ *  修复旧实现单次 .limit(1000) 在活跃关注超 1000 时静默截断漏检的问题。 */
 async function listDueTopics(force) {
   const today = todayStr()
-  const res = await db.collection('follow_up')
-    .where({ isActive: true })
-    .limit(1000)
-    .get()
-  const all = res.data || []
   const now = Date.now()
   const due = []
-  for (const d of all) {
-    if (!d.itemId || !d.title) continue
-    if (!force) {
-      if (!trackDue(d.trackTime, now)) continue
-      if (d.lastCheckedDate === today) continue // 今天已检索过
+  const PAGE = 100
+  let skip = 0
+  let exhausted = false
+  while (!exhausted && due.length < MAX_BATCH) {
+    const res = await db.collection('follow_up')
+      .where({ isActive: true })
+      .skip(skip)
+      .limit(PAGE)
+      .get()
+    const all = res.data || []
+    if (all.length < PAGE) exhausted = true
+    skip += all.length
+    for (const d of all) {
+      if (!d.itemId || !d.title) continue
+      if (!force) {
+        if (!trackDue(d.trackTime, now)) continue
+        if (d.lastCheckedDate === today) continue // 今天已检索过
+      }
+      due.push(d)
+      if (due.length >= MAX_BATCH) break
     }
-    due.push(d)
-    if (due.length >= MAX_BATCH) break
   }
   return due
-}
-
-/**
- * 单话题手动检索（前端「立即检索最新进展」入口）：
- * 按 openid + itemId 精确定位用户自己的关注，忽略 trackTime/日期去重（用户主动触发）。
- * @returns {Promise<Array>} 0 或 1 个 topic 文档
- */
-async function findTopicByItemId(openid, itemId) {
-  if (!openid || !itemId) return []
-  const res = await db.collection('follow_up')
-    .where({ _openid: openid, itemId: String(itemId), isActive: true })
-    .limit(1)
-    .get()
-  return (res.data || []).slice(0, 1)
 }
 
 exports.main = async (event = {}) => {
   const startedAt = Date.now()
   const force = event.force === true
   const today = todayStr()
-  const openid = cloud.getWXContext().OPENID
 
   try {
-    let due
-    if (event.itemId) {
-      // 单话题手动检索：仅当前用户自己的关注（OPENID 隔离），忽略日期/时间去重
-      if (!openid) {
-        return { code: 0, data: { checked: 0, newUpdates: 0, message: 'no openid context' } }
-      }
-      due = await findTopicByItemId(openid, event.itemId)
-      if (!due.length) {
-        return { code: 0, data: { checked: 0, newUpdates: 0, message: 'topic not found or not followed' } }
-      }
-    } else {
-      due = await listDueTopics(force)
-    }
+    // owner 2026-09-08：移除 event.itemId 单话题手动检索模式——
+    // 「立即检索」前端入口已下线，检索只能走每日定时档（成本可控，避免无节流直打 Tavily/DeepSeek）。
+    const due = await listDueTopics(force)
     if (!due.length) {
       return { code: 0, data: { checked: 0, skipped: 0, newUpdates: 0, message: 'no due topics' } }
     }

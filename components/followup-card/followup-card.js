@@ -29,6 +29,11 @@ Component({
     expanded: {},
     // 初始即收为 0%，避免挂载瞬间闪现覆盖首页
     revealStyle: 'clip-path: circle(0% at 50% 50%); -webkit-clip-path: circle(0% at 50% 50%);',
+    // 长按操作面板（owner 2026-09-08：自定义底部面板——无系统「取消」按钮，点蒙层关闭）
+    sheetShow: false,
+    sheetMode: 'actions',     // actions=操作菜单 | tracktime=改追踪时间
+    sheetTitle: '',
+    trackTimeOptions: TRACK_TIMES,
   },
 
   lifetimes: {
@@ -56,6 +61,7 @@ Component({
     // 宿主把 visible 置 true → 从按压点绽放
     'visible': function (v) {
       if (v) this._enterReveal()
+      else this._onClosed()
     },
   },
 
@@ -87,15 +93,12 @@ Component({
       const latest = updates.length ? updates[0] : null
       let latestDate = ''
       let latestSummary = ''
-      let summaryMuted = false
       if (latest) {
         latestDate = FU.formatFollowTime(latest.date)  // 2026-08-31: 带时分（今天 HH:MM / 昨天 HH:MM）
         latestSummary = latest.summary
-      } else {
-        // 无更新：展示「已检索但无新进展」提示（对齐 demo 灰态文案）
-        summaryMuted = true
-        latestSummary = '今天 ' + (item.trackTime || '12:00') + ' 已检索，暂无新的公开进展，已为你持续关注。'
       }
+      // owner 2026-09-08：无更新时不再展示「今天 HH:MM 已检索，暂无新的公开进展」话术——
+      // 静默留白（话题介绍 knownSummary 承担标题下的上下文版面）
 
       return Object.assign({}, item, {
         unreadCount: unreadCount,
@@ -106,7 +109,6 @@ Component({
         followDays: followDays,
         latestDate: latestDate,
         latestSummary: latestSummary,
-        summaryMuted: summaryMuted,
         timeline: updates.map(function (u) {
           return { date: FU.formatFollowTime(u.date), summary: u.summary, sourcesCount: u.sourcesCount, read: u.read }  // 2026-08-31: 带时分
         }),
@@ -162,72 +164,71 @@ Component({
       this._load()
     },
 
-    // 长按卡片：操作菜单（立即检索 / 标记已读 / 改追踪时间 / 取消关注）
+    // 长按卡片：打开自定义操作面板（owner 2026-09-08：
+    // ①去掉系统弹窗底部的「取消」按钮——换自定义面板，点蒙层关闭；
+    // ②「立即检索」下线——检索只能走每日定时档）
     onItemLongPress(e) {
       const id = e.currentTarget.dataset.id
       const module = e.currentTarget.dataset.module
-      const that = this
-      wx.showActionSheet({
-        itemList: ['立即检索最新进展', '标记已读', '改追踪时间', '取消关注'],
-        success: function (res) {
-          if (res.tapIndex === 0) {
-            that._checkNow(module, id)
-          } else if (res.tapIndex === 1) {
-            FU.markRead(module, id)
-            that._load()
-          } else if (res.tapIndex === 2) {
-            wx.showActionSheet({
-              itemList: TRACK_TIMES,
-              success: function (r) {
-                FU.setTrackTime(module, id, TRACK_TIMES[r.tapIndex])
-                that._load()
-                wx.showToast({ title: '追踪时间 ' + TRACK_TIMES[r.tapIndex], icon: 'none' })
-                // 追踪时间改后需同步云端（否则定时器按旧 trackTime 触发）
-                FU_SYNC.syncModule(module)
-              },
-            })
-          } else if (res.tapIndex === 3) {
-            FU.removeFollow(module, id)
-            if (that._expanded[id]) delete that._expanded[id]
-            that._load()
-            wx.showToast({ title: '已取消关注', icon: 'none' })
-            // 取消关注同步云端（否则云端残留，定时器继续检索已取消话题）
-            FU_SYNC.syncModule(module)
-          }
-        },
+      const item = (this.data.list || []).find(function (it) { return it.itemId === id })
+      this._sheetTarget = { module: module, id: id }
+      this.setData({
+        sheetShow: true,
+        sheetMode: 'actions',
+        sheetTitle: (item && item.title) ? String(item.title).slice(0, 20) : '',
       })
     },
 
-    // 立即检索该话题最新进展（T9.6：调 followUpCheck 单话题模式 → 拉取合并 → 刷新）
-    _checkNow(module, id) {
-      const that = this
-      wx.showLoading({ title: 'AI 检索中…', mask: true })
-      wx.cloud.callFunction({
-        name: 'followUpCheck',
-        data: { itemId: id },
-        success: function (res) {
-          wx.hideLoading()
-          const r = res && res.result
-          if (r && r.code === 0) {
-            const data = r.data || {}
-            if (data.newUpdates > 0) {
-              wx.showToast({ title: '发现 ' + data.newUpdates + ' 条新进展', icon: 'none' })
-            } else if (data.message === 'topic not found or not followed') {
-              wx.showToast({ title: '该话题未在关注列表', icon: 'none' })
-            } else {
-              wx.showToast({ title: '已检索，暂无新进展', icon: 'none' })
-            }
-            // 拉取云端 updates 合并进本地 → 刷新列表（红点/时间线更新）
-            FU_SYNC.fetchUpdates().then(function () { that._load() }).catch(function () { that._load() })
-          } else {
-            wx.showToast({ title: (r && r.message) || '检索失败', icon: 'none' })
-          }
-        },
-        fail: function () {
-          wx.hideLoading()
-          wx.showToast({ title: '检索失败，请重试', icon: 'none' })
-        },
-      })
+    // —— 操作面板事件 ——
+    onSheetMaskTap() {
+      this.setData({ sheetShow: false })
+    },
+    // 阻止面板内点击冒泡到蒙层（catchtap 引用）
+    noop() {},
+
+    onSheetMarkRead() {
+      const t = this._sheetTarget
+      if (!t) return
+      FU.markRead(t.module, t.id)
+      this.setData({ sheetShow: false })
+      this._load()
+    },
+
+    onSheetTrackTime() {
+      this.setData({ sheetMode: 'tracktime' })
+    },
+
+    onSheetPickTime(e) {
+      const t = this._sheetTarget
+      const v = e.currentTarget.dataset.v
+      if (!t || !v) return
+      FU.setTrackTime(t.module, t.id, v)
+      this.setData({ sheetShow: false })
+      this._load()
+      wx.showToast({ title: '追踪时间 ' + v, icon: 'none' })
+      // 追踪时间改后需同步云端（否则定时器按旧 trackTime 触发）
+      FU_SYNC.syncModule(t.module)
+    },
+
+    onSheetUnfollow() {
+      const t = this._sheetTarget
+      if (!t) return
+      // followUp.removeFollow 单点收口：本地物理移除 + 云端物理删除（内部触发 removeOne）
+      FU.removeFollow(t.module, t.id)
+      if (this._expanded[t.id]) delete this._expanded[t.id]
+      this._sheetTarget = null
+      this.setData({ sheetShow: false })
+      this._load()
+      wx.showToast({ title: '已取消关注', icon: 'none' })
+    },
+
+    // owner 2026-09-08 调整：离开关注页（overlay 收起）→ 自动收起全部展开的时间线与操作面板
+    _onClosed() {
+      this._expanded = {}
+      this._sheetTarget = null
+      if (this.data.sheetShow || Object.keys(this.data.expanded || {}).length) {
+        this.setData({ expanded: {}, sheetShow: false })
+      }
     },
 
     // 全部标为已读（红 → 绿，顶部红点清 0）

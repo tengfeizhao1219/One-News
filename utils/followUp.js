@@ -98,11 +98,18 @@ function addFollow(module, item) {
   return { followed: true, list: getFollows() }
 }
 
-/** 取消关注 */
+/** 取消关注（owner 2026-09-08：本地物理移除 + 云端物理删除，单点收口——
+ *  详情页长按取消/关注页长按菜单都走本函数，云端同步在此统一触发，调用方无需再各自处理） */
 function removeFollow(module, itemId) {
   if (!itemId) return getFollows()
   const list = _read(module).filter(function (it) { return it.itemId !== itemId })
   _write(module, list)
+  // 云端物理删除（延迟 require 避免与 followUpSync 顶层循环依赖；
+  // fire-and-forget：离线时进入 cloud 队列，联网后重试投递）
+  try {
+    const FU_SYNC = require('./followUpSync')
+    if (FU_SYNC && FU_SYNC.removeOne) FU_SYNC.removeOne(module, itemId)
+  } catch (e) { /* 静默：云端删除失败不影响本地取消关注 */ }
   return getFollows()
 }
 

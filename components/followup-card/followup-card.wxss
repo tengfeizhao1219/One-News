@@ -211,6 +211,18 @@
   opacity: 0.6;
 }
 
+/* owner 2026-09-08：话题介绍——关注时捕获的原文摘要作简短背景（标题下，最多 3 行截断） */
+.fc-intro {
+  margin-top: 12rpx;
+  font-size: 25rpx;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
 /* 最新更新高亮框（对齐 demo .fc-summary：浅底圆角卡） */
 .fc-summary {
   margin-top: 20rpx;
@@ -220,9 +232,6 @@
   background: var(--bg-subtle);
   border-radius: 20rpx;
   padding: 18rpx 22rpx;
-}
-.fc-summary.muted {
-  color: var(--text-tertiary);
 }
 .fc-summary-date {
   font-weight: 700;
@@ -278,17 +287,16 @@
   font-weight: 600;
 }
 
-/* 底部品牌（BUG-20260828-006：紧凑居中，非全宽横幅） */
+/* owner 2026-09-08：logo 条横向铺满屏幕（全出血，无左右留白；回退 BUG-20260828-006 的 200rpx 收缩） */
 .brand-footer {
   margin-top: 8rpx;
-  padding: 0 32rpx 60rpx;
+  padding: 0 0 60rpx;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
 }
 .brand-card {
-  width: 200rpx;
-  border-radius: 14rpx;
+  width: 100%;
   overflow: hidden;
 }
 .brand-text {
@@ -297,4 +305,50 @@
   color: var(--text-tertiary);
   letter-spacing: 2rpx;
   text-align: center;
+}
+
+/* owner 2026-09-08：长按操作面板（自定义底部面板——无系统「取消」按钮，点蒙层关闭） */
+.sheet-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 90;
+}
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 91;
+  background: var(--bg-card);
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
+}
+.sheet-title {
+  font-size: 24rpx;
+  color: var(--text-tertiary);
+  text-align: center;
+  margin-bottom: 8rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sheet-item {
+  padding: 26rpx 8rpx;
+  font-size: 30rpx;
+  color: var(--text-body);
+  text-align: center;
+  border-bottom: 1rpx solid var(--divider);
+}
+.sheet-item:last-child {
+  border-bottom: none;
+}
+.sheet-item--hover {
+  background: var(--bg-subtle);
+}
+.sheet-item--danger {
+  color: var(--color-favorite);
 }
