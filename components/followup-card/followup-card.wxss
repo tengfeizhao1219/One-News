@@ -112,6 +112,15 @@
   padding: 0 0 40rpx;
   /* 顶部无 padding：内容紧贴导航栏，去绿色窄条 */
   padding-top: 0;
+  /* 2026-09-09：隐藏侧边滚动条（我的关注页反馈），对齐 intel 页做法 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.list-scroll ::-webkit-scrollbar,
+.list-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* 汇总计数行（对齐 demo feed-head .c；BUG-20260828-007：flex 两端对齐，右侧放「全部标为已读」） */
