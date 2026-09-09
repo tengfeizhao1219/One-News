@@ -203,27 +203,22 @@
   letter-spacing: 1rpx;
 }
 
-/* 大白话解读（2026-08-21）：仅专业/深度文档（plainTalk 非空）渲染，给不懂 AI 的普通读者；
-   样式与 AI 预测块同族——很浅蓝底（highlight-bg）+ 块内左上「大白话解读」蓝字 */
+/* 大白话 / 原文解读（owner 2026-09-09）：去浅蓝卡——前缀与正文同段内联（非独立成行），
+   前缀字号与正文一致（32rpx），仅用灰色区分（即「原文解读」） */
 .plain-talk {
-  background: var(--highlight-bg);
-  border-radius: 20rpx;
-  padding: 22rpx 26rpx;
-  margin: 16rpx 0;
+  margin: 4rpx 0 16rpx;
 }
-.plain-talk-tag {
-  display: block;
-  margin-bottom: 10rpx;
-  font-size: calc(23rpx * var(--font-scale-meta, 1));
-  font-weight: 700;
-  color: var(--primary);
+.blk-prefix {
+  font-size: calc(32rpx * var(--font-scale) * var(--page-fs, 1));
+  color: var(--text-tertiary);
   letter-spacing: 1rpx;
+  margin-right: 10rpx;
 }
 .plain-talk-body {
-  font-size: calc(28rpx * var(--font-scale));
+  font-size: calc(32rpx * var(--font-scale) * var(--page-fs, 1));
   color: var(--text-body);
-  line-height: 1.75;
-  display: block;
+  line-height: calc(1.85 * var(--font-scale));
+  letter-spacing: 1rpx;
 }
 
 /* 落到你这里：浅蓝底卡 */

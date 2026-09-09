@@ -68,18 +68,22 @@
         <image wx:if="{{isFollowed}}" class="follow-meta-ic" src="/assets/icons/follow{{isDark ? '-dark' : ''}}.svg" mode="aspectFit"></image>
       </view>
 
-      <!-- 发生了什么（2026-08-21 问题③⑥：正文自然段落；仅 AI 预测用浅灰底块+段尾 UI 提示，
-           大白话/定义归为普通正文段（不显示标签文字）） -->
+      <!-- 发生了什么（2026-08-21 问题③⑥：正文自然段落；仅 AI 预测用浅灰底块+段尾 UI 提示。
+           owner 2026-09-09：两块内容各自行首灰标——大白话段前标「大白话」、
+           正文首段前标「原文解读」（属于谁标谁，不合并），去浅蓝卡高亮 -->
       <text class="block-label">发生了什么</text>
-      <!-- 大白话解读：仅专业/深度文档（plainTalk 非空）渲染，给不懂 AI 的普通读者 -->
+      <!-- 大白话：仅专业/深度文档（plainTalk 非空）渲染，行首灰字前缀「大白话」 -->
       <view wx:if="{{plainTalk}}" class="plain-talk">
-        <text class="plain-talk-tag">大白话解读</text>
+        <text class="blk-prefix">大白话</text>
         <text class="plain-talk-body">{{plainTalk}}</text>
       </view>
+      <!-- 原文解读：首段行首灰字前缀「原文解读」（字号与正文一致），后续段不带标 -->
       <block wx:if="{{whatHappenedBlocks.length}}">
         <block wx:for="{{whatHappenedBlocks}}" wx:key="index" wx:for-item="blk">
           <!-- 普通正文段（text / plain / def 都按自然段落渲染，不显示标记文字） -->
-          <view wx:if="{{blk.type !== 'predict'}}" class="prose {{index ? 'prose-2' : ''}}">{{blk.text}}</view>
+          <view wx:if="{{blk.type !== 'predict'}}" class="prose {{index ? 'prose-2' : ''}}">
+            <text wx:if="{{index === 0}}" class="blk-prefix">原文解读</text>{{blk.text}}
+          </view>
           <!-- AI 预测：很浅蓝底块（highlight-bg）+ 块内左上「AI 预测」蓝字（同 for-k），对齐 ui-demo -->
           <view wx:elif="{{blk.text}}" class="wh-panel">
             <text class="wh-panel-tag">AI 预测</text>
@@ -88,9 +92,13 @@
         </block>
       </block>
       <block wx:elif="{{whatHappenedParagraphs.length}}">
-        <view class="prose {{index ? 'prose-2' : ''}}" wx:for="{{whatHappenedParagraphs}}" wx:key="index">{{item}}</view>
+        <view class="prose {{index ? 'prose-2' : ''}}" wx:for="{{whatHappenedParagraphs}}" wx:key="index">
+          <text wx:if="{{index === 0}}" class="blk-prefix">原文解读</text>{{item}}
+        </view>
       </block>
-      <view class="prose" wx:else>{{descText}}</view>
+      <view class="prose" wx:else>
+        <text class="blk-prefix">原文解读</text>{{descText}}
+      </view>
 
       <!-- 落到你这里（浅蓝底卡，命中身份才显示） -->
       <block wx:if="{{relateItems.length}}">
