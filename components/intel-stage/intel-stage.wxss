@@ -75,10 +75,11 @@
   margin-bottom: 24rpx;
 }
 .hero-count {
-  font-size: calc(30rpx * var(--font-scale));
-  font-weight: 700;
-  color: var(--text-primary);
-  line-height: 1.35;
+  /* 2026-09-09 3.0.0：与「数据截止」同行同字号（22rpx meta），弱化大数字头条感 */
+  font-size: calc(22rpx * var(--font-scale-meta, 1));
+  font-weight: 500;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 .hero-num { color: var(--primary); }
 .hero-sub {
@@ -216,3 +217,12 @@
 
 /* 暗色兜底 */
 .intel-stage.page--dark, .intel-stage.page--dark .content { background-color: #000000; }
+
+/* 情报页顶部页面标题「AI情报官」（2026-09-09 3.0.0）：左对齐；字号结合整体首页节奏
+   （内容标题 30/重点卡 32/元信息 20-22）定为 32rpx/700，页头身份感略高于正文标题 */
+.intel-nav-title {
+  font-size: calc(32rpx * var(--font-scale));
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1rpx;
+}
