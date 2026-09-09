@@ -212,15 +212,38 @@
 }
 
 /* owner 2026-09-08：话题介绍——关注时捕获的原文摘要作简短背景（标题下，最多 3 行截断） */
+/* 话题摘要：裁切必须加在块级容器上——微信 <text> 是内联元素，max-height/overflow 在内联上不生效
+   （2026-09-08 修复：此前加在 .fc-intro-text(<text>) 上导致折叠失效、整篇全展示） */
 .fc-intro {
+  position: relative;         /* 折叠箭头按本块定位 */
   margin-top: 12rpx;
   font-size: 25rpx;
   color: var(--text-secondary);
   line-height: 1.6;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
+  word-break: break-word;
+}
+/* 展开入口 · 圆形按钮（方案2 owner 2026-09-09 定稿+两次微调）：
+   按钮是摘要末行末尾的流内元素（内联跟在截断文本/全文之后，不盖字、不占行）；
+   SVG 描边箭头展开时旋转 180°，动效暗示开合。折叠文本由 JS 估宽截断（见 js introFoldText），
+   故不再需要 max-height 裁切与渐隐遮罩。 */
+.fc-intro-toggle {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  background: var(--bg-subtle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  margin-left: 8rpx;
+}
+.fc-intro-toggle-icon {
+  width: 20rpx;
+  height: 20rpx;
+  transition: transform 0.25s ease;
+}
+.fc-intro-toggle-icon--open {
+  transform: rotate(180deg);
 }
 
 /* 最新更新高亮框（对齐 demo .fc-summary：浅底圆角卡） */
@@ -325,16 +348,7 @@
   z-index: 91;
   background: var(--bg-card);
   border-radius: 28rpx 28rpx 0 0;
-  padding: 28rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
-}
-.sheet-title {
-  font-size: 24rpx;
-  color: var(--text-tertiary);
-  text-align: center;
-  margin-bottom: 8rpx;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  padding: 12rpx 32rpx calc(28rpx + env(safe-area-inset-bottom));
 }
 .sheet-item {
   padding: 26rpx 8rpx;

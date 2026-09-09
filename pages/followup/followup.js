@@ -19,6 +19,15 @@ Page({
     this.setData({ themeClass: (a.globalData && a.globalData.themeClass) || '' })
   },
 
+  // owner 2026-09-09：每次显示刷新底部 logo 深浅底快照（页面驻留期间切过主题的情形）；
+  // 组件不在时静默跳过（attach 时机主题本就正确）
+  onShow() {
+    try {
+      const card = this.selectComponent('#fu-card')
+      if (card && card.refreshLogoTheme) card.refreshLogoTheme()
+    } catch (e) { /* 忽略 */ }
+  },
+
   // overlay 返回事件 → 关闭本页（无上层则回首页）
   onBack() {
     wx.navigateBack({

@@ -41,9 +41,23 @@
         <view class="fc-badge status-{{item.status}}">{{item.statusText}}</view>
       </view>
 
-      <!-- owner 2026-09-08：话题介绍——关注时捕获的原文摘要作简短背景，
-           标题下先给上下文，最新进展在此之上按时间展开 -->
-      <view class="fc-intro" wx:if="{{item.knownSummary}}">{{item.knownSummary}}</view>
+      <!-- owner 2026-09-08：话题介绍——关注时捕获的原文摘要作简短背景。
+           2026-09-09 方案2（owner 定稿+两次微调）：圆形箭头按钮是摘要末行末尾的流内元素——
+           折叠态渲染 JS 估宽截断文本（introFoldedText，预算=3行容量−按钮−省略号−安全余量）+「…」，
+           按钮内联跟在其后，不盖在文字上、不单独占行；展开态全文+按钮（箭头旋转 180°）。
+           点击摘要本体或按钮均可开合（catchtap 不触发卡片时间线）；离开页面自动收起。
+           未超 3 行则无按钮、点击摘要等同卡片点击（与其余区域一致）。 -->
+      <view class="fc-intro"
+            wx:if="{{item.knownSummary}}"
+            catchtap="onIntroTap"
+            data-id="{{item.itemId}}" data-module="{{item.module}}" data-expandable="{{item.needIntroExpand}}">
+        {{item.needIntroExpand && !introExpanded[item.itemId] ? item.introFoldedText : item.knownSummary}}<view class="fc-intro-toggle" wx:if="{{item.needIntroExpand}}"
+            catchtap="onIntroTap"
+            data-id="{{item.itemId}}" data-module="{{item.module}}" data-expandable="{{true}}">
+          <image class="fc-intro-toggle-icon {{introExpanded[item.itemId] ? 'fc-intro-toggle-icon--open' : ''}}"
+                 src="/assets/icons/chevron-down.svg" mode="aspectFit" />
+        </view>
+      </view>
 
       <!-- 元信息：来源标签 · 追踪时间 · 已关注天数 -->
       <view class="fc-meta">
@@ -75,7 +89,7 @@
     <!-- owner 2026-09-08：logo 条横向铺满屏幕（回退 BUG-20260828-006 的 200rpx 收缩） -->
     <view class="brand-footer">
       <view class="brand-card">
-        <logo id="fu-logo" mode="splash" fluid="{{true}}"></logo>
+        <logo id="fu-logo" mode="splash" fluid="{{true}}" dark="{{isDark}}"></logo>
       </view>
       <view class="brand-text">一页 · 简单到极致</view>
     </view>
@@ -85,13 +99,11 @@
   <view class="sheet-mask" wx:if="{{sheetShow}}" bindtap="onSheetMaskTap"></view>
   <view class="sheet {{sheetShow ? 'sheet--show' : ''}}" wx:if="{{sheetShow}}" catchtap="noop">
     <block wx:if="{{sheetMode === 'actions'}}">
-      <view class="sheet-title">{{sheetTitle}}</view>
       <view class="sheet-item" hover-class="sheet-item--hover" bindtap="onSheetMarkRead">标记已读</view>
       <view class="sheet-item" hover-class="sheet-item--hover" bindtap="onSheetTrackTime">改追踪时间</view>
       <view class="sheet-item sheet-item--danger" hover-class="sheet-item--hover" bindtap="onSheetUnfollow">取消关注</view>
     </block>
     <block wx:if="{{sheetMode === 'tracktime'}}">
-      <view class="sheet-title">每天追踪时间</view>
       <view class="sheet-item" hover-class="sheet-item--hover" wx:for="{{trackTimeOptions}}" wx:key="*this" data-v="{{item}}" bindtap="onSheetPickTime">每天 {{item}}</view>
     </block>
   </view>

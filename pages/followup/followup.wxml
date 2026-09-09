@@ -1,2 +1,2 @@
 <!-- 我的关注 — 独立直达页（承载覆盖层组件） -->
-<followup-card visible="{{true}}" bind:back="onBack" />
+<followup-card id="fu-card" visible="{{true}}" bind:back="onBack" />
