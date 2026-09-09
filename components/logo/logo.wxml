@@ -3,12 +3,16 @@
   用法: logo mode="wordmark" size="360" 主标 / logo mode="avatar" 头像 / logo mode="splash" dark 启动屏
   属性:
     mode  - 四种形态 (wordmark/avatar/avatar-circle/splash)
-    size  - 宽度 rpx (等比缩放, 高度按 SVG 比例自动)
+    size  - 宽度 rpx (等比缩放, 高度按图比例自动)
     dark  - Boolean, 强制深底; 缺省跟随 app.globalData.effectiveTheme
+    fluid - Boolean, width:100% 铺满父容器
 -->
+<!-- owner 2026-09-08：splash 改用预渲染 PNG（assets/logo/png/logo-splash-*@2x.png，原始 SVG 设计稿的
+     保真位图）——SVG 内含 <text> 依赖系统字体，<image> 真机渲染不可靠；PNG 带固有尺寸
+     (1280×240，与 SVG 640×120 同比例)，widthFix 全端等比缩放。其余模式无 PNG 资产，维持 SVG。 -->
 <image
   class="logo-img"
-  src="/assets/logo/logo-{{mode}}{{isDark ? '-dark' : '-light'}}.svg"
+  src="{{mode === 'splash' ? '/assets/logo/png/logo-splash-' + (isDark ? 'dark' : 'light') + '@2x.png' : '/assets/logo/logo-' + mode + (isDark ? '-dark' : '-light') + '.svg'}}"
   mode="widthFix"
   style="{{fluid ? 'width:100%;' : 'width:' + size + 'rpx;'}}"
 ></image>
